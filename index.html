@@ -399,7 +399,7 @@ async function afterLogin(user){
   document.getElementById("bLogout").hidden=false;document.getElementById("bPw").hidden=false;
   if(!data||!data.active){me={id:user.id,email:user.email,role:""};view().innerHTML=`<div class="empty"><h2>아직 직원으로 등록되지 않은 계정입니다</h2><p>${esc(user.email)} 계정으로 로그인했습니다. 관리자에게 직원 등록을 요청하세요.</p></div>`;return}
   me={id:user.id,email:user.email,name:data.name,role:data.role};
-  if(me.role==="tech"){ui.view="jobs";ui.jscope="mine"}else ui.jscope="all";
+  if(me.role==="tech"){ui.view="install";ui.jscope="mine"}else ui.jscope="all";
   document.getElementById("modeLabel").textContent=`${me.name||me.email} · ${ROLE[me.role]}`;
   document.getElementById("bImport").hidden=!isOffice();
   await loadAll();
@@ -431,10 +431,10 @@ async function reload(tables){
 
 /* ================= 화면 틀 ================= */
 function render(){
-  const tabs=[["cust","고객"],["jobs","설치·A/S"]];if(isAdmin())tabs.push(["staff","직원"],["settings","설정"]);
+  const tabs=[["cust","고객"],["install","설치"],["as","A/S"]];if(isAdmin())tabs.push(["staff","직원"],["settings","설정"]);
   document.getElementById("nav").innerHTML=tabs.map(([k,l])=>`<button type="button" class="${ui.view===k?"on":""}" data-v="${k}">${l}</button>`).join("");
   document.querySelectorAll("#nav button").forEach(b=>b.onclick=()=>{ui.view=b.dataset.v;render()});
-  if(ui.view==="cust")renderCustView();else if(ui.view==="jobs")renderJobsView();else if(ui.view==="staff")renderStaffView();else renderSettings();
+  if(ui.view==="cust")renderCustView();else if(ui.view==="install"||ui.view==="as")renderJobsView(ui.view);else if(ui.view==="staff")renderStaffView();else renderSettings();
 }
 
 /* ================= 고객 ================= */
@@ -472,14 +472,14 @@ function renderCustList(){
 }
 function renderCustMain(){
   const m=document.getElementById("main");const c=custById(ui.sel);
-  if(!c){m.innerHTML=`<div class="empty"><h2>고객을 고르세요</h2><p>${me.role==="sales"?"본인이 담당하거나 수금을 배정받은 고객만 보입니다.":me.role==="tech"?"배정받은 작업의 고객만 보입니다. 위쪽 ‘설치·A/S’에서 작업 목록을 볼 수 있습니다.":"왼쪽에서 업체명, 전화번호, 시리얼, 담당자로 검색하세요."}</p></div>`;return}
+  if(!c){m.innerHTML=`<div class="empty"><h2>고객을 고르세요</h2><p>${me.role==="sales"?"본인이 담당하거나 수금을 배정받은 고객만 보입니다.":me.role==="tech"?"배정받은 작업의 고객만 보입니다. 위쪽 ‘설치’·‘A/S’ 메뉴에서 작업 목록을 볼 수 있습니다.":"왼쪽에서 업체명, 전화번호, 시리얼, 담당자로 검색하세요."}</p></div>`;return}
   const ks=custContracts(c.id),js=custJobs(c.id);
-  const tabs=[["info","고객정보"]];if(me.role!=="tech")tabs.push(["ctr",`계약 (${ks.length})`]);tabs.push(["job",`설치·A/S (${js.length})`],["conf","확인서"]);
+  const tabs=[["info","고객정보"]];if(me.role!=="tech")tabs.push(["ctr",`계약 (${ks.length})`]);tabs.push(["install",`설치 (${js.filter(j=>j.kind==="install").length})`],["as",`A/S (${js.filter(j=>j.kind==="as").length})`],["conf","확인서"]);
   if(!tabs.some(t=>t[0]===ui.ctab))ui.ctab="info";
   m.innerHTML=`<div class="chead"><h2>${esc(c.name)}</h2><span class="meta">${esc([c.ceo,c.phone||c.phone2,"담당 "+(staffName(c.owner)||c.owner_name||"-")].filter(Boolean).join(" · "))}</span></div>
    <div class="tabs">${tabs.map(([k,l])=>`<button type="button" class="tab${ui.ctab===k?" on":""}" data-t="${k}">${l}</button>`).join("")}</div><div id="tabBody"></div>`;
   m.querySelectorAll(".tab").forEach(b=>b.onclick=()=>{ui.ctab=b.dataset.t;ui.draft=null;renderCustMain()});
-  if(ui.ctab==="info")renderCustInfo(c);else if(ui.ctab==="ctr")renderContracts(c);else if(ui.ctab==="job")renderCustJobs(c);else renderConf(c);
+  if(ui.ctab==="info")renderCustInfo(c);else if(ui.ctab==="ctr")renderContracts(c);else if(ui.ctab==="install"||ui.ctab==="as")renderCustJobs(c,ui.ctab);else renderConf(c);
 }
 function inp(name,label,v,type="text",ro=false,extra=""){return `<label class="f">${label}<input name="${name}" type="${type}" value="${esc(v??"")}" ${ro?"readonly":""} ${extra}></label>`}
 function sel(name,label,opts,v,ro=false){return `<label class="f">${label}<select name="${name}" ${ro?"disabled":""}>${opts.map(o=>Array.isArray(o)?`<option value="${esc(o[0])}" ${o[0]===v?"selected":""}>${esc(o[1])}</option>`:`<option ${o===v?"selected":""}>${esc(o)}</option>`).join("")}</select></label>`}
@@ -572,46 +572,47 @@ function jobCard(j){
    ${j.symptom?`<div class="d">${esc(j.symptom)}</div>`:""}</div>`;
 }
 function bindJobCards(root){root.querySelectorAll("[data-j]").forEach(el=>el.onclick=()=>jobDlg(jobs.find(j=>j.id===el.dataset.j)))}
-function renderCustJobs(c){
-  const js=custJobs(c.id);const tb=document.getElementById("tabBody");const canNew=isOffice()||(me.role==="sales"&&c.owner===me.id);
-  tb.innerHTML=`<div class="toolbar">${canNew?`<button class="btn pri" id="bNewAS">+ A/S 접수</button><button class="btn" id="bNewIS">+ 설치 작업</button>`:""}</div><div class="cards">${js.map(jobCard).join("")||`<div class="empty" style="padding:8px 0">설치·A/S 기록이 없습니다.</div>`}</div>`;
+const KLABEL={install:"설치",as:"A/S"};
+function canNewJob(c){return isOffice()||(me.role==="sales"&&(!c||c.owner===me.id))}
+function renderCustJobs(c,kind){
+  const js=custJobs(c.id).filter(j=>j.kind===kind);const tb=document.getElementById("tabBody");
+  tb.innerHTML=`<div class="toolbar">${canNewJob(c)?`<button class="btn pri" id="bNewJob">+ ${kind==="as"?"A/S 접수":"설치 접수"}</button>`:""}</div><div class="cards">${js.map(jobCard).join("")||`<div class="empty" style="padding:8px 0">${KLABEL[kind]} 기록이 없습니다.</div>`}</div>`;
   bindJobCards(tb);
-  const a=document.getElementById("bNewAS");if(a)a.onclick=()=>jobDlg(null,c,"as");
-  const b=document.getElementById("bNewIS");if(b)b.onclick=()=>jobDlg(null,c,"install");
+  const a=document.getElementById("bNewJob");if(a)a.onclick=()=>jobDlg(null,c,kind);
 }
-function renderJobsView(){
-  const list=jobs.filter(j=>(ui.jscope!=="mine"||(j.techs||[]).includes(me.id))&&(!ui.jkind||j.kind===ui.jkind)
+function renderJobsView(kind){
+  const list=jobs.filter(j=>j.kind===kind&&(ui.jscope!=="mine"||(j.techs||[]).includes(me.id))
      &&(ui.jst==="all"||(ui.jst==="open"?(j.status==="접수"||j.status==="배정"):j.status===ui.jst))
-     &&(!ui.jq||[j.customer_name,j.address,j.tech_names,(j.product||{}).serial,(j.techs||[]).map(staffName).join(" ")].join(" ").toLowerCase().includes(ui.jq.toLowerCase())))
+     &&(!ui.jq||[j.customer_name,j.address,j.tech_names,j.symptom,(j.product||{}).serial,(j.techs||[]).map(staffName).join(" ")].join(" ").toLowerCase().includes(ui.jq.toLowerCase())))
     .sort((a,b)=>(ui.jst==="open"?1:-1)*((a.visit_date||a.request_date||"").localeCompare(b.visit_date||b.request_date||"")));
   view().innerHTML=`<div class="toolbar">
-    <select id="jScope"><option value="mine" ${ui.jscope==="mine"?"selected":""}>내 배정 건</option><option value="all" ${ui.jscope==="all"?"selected":""}>전체</option></select>
-    <select id="jKind"><option value="">설치·A/S 전체</option><option value="install" ${ui.jkind==="install"?"selected":""}>설치</option><option value="as" ${ui.jkind==="as"?"selected":""}>A/S</option></select>
-    <select id="jSt"><option value="open" ${ui.jst==="open"?"selected":""}>진행 중 (접수·배정)</option>${JST.map(s=>`<option ${ui.jst===s?"selected":""}>${s}</option>`).join("")}<option value="all" ${ui.jst==="all"?"selected":""}>전체 상태</option></select>
+    <h2 style="margin:0 8px 0 0;font-size:18px">${KLABEL[kind]}</h2>
+    <select id="jScope" aria-label="범위"><option value="mine" ${ui.jscope==="mine"?"selected":""}>내 배정 건</option><option value="all" ${ui.jscope==="all"?"selected":""}>전체</option></select>
+    <select id="jSt" aria-label="상태"><option value="open" ${ui.jst==="open"?"selected":""}>진행 중 (접수·배정)</option>${JST.map(s=>`<option ${ui.jst===s?"selected":""}>${s}</option>`).join("")}<option value="all" ${ui.jst==="all"?"selected":""}>전체 상태</option></select>
     <input id="jQ" type="search" placeholder="업체명·주소·기사 검색" value="${esc(ui.jq)}">
     <span class="mapt">${list.length}건</span><span style="flex:1"></span>
-    ${isOffice()||me.role==="sales"?`<button class="btn pri" id="bNewJ">+ A/S 접수</button>`:""}</div>
-    <div class="cards">${list.slice(0,300).map(jobCard).join("")||`<div class="empty" style="padding:8px 0">해당하는 작업이 없습니다.</div>`}</div>`;
-  const re=()=>renderJobsView();
+    ${canNewJob(null)?`<button class="btn pri" id="bNewJ">+ ${kind==="as"?"A/S 접수":"설치 접수"}</button>`:""}</div>
+    <div class="cards">${list.slice(0,300).map(jobCard).join("")||`<div class="empty" style="padding:8px 0">해당하는 ${KLABEL[kind]} 건이 없습니다.</div>`}</div>`;
+  const re=()=>renderJobsView(kind);
   document.getElementById("jScope").onchange=e=>{ui.jscope=e.target.value;re()};
-  document.getElementById("jKind").onchange=e=>{ui.jkind=e.target.value;re()};
   document.getElementById("jSt").onchange=e=>{ui.jst=e.target.value;re()};
   const jq=document.getElementById("jQ");jq.oninput=e=>{ui.jq=e.target.value;clearTimeout(jq._t);jq._t=setTimeout(()=>{re();const n=document.getElementById("jQ");n.focus();n.setSelectionRange(n.value.length,n.value.length)},250)};
   bindJobCards(view());
-  const nb=document.getElementById("bNewJ");if(nb)nb.onclick=()=>pickCustomer(c=>jobDlg(null,c,"as"));
+  const nb=document.getElementById("bNewJ");if(nb)nb.onclick=()=>jobDlg(null,null,kind);
 }
-function pickCustomer(cb){
-  const mine=customers.filter(c=>isOffice()||c.owner===me.id);
-  openDlg("고객 선택",`<label class="f">업체명 또는 전화번호<input id="pcQ" list="pcList" autocomplete="off"></label><datalist id="pcList">${mine.slice(0,2000).map(c=>`<option value="${esc(c.name)} · ${esc(c.phone||c.phone2)}">`).join("")}</datalist><p class="mapt">목록에 없는 고객은 ‘고객’ 화면에서 먼저 등록하세요.</p>`,
-   [["취소"],["다음","pri",()=>{const v=val("pcQ");const c=mine.find(c=>`${c.name} · ${c.phone||c.phone2}`===v)||mine.find(c=>c.name===v);if(!c)return toast("고객을 목록에서 골라 주세요");cb(c)}]]);
-}
+function custLabel(c){return `${c.name} · ${c.phone||c.phone2||"전화 없음"}`}
 function jobDlg(j,c,kind){
-  const isNew=!j;c=c||custById(j&&j.customer_id);
-  if(isNew){const k=custContracts(c.id)[0];j={kind,customer_id:c.id,contract_id:k?k.id:null,customer_name:c.name,address:c.address,product:productOf(k),status:"접수",request_date:today(),techs:[],tech_names:"",symptom:"",result:"",cost:0,sink_status:"",sink_memo:"",parts:"",visit_time:""}}
+  const isNew=!j;c=c||(j&&custById(j.customer_id))||null;
+  if(isNew){const k=c?custContracts(c.id)[0]:null;j={kind,customer_id:c?c.id:null,contract_id:k?k.id:null,customer_name:c?c.name:"",address:c?c.address:"",product:productOf(k),status:"접수",request_date:today(),techs:[],tech_names:"",symptom:"",result:"",cost:0,sink_status:"",sink_memo:"",parts:"",visit_time:""}}
   const can=isNew||canEditJob(j);const off=isOffice();const p=j.product||{};
   const techs=staff.filter(s=>s.active&&s.role==="tech");
-  openDlg(`${j.kind==="install"?"설치":"A/S"} ${isNew?"접수":"작업"} · ${esc(j.customer_name)}`,`<div id="jf" style="display:grid;gap:10px">
-   <p class="mapt">${esc(j.address||"")}${c&&c.phone?" · "+esc(c.phone):""} · 제품: ${esc([p.product,p.size,p.options&&"("+p.options+")",p.serial&&"SN "+p.serial].filter(Boolean).join(" ")||"-")}</p>
+  const pickable=customers.filter(x=>isOffice()||x.owner===me.id);
+  const pick=isNew&&!c?`<label class="f">고객 (업체명이나 전화번호를 입력해 목록에서 고르세요)<input name="cust" list="jcList" autocomplete="off" placeholder="예: 맛나분식"></label>
+     <datalist id="jcList">${pickable.slice(0,3000).map(x=>`<option value="${esc(custLabel(x))}">`).join("")}</datalist>
+     <p class="mapt">목록에 없는 고객은 ‘고객’ 화면의 ‘+ 새 고객’으로 먼저 등록하세요.</p>`
+    :`<p class="mapt"><b>${esc(j.customer_name)}</b> · ${esc(j.address||"")}${c&&c.phone?" · "+esc(c.phone):""} · 제품: ${esc([p.product,p.size,p.options&&"("+p.options+")",p.serial&&"SN "+p.serial].filter(Boolean).join(" ")||"-")}</p>`;
+  openDlg(`${KLABEL[j.kind]} ${isNew?"접수":"작업"}${j.customer_name?" · "+esc(j.customer_name):""}`,`<div id="jf" style="display:grid;gap:10px">
+   ${pick}
    <div class="g3">${sel("status","상태",JST,j.status,!can)}${inp("request_date","접수일",j.request_date,"date",!off&&!isNew)}${inp("done_date","완료일",j.done_date,"date",!can)}</div>
    <div class="g3">${inp("visit_date","방문(예정)일",j.visit_date,"date",!(off||isNew))}${inp("visit_time","시간",j.visit_time,"text",!(off||isNew))}${inp("tech_names","외부업체·배송·기타",j.tech_names,"text",!off)}</div>
    <div class="f mapt">담당 기사 ${off?"(여러 명 선택 가능)":""}</div>
@@ -620,15 +621,18 @@ function jobDlg(j,c,kind){
    <label class="f">처리 내용<textarea name="result" ${can?"":"readonly"}>${esc(j.result)}</textarea></label>
    ${j.kind==="as"?`<div class="g3">${inp("cost","A/S 비용(원)",j.cost||"","number",!can)}</div>`:`<div class="g3">${sel("sink_status","싱크대 발주",["",...SINKS],j.sink_status,!can)}${inp("sink_memo","싱크대 메모(크기 등)",j.sink_memo,"text",!can)}${inp("parts","제공 부자재",j.parts,"text",!can)}</div>`}
    </div>`,
-   [["닫기"],["확인서 인쇄","",()=>printJob(j,c)],...(can?[["저장","pri",async()=>{
+   [["닫기"],...(isNew&&!c?[]:[["확인서 인쇄","",()=>{printJob(j,c);return true}]]),...(can?[["저장","pri",async()=>{
      const f=fdata("jf");
+     if(isNew&&!c){const v=(f.get("cust")||"").trim();const cc=pickable.find(x=>custLabel(x)===v)||pickable.find(x=>x.name===v);
+       if(!cc)return toast("고객을 목록에서 골라 주세요");c=cc;const k=custContracts(cc.id)[0];
+       Object.assign(j,{customer_id:cc.id,contract_id:k?k.id:null,customer_name:cc.name,address:cc.address,product:productOf(k)})}
      const pt={status:f.get("status")||j.status,done_date:f.get("done_date")||null,result:f.get("result")||""};
      if(pt.status==="완료"&&!pt.done_date)pt.done_date=today();
      if(j.kind==="as")pt.cost=Number(f.get("cost")||0)||0;else{pt.sink_status=f.get("sink_status")||"";pt.sink_memo=f.get("sink_memo")||"";pt.parts=f.get("parts")||""}
      if(off||isNew){Object.assign(pt,{request_date:f.get("request_date")||today(),visit_date:f.get("visit_date")||null,visit_time:f.get("visit_time")||"",symptom:f.get("symptom")||""})}
      if(off){pt.techs=f.getAll("tech");pt.tech_names=f.get("tech_names")||"";if(pt.status==="접수"&&(pt.techs.length||pt.tech_names))pt.status="배정"}
-     let r;if(isNew){r=await sb.from("jobs").insert(Object.assign({},j,pt,{id:undefined}))}else r=await sb.from("jobs").update(pt).eq("id",j.id);
-     if(r.error)return toast("저장하지 못했습니다: "+r.error.message);toast("저장했습니다");reload(["jobs","customers"])}]]:[])]);
+     let r;if(isNew){const row=Object.assign({},j,pt);delete row.id;r=await sb.from("jobs").insert(row)}else r=await sb.from("jobs").update(pt).eq("id",j.id);
+     if(r.error)return toast("저장하지 못했습니다: "+r.error.message);toast(isNew?`${KLABEL[j.kind]} 접수했습니다`:"저장했습니다");reload(["jobs","customers"])}]]:[])]);
 }
 /* 작업에서 확인서 인쇄: 1번 고객정보와 업장명만 */
 function printJob(j,c){
