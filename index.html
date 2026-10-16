@@ -372,7 +372,7 @@ const DOCS=["미수령","사진","원본","전자서명"];
 const SINKS=["해당없음","발주대기","발주완료","중고사용","재고사용","기타"];
 const JST=["접수","배정","완료","취소"];
 let sb=null, me=null, staff=[], customers=[], contracts=[], jobs=[];
-let ui={view:"cust", sel:null, ctab:"info", q:"", stage:"", jscope:"mine", jkind:"", jst:"open", jq:"", draft:null, conf:null};
+let ui={view:"cust", sel:null, ctab:"info", q:"", stage:"", jscope:"mine", jkind:"", jpay:"", jview:"card", jst:"open", jq:"", draft:null, conf:null};
 const isAdmin=()=>me&&me.role==="admin", isOffice=()=>me&&(me.role==="admin"||me.role==="office");
 const custById=id=>customers.find(c=>c.id===id);
 const staffName=id=>{const s=staff.find(x=>x.user_id===id);return s?s.name:""};
@@ -575,7 +575,7 @@ function jobCard(j){
   return `<div class="card click" data-j="${j.id}"><div class="t"><span class="badge ${j.kind}">${j.kind==="install"?"설치":"A/S"}</span><span class="badge s-${j.status}">${j.status}</span>${esc(j.customer_name||(c&&c.name)||"")}</div>
    <div class="d"><span>${esc(j.visit_date?("방문 "+j.visit_date+(j.visit_time?" "+j.visit_time:"")):"접수 "+(j.request_date||""))}</span><span>${esc([p.product,p.size,p.options&&"("+p.options+")"].filter(Boolean).join(" "))}</span><span>기사 ${esc(who||"미배정")}</span>${j.address?`<span>${esc(j.address)}</span>`:""}</div>
    ${j.symptom?`<div class="d">${esc(j.symptom)}</div>`:""}
-   ${j.kind==="as"&&(j.cost||j.pay_status)?`<div class="d"><span class="money">비용 ${won0(j.cost)}원</span>${j.pay_status?`<span class="badge ${j.pay_status==="미수"?"as":"install"}">${esc(j.pay_status)}</span>`:""}${j.pay_method?`<span>${esc(j.pay_method)}</span>`:""}</div>`:""}</div>`;
+   ${j.kind==="as"&&(j.cost||j.pay_status||j.paid_type)?`<div class="d">${j.paid_type?`<span class="badge">${esc(j.paid_type)}</span>`:""}${j.cost?`<span class="money">비용 ${won0(j.cost)}원</span>`:""}${j.pay_status?`<span class="badge ${j.pay_status==="미수"?"as":"install"}">${esc(j.pay_status)}</span>`:""}${j.pay_method?`<span>${esc(j.pay_method)}${j.pay_name?" · "+esc(j.pay_name):""}</span>`:""}${j.closed?`<span class="badge">매출마감</span>`:""}</div>`:""}</div>`;
 }
 function bindJobCards(root){root.querySelectorAll("[data-j]").forEach(el=>el.onclick=()=>jobDlg(jobs.find(j=>j.id===el.dataset.j)))}
 const KLABEL={install:"설치",as:"A/S"};
@@ -587,7 +587,8 @@ function renderCustJobs(c,kind){
   const a=document.getElementById("bNewJob");if(a)a.onclick=()=>jobDlg(null,c,kind);
 }
 function renderJobsView(kind){
-  const list=jobs.filter(j=>j.kind===kind&&(ui.jscope!=="mine"||(j.techs||[]).includes(me.id))
+  const payOk=j=>!ui.jpay||kind!=="as"||(ui.jpay==="open"?(j.pay_status==="완료"&&!j.closed):j.pay_status===ui.jpay);
+  const list=jobs.filter(j=>j.kind===kind&&payOk(j)&&(ui.jscope!=="mine"||(j.techs||[]).includes(me.id))
      &&(ui.jst==="all"||(ui.jst==="open"?(j.status==="접수"||j.status==="배정"):j.status===ui.jst))
      &&(!ui.jq||[j.customer_name,j.address,j.tech_names,j.symptom,(j.product||{}).serial,(j.techs||[]).map(staffName).join(" ")].join(" ").toLowerCase().includes(ui.jq.toLowerCase())))
     .sort((a,b)=>(ui.jst==="open"?1:-1)*((a.visit_date||a.request_date||"").localeCompare(b.visit_date||b.request_date||"")));
@@ -596,15 +597,30 @@ function renderJobsView(kind){
     <select id="jScope" aria-label="범위"><option value="mine" ${ui.jscope==="mine"?"selected":""}>내 배정 건</option><option value="all" ${ui.jscope==="all"?"selected":""}>전체</option></select>
     <select id="jSt" aria-label="상태"><option value="open" ${ui.jst==="open"?"selected":""}>진행 중 (접수·배정)</option>${JST.map(s=>`<option ${ui.jst===s?"selected":""}>${s}</option>`).join("")}<option value="all" ${ui.jst==="all"?"selected":""}>전체 상태</option></select>
     <input id="jQ" type="search" placeholder="업체명·주소·기사 검색" value="${esc(ui.jq)}">
+    ${kind==="as"?`<select id="jPay" aria-label="결제"><option value="">결제 전체</option><option value="미수" ${ui.jpay==="미수"?"selected":""}>미수만</option><option value="완료" ${ui.jpay==="완료"?"selected":""}>납부 완료만</option><option value="open" ${ui.jpay==="open"?"selected":""}>매출마감 안 된 납부</option></select>
+      <div class="nav"><button type="button" data-jv="card" class="${ui.jview!=="table"?"on":""}">카드</button><button type="button" data-jv="table" class="${ui.jview==="table"?"on":""}">결제 표</button></div>`:""}
     <span class="mapt">${list.length}건</span><span style="flex:1"></span>
     ${canNewJob(null)?`<button class="btn pri" id="bNewJ">+ ${kind==="as"?"A/S 접수":"설치 접수"}</button>`:""}</div>
-    <div class="cards">${list.slice(0,300).map(jobCard).join("")||`<div class="empty" style="padding:8px 0">해당하는 ${KLABEL[kind]} 건이 없습니다.</div>`}</div>`;
+    ${kind==="as"&&ui.jview==="table"?payTable(list):`<div class="cards">${list.slice(0,300).map(jobCard).join("")||`<div class="empty" style="padding:8px 0">해당하는 ${KLABEL[kind]} 건이 없습니다.</div>`}</div>`}`;
   const re=()=>renderJobsView(kind);
+  const jp=document.getElementById("jPay");if(jp)jp.onchange=e=>{ui.jpay=e.target.value;re()};
+  view().querySelectorAll("[data-jv]").forEach(b=>b.onclick=()=>{ui.jview=b.dataset.jv;re()});
   document.getElementById("jScope").onchange=e=>{ui.jscope=e.target.value;re()};
   document.getElementById("jSt").onchange=e=>{ui.jst=e.target.value;re()};
   const jq=document.getElementById("jQ");jq.oninput=e=>{ui.jq=e.target.value;clearTimeout(jq._t);jq._t=setTimeout(()=>{re();const n=document.getElementById("jQ");n.focus();n.setSelectionRange(n.value.length,n.value.length)},250)};
   bindJobCards(view());
   const nb=document.getElementById("bNewJ");if(nb)nb.onclick=()=>jobDlg(null,null,kind);
+}
+function payTable(list){
+  const rows=list.slice(0,500);
+  const sumCard=rows.filter(j=>j.pay_method==="카드"&&j.pay_status==="완료").reduce((a,j)=>a+Number(j.cost||0),0);
+  const sumCash=rows.filter(j=>j.pay_method!=="카드"&&j.pay_status==="완료").reduce((a,j)=>a+Number(j.cost||0),0);
+  const sumUn=rows.filter(j=>j.pay_status==="미수").reduce((a,j)=>a+Number(j.cost||0),0);
+  return `<div class="wrapx" style="padding-top:12px"><table class="stafft paytable"><thead><tr><th>결제수단</th><th>유상</th><th>결제일</th><th>카드사·입금자</th><th style="text-align:right">카드</th><th style="text-align:right">현금·입금</th><th>업체명</th><th>메모</th><th>상태</th></tr></thead><tbody>
+   ${rows.map(j=>{const amt=won0(j.cost);const card=j.pay_method==="카드";return `<tr data-j="${j.id}" style="cursor:pointer"><td>${esc(j.pay_method||"-")}</td><td>${esc(j.paid_type||"")}</td><td>${esc(j.pay_date?j.pay_date.slice(5).replace("-","/"):"")}</td><td>${esc(j.pay_name||"")}</td>
+     <td class="money" style="text-align:right">${card&&j.cost?amt:""}</td><td class="money" style="text-align:right">${!card&&j.cost?amt:""}</td><td>${esc(j.customer_name)}</td><td>${esc(j.pay_memo||"")}</td>
+     <td>${j.pay_status==="미수"?`<span class="badge as">미수</span>`:j.closed?`<span class="badge">매출마감</span>`:j.pay_status==="완료"?`<span class="badge install">납부</span>`:""}</td></tr>`}).join("")||`<tr><td colspan="9" class="mapt">해당하는 A/S 건이 없습니다.</td></tr>`}</tbody>
+   <tfoot><tr><th colspan="4">합계 (납부 완료 기준)</th><th class="money" style="text-align:right">${won0(sumCard)}</th><th class="money" style="text-align:right">${won0(sumCash)}</th><th colspan="3">미수 ${won0(sumUn)}원</th></tr></tfoot></table></div>`;
 }
 function custLabel(c){return `${c.name} · ${c.phone||c.phone2||"전화 없음"}`}
 function jobDlg(j,c,kind){
@@ -625,7 +641,12 @@ function jobDlg(j,c,kind){
    <div class="chk">${techs.map(t=>`<label><input type="checkbox" name="tech" value="${t.user_id}" ${(j.techs||[]).includes(t.user_id)?"checked":""} ${off?"":"disabled"}>${esc(t.name)}</label>`).join("")||`<span class="mapt">등록된 기사가 없습니다. ‘직원’ 화면에서 기사를 등록하세요.</span>`}</div>
    <label class="f">${j.kind==="as"?"불편사항·접수 내용":"요청 사항"}<textarea name="symptom" ${(off||isNew)?"":"readonly"}>${esc(j.symptom)}</textarea></label>
    <label class="f">처리 내용<textarea name="result" ${can?"":"readonly"}>${esc(j.result)}</textarea></label>
-   ${j.kind==="as"?`<div class="g3">${inp("cost","A/S 비용(원)",j.cost||"","number",!can)}${sel("pay_status","납부 여부",[["","(선택)"],["완료","완료"],["미수","미수"]],j.pay_status||"",!can)}${sel("pay_method","결제수단",[["","(선택)"],["카드","카드"],["현금","현금"],["입금","입금(계좌)"]],j.pay_method||"",!can)}</div>`:`<div class="g3">${sel("sink_status","싱크대 발주",["",...SINKS],j.sink_status,!can)}${inp("sink_memo","싱크대 메모(크기 등)",j.sink_memo,"text",!can)}${inp("parts","제공 부자재",j.parts,"text",!can)}</div>`}
+   ${j.kind==="as"?`<fieldset id="payBox" style="padding:10px 12px"><legend>A/S 비용·결제</legend>
+     <div class="g3">${sel("paid_type","유상/무상",[["","(선택)"],["유상","유상"],["무상","무상"]],j.paid_type||"",!can)}${inp("cost","A/S 비용(원)",j.cost||"","number",!can)}${sel("pay_status","납부 여부",[["","(선택)"],["완료","완료"],["미수","미수"]],j.pay_status||"",!can)}</div>
+     <div class="g3">${sel("pay_method","결제수단",[["","(선택)"],["카드","카드"],["현금","현금"],["입금","입금(계좌)"]],j.pay_method||"",!can)}${inp("pay_date","결제·입금일",j.pay_date,"date",!can)}${inp("pay_name","카드사 / 입금자명",j.pay_name,"text",!can,'list="cardList"')}</div>
+     <label class="f">입금 메모<input name="pay_memo" value="${esc(j.pay_memo||"")}" ${can?"":"readonly"} placeholder="예: 10/14 이애경 명의로 입금, 2건 합산"></label>
+     <label class="chip" style="justify-self:start"><input type="checkbox" name="closed" ${j.closed?"checked":""} ${off?"":"disabled"}>매출마감 ${off?"":"(사무실에서 처리)"}</label>
+     <datalist id="cardList">${["농협카드","비씨카드","국민카드","신한카드","삼성카드","현대카드","롯데카드","하나카드","우리카드","네이버페이"].map(x=>`<option value="${x}">`).join("")}</datalist></fieldset>`:`<div class="g3">${sel("sink_status","싱크대 발주",["",...SINKS],j.sink_status,!can)}${inp("sink_memo","싱크대 메모(크기 등)",j.sink_memo,"text",!can)}${inp("parts","제공 부자재",j.parts,"text",!can)}</div>`}
    </div>`,
    [["닫기"],...(isNew&&!c?[]:[["확인서 인쇄","",()=>{printJob(j,c);return true}]]),...(can?[["저장","pri",async()=>{
      const f=fdata("jf");
@@ -634,11 +655,13 @@ function jobDlg(j,c,kind){
        Object.assign(j,{customer_id:cc.id,contract_id:k?k.id:null,customer_name:cc.name,address:cc.address,product:productOf(k)})}
      const pt={status:f.get("status")||j.status,done_date:f.get("done_date")||null,result:f.get("result")||""};
      if(pt.status==="완료"&&!pt.done_date)pt.done_date=today();
-     if(j.kind==="as"){pt.cost=Number(f.get("cost")||0)||0;pt.pay_status=f.get("pay_status")||"";pt.pay_method=f.get("pay_method")||"";if(pt.pay_method&&!pt.pay_status&&pt.cost)pt.pay_status="완료"}else{pt.sink_status=f.get("sink_status")||"";pt.sink_memo=f.get("sink_memo")||"";pt.parts=f.get("parts")||""}
+     if(j.kind==="as"){Object.assign(pt,{paid_type:f.get("paid_type")||"",cost:Number(f.get("cost")||0)||0,pay_status:f.get("pay_status")||"",pay_method:f.get("pay_method")||"",pay_date:f.get("pay_date")||null,pay_name:(f.get("pay_name")||"").trim(),pay_memo:(f.get("pay_memo")||"").trim()});
+       if(pt.paid_type==="무상"){pt.cost=0;pt.pay_status="";pt.pay_method=""}else{if(pt.cost&&!pt.paid_type)pt.paid_type="유상";if(pt.pay_method&&!pt.pay_status&&pt.cost)pt.pay_status="완료";if(pt.pay_status==="완료"&&!pt.pay_date)pt.pay_date=today()}
+       if(off)pt.closed=!!f.get("closed")}else{pt.sink_status=f.get("sink_status")||"";pt.sink_memo=f.get("sink_memo")||"";pt.parts=f.get("parts")||""}
      if(off||isNew){Object.assign(pt,{request_date:f.get("request_date")||today(),visit_date:f.get("visit_date")||null,visit_time:f.get("visit_time")||"",symptom:f.get("symptom")||""})}
      if(off){pt.techs=f.getAll("tech");pt.tech_names=f.get("tech_names")||"";if(pt.status==="접수"&&(pt.techs.length||pt.tech_names))pt.status="배정"}
      let r;if(isNew){const row=Object.assign({},j,pt);delete row.id;r=await sb.from("jobs").insert(row)}else r=await sb.from("jobs").update(pt).eq("id",j.id);
-     if(r.error)return toast(/pay_status|pay_method/.test(r.error.message)?"납부 칸이 아직 없습니다. Supabase에서 phase1b.sql을 실행해 주세요.":"저장하지 못했습니다: "+r.error.message);toast(isNew?`${KLABEL[j.kind]} 접수했습니다`:"저장했습니다");reload(["jobs","customers"])}]]:[])]);
+     if(r.error)return toast(/pay_status|pay_method/.test(r.error.message)?"납부 칸이 아직 없습니다. Supabase에서 phase1b.sql을 실행해 주세요.":/paid_type|pay_date|pay_name|pay_memo|closed/.test(r.error.message)?"결제 상세 칸이 아직 없습니다. Supabase에서 phase1c.sql을 실행해 주세요.":"저장하지 못했습니다: "+r.error.message);toast(isNew?`${KLABEL[j.kind]} 접수했습니다`:"저장했습니다");reload(["jobs","customers"])}]]:[])]);
   if(isNew&&!c)bindCustPicker(pickable);
 }
 function bindCustPicker(pool){
