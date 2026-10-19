@@ -622,7 +622,7 @@ function colPicker(onDone){
 function ctrCell(col,k,c,st,basis){
   const ij=installOf(k);
   switch(col){
-    case"basis":return `<td>${basis.map(b=>`<span class="tag b-${b}">${b}</span>`).join("")}</td>`;
+    case"basis":{const d=k.contract_date||"";return `<td title="${esc(basis.join("·"))}">${esc(d?d.slice(2,4)+d.slice(5,7):"")}</td>`}
     case"ctype":return `<td><span class="tag ct-${esc(k.contract_type||"구매")}">${esc(k.contract_type||"구매")}</span></td>`;
     case"stage":return `<td><span class="tag st-${esc(k.stage)}">${esc(k.stage)}</span></td>`;
     case"name":return `<td><b>${esc(c.name||"")}</b></td>`;
