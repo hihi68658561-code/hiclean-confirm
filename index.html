@@ -125,6 +125,9 @@ dialog .df{padding:12px 18px;border-top:1px solid var(--line2);display:flex;just
 .wtbox{max-height:calc(100vh - 260px);overflow:auto;border:1px solid var(--line);border-radius:6px}
 .sumt th{white-space:nowrap}
 .wrapx.vis{overflow:visible}
+.ksec{font-size:16px;font-weight:700;margin:14px 0 -2px;padding:2px 0 6px 10px;border-left:4px solid var(--accent);border-bottom:1px solid var(--line);color:var(--fg)}
+#kf>.ksec:first-child{margin-top:0}
+.sr{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0)}
 .bizup{display:flex;gap:10px;align-items:center;flex-wrap:wrap;border:1px dashed var(--line);border-radius:8px;padding:10px 12px;background:var(--accent-weak)}
 .bizup [data-pv],.bizup details{flex-basis:100%}.rawtxt{white-space:pre-wrap;font-size:12px;max-height:200px;overflow:auto;background:var(--panel);border:1px solid var(--line);border-radius:6px;padding:8px;margin:4px 0 0}.bizup img{max-height:160px;max-width:100%;border:1px solid var(--line);border-radius:4px}
 .bizrow{display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-top:6px}.bizrow .bizup{flex:1 1 100%}
@@ -882,21 +885,27 @@ function contractDlg(c,k){
   const ro=!canEditCust(c);const cap=k.capital||{},cms=k.cms||{};
   const ij=isNew?null:installOf(k);const sinkRo=ro||!isOffice()||(!isNew&&!ij);
   openDlg(isNew?"신규계약":"계약",`<div id="kf" style="display:grid;gap:10px">
+   <h3 class="ksec">계약 정보</h3>
    <div class="g3">${inp("contract_date","계약일자",k.contract_date,"date",ro)}${sel("contract_type","구분",CTYPES,k.contract_type||"구매",ro)}${sel("stage","진행단계",STAGES,STAGES.includes(k.stage)?k.stage:"확정",ro)}</div>
-   <div class="g3">${sel("contract_doc","계약서",DOCS.map(d=>[d,d==="사진"?"사진 수령(○)":d==="원본"?"원본 수령(●)":d]),k.contract_doc,ro)}${inp("channel","영업 경로(엑셀 ‘구분’)",k.channel,"text",ro,'list="chList"')}${inp("referrer","소개",k.referrer,"text",ro)}</div>
+   <div class="g3">${sel("contract_doc","계약서",DOCS.map(d=>[d,d==="사진"?"사진 수령(○)":d==="원본"?"원본 수령(●)":d]),k.contract_doc,ro)}${inp("channel","영업 경로",k.channel,"text",ro,'list="chList"')}${inp("referrer","소개",k.referrer,"text",ro)}</div>
    ${inp("free_trial","무료체험 메모(날짜 등)",k.free_trial,"text",ro)}
+   <h3 class="ksec">영업 및 설치 담당자</h3>
    <div class="g3">${inp("sales1","1차 선행자",k.sales1,"text",ro,'list="stList"')}${inp("sales2","2차 상담자",k.sales2,"text",ro,'list="stList"')}${isOffice()?sel("sales3","3차 계약자(담당자)",staffOpts(["admin","office","sales"]),k.sales3||""):inp("_s3","3차 계약자",staffName(k.sales3)||k.sales3_name,"text",true)}</div>
+   <h3 class="ksec">제품내역</h3>
    <div class="g3">${inp("product","제품",k.product,"text",ro,'list="pdList"')}${inp("size","사이즈",k.size,"text",ro)}${inp("serial","시리얼",k.serial,"text",ro)}</div>
    <div class="g3"><label class="f">수압식 추가 구매<select name="wash_added" ${ro?"disabled":""}><option value="0">아니오</option><option value="1" ${k.wash_added?"selected":""}>예</option></select></label>${sel("sink_status","싱크대 발주",["",...SINKS],(ij||{}).sink_status||"",sinkRo)}${inp("sink_memo","싱크대 메모(크기 등)",(ij||{}).sink_memo,"text",sinkRo)}</div>
    <div class="g3">${inp("parts","제공 부자재",(ij||{}).parts,"text",sinkRo)}${sel("pay_method","결제방식",["",...PAYM],k.pay_method,ro)}<span></span></div>
    ${!isNew&&!ij?`<p class="mapt" style="margin:-4px 0 0">이 계약에 연결된 설치 작업이 없어 싱크대·부자재는 입력할 수 없습니다.</p>`:""}
+   <h3 class="ksec">계약금액(부가세포함)</h3>
    <div class="g3">${inp("amt_ultra","초음파",k.amt_ultra||"","number",ro)}${inp("amt_wash","워시(수압식)",k.amt_wash||"","number",ro)}${inp("amt_parts","부자재",k.amt_parts||"","number",ro)}</div>
    <div class="g3">${inp("amount","합계금액 (VAT 포함)",k.amount||"","number",ro)}${inp("cap_company","캐피탈 승인처",cap.company,"text",ro)}${inp("cap_monthly","캐피탈 월할부금(참고)",cap.monthly||"","number",ro)}</div>
    <div class="g3">${inp("cap_months","캐피탈 기간(개월)",cap.months||"","number",ro)}${inp("cms_day","CMS 출금일",cms.day||"","text",ro)}${inp("settle_month","정산년월",k.settle_month,"month",ro)}</div>
    ${ui.noPay?"":`<div class="g3">${inp("approval","승인처 (예: 삼성+현금)",k.approval,"text",ro)}${inp("tax_date","계산서 발급일",(k.tax||{}).date,"date",ro)}${inp("tax_type","발급 구분 (소매매출·카드결제 등)",(k.tax||{}).date?"":(k.tax||{}).type,"text",ro)}</div>
+   <h3 class="ksec">마감</h3>
    <div class="g3">${inp("chk_cust","고객등록",k.chk_cust,"text",ro,'list="chkList"')}${inp("chk_slip","전표마감",k.chk_slip,"text",ro,'list="chkList"')}${inp("chk_sales","매출마감",k.chk_sales,"text",ro,'list="chkList"')}</div>
    <datalist id="chkList">${CHKV.map(x=>`<option value="${esc(x)}">`).join("")}</datalist>`}
-   <label class="f">비고<textarea name="memo" ${ro?"readonly":""}>${esc(k.memo)}</textarea></label>
+   <h3 class="ksec">비고</h3>
+   <label class="f"><span class="sr">비고</span><textarea name="memo" ${ro?"readonly":""} aria-label="비고">${esc(k.memo)}</textarea></label>
    ${isNew?"":`<div id="paySec"></div>`}
    ${isNew?`<label class="chip"><input type="checkbox" name="mkjob" checked>설치 작업도 함께 만들기 (기사에게 설치 건으로 보임)</label>`:""}
    <datalist id="chList">${["중앙회","인바운드","MOU","보상판매","기존고객","하이클린","소개"].map(x=>`<option value="${x}">`).join("")}</datalist>
