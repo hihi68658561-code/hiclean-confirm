@@ -851,7 +851,7 @@ function renderPaySec(k){
   const box=document.getElementById("paySec");if(!box)return;
   if(ui.noPay){box.innerHTML=`<p class="warnbox">입금 내역을 쓰려면 Supabase에서 phase1h.sql을 실행해 주세요.</p>`;return}
   const c=custById(k.customer_id);const can=c&&canEditCust(c);const s=payStat(k);const ps=paysOf(k);
-  box.innerHTML=`<fieldset style="padding:10px 12px"><legend>입금 내역</legend>
+  box.innerHTML=`<div class="payin">
    <div class="paysum"><span>합계금액 <b>${won0(k.amount)}</b></span><span>입금합계 <b>${won0(s.paid)}</b></span><span>미수금 <b class="${s.unpaid>0?"neg":""}">${won0(s.unpaid)}</b></span><span>최종결제일 <b>${esc(s.last||"-")}</b></span></div>
    ${s.n&&s.unpaid<=0&&k.stage!=="완료"&&k.stage!=="취소"&&can?`<div class="donebox">미수금이 0원이 되었습니다. <button type="button" class="btn sm pri" id="pDone">진행단계를 ‘완료’로 바꾸기</button></div>`:""}
    <table class="stafft"><thead><tr><th>날짜</th><th>수단</th><th>카드사·입금자</th><th class="num">금액</th><th>메모</th>${can?"<th></th>":""}</tr></thead><tbody>
@@ -860,7 +860,7 @@ function renderPaySec(k){
      <input id="pN" list="cardList2" placeholder="카드사·입금자" aria-label="카드사·입금자"><input id="pA" type="number" placeholder="금액" aria-label="금액"><input id="pMemo" placeholder="메모" aria-label="메모">
      <button type="button" class="btn pri" id="pAdd">입금 추가</button></div>
      <datalist id="cardList2">${["농협카드","비씨카드","국민카드","신한카드","삼성카드","현대카드","롯데카드","하나카드","우리카드","네이버페이","하나캐피탈"].map(x=>`<option value="${x}">`).join("")}</datalist>
-     <p class="mapt">승인취소는 금액을 음수로 넣으세요(예: -4440000). 입금은 바로 저장됩니다.</p>`:""}</fieldset>`;
+     <p class="mapt">승인취소는 금액을 음수로 넣으세요(예: -4440000). 입금은 바로 저장됩니다.</p>`:""}</div>`;
   if(!can)return;
   const after=async()=>{await reload(["payments"],true);renderPaySec(k)};
   document.getElementById("pAdd").onclick=async()=>{let a=Number(val("pA")||0);const m=val("pM");if(!a)return toast("금액을 입력하세요");if(m==="승인취소"&&a>0)a=-a;
@@ -887,14 +887,14 @@ function contractDlg(c,k){
   openDlg(isNew?"신규계약":"계약",`<div id="kf" style="display:grid;gap:10px">
    <h3 class="ksec">계약 정보</h3>
    <div class="g3">${inp("contract_date","계약일자",k.contract_date,"date",ro)}${sel("contract_type","구분",CTYPES,k.contract_type||"구매",ro)}${sel("stage","진행단계",STAGES,STAGES.includes(k.stage)?k.stage:"확정",ro)}</div>
-   <div class="g3">${sel("contract_doc","계약서",DOCS.map(d=>[d,d==="사진"?"사진 수령(○)":d==="원본"?"원본 수령(●)":d]),k.contract_doc,ro)}${inp("channel","영업 경로",k.channel,"text",ro,'list="chList"')}${inp("referrer","소개",k.referrer,"text",ro)}</div>
-   ${inp("free_trial","무료체험 메모(날짜 등)",k.free_trial,"text",ro)}
+   <div class="g3">${sel("contract_doc","계약서",DOCS.map(d=>[d,d==="사진"?"사진 수령(○)":d==="원본"?"원본 수령(●)":d]),k.contract_doc,ro)}<div style="grid-column:span 2">${inp("free_trial","무료체험 메모(날짜 등)",k.free_trial,"text",ro)}</div></div>
    <h3 class="ksec">영업 및 설치 담당자</h3>
+   <div class="g3">${inp("channel","영업 경로",k.channel,"text",ro,'list="chList"')}${inp("referrer","소개",k.referrer,"text",ro)}<span></span></div>
    <div class="g3">${inp("sales1","1차 선행자",k.sales1,"text",ro,'list="stList"')}${inp("sales2","2차 상담자",k.sales2,"text",ro,'list="stList"')}${isOffice()?sel("sales3","3차 계약자(담당자)",staffOpts(["admin","office","sales"]),k.sales3||""):inp("_s3","3차 계약자",staffName(k.sales3)||k.sales3_name,"text",true)}</div>
    <h3 class="ksec">제품내역</h3>
    <div class="g3">${inp("product","제품",k.product,"text",ro,'list="pdList"')}${inp("size","사이즈",k.size,"text",ro)}${inp("serial","시리얼",k.serial,"text",ro)}</div>
    <div class="g3"><label class="f">수압식 추가 구매<select name="wash_added" ${ro?"disabled":""}><option value="0">아니오</option><option value="1" ${k.wash_added?"selected":""}>예</option></select></label>${sel("sink_status","싱크대 발주",["",...SINKS],(ij||{}).sink_status||"",sinkRo)}${inp("sink_memo","싱크대 메모(크기 등)",(ij||{}).sink_memo,"text",sinkRo)}</div>
-   <div class="g3">${inp("parts","제공 부자재",(ij||{}).parts,"text",sinkRo)}${sel("pay_method","결제방식",["",...PAYM],k.pay_method,ro)}<span></span></div>
+   <div class="g3"><div style="grid-column:span 2">${inp("parts","제공 부자재",(ij||{}).parts,"text",sinkRo)}</div><span></span></div>
    ${!isNew&&!ij?`<p class="mapt" style="margin:-4px 0 0">이 계약에 연결된 설치 작업이 없어 싱크대·부자재는 입력할 수 없습니다.</p>`:""}
    <h3 class="ksec">계약금액(부가세포함)</h3>
    <div class="g3">${inp("amt_ultra","초음파",k.amt_ultra||"","number",ro)}${inp("amt_wash","워시(수압식)",k.amt_wash||"","number",ro)}${inp("amt_parts","부자재",k.amt_parts||"","number",ro)}</div>
@@ -906,7 +906,9 @@ function contractDlg(c,k){
    <datalist id="chkList">${CHKV.map(x=>`<option value="${esc(x)}">`).join("")}</datalist>`}
    <h3 class="ksec">비고</h3>
    <label class="f"><span class="sr">비고</span><textarea name="memo" ${ro?"readonly":""} aria-label="비고">${esc(k.memo)}</textarea></label>
-   ${isNew?"":`<div id="paySec"></div>`}
+   <h3 class="ksec">입금 내역</h3>
+   <div class="g3">${sel("pay_method","결제방식",["",...PAYM],k.pay_method,ro)}<span></span><span></span></div>
+   ${isNew?`<p class="mapt" style="margin:0">입금 기록은 계약을 저장한 뒤 다시 열어서 추가할 수 있습니다.</p>`:`<div id="paySec"></div>`}
    ${isNew?`<label class="chip"><input type="checkbox" name="mkjob" checked>설치 작업도 함께 만들기 (기사에게 설치 건으로 보임)</label>`:""}
    <datalist id="chList">${["중앙회","인바운드","MOU","보상판매","기존고객","하이클린","소개"].map(x=>`<option value="${x}">`).join("")}</datalist>
    <datalist id="stList">${staff.filter(s=>s.active).map(s=>`<option value="${esc(s.name)}">`).join("")}<option value="무료체험"></datalist>
