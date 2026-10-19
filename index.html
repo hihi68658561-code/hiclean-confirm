@@ -126,7 +126,7 @@ dialog .df{padding:12px 18px;border-top:1px solid var(--line2);display:flex;just
 .sumt th{white-space:nowrap}
 .wrapx.vis{overflow:visible}
 .bizup{display:flex;gap:10px;align-items:center;flex-wrap:wrap;border:1px dashed var(--line);border-radius:8px;padding:10px 12px;background:var(--accent-weak)}
-.bizup [data-pv]{flex-basis:100%}.bizup img{max-height:160px;max-width:100%;border:1px solid var(--line);border-radius:4px}
+.bizup [data-pv],.bizup details{flex-basis:100%}.rawtxt{white-space:pre-wrap;font-size:12px;max-height:200px;overflow:auto;background:var(--panel);border:1px solid var(--line);border-radius:6px;padding:8px;margin:4px 0 0}.bizup img{max-height:160px;max-width:100%;border:1px solid var(--line);border-radius:4px}
 .bizrow{display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-top:6px}.bizrow .bizup{flex:1 1 100%}
 @media (hover:hover) and (pointer:fine){.wtbox.hb{overflow-x:hidden}}
 .wt.ct tr.rs-완료 td{background:#E2EFDA;color:#1b1b1b}.wt.ct tr.rs-미수 td{background:#FFE699;color:#1b1b1b}.wt.ct tr.rs-철거 td,.wt.ct tr.rs-보류 td,.wt.ct tr.rs-취소 td{background:#D9D9D9;color:#1b1b1b}
@@ -620,10 +620,17 @@ const _scripts={};
 function loadScript(u){return _scripts[u]=_scripts[u]||new Promise((ok,no)=>{const s=document.createElement("script");s.src=u;s.onload=ok;s.onerror=()=>{delete _scripts[u];no(new Error("load"))};document.head.appendChild(s)})}
 async function pdfLib(){await loadScript(PDFJS_URL);window.pdfjsLib.GlobalWorkerOptions.workerSrc=PDFJS_WORKER;return window.pdfjsLib}
 /* 사진을 글자 읽기 좋게: 긴 변 2000px 안팎, 흑백 */
-async function prepImage(src){
+async function prepImage(src,mode){
   const img=await new Promise((ok,no)=>{const i=new Image();i.onload=()=>ok(i);i.onerror=no;i.src=src});
-  const k=Math.min(2.5,Math.max(1,1800/Math.max(img.width,img.height)));const c=document.createElement("canvas");c.width=Math.round(img.width*k);c.height=Math.round(img.height*k);
-  const x=c.getContext("2d");x.filter="grayscale(1) contrast(1.2)";x.drawImage(img,0,0,c.width,c.height);return c;
+  const target=(window.__OCR_T||{})[mode]||(mode==="bin"?3000:2400);
+  const k=Math.min(4,Math.max(1,target/Math.max(img.width,img.height)));const c=document.createElement("canvas");c.width=Math.round(img.width*k);c.height=Math.round(img.height*k);
+  const x=c.getContext("2d");x.imageSmoothingQuality="high";x.filter="grayscale(1) contrast(1.15)";x.drawImage(img,0,0,c.width,c.height);
+  if(mode==="bin"){ // 흑백 이진화(오츠): 바탕 무늬·워터마크 제거
+    const d=x.getImageData(0,0,c.width,c.height),p=d.data,h=new Array(256).fill(0);for(let i=0;i<p.length;i+=4)h[p[i]]++;
+    const tot=c.width*c.height;let sum=0;for(let i=0;i<256;i++)sum+=i*h[i];let sB=0,wB=0,best=0,th=128;
+    for(let i=0;i<256;i++){wB+=h[i];if(!wB)continue;const wF=tot-wB;if(!wF)break;sB+=i*h[i];const mB=sB/wB,mF=(sum-sB)/wF,v=wB*wF*(mB-mF)*(mB-mF);if(v>best){best=v;th=i}}
+    for(let i=0;i<p.length;i+=4){const v=p[i]>th?255:0;p[i]=p[i+1]=p[i+2]=v}x.putImageData(d,0,0)}
+  return c;
 }
 let _tw=null;
 async function ocrCanvas(cv,prog){
@@ -642,16 +649,24 @@ async function readBizText(file,prog){
     const vp=pg.getViewport({scale:2.2});const cv=document.createElement("canvas");cv.width=vp.width;cv.height=vp.height;await pg.render({canvasContext:cv.getContext("2d"),viewport:vp}).promise;
     return{text:await ocrCanvas(cv,prog),how:"ocr"};
   }
-  const url=URL.createObjectURL(file);try{return{text:await ocrCanvas(await prepImage(url),prog),how:"ocr"}}finally{URL.revokeObjectURL(url)}
+  const url=URL.createObjectURL(file);
+  try{const t1=await ocrCanvas(await prepImage(url,"g"),prog);let f1=parseBizReg(t1);
+    if(Object.keys(f1).length>=6)return{text:t1,how:"ocr",fields:f1};
+    prog("한 번 더 읽는 중… (흑백 처리)");const t2=await ocrCanvas(await prepImage(url,"bin"),prog);const f2=parseBizReg(t2);
+    const m=Object.assign({},f2,f1);return{text:t1+"\n\n----- 흑백으로 다시 읽은 글자 -----\n"+t2,how:"ocr",fields:m}}
+  finally{URL.revokeObjectURL(url)}
 }
 /* 글자에서 항목 뽑기 (글자 사이 띄어쓰기·OCR 잡음 허용) */
 function parseBizReg(raw){
   const L=s=>s.split("").map(ch=>ch.replace(/[()]/g,"\\$&")).join("\\s*");
   const lines=String(raw||"").split(/\n+/).map(x=>x.replace(/[|｜]/g," ").replace(/\s+/g," ").trim()).filter(Boolean);
   const all=lines.join("\n");const out={};
-  const nm=all.replace(/[oO]/g,"0").replace(/[lI]/g,"1").match(/(\d{3})\s*[-–—~.]\s*(\d{2})\s*[-–—~.]\s*(\d{5})/)||all.match(/등\s*록\s*번\s*호\D{0,6}(\d{3})\D{0,3}(\d{2})\D{0,3}(\d{5})/);
+  const dg=all.replace(/[oOㅇ]/g,"0").replace(/[lI|]/g,"1");const SEP="\\s*[-–—~.ㅡ一_=－\\s]\\s*";
+  const nm=dg.match(/등\s*록\s*번\s*호\D{0,8}(\d{3})\D{0,4}(\d{2})\D{0,4}(\d{5})(?!\d)/)||dg.match(new RegExp("(?<!\\d)(\\d{3})"+SEP+"(\\d{2})"+SEP+"(\\d{5})(?!\\d)"));
   if(nm)out.biz=`${nm[1]}-${nm[2]}-${nm[3]}`;
-  const after=(labels,stops)=>{for(const lb of labels){const re=new RegExp(L(lb)+"\\s*[:;：.]?\\s*(.*)");for(let i=0;i<lines.length;i++){const m=lines[i].match(re);if(m&&m[1]!==undefined){let v=m[1];
+  const FZ={"상":"[상삼샹]","호":"[호효흐]","성":"[성섬셩]","명":"[명멍맹멍]","대":"[대데]","표":"[표포]","자":"[자저]","소":"[소쇼]","재":"[재제]","지":"[지치]","업":"[업엄]","개":"[개게]","연":"[연언]","월":"[월윌]","일":"[일잃]","법":"[법볍]","인":"[인민]"};
+  const after=(labels,stops)=>{for(const lb of labels){const re=new RegExp(lb.split("").map(ch=>FZ[ch]||ch.replace(/[()]/g,"\\$&")).join("\\s*")+"\\s*[:;：.,ㆍ·]?\\s*(.*)");for(let i=0;i<lines.length;i++){const m=lines[i].match(re);if(m&&m[1]!==undefined){let v=m[1];
+    if(!v.replace(/[\s:;：.,ㆍ·]/g,"")&&lines[i+1]&&!/[:：]/.test(lines[i+1]))v=lines[i+1];
     for(const st of stops||[]){const k=v.search(new RegExp(L(st)));if(k>=0)v=v.slice(0,k)}v=v.replace(/^[\s:;：.]+|[\s:;：.]+$/g,"");if(v)return{v,i}}}}return null};
   const STOP=["생년월일","개업연월일","법인등록번호","사업장","성명","대표자","등록번호"];
   const sh=after(["법인명(단체명)","법인명","상호"],STOP);if(sh)out.name=sh.v.replace(/^\(?단체명\)?\s*/,"");
@@ -686,12 +701,13 @@ async function openBizDoc(path){
   const u=/^https?:/.test(data.signedUrl)?data.signedUrl:SB_URL+"/storage/v1"+data.signedUrl;if(w)w.location=u;else location.href=u;
 }
 /* 등록증 올리기 칸 (새 고객·고객정보 공용). onRead(fields,file) */
-function bizUploadBox(id){return `<div class="bizup" id="${id}"><label class="btn"><input type="file" accept="image/*,application/pdf" hidden>사업자등록증 올리기 (사진·PDF)</label><span class="mapt" data-st>올리면 상호·대표자·사업자번호·주소를 자동으로 채웁니다.</span><div data-pv></div></div>`}
+function bizUploadBox(id){return `<div class="bizup" id="${id}"><label class="btn"><input type="file" accept="image/*,application/pdf" hidden>사업자등록증 올리기 (사진·PDF)</label><span class="mapt" data-st>올리면 상호·대표자·사업자번호·주소를 자동으로 채웁니다.</span><div data-pv></div><details data-raw hidden><summary class="mapt">읽은 글자 보기</summary><pre class="rawtxt"></pre></details></div>`}
 function bindBizUpload(id,onRead){
   const box=document.getElementById(id);if(!box)return;const inp=box.querySelector("input[type=file]"),st=box.querySelector("[data-st]"),pv=box.querySelector("[data-pv]");
   inp.onchange=async()=>{const f=inp.files[0];if(!f)return;if(f.size>15*1024*1024){st.textContent="15MB보다 큰 파일은 올릴 수 없습니다.";return}
     box.file=f;pv.innerHTML=/^image\//.test(f.type)?`<img alt="올린 사업자등록증" src="${URL.createObjectURL(f)}">`:`<span class="mapt">📄 ${esc(f.name)}</span>`;
-    try{const r=await readBizText(f,m=>st.textContent=m);const fd=parseBizReg(r.text);const n=Object.keys(fd).length;
+    try{const r=await readBizText(f,m=>st.textContent=m);const fd=r.fields||parseBizReg(r.text);const n=Object.keys(fd).length;
+      const rw=box.querySelector("[data-raw]");if(rw){rw.hidden=false;rw.querySelector("pre").textContent=r.text||"(읽은 글자 없음)"}
       st.textContent=n?`${n}개 항목을 채웠습니다. 틀린 곳이 없는지 확인해 주세요.${r.how==="ocr"?" (사진에서 읽은 글자는 틀릴 수 있습니다)":""}`:"글자를 읽지 못했습니다. 직접 입력해 주세요. 등록증 파일은 함께 보관됩니다.";
       box.dataset.raw=r.text;onRead(fd,f)}
     catch(e){st.textContent="글자 읽기에 실패했습니다(인터넷 연결 확인). 직접 입력해 주세요. 파일은 함께 보관됩니다.";onRead({},f)}};
