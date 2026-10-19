@@ -179,6 +179,7 @@ dialog .df{padding:12px 18px;border-top:1px solid var(--line2);display:flex;just
 .chk{display:flex;flex-wrap:wrap;gap:6px}
 .chk label{display:inline-flex;gap:5px;align-items:center;border:1px solid var(--line);border-radius:14px;padding:3px 10px;font-size:13px;cursor:pointer}
 dialog{max-width:720px}
+#cfm{max-width:340px;width:calc(100% - 48px)}#cfm .cfmb{padding:22px 22px 16px;display:grid;gap:18px}#cfm p{margin:0;font-size:16px;font-weight:600;text-align:center}#cfm .cfmf{display:flex;justify-content:center;gap:10px}#cfm .btn{min-width:90px}
 .stafft{width:100%;border-collapse:collapse;font-size:13px;background:var(--panel)}
 .stafft td,.stafft th{padding:6px 6px;border-bottom:1px solid var(--line2);text-align:left;vertical-align:middle}
 .stafft input,.stafft select{padding:4px 6px;border:1px solid var(--line);border-radius:5px;background:var(--field);width:100%;min-width:70px}
@@ -267,6 +268,7 @@ dialog{max-width:720px}
   <p class="mapt" id="lMsg">회사에서 받은 이메일과 비밀번호로 로그인하세요.</p>
 </form></div>
 <div id="printRoot"></div>
+<dialog id="cfm" aria-labelledby="cfmMsg"><div class="cfmb"><p id="cfmMsg"></p><div class="cfmf"><button type="button" class="btn" id="cfmNo">취소</button><button type="button" class="btn pri" id="cfmYes">확인</button></div></div></dialog>
 <dialog id="dlg"><form method="dialog" id="dlgForm"><div class="dh" id="dlgH"></div><div class="db" id="dlgB"></div><div class="df" id="dlgF"></div></form></dialog>
 <div class="toast" id="toast" role="status"></div>
 
@@ -869,7 +871,7 @@ function renderPaySec(k){
   document.getElementById("pAdd").onclick=async()=>{let a=Number(val("pA")||0);const m=val("pM");if(!a)return toast("금액을 입력하세요");if(m==="승인취소"&&a>0)a=-a;
     const {error}=await sb.from("payments").insert({contract_id:k.id,customer_id:k.customer_id,pay_date:val("pD")||null,method:m,payer:val("pN").trim(),amount:a,memo:val("pMemo").trim()});
     if(error)return toast("입금을 저장하지 못했습니다: "+error.message);toast("입금을 추가했습니다");await after()};
-  box.querySelectorAll("[data-pdel]").forEach(b=>b.onclick=async()=>{if(!confirm("이 입금 기록을 삭제할까요?"))return;const {error}=await sb.from("payments").delete().eq("id",b.dataset.pdel);if(error)return toast("삭제하지 못했습니다: "+error.message);toast("삭제했습니다");await after()});
+  box.querySelectorAll("[data-pdel]").forEach(b=>b.onclick=async()=>{if(!await askConfirm("이 입금 기록을 삭제할까요?"))return;const {error}=await sb.from("payments").delete().eq("id",b.dataset.pdel);if(error)return toast("삭제하지 못했습니다: "+error.message);toast("삭제했습니다");await after()});
   const pd=document.getElementById("pDone");if(pd)pd.onclick=async()=>{const {error}=await sb.from("contracts").update({stage:"완료"}).eq("id",k.id);if(error)return toast("바꾸지 못했습니다: "+error.message);
     k.stage="완료";const s_=document.querySelector('#kf select[name=stage]');if(s_)s_.value="완료";toast("진행단계를 완료로 바꿨습니다");await reload(["contracts"],true);renderPaySec(k)};
 }
@@ -1395,21 +1397,27 @@ async function runImport(plan,replace){
 }
 
 /* ================= 공통 ================= */
+/* 화면 가운데 확인창 */
+function askConfirm(msg){const d=document.getElementById("cfm");document.getElementById("cfmMsg").textContent=msg;
+  return new Promise(ok=>{let done=false;const fin=v=>{if(done)return;done=true;d.close();ok(v)};
+    document.getElementById("cfmYes").onclick=()=>fin(true);document.getElementById("cfmNo").onclick=()=>fin(false);
+    d.oncancel=e=>{e.preventDefault();fin(false)};d.onkeydown=e=>{if(e.key==="Enter"&&!e.isComposing){e.preventDefault();e.stopPropagation();fin(true)}};
+    d.showModal();setTimeout(()=>document.getElementById("cfmYes").focus(),0)})}
 /* 입력 중 Enter: 창이 닫히지 않게 막고, "저장하시겠습니까?"를 물은 뒤 저장 */
 document.getElementById("dlgForm").addEventListener("submit",e=>e.preventDefault());
 document.getElementById("dlg").addEventListener("keydown",e=>{
   if(e.key!=="Enter"||e.isComposing||e.defaultPrevented)return;const el=e.target;
   if(!el.matches||!el.matches("input,select")||["checkbox","radio","file","button","submit"].includes(el.type))return;
   e.preventDefault();
-  if(el.closest(".payadd")){const b=document.getElementById("pAdd");if(b&&confirm("입금을 추가하시겠습니까?"))b.click();return}
+  if(el.closest(".payadd")){const b=document.getElementById("pAdd");if(b)askConfirm("입금을 추가하시겠습니까?").then(y=>{if(y)b.click()});return}
   const btn=[...document.querySelectorAll("#dlgF .btn.pri")].pop();if(!btn)return;
-  if(confirm(btn.textContent.trim()+"하시겠습니까?"))btn.click();
+  askConfirm(btn.textContent.trim()+"하시겠습니까?").then(y=>{if(y)btn.click();else el.focus()});
 });
 /* 고객정보 화면에서도 Enter는 확인 후 저장 */
 document.addEventListener("keydown",e=>{
   if(e.key!=="Enter"||e.isComposing||e.defaultPrevented)return;const el=e.target;const f=el.closest&&el.closest("#cf");
   if(!f||!el.matches("input,select")||["checkbox","radio","file"].includes(el.type))return;
-  e.preventDefault();if(confirm("저장하시겠습니까?"))f.requestSubmit();
+  e.preventDefault();askConfirm("저장하시겠습니까?").then(y=>{if(y)f.requestSubmit();else el.focus()});
 });
 /* 싱크준비: 상태만 보이고, 메모가 있으면 마우스를 올렸을 때 메모 상자 */
 function sinkCell(j){const s=esc(j.sink_status||""),m=String(j.sink_memo||"").trim();
