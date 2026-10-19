@@ -372,7 +372,7 @@ const DOCS=["미수령","사진","원본","전자서명"];
 const SINKS=["해당없음","발주대기","발주완료","중고사용","재고사용","기타"];
 const JST=["접수","배정","완료","취소"];
 let sb=null, me=null, staff=[], customers=[], contracts=[], jobs=[];
-let ui={view:"cust", sel:null, ctab:"info", q:"", stage:"", jscope:"mine", jkind:"", jpay:"", jview:"card", jst:"open", jq:"", draft:null, conf:null};
+let ui={view:"cust", sel:null, ctab:"info", q:"", stage:"", jscope:"mine", jkind:"", jpay:"", jview:"card", dkind:"as", dq:"", dsel:new Set(), jst:"open", jq:"", draft:null, conf:null};
 const isAdmin=()=>me&&me.role==="admin", isOffice=()=>me&&(me.role==="admin"||me.role==="office");
 const custById=id=>customers.find(c=>c.id===id);
 const staffName=id=>{const s=staff.find(x=>x.user_id===id);return s?s.name:""};
@@ -436,10 +436,10 @@ async function reload(tables){
 
 /* ================= 화면 틀 ================= */
 function render(){
-  const tabs=[["cust","고객"],["install","설치"],["as","A/S"]];if(isAdmin())tabs.push(["staff","직원"],["settings","설정"]);
+  const tabs=[["cust","고객"],["install","설치"],["as","A/S"]];if(isAdmin())tabs.push(["staff","직원"],["delete","삭제"],["settings","설정"]);
   document.getElementById("nav").innerHTML=tabs.map(([k,l])=>`<button type="button" class="${ui.view===k?"on":""}" data-v="${k}">${l}</button>`).join("");
   document.querySelectorAll("#nav button").forEach(b=>b.onclick=()=>{ui.view=b.dataset.v;render()});
-  if(ui.view==="cust")renderCustView();else if(ui.view==="install"||ui.view==="as")renderJobsView(ui.view);else if(ui.view==="staff")renderStaffView();else renderSettings();
+  if(ui.view==="cust")renderCustView();else if(ui.view==="install"||ui.view==="as")renderJobsView(ui.view);else if(ui.view==="staff")renderStaffView();else if(ui.view==="delete")renderDeleteView();else renderSettings();
 }
 
 /* ================= 고객 ================= */
@@ -744,6 +744,38 @@ async function renderStaffView(){
   document.getElementById("bLink").onclick=linkNames;
 }
 async function linkNames(){const {data,error}=await sb.rpc("link_staff_names");if(error)return toast("연결하지 못했습니다: "+error.message);const r=(data&&data[0])||{};toast(`담당 고객 ${r.owners||0}곳 · 계약 ${r.sellers||0}건 · 작업 ${r.jobs_linked||0}건 연결`);reload(["customers","contracts","jobs"])}
+
+/* ================= 삭제 (관리자) ================= */
+const DKIND={as:"A/S",install:"설치",ctr:"계약",cust:"고객"};
+function delRows(){
+  const q=ui.dq.trim().toLowerCase().replace(/-/g,"");const has=t=>!q||String(t).toLowerCase().replace(/-/g,"").includes(q);
+  if(ui.dkind==="as"||ui.dkind==="install")return jobs.filter(j=>j.kind===ui.dkind).map(j=>({id:j.id,date:j.request_date||"",title:j.customer_name,sub:[j.status,j.symptom,j.paid_type,j.cost?won0(j.cost)+"원":"",j.pay_status].filter(Boolean).join(" · ")})).filter(r=>has(r.title+" "+r.sub));
+  if(ui.dkind==="ctr")return contracts.map(k=>{const c=custById(k.customer_id);return{id:k.id,date:k.contract_date||"",title:c?c.name:"",sub:[k.stage,k.product,k.size,k.serial&&"SN "+k.serial,k.amount?won0(k.amount)+"원":""].filter(Boolean).join(" · ")}}).filter(r=>has(r.title+" "+r.sub));
+  return customers.map(c=>({id:c.id,date:(c.created_at||"").slice(0,10),title:c.name,sub:[c.ceo,c.phone||c.phone2,`계약 ${custContracts(c.id).length} · 작업 ${custJobs(c.id).length}`].filter(Boolean).join(" · ")})).filter(r=>has(r.title+" "+r.sub));
+}
+function renderDeleteView(){
+  if(!isAdmin()){view().innerHTML=`<div class="empty"><h2>관리자만 쓸 수 있는 화면입니다</h2></div>`;return}
+  const rows=delRows().sort((a,b)=>(b.date||"").localeCompare(a.date||""));
+  [...ui.dsel].forEach(id=>{if(!rows.some(r=>r.id===id))ui.dsel.delete(id)});
+  const shown=rows.slice(0,500);
+  view().innerHTML=`<div class="toolbar"><h2 style="margin:0 8px 0 0;font-size:18px">삭제</h2>
+    <div class="nav">${Object.entries(DKIND).map(([k,l])=>`<button type="button" data-dk="${k}" class="${ui.dkind===k?"on":""}">${l}</button>`).join("")}</div>
+    <input id="dQ" type="search" placeholder="업체명·내용 검색" value="${esc(ui.dq)}"><span class="mapt">${rows.length}건 · 선택 ${ui.dsel.size}건</span><span style="flex:1"></span>
+    <button class="btn danger" type="button" id="bDel" ${ui.dsel.size?"":"disabled"}>선택한 ${ui.dsel.size}건 삭제</button></div>
+    <div class="sec" style="padding-bottom:0"><p class="mapt">${ui.dkind==="cust"?"고객을 지우면 그 고객의 계약·설치·A/S 기록도 함께 지워집니다.":ui.dkind==="ctr"?"계약을 지워도 연결된 설치·A/S 기록은 남습니다.":"지운 기록은 되돌릴 수 없습니다."} 삭제는 관리자만 할 수 있습니다.</p></div>
+    <div class="wrapx"><table class="stafft"><thead><tr><th style="width:36px"><input type="checkbox" id="dAll" aria-label="전체 선택" ${shown.length&&shown.every(r=>ui.dsel.has(r.id))?"checked":""}></th><th>날짜</th><th>업체명</th><th>내용</th></tr></thead><tbody>
+    ${shown.map(r=>`<tr><td><input type="checkbox" data-d="${r.id}" ${ui.dsel.has(r.id)?"checked":""} aria-label="선택"></td><td class="money">${esc(r.date)}</td><td>${esc(r.title)}</td><td>${esc(r.sub)}</td></tr>`).join("")||`<tr><td colspan="4" class="mapt">기록이 없습니다.</td></tr>`}
+    </tbody></table>${rows.length>shown.length?`<p class="mapt">${rows.length-shown.length}건 더 있습니다. 검색으로 좁혀 주세요.</p>`:""}</div>`;
+  view().querySelectorAll("[data-dk]").forEach(b=>b.onclick=()=>{ui.dkind=b.dataset.dk;ui.dsel=new Set();renderDeleteView()});
+  const dq=document.getElementById("dQ");dq.oninput=e=>{ui.dq=e.target.value;clearTimeout(dq._t);dq._t=setTimeout(()=>{renderDeleteView();const n=document.getElementById("dQ");n.focus();n.setSelectionRange(n.value.length,n.value.length)},250)};
+  view().querySelectorAll("[data-d]").forEach(x=>x.onchange=()=>{x.checked?ui.dsel.add(x.dataset.d):ui.dsel.delete(x.dataset.d);renderDeleteView()});
+  document.getElementById("dAll").onchange=e=>{shown.forEach(r=>e.target.checked?ui.dsel.add(r.id):ui.dsel.delete(r.id));renderDeleteView()};
+  document.getElementById("bDel").onclick=()=>{const n=ui.dsel.size;const names=shown.filter(r=>ui.dsel.has(r.id)).slice(0,5).map(r=>esc(r.title)).join(", ");
+    openDlg(`${DKIND[ui.dkind]} ${n}건 삭제`,`<p>${names}${n>5?` 외 ${n-5}건`:""}을(를) 삭제합니다.</p><p><b>되돌릴 수 없습니다.</b>${ui.dkind==="cust"?" 그 고객의 계약·설치·A/S 기록도 모두 지워집니다.":""}</p>`,
+     [["취소"],["삭제","danger",async()=>{const tb=ui.dkind==="cust"?"customers":ui.dkind==="ctr"?"contracts":"jobs";const ids=[...ui.dsel];
+       for(let i=0;i<ids.length;i+=200){const {error}=await sb.from(tb).delete().in("id",ids.slice(i,i+200));if(error)return toast("삭제하지 못했습니다: "+error.message)}
+       ui.dsel=new Set();toast(`${n}건 삭제했습니다`);reload(["customers","contracts","jobs"])}]])};
+}
 
 /* ================= 설정 (관리자) ================= */
 function renderSettings(){
