@@ -383,7 +383,7 @@ function canEditJob(j){return isOffice()||(j.techs||[]).includes(me.id)}
 /* ================= 시작·로그인 ================= */
 async function init(){
   if(!window.supabase||!window.supabase.createClient){view().innerHTML=`<div class="empty"><h2>프로그램을 불러오지 못했습니다</h2><p>인터넷 연결을 확인하고 새로고침해 주세요.</p></div>`;return}
-  sb=window.supabase.createClient(SB_URL,SB_KEY,{auth:{persistSession:true,autoRefreshToken:true}});
+  sb=window.supabase.createClient(SB_URL,SB_KEY,{auth:{persistSession:true,autoRefreshToken:true},global:{fetch:(u,o)=>fetch(u,Object.assign({},o,{cache:"no-store"}))}});
   const {data}=await sb.auth.getSession();
   if(!data||!data.session){showLogin();return}
   await afterLogin(data.session.user);
@@ -428,14 +428,33 @@ async function loadAll(){
   if(ui.sel&&!custById(ui.sel))ui.sel=null;
   buildIdx();render();
 }
-async function reload(tables){
-  const m={customers:()=>fetchAll("customers"),contracts:()=>fetchAll("contracts"),jobs:()=>fetchAll("jobs"),staff:()=>fetchAll("staff","user_id,name,role,aliases,active")};
-  for(const t of tables){const d=await m[t]();if(t==="customers")customers=d;if(t==="contracts")contracts=d;if(t==="jobs")jobs=d;if(t==="staff")staff=d}
-  buildIdx();render();
+const TBL={customers:()=>fetchAll("customers"),contracts:()=>fetchAll("contracts"),jobs:()=>fetchAll("jobs"),staff:()=>fetchAll("staff","user_id,name,role,aliases,active")};
+let reloadSeq=0;
+async function reload(tables,quiet){
+  const seq=++reloadSeq;let res;
+  try{res=await Promise.all(tables.map(t=>TBL[t]()))}catch(e){if(!quiet)toast("최신 내용을 불러오지 못했습니다. 인터넷 연결을 확인해 주세요.");return false}
+  if(seq!==reloadSeq&&quiet)return false;
+  let changed=false;
+  tables.forEach((t,i)=>{const d=res[i];const old={customers,contracts,jobs,staff}[t];if(JSON.stringify(old)!==JSON.stringify(d))changed=true;
+    if(t==="customers")customers=d;if(t==="contracts")contracts=d;if(t==="jobs")jobs=d;if(t==="staff")staff=d});
+  if(tables.includes("staff")&&me){const s=staff.find(x=>x.user_id===me.id);if(s){me.name=s.name;me.role=s.role;document.getElementById("modeLabel").textContent=`${me.name||me.email} · ${ROLE[me.role]}`}}
+  if(ui.sel&&!custById(ui.sel))ui.sel=null;
+  buildIdx();if(!quiet||changed)render();return true;
 }
+/* 다른 직원이 바꾼 내용 자동 반영: 30초마다, 그리고 창으로 돌아올 때 (입력 중이거나 창이 열려 있으면 건너뜀) */
+function bgRefresh(){
+  if(!me||!me.role||document.hidden||ui.dirty||document.getElementById("dlg").open)return;
+  const a=document.activeElement;if(a&&a.closest&&a.closest("#view form,#view .stafft,#view fieldset"))return;
+  reload(["customers","contracts","jobs","staff"],true);
+}
+setInterval(bgRefresh,30000);
+window.addEventListener("focus",bgRefresh);
+document.addEventListener("visibilitychange",()=>{if(!document.hidden)bgRefresh()});
+document.getElementById("view").addEventListener("input",e=>{if(e.target.closest("form,.stafft,fieldset"))ui.dirty=true});
 
 /* ================= 화면 틀 ================= */
 function render(){
+  ui.dirty=false;
   const tabs=[["cust","고객"],["install","설치"],["as","A/S"]];if(isAdmin())tabs.push(["staff","직원"],["settings","설정"]);
   document.getElementById("nav").innerHTML=tabs.map(([k,l])=>`<button type="button" class="${ui.view===k?"on":""}" data-v="${k}">${l}</button>`).join("");
   document.querySelectorAll("#nav button").forEach(b=>b.onclick=()=>{ui.view=b.dataset.v;ui.jsel=new Set();render()});
