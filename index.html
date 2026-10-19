@@ -125,6 +125,9 @@ dialog .df{padding:12px 18px;border-top:1px solid var(--line2);display:flex;just
 .wtbox{max-height:calc(100vh - 260px);overflow:auto;border:1px solid var(--line);border-radius:6px}
 .sumt th{white-space:nowrap}
 .wrapx.vis{overflow:visible}
+.hastip{border-bottom:1px dashed currentColor;cursor:help;position:relative;padding-right:9px}
+.hastip::after{content:"";position:absolute;right:0;top:1px;width:6px;height:6px;border-radius:50%;background:var(--accent)}
+#tipbox{position:fixed;z-index:1000;max-width:280px;background:#1f2937;color:#fff;font-size:13px;line-height:1.5;padding:7px 10px;border-radius:6px;box-shadow:0 4px 14px rgba(0,0,0,.25);white-space:pre-wrap;pointer-events:none}
 .ksec{font-size:16px;font-weight:700;margin:14px 0 -2px;padding:2px 0 6px 10px;border-left:4px solid var(--accent);border-bottom:1px solid var(--line);color:var(--fg)}
 #kf>.ksec:first-child{margin-top:0}
 .sr{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0)}
@@ -777,7 +780,7 @@ function ctrCell(col,k,c,st,basis){
     case"size":return `<td>${esc([k.size,k.options].filter(Boolean).join(" "))}</td>`;
     case"serial":return `<td>${esc(k.serial||"")}</td>`;
     case"wash":return `<td>${k.wash_added?"구매":""}</td>`;
-    case"sink":return `<td title="${esc(ij&&ij.sink_memo||"")}">${esc(ij?[ij.sink_status,ij.sink_memo&&"("+ij.sink_memo+")"].filter(Boolean).join(" "):"")}</td>`;
+    case"sink":return `<td>${ij?sinkCell(ij):""}</td>`;
     case"parts":return `<td>${esc(ij&&ij.parts||"")}</td>`;
     case"amount":return `<td class="num">${won0(k.amount)}</td>`;
     case"card":return `<td class="num">${st.card?won0(st.card):""}</td>`;
@@ -1049,7 +1052,7 @@ function renderWorkView(){
         <td><b>${esc(j.customer_name||c.name||"")}</b></td><td>${esc(c.phone||c.phone2||"")}</td><td>${esc(region(j.address||c.address))}</td><td class="wrap">${esc(j.address||c.address||"")}</td>
         <td>${esc(ymd2(j.kind!=="as"&&k.contract_date?k.contract_date:rd))}</td><td class="${vcls}">${esc(vd||"")}</td><td>${wday(vd)}</td><td>${esc(j.visit_time||"")}</td>
         <td>${esc(p.product||"")}</td><td>${esc(p.size||"")}</td><td>${esc(p.serial||"")}</td><td>${k.wash_added?"구매":""}</td>
-        <td title="${esc(j.sink_memo||"")}">${j.kind==="as"?"":esc(j.sink_status||"")}</td><td class="wrap">${esc(j.symptom||"")}</td><td>${esc(sales)}</td><td>${esc(whoOf(j)||"")}</td>
+        <td>${j.kind==="as"?"":sinkCell(j)}</td><td class="wrap">${esc(j.symptom||"")}</td><td>${esc(sales)}</td><td>${esc(whoOf(j)||"")}</td>
         <td><span class="badge s-${j.status}">${esc(j.status)}</span>${j.kind==="as"&&j.pay_status==="미수"?` <span class="badge remove">미수</span>`:""}</td></tr>`}).join("")||`<tr><td colspan="21" class="mapt" style="cursor:default">해당하는 작업이 없습니다.</td></tr>`}</tbody></table></div>
      ${list.length>500?`<p class="mapt">앞의 500건만 보입니다. 검색이나 구분으로 좁혀 주세요.</p>`:""}</div>`};
   view().innerHTML=`<div class="sumwrap"><div style="display:grid;gap:6px"><div style="display:flex;gap:8px;align-items:center"><h2 style="margin:0;font-size:18px">작업현황</h2>
@@ -1386,6 +1389,17 @@ async function runImport(plan,replace){
 }
 
 /* ================= 공통 ================= */
+/* 싱크준비: 상태만 보이고, 메모가 있으면 마우스를 올렸을 때 메모 상자 */
+function sinkCell(j){const s=esc(j.sink_status||""),m=String(j.sink_memo||"").trim();
+  return m?`<span class="hastip" data-tip="${esc(m)}" tabindex="0">${s||"메모"}</span>`:s}
+(function(){const box=document.createElement("div");box.id="tipbox";box.setAttribute("role","tooltip");box.hidden=true;document.body.appendChild(box);
+  const show=el=>{box.textContent=el.dataset.tip;box.hidden=false;const r=el.getBoundingClientRect();const w=box.offsetWidth,h=box.offsetHeight;
+    let x=r.left,y=r.bottom+6;if(x+w>innerWidth-8)x=innerWidth-8-w;if(y+h>innerHeight-8)y=r.top-h-6;box.style.left=Math.max(8,x)+"px";box.style.top=Math.max(8,y)+"px"};
+  const hide=()=>{box.hidden=true};
+  document.addEventListener("mouseover",e=>{const el=e.target.closest&&e.target.closest("[data-tip]");if(el)show(el)});
+  document.addEventListener("mouseout",e=>{const el=e.target.closest&&e.target.closest("[data-tip]");if(el&&!el.contains(e.relatedTarget))hide()});
+  document.addEventListener("focusin",e=>{const el=e.target.closest&&e.target.closest("[data-tip]");if(el)show(el)});
+  document.addEventListener("focusout",hide);document.addEventListener("scroll",hide,true);})();
 /* 넓은 표: 화면 맨 아래에 붙는 가로 막대 (표의 가로 스크롤과 함께 움직임) */
 function hbar(box){
   if(!box||box.nextElementSibling&&box.nextElementSibling.classList.contains("hbar"))return;
