@@ -517,11 +517,18 @@ document.addEventListener("visibilitychange",()=>{if(!document.hidden)bgRefresh(
 document.getElementById("view").addEventListener("input",e=>{if(e.target.closest("form,.stafft,fieldset"))ui.dirty=true});
 
 /* ================= 화면 틀 ================= */
-function render(){
+/* 다시 그려도 스크롤 위치 유지 (목록 표·고객 목록·페이지) */
+const SCROLLERS=".wtbox,.clist,.wrapx,.sumbox,.cards,#main";
+function snapScroll(){return{v:ui.view,x:scrollX,y:scrollY,els:[...document.querySelectorAll(SCROLLERS)].map(e=>[e.scrollTop,e.scrollLeft])}}
+function restoreScroll(s){if(!s||s.v!==ui.view)return;const els=[...document.querySelectorAll(SCROLLERS)];
+  s.els.forEach((p,i)=>{const e=els[i];if(e){e.scrollTop=p[0];e.scrollLeft=p[1]}});window.scrollTo(s.x,s.y);
+  document.querySelectorAll(".hbar").forEach(b=>{const box=b.previousElementSibling;if(box)b.scrollLeft=box.scrollLeft})}
+function render(){if(ui._fresh){ui._fresh=false;render0();window.scrollTo(0,0);return}const _sv=snapScroll();try{render0()}finally{restoreScroll(_sv)}}
+function render0(){
   ui.dirty=false;
   const tabs=[["cust","고객"]];if(me.role!=="tech")tabs.push(["ctrm","계약관리"]);tabs.push(["work","작업현황"]);if(isAdmin())tabs.push(["staff","직원"],["settings","설정"]);
   document.getElementById("nav").innerHTML=tabs.map(([k,l])=>`<button type="button" class="${ui.view===k?"on":""}" data-v="${k}">${l}</button>`).join("");
-  document.querySelectorAll("#nav button").forEach(b=>b.onclick=()=>{ui.view=b.dataset.v;ui.jsel=new Set();render()});
+  document.querySelectorAll("#nav button").forEach(b=>b.onclick=()=>{ui.view=b.dataset.v;ui.jsel=new Set();ui._fresh=true;render()});
   if(ui.view==="install"||ui.view==="as")ui.view="work";
   if(ui.view==="cust")renderCustView();else if(ui.view==="work")renderWorkView();else if(ui.view==="ctrm")renderCtrView();else if(ui.view==="staff")renderStaffView();else if(ui.view==="delete")renderDeleteView();else renderSettings();
 }
@@ -816,7 +823,8 @@ function ctrCell(col,k,c,st,basis){
   }
   return "<td></td>";
 }
-function renderCtrView(){
+function renderCtrView(){const _sv=snapScroll();renderCtrView0();restoreScroll(_sv)}
+function renderCtrView0(){
   if(!ui.cm)ui.cm=thisMonth();if(ui.crow===undefined)ui.crow="";if(ui.cct===undefined)ui.cct="";if(ui.cq===undefined)ui.cq="";
   const [st0,en0]=monthRange(ui.cm);const inM=d=>d&&d>=st0&&d<en0;
   const rows=[];
@@ -1052,7 +1060,8 @@ function monthBuckets(list,ym){
   return out;
 }
 function whoOf(j){const tn=(j.techs||[]).map(staffName).filter(Boolean);const extra=String(j.tech_names||"").split(/[\s,/]+/).filter(t=>t&&!tn.includes(t)&&!staff.some(x=>tn.includes(x.name)&&(x.aliases||[]).includes(t))).join(" ");return [tn.join(", "),extra].filter(Boolean).join(" · ")}
-function renderWorkView(){
+function renderWorkView(){const _sv=snapScroll();renderWorkView0();restoreScroll(_sv)}
+function renderWorkView0(){
   if(!ui.wm)ui.wm=thisMonth();if(!ui.wrow)ui.wrow="open";if(ui.wkind===undefined)ui.wkind="";
   if(!ui.wview)ui.wview=window.innerWidth<800?"card":"table";
   const scoped=jobs.filter(j=>ui.jscope!=="mine"||(j.techs||[]).includes(me.id));
