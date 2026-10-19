@@ -125,6 +125,9 @@ dialog .df{padding:12px 18px;border-top:1px solid var(--line2);display:flex;just
 .wtbox{max-height:calc(100vh - 260px);overflow:auto;border:1px solid var(--line);border-radius:6px}
 .sumt th{white-space:nowrap}
 .wrapx.vis{overflow:visible}
+.wt.ct thead th{position:sticky}.wt.ct .rz{position:absolute;top:0;right:-3px;width:7px;height:100%;cursor:col-resize;z-index:2;touch-action:none}
+.wt.ct .rz::after{content:"";position:absolute;left:3px;top:20%;height:60%;border-left:1px solid var(--line)}.wt.ct .rz:hover::after{border-left:2px solid var(--accent)}
+body.resizing,body.resizing *{cursor:col-resize!important;user-select:none}
 .hastip{border-bottom:1px dashed currentColor;cursor:help;position:relative;padding-right:9px}
 .hastip::after{content:"";position:absolute;right:0;top:1px;width:6px;height:6px;border-radius:50%;background:var(--accent)}
 #tipbox{position:fixed;z-index:1000;max-width:280px;background:#1f2937;color:#fff;font-size:13px;line-height:1.5;padding:7px 10px;border-radius:6px;box-shadow:0 4px 14px rgba(0,0,0,.25);white-space:pre-wrap;pointer-events:none}
@@ -748,6 +751,22 @@ function getCols(){let v=null;try{v=JSON.parse(localStorage.getItem(colKey())||"
   CCOLS.forEach(([k,,d],i)=>{if(d&&!seen.includes(k)&&!cols.includes(k)){const prev=CCOLS.slice(0,i).map(c=>c[0]).reverse().find(x=>cols.includes(x));cols.splice(prev?cols.indexOf(prev)+1:cols.length,0,k)}});
   return cols}
 function setCols(v){try{localStorage.setItem(colKey(),JSON.stringify({cols:v,seen:CCOLS.map(c=>c[0])}))}catch(e){}}
+/* 열 너비 조절 (브라우저별로 기억) */
+function cwKey(){return "hc.colw.ctr."+(me&&me.id||"")}
+function getColW(){try{return JSON.parse(localStorage.getItem(cwKey())||"{}")||{}}catch(e){return{}}}
+function setColW(o){try{localStorage.setItem(cwKey(),JSON.stringify(o))}catch(e){}}
+function applyColW(cols,live){const w=Object.assign(getColW(),live||{});let st=document.getElementById("colwStyle");if(!st){st=document.createElement("style");st.id="colwStyle";document.head.appendChild(st)}
+  st.textContent=cols.map((c,i)=>w[c]?`.wt.ct tr>*:nth-child(${i+2}){width:${w[c]}px;min-width:${w[c]}px;max-width:${w[c]}px;overflow:hidden;text-overflow:ellipsis}`:"").join("\n")}
+function bindColResize(cols){
+  view().querySelectorAll(".wt.ct .rz").forEach(h=>{
+    h.onclick=e=>e.stopPropagation();
+    h.ondblclick=e=>{e.stopPropagation();const w=getColW();delete w[h.dataset.rz];setColW(w);applyColW(cols)};
+    h.onpointerdown=e=>{e.preventDefault();e.stopPropagation();const th=h.parentElement,k=h.dataset.rz,x0=e.clientX,w0=th.getBoundingClientRect().width;let w=w0;
+      h.setPointerCapture(e.pointerId);document.body.classList.add("resizing");
+      h.onpointermove=ev=>{w=Math.max(36,Math.round(w0+ev.clientX-x0));applyColW(cols,{[k]:w})};
+      h.onpointerup=()=>{h.onpointermove=null;h.onpointerup=null;document.body.classList.remove("resizing");const o=getColW();o[k]=w;setColW(o);applyColW(cols)}};
+  });
+}
 function colPicker(onDone){
   let cur=getCols();const lab=Object.fromEntries(CCOLS.map(c=>[c[0],c[1]]));
   const draw=()=>{const order=[...cur,...CCOLS.map(c=>c[0]).filter(x=>!cur.includes(x))];
@@ -756,7 +775,7 @@ function colPicker(onDone){
     document.querySelectorAll("#cpList [data-ck]").forEach(x=>x.onchange=()=>{const k=x.dataset.ck;cur=x.checked?[...cur,k]:cur.filter(y=>y!==k);draw()});
     document.querySelectorAll("#cpList [data-up],#cpList [data-dn]").forEach(b=>b.onclick=()=>{const k=b.dataset.up||b.dataset.dn;const i=cur.indexOf(k),j=b.dataset.up?i-1:i+1;if(j<0||j>=cur.length)return;[cur[i],cur[j]]=[cur[j],cur[i]];draw()})};
   openDlg("입력화면설정",`<p class="mapt">체크한 열만 목록에 보입니다. ↑↓로 순서를 바꿀 수 있습니다. 이 컴퓨터(브라우저)에 기억됩니다.</p><div id="cpList" class="cplist"></div>`,
-    [["기본값으로","",()=>{cur=CCOLS.filter(c=>c[2]).map(c=>c[0]);draw();return true}],["취소"],["적용","pri",()=>{if(!cur.length){toast("열을 하나 이상 고르세요");return true}setCols(cur);onDone()}]]);
+    [["열 너비 초기화","",()=>{setColW({});applyColW(getCols());toast("열 너비를 원래대로 돌렸습니다");return true}],["기본값으로","",()=>{cur=CCOLS.filter(c=>c[2]).map(c=>c[0]);draw();return true}],["취소"],["적용","pri",()=>{if(!cur.length){toast("열을 하나 이상 고르세요");return true}setCols(cur);onDone()}]]);
   draw();
 }
 function ctrCell(col,k,c,st,basis){
@@ -765,7 +784,7 @@ function ctrCell(col,k,c,st,basis){
     case"basis":{const d=k.contract_date||"";return `<td title="${esc(basis.join("·"))}">${esc(d?d.slice(2,4)+d.slice(5,7):"")}</td>`}
     case"ctype":return `<td><span class="tag ct-${esc(k.contract_type||"구매")}">${esc(k.contract_type||"구매")}</span></td>`;
     case"stage":return `<td><span class="tag st-${esc(k.stage)}">${esc(k.stage)}</span></td>`;
-    case"name":return `<td><b>${esc(c.name||"")}</b></td>`;
+    case"name":return `<td title="${esc(c.name||"")}"><b>${esc(c.name||"")}</b></td>`;
     case"ceo":return `<td>${esc(c.ceo||"")}</td>`;
     case"phone":return `<td>${esc(c.phone||c.phone2||"")}</td>`;
     case"addr":return `<td class="wrap">${esc(c.address||"")}</td>`;
@@ -833,10 +852,11 @@ function renderCtrView(){
    <div class="toolbar"><input id="cQ" type="search" placeholder="업체명·대표자·전화·시리얼·담당 검색" value="${esc(ui.cq)}">
      <span class="mapt">${ui.crow?esc(CROWS.find(y=>y[0]===ui.crow)[1])+" · ":""}${ui.cct?esc(ui.cct)+" · ":""}${list.length}건</span>${ui.crow||ui.cct?`<button class="btn sm" type="button" id="cAll">전체 보기</button>`:""}
      <span style="flex:1"></span><button class="btn" type="button" id="cCols">입력화면설정</button></div>
-   <div class="wrapx vis" style="padding-top:10px"><div class="wtbox"><table class="wt ct"><thead><tr><th>#</th>${cols.map(c=>`<th class="${MONEYC.has(c)?"num":""}">${esc(lab[c])}</th>`).join("")}</tr></thead><tbody>
+   <div class="wrapx vis" style="padding-top:10px"><div class="wtbox"><table class="wt ct"><thead><tr><th>#</th>${cols.map(c=>`<th class="${MONEYC.has(c)?"num":""}" data-ck="${c}">${esc(lab[c])}<span class="rz" data-rz="${c}" title="끌어서 너비 조절 · 두 번 클릭하면 원래대로"></span></th>`).join("")}</tr></thead><tbody>
     ${shown.map((x,i)=>`<tr data-ck="${x.k.id}" class="rs-${esc(x.k.stage)}"><td>${i+1}</td>${cols.map(c=>ctrCell(c,x.k,x.c,x.s,x.b)).join("")}</tr>`).join("")||`<tr><td colspan="${cols.length+1}" class="mapt" style="cursor:default">해당하는 계약이 없습니다.</td></tr>`}</tbody>
     ${shown.length?`<tfoot><tr><th></th>${cols.map(c=>`<th class="${MONEYC.has(c)?"num":""}">${MONEYC.has(c)?won0(tot[c]):c===cols[0]?"합계":""}</th>`).join("")}</tr></tfoot>`:""}</table></div>
     ${list.length>500?`<p class="mapt">앞의 500건만 보입니다. 검색으로 좁혀 주세요.</p>`:""}</div>`;
+  applyColW(cols);bindColResize(cols);
   view().querySelectorAll(".wtbox").forEach(hbar);
   const re=()=>renderCtrView();
   view().querySelectorAll(".sumt td.cl").forEach(td=>td.onclick=()=>{ui.crow=td.dataset.r;ui.cct=td.dataset.t;re()});
