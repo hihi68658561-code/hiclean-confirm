@@ -622,8 +622,8 @@ async function pdfLib(){await loadScript(PDFJS_URL);window.pdfjsLib.GlobalWorker
 /* 사진을 글자 읽기 좋게: 긴 변 2000px 안팎, 흑백 */
 async function prepImage(src,mode){
   const img=await new Promise((ok,no)=>{const i=new Image();i.onload=()=>ok(i);i.onerror=no;i.src=src});
-  const target=(window.__OCR_T||{})[mode]||(mode==="bin"?3000:2400);
-  const k=Math.min(4,Math.max(1,target/Math.max(img.width,img.height)));const c=document.createElement("canvas");c.width=Math.round(img.width*k);c.height=Math.round(img.height*k);
+  const target=(window.__OCR_T||{})[mode]||2400;
+  const k=Math.min(4,Math.max(0.2,target/Math.max(img.width,img.height)));/* 큰 스캔은 줄이고 작은 사진은 키워 A4 약 200dpi로 */const c=document.createElement("canvas");c.width=Math.round(img.width*k);c.height=Math.round(img.height*k);
   const x=c.getContext("2d");x.imageSmoothingQuality="high";x.filter="grayscale(1) contrast(1.15)";x.drawImage(img,0,0,c.width,c.height);
   if(mode==="bin"){ // 흑백 이진화(오츠): 바탕 무늬·워터마크 제거
     const d=x.getImageData(0,0,c.width,c.height),p=d.data,h=new Array(256).fill(0);for(let i=0;i<p.length;i+=4)h[p[i]]++;
@@ -677,6 +677,7 @@ function parseBizReg(raw){
     if(nx&&!/[:：]/.test(nx)&&!lab.test(nx)&&nx.length<30&&!/(호|층|\))$/.test(v))v+=" "+nx;out.addr=v.replace(/\s{2,}/g," ").trim()}
   const ut=all.match(new RegExp(L("업태")+"\\s*[:：]?\\s*(.+?)\\s*"+L("종목")+"\\s*[:：]?\\s*([^\\n]+)"));if(ut){out.type=ut[1].trim();out.item=ut[2].trim()}
   else{const a=after(["업태"],["종목"]);if(a)out.type=a.v;const b=after(["종목"]);if(b)out.item=b.v}
+  if(!out.type){const k=after(["사업의종류","사업의 종류"]);if(k){const w=k.v.replace(/^(업\s*태|종\s*목)\s*/,"").split(/\s+/);if(w[0]){out.type=w[0];if(w.length>1)out.item=w.slice(1).join(" ")}}}
   return out;
 }
 /* 큰 사진은 보관 전에 줄임 (긴 변 2400px, JPEG) */
