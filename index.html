@@ -736,14 +736,14 @@ function renderWorkView(){
     <select id="jPay" aria-label="A/S 결제"><option value="">A/S 결제 전체</option><option value="미수" ${ui.jpay==="미수"?"selected":""}>A/S 미수만</option><option value="완료" ${ui.jpay==="완료"?"selected":""}>A/S 납부 완료만</option><option value="open" ${ui.jpay==="open"?"selected":""}>A/S 매출마감 안 된 내역</option><option value="cancel" ${ui.jpay==="cancel"?"selected":""}>A/S 취소 건만</option></select>
     <input id="jQ" type="search" placeholder="업체명·전화·주소·기사 검색" value="${esc(ui.jq)}">
     <div class="nav" role="group" aria-label="보기"><button type="button" data-wv="table" class="${ui.wview==="table"?"on":""}">표</button><button type="button" data-wv="card" class="${ui.wview==="card"?"on":""}">카드</button><button type="button" data-wv="pay" class="${ui.wview==="pay"?"on":""}">결제 표</button></div>
-    <span class="mapt">${ui.jpay?"":esc(rowLabel)+" · "}${list.length}건</span><span style="flex:1"></span>
+    <span class="mapt">${ui.jpay?"":esc(rowLabel)+" · "}${ui.wview==="pay"?"A/S "+list.filter(j=>j.kind==="as").length:list.length}건</span><span style="flex:1"></span>
     ${admin?`<label class="chip"><input type="checkbox" id="jAll">전체 선택</label><button class="btn danger" type="button" id="bJDel" disabled>선택 삭제 (0)</button>`:""}
     ${canNewJob(null)?`<button class="btn pri" id="bNewJ">+ 접수</button>`:""}</div>
     ${ui.wview==="pay"?payTable(list.filter(j=>j.kind==="as")):ui.wview==="card"?`<div class="cards">${list.slice(0,300).map(j=>jobCard(j,admin)).join("")||`<div class="empty" style="padding:8px 0">해당하는 작업이 없습니다.</div>`}</div>`:tbl()}`;
   const re=()=>renderWorkView();
-  view().querySelectorAll(".sumt td.cl").forEach(td=>td.onclick=()=>{ui.wrow=td.dataset.r;ui.wkind=td.dataset.k;ui.jpay="";re()});
-  view().querySelectorAll("[data-wk]").forEach(b=>b.onclick=()=>{ui.wkind=b.dataset.wk;re()});
-  view().querySelectorAll("[data-wv]").forEach(b=>b.onclick=()=>{ui.wview=b.dataset.wv;re()});
+  view().querySelectorAll(".sumt td.cl").forEach(td=>td.onclick=()=>{ui.wrow=td.dataset.r;ui.wkind=td.dataset.k;ui.jpay="";if(ui.wview==="pay")ui.wview="table";re()});
+  view().querySelectorAll("[data-wk]").forEach(b=>b.onclick=()=>{ui.wkind=b.dataset.wk;if(ui.wview==="pay"&&ui.wkind!=="as")ui.wview="table";re()});
+  view().querySelectorAll("[data-wv]").forEach(b=>b.onclick=()=>{ui.wview=b.dataset.wv;if(ui.wview==="pay")ui.wkind="as";re()});
   document.getElementById("wM").onchange=e=>{if(e.target.value){ui.wm=e.target.value;re()}};
   const wn=document.getElementById("wNow");if(wn)wn.onclick=()=>{ui.wm=thisMonth();re()};
   document.getElementById("wRow").onchange=e=>{ui.wrow=e.target.value;re()};
