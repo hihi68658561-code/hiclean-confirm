@@ -1258,7 +1258,7 @@ document.getElementById("fileIn").onchange=async e=>{
   const plan=planImport(parsed);
   openDlg("엑셀 이관",`<p><b>${esc(f.name)}</b> · ${parsed.length}줄</p>
    <table class="stafft"><tbody><tr><td>새 고객</td><td>${plan.newCust.length}곳</td></tr><tr><td>새 계약</td><td>${plan.newCtr.length}건</td></tr><tr><td>새 설치 작업</td><td>${plan.newJob.length}건</td></tr><tr><td>새 입금 내역</td><td>${plan.newPay.length}건</td></tr><tr><td>이미 있는 계약</td><td>${plan.skipped}건</td></tr></tbody></table>
-   ${plan.updCtr.length?`<label class="chip"><input type="checkbox" id="updEx" checked>이미 있는 계약 ${plan.updCtr.length}건도 엑셀 기준으로 구분·진행단계·승인처·마감 체크를 갱신 (입금 기록이 없는 계약은 입금 ${plan.updCtr.reduce((a,u)=>a+u.pays.length,0)}건 추가)</label>`:""}
+   ${plan.updCtr.length?`<label class="chip"><input type="checkbox" id="updEx" checked>이미 있는 계약 ${plan.updCtr.length}건도 엑셀 기준으로 구분·영업 경로·진행단계·승인처·마감 체크를 갱신 (입금 기록이 없는 계약은 입금 ${plan.updCtr.reduce((a,u)=>a+u.pays.length,0)}건 추가)</label>`:""}
    ${plan.payWarn?`<p class="mapt">입금 칸 합계가 엑셀 ‘합계금액’과 다른 줄이 ${plan.payWarn}건 있습니다. 이관 후 계약관리에서 미수금을 확인해 주세요.</p>`:""}
    <p class="mapt">엑셀 한 줄이 계약 1건과 설치 작업 1건이 됩니다. 같은 사업자번호 또는 같은 업체명·휴대번호는 한 고객으로 묶습니다. 입금일자 묶음(1차·2차·최종)은 계약별 입금 내역으로 들어갑니다.${ui.noPay?" (입금 내역 칸이 아직 없어 입금은 옮기지 않습니다. phase1h.sql을 먼저 실행하세요.)":""}</p>
    ${isAdmin()&&customers.length?`<label class="chip"><input type="checkbox" id="rpl">지금 고객·계약·작업을 모두 지우고 이 엑셀로 새로 이관</label>`:""}`,
@@ -1284,6 +1284,8 @@ function custKey(c){const d=String(c.biz_no||"").replace(/\D/g,"");return d.leng
 function planImport(rows,fresh){
   const exCust=fresh?[]:customers,exCtr=fresh?[]:contracts;
   const byKey={};exCust.forEach(c=>byKey[custKey(c)]=c);
+  const byName={};exCust.forEach(c=>{const n=nk(c.name);(byName[n]=byName[n]||[]).push(c)});
+  const digits=s=>String(s||"").replace(/\D/g,"");
   const serials=new Set(exCtr.map(k=>nk(k.serial)).filter(Boolean));
   const sig=new Set(exCtr.map(k=>k.customer_id+"|"+nk(k.product)+"|"+(k.contract_date||"")+"|"+k.amount));
   const bySerial={},bySig={};exCtr.forEach(k=>{if(k.serial)bySerial[nk(k.serial)]=k;bySig[k.customer_id+"|"+nk(k.product)+"|"+(k.contract_date||"")+"|"+k.amount]=k});
@@ -1298,10 +1300,13 @@ function planImport(rows,fresh){
     const s3=t("3차");const s3clean=["무료체험","보상판매"].includes(s3)?"":s3;
     const cu={id:crypto.randomUUID(),name,ceo:t("대표자"),phone,phone2,biz_no:biz,address:t("상점주소"),owner_name:s3clean,memo:""};
     const key=custKey(cu);let cust=byKey[key];
-    if(!cust){cust=cu;byKey[key]=cu;newCust.push(cu)}
+    if(!cust){const cand=(byName[nk(name)]||[]).filter(x=>(!x.biz_no||!biz||x.biz_no===biz)&&(!digits(x.phone)||!digits(phone)||digits(x.phone)===digits(phone)));
+      if(cand.length===1&&(!biz||!phone||!cand[0].biz_no||!digits(cand[0].phone)))cust=cand[0]}
+    if(!cust){cust=cu;byKey[key]=cu;(byName[nk(name)]=byName[nk(name)]||[]).push(cu);newCust.push(cu)}
     // 계약
     const stRaw=t("진행단계");let stage=STAGES.includes(stRaw)?stRaw:"확정";
-    const two=has&&has("구분",1);const typeRaw=two?t("구분",0):"";const channel=two?t("구분",1):t("구분");
+    const g0=t("구분",0);const typeRaw=CTYPES.includes(g0)?g0:"";
+    const channel=has&&has("영업경로")?t("영업경로"):has&&has("영업 경로")?t("영업 경로"):has&&has("구분",1)?t("구분",1):(typeRaw?"":g0);
     const ctype=CTYPES.includes(typeRaw)?typeRaw:CTYPES.includes(stRaw)?stRaw:"구매";if(stRaw&&!STAGES.includes(stRaw)&&!CTYPES.includes(stRaw))notes.push("진행단계: "+stRaw);
     const s2=t("2차");if(s2==="무료체험"&&!trial)trial="예";
     let size=t("사이즈"),opts=[];if(/수압식/.test(size))size="";else{const z=size.match(/^(\d+(?:\s*[*xX×]\s*\d+)?)\s*(무|좌)?/);if(z){size=z[1].replace(/\s/g,"");if(z[2]==="무")opts.push("무턱");if(z[2]==="좌")opts.push("좌배수")}}
@@ -1336,7 +1341,7 @@ function planImport(rows,fresh){
     const sg=k.customer_id+"|"+nk(k.product)+"|"+(k.contract_date||"")+"|"+k.amount;
     const ex=(k.serial&&bySerial[nk(k.serial)])||bySig[sg];
     if((k.serial&&serials.has(nk(k.serial)))||sig.has(sg)){skipped++;
-      if(ex&&withPay){updCtr.push({id:ex.id,patch:Object.assign({contract_type:ctype,stage},extra,k.tax&&Object.keys(k.tax).length?{tax:k.tax}:{}),pays:paysOf(ex).length?[]:pays.map(p=>Object.assign(p,{contract_id:ex.id,customer_id:ex.customer_id}))})}
+      if(ex&&withPay){updCtr.push({id:ex.id,patch:Object.assign({contract_type:ctype,channel,stage},extra,k.tax&&Object.keys(k.tax).length?{tax:k.tax}:{}),pays:paysOf(ex).length?[]:pays.map(p=>Object.assign(p,{contract_id:ex.id,customer_id:ex.customer_id}))})}
       return}
     if(k.serial)serials.add(nk(k.serial));sig.add(sg);newCtr.push(k);
     pays.forEach(p=>{p.contract_id=k.id;p.customer_id=k.customer_id;newPay.push(p)});
@@ -1356,6 +1361,8 @@ async function runImport(plan,replace){
     await put("customers",plan.newCust);await put("contracts",plan.newCtr);await put("jobs",plan.newJob);
     const ups=plan.updCtr||[];for(let i=0;i<ups.length;i++){if(i%10===0)toast(`기존 계약 갱신 중… ${i+1}/${ups.length}`);const {error}=await sb.from("contracts").update(ups[i].patch).eq("id",ups[i].id);if(error)throw error}
     await put("payments",[...(plan.newPay||[]),...ups.flatMap(u=>u.pays)]);
+    if(!ui.noPay){const touched=new Set(ups.map(u=>u.id));const bad=contracts.filter(k=>!touched.has(k.id)&&CTYPES.includes(k.channel||""));
+      for(const k of bad){const {error}=await sb.from("contracts").update({channel:"",contract_type:(k.contract_type&&k.contract_type!=="구매")?k.contract_type:k.channel}).eq("id",k.id);if(error)throw error}}
     await sb.rpc("link_staff_names");
     toast(`이관 완료: 고객 ${plan.newCust.length} · 계약 ${plan.newCtr.length} · 작업 ${plan.newJob.length} · 입금 ${(plan.newPay||[]).length+(plan.updCtr||[]).reduce((a,u)=>a+u.pays.length,0)} · 갱신 ${(plan.updCtr||[]).length}`);
     ui.sel=null;await loadAll();
