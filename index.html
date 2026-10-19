@@ -755,7 +755,7 @@ function colPicker(onDone){
       ${on?`<span><button type="button" class="btn sm" data-up="${k}" ${i===0?"disabled":""} aria-label="${esc(lab[k])} 위로">↑</button><button type="button" class="btn sm" data-dn="${k}" ${i===cur.length-1?"disabled":""} aria-label="${esc(lab[k])} 아래로">↓</button></span>`:""}</div>`}).join("");
     document.querySelectorAll("#cpList [data-ck]").forEach(x=>x.onchange=()=>{const k=x.dataset.ck;cur=x.checked?[...cur,k]:cur.filter(y=>y!==k);draw()});
     document.querySelectorAll("#cpList [data-up],#cpList [data-dn]").forEach(b=>b.onclick=()=>{const k=b.dataset.up||b.dataset.dn;const i=cur.indexOf(k),j=b.dataset.up?i-1:i+1;if(j<0||j>=cur.length)return;[cur[i],cur[j]]=[cur[j],cur[i]];draw()})};
-  openDlg("보이는 열 고르기",`<p class="mapt">체크한 열만 목록에 보입니다. ↑↓로 순서를 바꿀 수 있습니다. 이 컴퓨터(브라우저)에 기억됩니다.</p><div id="cpList" class="cplist"></div>`,
+  openDlg("입력화면설정",`<p class="mapt">체크한 열만 목록에 보입니다. ↑↓로 순서를 바꿀 수 있습니다. 이 컴퓨터(브라우저)에 기억됩니다.</p><div id="cpList" class="cplist"></div>`,
     [["기본값으로","",()=>{cur=CCOLS.filter(c=>c[2]).map(c=>c[0]);draw();return true}],["취소"],["적용","pri",()=>{if(!cur.length){toast("열을 하나 이상 고르세요");return true}setCols(cur);onDone()}]]);
   draw();
 }
@@ -832,7 +832,7 @@ function renderCtrView(){
      <div class="sumbox">${sumT}</div></div>
    <div class="toolbar"><input id="cQ" type="search" placeholder="업체명·대표자·전화·시리얼·담당 검색" value="${esc(ui.cq)}">
      <span class="mapt">${ui.crow?esc(CROWS.find(y=>y[0]===ui.crow)[1])+" · ":""}${ui.cct?esc(ui.cct)+" · ":""}${list.length}건</span>${ui.crow||ui.cct?`<button class="btn sm" type="button" id="cAll">전체 보기</button>`:""}
-     <span style="flex:1"></span><button class="btn" type="button" id="cCols">보이는 열 고르기</button></div>
+     <span style="flex:1"></span><button class="btn" type="button" id="cCols">입력화면설정</button></div>
    <div class="wrapx vis" style="padding-top:10px"><div class="wtbox"><table class="wt ct"><thead><tr><th>#</th>${cols.map(c=>`<th class="${MONEYC.has(c)?"num":""}">${esc(lab[c])}</th>`).join("")}</tr></thead><tbody>
     ${shown.map((x,i)=>`<tr data-ck="${x.k.id}" class="rs-${esc(x.k.stage)}"><td>${i+1}</td>${cols.map(c=>ctrCell(c,x.k,x.c,x.s,x.b)).join("")}</tr>`).join("")||`<tr><td colspan="${cols.length+1}" class="mapt" style="cursor:default">해당하는 계약이 없습니다.</td></tr>`}</tbody>
     ${shown.length?`<tfoot><tr><th></th>${cols.map(c=>`<th class="${MONEYC.has(c)?"num":""}">${MONEYC.has(c)?won0(tot[c]):c===cols[0]?"합계":""}</th>`).join("")}</tr></tfoot>`:""}</table></div>
