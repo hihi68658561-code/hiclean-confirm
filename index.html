@@ -127,7 +127,7 @@ dialog .df{padding:12px 18px;border-top:1px solid var(--line2);display:flex;just
 .num{text-align:right!important;font-variant-numeric:tabular-nums}.neg{color:var(--bad-fg);font-weight:700}
 .wt.ct tfoot th{position:sticky;bottom:0;background:var(--line2);border-top:1px solid var(--line);padding:6px 7px}
 .wt td.memo{max-width:320px;min-width:200px;font-size:12px;color:var(--mute)}.clamp{display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
-.wt td.chk{text-align:center;font-size:12px}.wt td.chk.ok{color:var(--ok-fg);font-weight:700}.wt td.chk.note{color:var(--warn-fg)}
+.wt td.ckc{text-align:center;font-size:12px}.wt td.ckc.ok{color:var(--ok-fg);font-weight:700}.wt td.ckc.note{color:var(--warn-fg)}
 .tag.b-계약{background:var(--accent-weak);color:var(--accent)}.tag.b-결제{background:var(--ok-bg);color:var(--ok-fg)}.tag.b-미수{background:var(--bad-bg);color:var(--bad-fg)}
 .tag.ct-구매{background:var(--line2);color:var(--fg)}
 .kpis{display:flex;gap:8px;flex-wrap:wrap}.kpi{border:1px solid var(--line);background:var(--panel);border-radius:8px;padding:8px 12px;display:grid;gap:2px;min-width:150px}
@@ -650,7 +650,7 @@ function ctrCell(col,k,c,st,basis){
     case"last":return `<td>${esc(ymd2(st.last))}</td>`;
     case"approval":return `<td>${esc(k.approval||k.pay_method||"")}</td>`;
     case"tax":{const t=k.tax||{};return `<td>${esc(t.date?ymd2(t.date):t.type||"")}</td>`}
-    case"chk_cust":case"chk_slip":case"chk_sales":{const v=k[col]||"";return `<td class="chk ${v==="OK"?"ok":v?"note":""}" data-chk="${col}" data-kid="${k.id}" title="${isOffice()?"누르면 OK ↔ 빈칸":""}">${esc(v)}</td>`}
+    case"chk_cust":case"chk_slip":case"chk_sales":{const v=k[col]||"";return `<td class="ckc ${v==="OK"?"ok":v?"note":""}" data-chk="${col}" data-kid="${k.id}" title="${isOffice()?"누르면 OK ↔ 빈칸":""}">${esc(v)}</td>`}
     case"memo":return `<td class="wrap memo" title="${esc(k.memo||"")}"><div class="clamp">${esc(k.memo||"")}</div></td>`;
   }
   return "<td></td>";
