@@ -118,7 +118,7 @@ dialog .df{padding:12px 18px;border-top:1px solid var(--line2);display:flex;just
 .toolbar select,.toolbar input{padding:6px 8px;border:1px solid var(--line);border-radius:6px;background:var(--field)}
 .badge{display:inline-block;font-size:11.5px;padding:1px 7px;border-radius:10px;font-weight:700;background:var(--line2);color:var(--mute)}
 .badge.install{background:var(--ok-bg);color:var(--ok-fg)}.badge.as{background:var(--bad-bg);color:var(--bad-fg)}
-.badge.s-접수{background:var(--warn-bg);color:var(--warn-fg)}.badge.s-배정{background:var(--accent-weak);color:var(--accent)}.badge.s-완료{background:var(--ok-bg);color:var(--ok-fg)}.badge.s-취소{text-decoration:line-through}
+.badge.s-접수{background:var(--warn-bg);color:var(--warn-fg)}.badge.s-배정{background:var(--accent-weak);color:var(--accent)}.badge.s-보류{background:var(--line2);color:var(--fg);outline:1px dashed var(--mute)}.badge.s-완료{background:var(--ok-bg);color:var(--ok-fg)}.badge.s-취소{text-decoration:line-through}
 .money{font-variant-numeric:tabular-nums}
 .g3{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}
 .chk{display:flex;flex-wrap:wrap;gap:6px}
@@ -370,7 +370,7 @@ const ROLE={admin:"관리자",office:"사무실",sales:"영업",tech:"설치·A/
 const PAYM=["현금","카드","카드+현금","CMS","분납","캐피탈"];
 const DOCS=["미수령","사진","원본","전자서명"];
 const SINKS=["해당없음","발주대기","발주완료","중고사용","재고사용","기타"];
-const JST=["접수","배정","완료","취소"];
+const JST=["접수","배정","보류","완료","취소"];
 let sb=null, me=null, staff=[], customers=[], contracts=[], jobs=[];
 let ui={view:"cust", sel:null, ctab:"info", q:"", stage:"", jscope:"mine", jkind:"", jpay:"", jview:"card", dkind:"as", dq:"", dsel:new Set(), jsel:new Set(), jst:"open", jq:"", draft:null, conf:null};
 const isAdmin=()=>me&&me.role==="admin", isOffice=()=>me&&(me.role==="admin"||me.role==="office");
@@ -597,7 +597,7 @@ function renderCustJobs(c,kind){
 }
 function renderJobsView(kind){
   const payOk=j=>!ui.jpay||kind!=="as"||(ui.jpay==="open"?(!j.closed&&j.status!=="취소"):ui.jpay==="cancel"?j.status==="취소":j.pay_status===ui.jpay);
-  const stOk=j=>(kind==="as"&&(ui.jpay==="open"||ui.jpay==="cancel"))||ui.jst==="all"||(ui.jst==="open"?(j.status==="접수"||j.status==="배정"):j.status===ui.jst);
+  const stOk=j=>(kind==="as"&&(ui.jpay==="open"||ui.jpay==="cancel"))||ui.jst==="all"||(ui.jst==="open"?(j.status==="접수"||j.status==="배정"||j.status==="보류"):j.status===ui.jst);
   const list=jobs.filter(j=>j.kind===kind&&payOk(j)&&(ui.jscope!=="mine"||(j.techs||[]).includes(me.id))
      &&stOk(j)
      &&(!ui.jq||[j.customer_name,j.address,j.tech_names,j.symptom,(j.product||{}).serial,(j.techs||[]).map(staffName).join(" ")].join(" ").toLowerCase().includes(ui.jq.toLowerCase())))
@@ -605,7 +605,7 @@ function renderJobsView(kind){
   view().innerHTML=`<div class="toolbar">
     <h2 style="margin:0 8px 0 0;font-size:18px">${KLABEL[kind]}</h2>
     <select id="jScope" aria-label="범위"><option value="mine" ${ui.jscope==="mine"?"selected":""}>내 배정 건</option><option value="all" ${ui.jscope==="all"?"selected":""}>전체</option></select>
-    <select id="jSt" aria-label="상태"><option value="open" ${ui.jst==="open"?"selected":""}>진행 중 (접수·배정)</option>${JST.map(s=>`<option ${ui.jst===s?"selected":""}>${s}</option>`).join("")}<option value="all" ${ui.jst==="all"?"selected":""}>전체 상태</option></select>
+    <select id="jSt" aria-label="상태"><option value="open" ${ui.jst==="open"?"selected":""}>진행 중 (접수·배정·보류)</option>${JST.map(s=>`<option ${ui.jst===s?"selected":""}>${s}</option>`).join("")}<option value="all" ${ui.jst==="all"?"selected":""}>전체 상태</option></select>
     <input id="jQ" type="search" placeholder="업체명·주소·기사 검색" value="${esc(ui.jq)}">
     ${kind==="as"?`<select id="jPay" aria-label="결제"><option value="">결제 전체</option><option value="미수" ${ui.jpay==="미수"?"selected":""}>미수만</option><option value="완료" ${ui.jpay==="완료"?"selected":""}>납부 완료만</option><option value="open" ${ui.jpay==="open"?"selected":""}>매출마감 안 된 내역 (유상·무상 모두)</option><option value="cancel" ${ui.jpay==="cancel"?"selected":""}>취소 건만</option></select>
       <div class="nav"><button type="button" data-jv="card" class="${ui.jview!=="table"?"on":""}">카드</button><button type="button" data-jv="table" class="${ui.jview==="table"?"on":""}">결제 표</button></div>`:""}
