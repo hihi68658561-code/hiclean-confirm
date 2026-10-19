@@ -601,13 +601,17 @@ function installOf(k){const j=jobs.filter(x=>x.kind==="install"&&(x.contract_id=
 const CCOLS=[
  ["basis","기준",1],["ctype","구분",1],["stage","진행단계",1],["name","업체명",1],["ceo","대표자",1],["phone","휴대번호",1],["addr","상점주소",0],
  ["cdate","계약일자",1],["idate","설치일자",1],["channel","영업 경로",0],["referrer","소개",0],["s1","1차",0],["s2","2차",0],["s3","3차(담당)",1],["doc","계약서",0],["tech","설치기사",0],
- ["product","제품",1],["size","사이즈",1],["serial","시리얼",1],["wash","수압식",0],["amount","합계금액",1],["card","카드",1],["cash","현금+캐피탈",1],["paid","입금합계",0],["unpaid","미수금",1],["last","최종결제일",1],
+ ["product","제품",1],["size","사이즈",1],["serial","시리얼",1],["wash","수압식",0],["sink","싱크준비",1],["parts","부자재",0],["amount","합계금액",1],["card","카드",1],["cash","현금+캐피탈",1],["paid","입금합계",0],["unpaid","미수금",1],["last","최종결제일",1],
  ["approval","승인처",1],["tax","계산서 발급",0],["chk_cust","고객등록",1],["chk_slip","전표마감",1],["chk_sales","매출마감",1],["memo","비고",1]];
 const MONEYC=new Set(["amount","card","cash","paid","unpaid"]);
 function colKey(){return "hc.cols.ctr."+(me&&me.id||"")}
 function getCols(){let v=null;try{v=JSON.parse(localStorage.getItem(colKey())||"null")}catch(e){}
-  const all=CCOLS.map(c=>c[0]);if(!Array.isArray(v))return CCOLS.filter(c=>c[2]).map(c=>c[0]);return v.filter(x=>all.includes(x))}
-function setCols(v){try{localStorage.setItem(colKey(),JSON.stringify(v))}catch(e){}}
+  const all=CCOLS.map(c=>c[0]);if(Array.isArray(v))v={cols:v,seen:all.filter(x=>!["sink","parts"].includes(x))};
+  if(!v||!Array.isArray(v.cols))return CCOLS.filter(c=>c[2]).map(c=>c[0]);
+  const cols=v.cols.filter(x=>all.includes(x));const seen=v.seen||all;
+  CCOLS.forEach(([k,,d],i)=>{if(d&&!seen.includes(k)&&!cols.includes(k)){const prev=CCOLS.slice(0,i).map(c=>c[0]).reverse().find(x=>cols.includes(x));cols.splice(prev?cols.indexOf(prev)+1:cols.length,0,k)}});
+  return cols}
+function setCols(v){try{localStorage.setItem(colKey(),JSON.stringify({cols:v,seen:CCOLS.map(c=>c[0])}))}catch(e){}}
 function colPicker(onDone){
   let cur=getCols();const lab=Object.fromEntries(CCOLS.map(c=>[c[0],c[1]]));
   const draw=()=>{const order=[...cur,...CCOLS.map(c=>c[0]).filter(x=>!cur.includes(x))];
@@ -642,6 +646,8 @@ function ctrCell(col,k,c,st,basis){
     case"size":return `<td>${esc([k.size,k.options].filter(Boolean).join(" "))}</td>`;
     case"serial":return `<td>${esc(k.serial||"")}</td>`;
     case"wash":return `<td>${k.wash_added?"구매":""}</td>`;
+    case"sink":return `<td title="${esc(ij&&ij.sink_memo||"")}">${esc(ij?[ij.sink_status,ij.sink_memo&&"("+ij.sink_memo+")"].filter(Boolean).join(" "):"")}</td>`;
+    case"parts":return `<td>${esc(ij&&ij.parts||"")}</td>`;
     case"amount":return `<td class="num">${won0(k.amount)}</td>`;
     case"card":return `<td class="num">${st.card?won0(st.card):""}</td>`;
     case"cash":return `<td class="num">${st.other?won0(st.other):""}</td>`;
