@@ -587,9 +587,10 @@ function renderCustJobs(c,kind){
   const a=document.getElementById("bNewJob");if(a)a.onclick=()=>jobDlg(null,c,kind);
 }
 function renderJobsView(kind){
-  const payOk=j=>!ui.jpay||kind!=="as"||(ui.jpay==="open"?(j.pay_status==="완료"&&!j.closed):j.pay_status===ui.jpay);
+  const payOk=j=>!ui.jpay||kind!=="as"||(ui.jpay==="open"?(!j.closed&&j.status!=="취소"):j.pay_status===ui.jpay);
+  const stOk=j=>(kind==="as"&&ui.jpay==="open")||ui.jst==="all"||(ui.jst==="open"?(j.status==="접수"||j.status==="배정"):j.status===ui.jst);
   const list=jobs.filter(j=>j.kind===kind&&payOk(j)&&(ui.jscope!=="mine"||(j.techs||[]).includes(me.id))
-     &&(ui.jst==="all"||(ui.jst==="open"?(j.status==="접수"||j.status==="배정"):j.status===ui.jst))
+     &&stOk(j)
      &&(!ui.jq||[j.customer_name,j.address,j.tech_names,j.symptom,(j.product||{}).serial,(j.techs||[]).map(staffName).join(" ")].join(" ").toLowerCase().includes(ui.jq.toLowerCase())))
     .sort((a,b)=>(ui.jst==="open"?1:-1)*((a.visit_date||a.request_date||"").localeCompare(b.visit_date||b.request_date||"")));
   view().innerHTML=`<div class="toolbar">
@@ -597,7 +598,7 @@ function renderJobsView(kind){
     <select id="jScope" aria-label="범위"><option value="mine" ${ui.jscope==="mine"?"selected":""}>내 배정 건</option><option value="all" ${ui.jscope==="all"?"selected":""}>전체</option></select>
     <select id="jSt" aria-label="상태"><option value="open" ${ui.jst==="open"?"selected":""}>진행 중 (접수·배정)</option>${JST.map(s=>`<option ${ui.jst===s?"selected":""}>${s}</option>`).join("")}<option value="all" ${ui.jst==="all"?"selected":""}>전체 상태</option></select>
     <input id="jQ" type="search" placeholder="업체명·주소·기사 검색" value="${esc(ui.jq)}">
-    ${kind==="as"?`<select id="jPay" aria-label="결제"><option value="">결제 전체</option><option value="미수" ${ui.jpay==="미수"?"selected":""}>미수만</option><option value="완료" ${ui.jpay==="완료"?"selected":""}>납부 완료만</option><option value="open" ${ui.jpay==="open"?"selected":""}>매출마감 안 된 납부</option></select>
+    ${kind==="as"?`<select id="jPay" aria-label="결제"><option value="">결제 전체</option><option value="미수" ${ui.jpay==="미수"?"selected":""}>미수만</option><option value="완료" ${ui.jpay==="완료"?"selected":""}>납부 완료만</option><option value="open" ${ui.jpay==="open"?"selected":""}>매출마감 안 된 내역 (유상·무상 모두)</option></select>
       <div class="nav"><button type="button" data-jv="card" class="${ui.jview!=="table"?"on":""}">카드</button><button type="button" data-jv="table" class="${ui.jview==="table"?"on":""}">결제 표</button></div>`:""}
     <span class="mapt">${list.length}건</span><span style="flex:1"></span>
     ${canNewJob(null)?`<button class="btn pri" id="bNewJ">+ ${kind==="as"?"A/S 접수":"설치 접수"}</button>`:""}</div>
