@@ -125,6 +125,7 @@ dialog .df{padding:12px 18px;border-top:1px solid var(--line2);display:flex;just
 .wtbox{max-height:calc(100vh - 260px);overflow:auto;border:1px solid var(--line);border-radius:6px}
 .sumt th{white-space:nowrap}
 .wrapx.vis{overflow:visible}
+@media (hover:hover) and (pointer:fine){.wtbox.hb{overflow-x:hidden}}
 .wt.ct tr.rs-완료 td{background:#E2EFDA;color:#1b1b1b}.wt.ct tr.rs-미수 td{background:#FFE699;color:#1b1b1b}.wt.ct tr.rs-철거 td,.wt.ct tr.rs-보류 td,.wt.ct tr.rs-취소 td{background:#D9D9D9;color:#1b1b1b}
 .wt.ct tr.rs-완료:hover td{background:#cfe4c2}.wt.ct tr.rs-미수:hover td{background:#ffdb70}.wt.ct tr.rs-철거:hover td,.wt.ct tr.rs-보류:hover td,.wt.ct tr.rs-취소:hover td{background:#c8c8c8}
 .wt.ct tr[class^="rs-"] td.memo{color:#444}
@@ -1247,7 +1248,10 @@ function hbar(box){
   if(!box||box.nextElementSibling&&box.nextElementSibling.classList.contains("hbar"))return;
   const bar=document.createElement("div");bar.className="hbar";bar.setAttribute("aria-hidden","true");bar.innerHTML="<div></div>";box.after(bar);
   const sync=()=>{bar.firstChild.style.width=box.scrollWidth+"px";bar.hidden=box.scrollWidth<=box.clientWidth+1;if(Math.abs(bar.scrollLeft-box.scrollLeft)>1)bar.scrollLeft=box.scrollLeft};
+  box.classList.add("hb");
   bar.addEventListener("scroll",()=>{if(Math.abs(box.scrollLeft-bar.scrollLeft)>1)box.scrollLeft=bar.scrollLeft});
+  box.addEventListener("wheel",e=>{const dx=e.shiftKey&&!e.deltaX?e.deltaY:e.deltaX;if(!dx||box.scrollWidth<=box.clientWidth)return;
+    const before=box.scrollLeft;box.scrollLeft+=dx;if(box.scrollLeft!==before){bar.scrollLeft=box.scrollLeft;e.preventDefault()}},{passive:false});
   box.addEventListener("scroll",()=>{if(Math.abs(bar.scrollLeft-box.scrollLeft)>1)bar.scrollLeft=box.scrollLeft});
   sync();if(window.ResizeObserver){const ro=new ResizeObserver(sync);ro.observe(box);const t=box.querySelector("table");if(t)ro.observe(t)}
 }
