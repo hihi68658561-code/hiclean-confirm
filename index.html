@@ -963,9 +963,15 @@ const KLABEL={install:"설치",as:"A/S",remove:"철거",addon:"추가설치"};
 function canNewJob(c){return isOffice()||(me.role==="sales"&&(!c||c.owner===me.id))}
 function renderCustJobs(c,kind){
   const js=custJobs(c.id).filter(j=>kind==="as"?j.kind==="as":j.kind!=="as");const tb=document.getElementById("tabBody");
-  tb.innerHTML=`<div class="toolbar">${canNewJob(c)?`<button class="btn pri" id="bNewJob">+ ${kind==="as"?"A/S 접수":"설치 접수"}</button>`:""}</div><div class="cards">${js.map(jobCard).join("")||`<div class="empty" style="padding:8px 0">${kind==="as"?"A/S":"설치·철거"} 기록이 없습니다.</div>`}</div>`;
+  const adm=isAdmin()&&js.length>0;[...ui.jsel].forEach(id=>{if(!js.some(j=>j.id===id))ui.jsel.delete(id)});
+  tb.innerHTML=`<div class="toolbar">${canNewJob(c)?`<button class="btn pri" id="bNewJob">+ ${kind==="as"?"A/S 접수":"설치 접수"}</button>`:""}<span style="flex:1"></span>
+    ${adm?`<label class="chip"><input type="checkbox" id="jAll">전체 선택</label><button class="btn danger" type="button" id="bJDel" disabled>선택 삭제 (0)</button>`:""}</div>
+    <div class="cards">${js.map(j=>jobCard(j,isAdmin())).join("")||`<div class="empty" style="padding:8px 0">${kind==="as"?"A/S":"설치·철거"} 기록이 없습니다.</div>`}</div>`;
   bindJobCards(tb);
   const a=document.getElementById("bNewJob");if(a)a.onclick=()=>jobDlg(null,c,kind);
+  const ja=document.getElementById("jAll");if(ja)ja.onchange=()=>{tb.querySelectorAll(".jsel").forEach(x=>{x.checked=ja.checked;ja.checked?ui.jsel.add(x.dataset.js):ui.jsel.delete(x.dataset.js)});updJSel()};
+  const jd=document.getElementById("bJDel");if(jd)jd.onclick=()=>{const ids=[...ui.jsel].filter(id=>js.some(j=>j.id===id));if(ids.length)delJobs(ids)};
+  updJSel();
 }
 function renderJobsView(kind){
   const payOk=j=>!ui.jpay||kind!=="as"||(ui.jpay==="open"?(!j.closed&&j.status!=="취소"):ui.jpay==="cancel"?j.status==="취소":j.pay_status===ui.jpay);
