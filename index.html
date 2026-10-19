@@ -1395,6 +1395,22 @@ async function runImport(plan,replace){
 }
 
 /* ================= 공통 ================= */
+/* 입력 중 Enter: 창이 닫히지 않게 막고, "저장하시겠습니까?"를 물은 뒤 저장 */
+document.getElementById("dlgForm").addEventListener("submit",e=>e.preventDefault());
+document.getElementById("dlg").addEventListener("keydown",e=>{
+  if(e.key!=="Enter"||e.isComposing||e.defaultPrevented)return;const el=e.target;
+  if(!el.matches||!el.matches("input,select")||["checkbox","radio","file","button","submit"].includes(el.type))return;
+  e.preventDefault();
+  if(el.closest(".payadd")){const b=document.getElementById("pAdd");if(b&&confirm("입금을 추가하시겠습니까?"))b.click();return}
+  const btn=[...document.querySelectorAll("#dlgF .btn.pri")].pop();if(!btn)return;
+  if(confirm(btn.textContent.trim()+"하시겠습니까?"))btn.click();
+});
+/* 고객정보 화면에서도 Enter는 확인 후 저장 */
+document.addEventListener("keydown",e=>{
+  if(e.key!=="Enter"||e.isComposing||e.defaultPrevented)return;const el=e.target;const f=el.closest&&el.closest("#cf");
+  if(!f||!el.matches("input,select")||["checkbox","radio","file"].includes(el.type))return;
+  e.preventDefault();if(confirm("저장하시겠습니까?"))f.requestSubmit();
+});
 /* 싱크준비: 상태만 보이고, 메모가 있으면 마우스를 올렸을 때 메모 상자 */
 function sinkCell(j){const s=esc(j.sink_status||""),m=String(j.sink_memo||"").trim();
   return m?`<span class="hastip" data-tip="${esc(m)}" tabindex="0">${s||"메모"}</span>`:s}
