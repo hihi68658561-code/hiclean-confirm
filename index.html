@@ -125,6 +125,9 @@ dialog .df{padding:12px 18px;border-top:1px solid var(--line2);display:flex;just
 .wtbox{max-height:calc(100vh - 260px);overflow:auto;border:1px solid var(--line);border-radius:6px}
 .sumt th{white-space:nowrap}
 .wrapx.vis{overflow:visible}
+.wt.ct tr.rs-완료 td{background:#E2EFDA;color:#1b1b1b}.wt.ct tr.rs-미수 td{background:#FFE699;color:#1b1b1b}.wt.ct tr.rs-철거 td{background:#D9D9D9;color:#1b1b1b}
+.wt.ct tr.rs-완료:hover td{background:#cfe4c2}.wt.ct tr.rs-미수:hover td{background:#ffdb70}.wt.ct tr.rs-철거:hover td{background:#c8c8c8}
+.wt.ct tr[class^="rs-"] td.memo{color:#444}
 .hbar{position:sticky;bottom:0;z-index:5;overflow-x:scroll;scrollbar-color:var(--mute) var(--line2);overflow-y:hidden;height:18px;background:var(--panel);border:1px solid var(--line);border-top:0;border-radius:0 0 6px 6px}
 .hbar>div{height:1px}
 .hbar::-webkit-scrollbar{height:14px}.hbar::-webkit-scrollbar-thumb{background:var(--mute);border-radius:7px;border:3px solid var(--panel)}.hbar::-webkit-scrollbar-track{background:var(--line2)}
@@ -702,7 +705,7 @@ function renderCtrView(){
      <span class="mapt">${ui.crow?esc(CROWS.find(y=>y[0]===ui.crow)[1])+" · ":""}${ui.cct?esc(ui.cct)+" · ":""}${list.length}건</span>${ui.crow||ui.cct?`<button class="btn sm" type="button" id="cAll">전체 보기</button>`:""}
      <span style="flex:1"></span><button class="btn" type="button" id="cCols">보이는 열 고르기</button></div>
    <div class="wrapx vis" style="padding-top:10px"><div class="wtbox"><table class="wt ct"><thead><tr><th>#</th>${cols.map(c=>`<th class="${MONEYC.has(c)?"num":""}">${esc(lab[c])}</th>`).join("")}</tr></thead><tbody>
-    ${shown.map((x,i)=>`<tr data-ck="${x.k.id}"><td>${i+1}</td>${cols.map(c=>ctrCell(c,x.k,x.c,x.s,x.b)).join("")}</tr>`).join("")||`<tr><td colspan="${cols.length+1}" class="mapt" style="cursor:default">해당하는 계약이 없습니다.</td></tr>`}</tbody>
+    ${shown.map((x,i)=>`<tr data-ck="${x.k.id}" class="rs-${esc(x.k.stage)}"><td>${i+1}</td>${cols.map(c=>ctrCell(c,x.k,x.c,x.s,x.b)).join("")}</tr>`).join("")||`<tr><td colspan="${cols.length+1}" class="mapt" style="cursor:default">해당하는 계약이 없습니다.</td></tr>`}</tbody>
     ${shown.length?`<tfoot><tr><th></th>${cols.map(c=>`<th class="${MONEYC.has(c)?"num":""}">${MONEYC.has(c)?won0(tot[c]):c===cols[0]?"합계":""}</th>`).join("")}</tr></tfoot>`:""}</table></div>
     ${list.length>500?`<p class="mapt">앞의 500건만 보입니다. 검색으로 좁혀 주세요.</p>`:""}</div>`;
   view().querySelectorAll(".wtbox").forEach(hbar);
