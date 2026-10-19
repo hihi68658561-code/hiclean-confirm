@@ -125,6 +125,9 @@ dialog .df{padding:12px 18px;border-top:1px solid var(--line2);display:flex;just
 .wtbox{max-height:calc(100vh - 260px);overflow:auto;border:1px solid var(--line);border-radius:6px}
 .sumt th{white-space:nowrap}
 .wrapx.vis{overflow:visible}
+.bizup{display:flex;gap:10px;align-items:center;flex-wrap:wrap;border:1px dashed var(--line);border-radius:8px;padding:10px 12px;background:var(--accent-weak)}
+.bizup [data-pv]{flex-basis:100%}.bizup img{max-height:160px;max-width:100%;border:1px solid var(--line);border-radius:4px}
+.bizrow{display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-top:6px}.bizrow .bizup{flex:1 1 100%}
 @media (hover:hover) and (pointer:fine){.wtbox.hb{overflow-x:hidden}}
 .wt.ct tr.rs-완료 td{background:#E2EFDA;color:#1b1b1b}.wt.ct tr.rs-미수 td{background:#FFE699;color:#1b1b1b}.wt.ct tr.rs-철거 td,.wt.ct tr.rs-보류 td,.wt.ct tr.rs-취소 td{background:#D9D9D9;color:#1b1b1b}
 .wt.ct tr.rs-완료:hover td{background:#cfe4c2}.wt.ct tr.rs-미수:hover td{background:#ffdb70}.wt.ct tr.rs-철거:hover td,.wt.ct tr.rs-보류:hover td,.wt.ct tr.rs-취소:hover td{background:#c8c8c8}
@@ -570,9 +573,17 @@ function renderCustInfo(c){
     <div class="g2">${isOffice()?sel("owner","담당자(3차 계약자)",staffOpts(),c.owner||""):inp("_o","담당자",staffName(c.owner)||c.owner_name,"text",true)}
       ${isOffice()?sel("collector","수금 배정",staffOpts(),c.collector||""):inp("_c","수금 배정",staffName(c.collector),"text",true)}</div>
     ${c.owner_name&&!c.owner?`<p class="mapt">엑셀에 적힌 담당자: ${esc(c.owner_name)} (직원 계정과 아직 연결되지 않음)</p>`:""}
-    <label class="f">메모<textarea name="memo" ${ro?"readonly":""}>${esc(c.memo)}</textarea></label></fieldset>
+    <label class="f">메모<textarea name="memo" ${ro?"readonly":""}>${esc(c.memo)}</textarea></label>
+    <div class="bizrow"><span class="mapt">사업자등록증</span>${c.biz_doc?`<button type="button" class="btn sm" id="bBizOpen">보관된 등록증 보기</button>`:`<span class="mapt">보관된 파일 없음</span>`}
+      ${ro?"":bizUploadBox("cBizUp")}</div></fieldset>
     ${ro?`<p class="mapt">고객정보는 사무실·관리자와 담당자만 고칠 수 있습니다.</p>`:`<div class="actions"><button class="btn pri" type="submit">저장</button><span style="flex:1"></span>${isAdmin()?`<button class="btn danger" type="button" id="bDelC">고객 삭제</button>`:""}</div>`}</form>`;
+  const bo=document.getElementById("bBizOpen");if(bo)bo.onclick=()=>openBizDoc(c.biz_doc);
   if(ro)return;
+  bindBizUpload("cBizUp",async(fd,file)=>{const f=document.getElementById("cf");const set=(n,v)=>{const el=f.elements[n];if(el&&v&&!el.value.trim())el.value=v};
+    set("name",fd.name);set("ceo",fd.ceo);set("biz_no",fd.biz);set("address",fd.addr);
+    const memo=[fd.open&&"개업일 "+fd.open,fd.type&&"업태 "+fd.type,fd.item&&"종목 "+fd.item].filter(Boolean).join(" · ");if(memo&&!f.elements.memo.value.includes(memo))f.elements.memo.value=(f.elements.memo.value?f.elements.memo.value+"\n":"")+memo;
+    try{await storeBizDoc(c.id,file);c.biz_doc=(customers.find(x=>x.id===c.id)||{}).biz_doc;toast("등록증을 보관했습니다. 비어 있던 칸만 채웠으니 확인 후 ‘저장’을 누르세요.");await reload(["customers"],true)}
+    catch(e){toast("등록증을 보관하지 못했습니다"+(/biz_doc|bucket|not found/i.test(e.message||"")?" — Supabase에서 phase1i.sql을 실행해 주세요":": "+(e.message||"")))}});
   document.getElementById("cf").onsubmit=async e=>{e.preventDefault();const fd=new FormData(e.target);
     const p={name:fd.get("name").trim(),biz_name:fd.get("biz_name").trim(),ceo:fd.get("ceo").trim(),phone:fmtPhone(fd.get("phone")),phone2:fmtPhone(fd.get("phone2")),biz_no:fmtBiz(fd.get("biz_no")),address:fd.get("address").trim(),memo:fd.get("memo")};
     if(isOffice()){p.owner=fd.get("owner")||null;p.collector=fd.get("collector")||null}
@@ -582,16 +593,108 @@ function renderCustInfo(c){
   const d=document.getElementById("bDelC");if(d)d.onclick=()=>openDlg("고객 삭제",`<p><b>${esc(c.name)}</b>과 그 계약·설치·A/S 기록을 모두 삭제합니다. 되돌릴 수 없습니다.</p>`,[["취소"],["삭제","danger",async()=>{const {error}=await sb.from("customers").delete().eq("id",c.id);if(error)return toast("삭제하지 못했습니다");ui.sel=null;toast("삭제했습니다");reload(["customers","contracts","jobs"])}]]);
 }
 function newCustomer(){
-  openDlg("새 고객",`<div class="g2"><label class="f">업체명<input id="nName"></label><label class="f">대표자<input id="nCeo"></label></div>
+  openDlg("새 고객",`${bizUploadBox("nBizUp")}<div class="g2"><label class="f">업체명<input id="nName"></label><label class="f">대표자<input id="nCeo"></label></div>
    <div class="g2"><label class="f">휴대번호<input id="nPhone"></label><label class="f">사업자등록번호<input id="nBiz"></label></div>
-   <label class="f">상점주소<input id="nAddr"></label>${me.role==="sales"?`<p class="mapt">담당자는 본인으로 등록됩니다.</p>`:""}`,
+   <label class="f">상점주소<input id="nAddr"></label><label class="f">메모<input id="nMemo" placeholder="개업일·업태 등"></label>${me.role==="sales"?`<p class="mapt">담당자는 본인으로 등록됩니다.</p>`:""}`,
    [["취소"],["등록","pri",async()=>{const name=val("nName").trim();if(!name)return toast("업체명을 입력하세요");
      const phone=fmtPhone(val("nPhone")),biz=fmtBiz(val("nBiz"));
      const dup=customers.find(c=>(biz&&c.biz_no&&c.biz_no===biz)||(phone&&c.phone===phone&&nk(c.name)===nk(name)));
      if(dup){toast("이미 등록된 고객입니다: "+dup.name);ui.sel=dup.id;render();return}
-     const row={name,ceo:val("nCeo").trim(),phone,biz_no:biz,address:val("nAddr").trim(),owner:me.role==="sales"?me.id:null};
+     const row={name,ceo:val("nCeo").trim(),phone,biz_no:biz,address:val("nAddr").trim(),memo:val("nMemo").trim(),owner:me.role==="sales"?me.id:null};
      const {data,error}=await sb.from("customers").insert(row).select().single();if(error)return toast("등록하지 못했습니다: "+error.message);
-     ui.sel=data.id;ui.ctab="info";toast("등록했습니다");reload(["customers"])}]]);
+     const bf=document.getElementById("nBizUp").file;let msg="등록했습니다";
+     if(bf){try{await storeBizDoc(data.id,bf);msg="등록했습니다 (사업자등록증 보관)"}catch(e){msg="고객은 등록했지만 등록증을 보관하지 못했습니다"+(/biz_doc|bucket|not found/i.test(e.message||"")?" — Supabase에서 phase1i.sql을 실행해 주세요":": "+(e.message||""))}}
+     ui.sel=data.id;ui.ctab="info";toast(msg);reload(["customers"])}]]);
+  bindBizUpload("nBizUp",fd=>{const set=(id,v)=>{const el=document.getElementById(id);if(el&&v)el.value=v};
+    set("nName",fd.name);set("nCeo",fd.ceo);set("nBiz",fd.biz);set("nAddr",fd.addr);
+    const memo=[fd.open&&"개업일 "+fd.open,fd.type&&"업태 "+fd.type,fd.item&&"종목 "+fd.item].filter(Boolean).join(" · ");set("nMemo",memo);
+    const b=fmtBiz(fd.biz||"");const dup=b&&customers.find(c=>c.biz_no===b);if(dup)toast("이미 등록된 사업자번호입니다: "+dup.name)});
+}
+
+/* ================= 사업자등록증: 글자 읽기 · 보관 ================= */
+const TESS_URL="https://cdn.jsdelivr.net/npm/tesseract.js@5.1.1/dist/tesseract.min.js";
+const TESS_LANG="https://cdn.jsdelivr.net/npm/@tesseract.js-data/kor@1.0.0/4.0.0_best_int";
+const PDFJS_URL="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js";
+const PDFJS_WORKER="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js";
+const _scripts={};
+function loadScript(u){return _scripts[u]=_scripts[u]||new Promise((ok,no)=>{const s=document.createElement("script");s.src=u;s.onload=ok;s.onerror=()=>{delete _scripts[u];no(new Error("load"))};document.head.appendChild(s)})}
+async function pdfLib(){await loadScript(PDFJS_URL);window.pdfjsLib.GlobalWorkerOptions.workerSrc=PDFJS_WORKER;return window.pdfjsLib}
+/* 사진을 글자 읽기 좋게: 긴 변 2000px 안팎, 흑백 */
+async function prepImage(src){
+  const img=await new Promise((ok,no)=>{const i=new Image();i.onload=()=>ok(i);i.onerror=no;i.src=src});
+  const k=Math.min(2.5,Math.max(1,1800/Math.max(img.width,img.height)));const c=document.createElement("canvas");c.width=Math.round(img.width*k);c.height=Math.round(img.height*k);
+  const x=c.getContext("2d");x.filter="grayscale(1) contrast(1.2)";x.drawImage(img,0,0,c.width,c.height);return c;
+}
+let _tw=null;
+async function ocrCanvas(cv,prog){
+  await loadScript(TESS_URL);
+  if(!_tw){prog("글자 인식 준비 중… (처음 한 번은 10~20초 걸립니다)");_tw=await Tesseract.createWorker("kor",1,{langPath:TESS_LANG,logger:m=>{if(m.status==="recognizing text")prog(`글자 읽는 중… ${Math.round(m.progress*100)}%`)}})}
+  prog("글자 읽는 중…");const {data}=await _tw.recognize(cv);return data.text||"";
+}
+/* 파일 → 글자. PDF는 글자층을 먼저 쓰고, 없으면(스캔 PDF) 첫 장을 그림으로 읽음 */
+async function readBizText(file,prog){
+  if(file.type==="application/pdf"||/\.pdf$/i.test(file.name)){
+    prog("PDF 여는 중…");const lib=await pdfLib();const doc=await lib.getDocument({data:await file.arrayBuffer()}).promise;const pg=await doc.getPage(1);
+    const tc=await pg.getTextContent();const rows={};tc.items.forEach(it=>{const y=Math.round(it.transform[5]/4);(rows[y]=rows[y]||[]).push(it)});
+    const txt=Object.keys(rows).map(Number).sort((a,b)=>b-a).map(y=>{const it=rows[y].sort((a,b)=>a.transform[4]-b.transform[4]);let s="",end=null;
+      it.forEach(i=>{const x=i.transform[4],fs=Math.abs(i.transform[0])||10;if(end!==null&&x-end>fs*0.2&&!/\s$/.test(s)&&!/^\s/.test(i.str))s+=" ";s+=i.str;end=x+(i.width||0)});return s}).join("\n");
+    if(txt.replace(/\s/g,"").length>30)return{text:txt,how:"pdf"};
+    const vp=pg.getViewport({scale:2.2});const cv=document.createElement("canvas");cv.width=vp.width;cv.height=vp.height;await pg.render({canvasContext:cv.getContext("2d"),viewport:vp}).promise;
+    return{text:await ocrCanvas(cv,prog),how:"ocr"};
+  }
+  const url=URL.createObjectURL(file);try{return{text:await ocrCanvas(await prepImage(url),prog),how:"ocr"}}finally{URL.revokeObjectURL(url)}
+}
+/* 글자에서 항목 뽑기 (글자 사이 띄어쓰기·OCR 잡음 허용) */
+function parseBizReg(raw){
+  const L=s=>s.split("").map(ch=>ch.replace(/[()]/g,"\\$&")).join("\\s*");
+  const lines=String(raw||"").split(/\n+/).map(x=>x.replace(/[|｜]/g," ").replace(/\s+/g," ").trim()).filter(Boolean);
+  const all=lines.join("\n");const out={};
+  const nm=all.replace(/[oO]/g,"0").replace(/[lI]/g,"1").match(/(\d{3})\s*[-–—~.]\s*(\d{2})\s*[-–—~.]\s*(\d{5})/)||all.match(/등\s*록\s*번\s*호\D{0,6}(\d{3})\D{0,3}(\d{2})\D{0,3}(\d{5})/);
+  if(nm)out.biz=`${nm[1]}-${nm[2]}-${nm[3]}`;
+  const after=(labels,stops)=>{for(const lb of labels){const re=new RegExp(L(lb)+"\\s*[:;：.]?\\s*(.*)");for(let i=0;i<lines.length;i++){const m=lines[i].match(re);if(m&&m[1]!==undefined){let v=m[1];
+    for(const st of stops||[]){const k=v.search(new RegExp(L(st)));if(k>=0)v=v.slice(0,k)}v=v.replace(/^[\s:;：.]+|[\s:;：.]+$/g,"");if(v)return{v,i}}}}return null};
+  const STOP=["생년월일","개업연월일","법인등록번호","사업장","성명","대표자","등록번호"];
+  const sh=after(["법인명(단체명)","법인명","상호"],STOP);if(sh)out.name=sh.v.replace(/^\(?단체명\)?\s*/,"");
+  const ce=after(["대표자","성명"],["생년월일","주민등록번호","개업"]);if(ce){const n=ce.v.replace(/[^가-힣\s]/g,"").trim();const z=n.replace(/\s/g,"");out.ceo=z.length<=5?z:n.split(" ")[0]}
+  const od=all.match(new RegExp(L("개업연월일")+"\\D{0,6}(\\d{4})\\s*[년.\\-/]\\s*(\\d{1,2})\\s*[월.\\-/]\\s*(\\d{1,2})"));if(od)out.open=`${od[1]}-${od[2].padStart(2,"0")}-${od[3].padStart(2,"0")}`;
+  const ad=after(["사업장소재지","사업장 소재지","소재지"],["본점소재지","사업의종류","업태"]);
+  if(ad){let v=ad.v;const nx=lines[ad.i+1]||"";const lab=new RegExp("("+["본점","사업의","업태","종목","발급","공동","생년","전자","개업"].map(L).join("|")+")");
+    if(nx&&!/[:：]/.test(nx)&&!lab.test(nx)&&nx.length<30&&!/(호|층|\))$/.test(v))v+=" "+nx;out.addr=v.replace(/\s{2,}/g," ").trim()}
+  const ut=all.match(new RegExp(L("업태")+"\\s*[:：]?\\s*(.+?)\\s*"+L("종목")+"\\s*[:：]?\\s*([^\\n]+)"));if(ut){out.type=ut[1].trim();out.item=ut[2].trim()}
+  else{const a=after(["업태"],["종목"]);if(a)out.type=a.v;const b=after(["종목"]);if(b)out.item=b.v}
+  return out;
+}
+/* 큰 사진은 보관 전에 줄임 (긴 변 2400px, JPEG) */
+async function shrinkForStore(file){
+  if(!/^image\//.test(file.type)||file.size<1500000||/heic/i.test(file.type))return file;
+  const url=URL.createObjectURL(file);try{const img=await new Promise((ok,no)=>{const i=new Image();i.onload=()=>ok(i);i.onerror=no;i.src=url});
+    const k=Math.min(1,2400/Math.max(img.width,img.height));const c=document.createElement("canvas");c.width=Math.round(img.width*k);c.height=Math.round(img.height*k);c.getContext("2d").drawImage(img,0,0,c.width,c.height);
+    const b=await new Promise(ok=>c.toBlob(ok,"image/jpeg",0.85));return b?new File([b],file.name.replace(/\.\w+$/,"")+".jpg",{type:"image/jpeg"}):file}catch(e){return file}finally{URL.revokeObjectURL(url)}
+}
+async function storeBizDoc(custId,file){
+  const f=await shrinkForStore(file);const ext=(f.name.match(/\.(\w+)$/)||[,"jpg"])[1].toLowerCase();
+  const path=`${custId}/bizreg-${Date.now()}.${ext}`;
+  const up=await sb.storage.from("bizdocs").upload(path,f,{contentType:f.type||"application/octet-stream",upsert:false});
+  if(up.error)throw up.error;
+  const {error}=await sb.from("customers").update({biz_doc:path}).eq("id",custId);if(error)throw error;
+  return path;
+}
+async function openBizDoc(path){
+  const w=window.open("","_blank");
+  const {data,error}=await sb.storage.from("bizdocs").createSignedUrl(path,300);
+  if(error||!data){if(w)w.close();return toast("등록증을 열지 못했습니다: "+((error&&error.message)||""))}
+  const u=/^https?:/.test(data.signedUrl)?data.signedUrl:SB_URL+"/storage/v1"+data.signedUrl;if(w)w.location=u;else location.href=u;
+}
+/* 등록증 올리기 칸 (새 고객·고객정보 공용). onRead(fields,file) */
+function bizUploadBox(id){return `<div class="bizup" id="${id}"><label class="btn"><input type="file" accept="image/*,application/pdf" hidden>사업자등록증 올리기 (사진·PDF)</label><span class="mapt" data-st>올리면 상호·대표자·사업자번호·주소를 자동으로 채웁니다.</span><div data-pv></div></div>`}
+function bindBizUpload(id,onRead){
+  const box=document.getElementById(id);if(!box)return;const inp=box.querySelector("input[type=file]"),st=box.querySelector("[data-st]"),pv=box.querySelector("[data-pv]");
+  inp.onchange=async()=>{const f=inp.files[0];if(!f)return;if(f.size>15*1024*1024){st.textContent="15MB보다 큰 파일은 올릴 수 없습니다.";return}
+    box.file=f;pv.innerHTML=/^image\//.test(f.type)?`<img alt="올린 사업자등록증" src="${URL.createObjectURL(f)}">`:`<span class="mapt">📄 ${esc(f.name)}</span>`;
+    try{const r=await readBizText(f,m=>st.textContent=m);const fd=parseBizReg(r.text);const n=Object.keys(fd).length;
+      st.textContent=n?`${n}개 항목을 채웠습니다. 틀린 곳이 없는지 확인해 주세요.${r.how==="ocr"?" (사진에서 읽은 글자는 틀릴 수 있습니다)":""}`:"글자를 읽지 못했습니다. 직접 입력해 주세요. 등록증 파일은 함께 보관됩니다.";
+      box.dataset.raw=r.text;onRead(fd,f)}
+    catch(e){st.textContent="글자 읽기에 실패했습니다(인터넷 연결 확인). 직접 입력해 주세요. 파일은 함께 보관됩니다.";onRead({},f)}};
 }
 
 /* ================= 계약관리 (당월 계약·최종결제·미수) ================= */
