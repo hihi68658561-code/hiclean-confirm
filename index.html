@@ -102,6 +102,8 @@ dialog .df{padding:12px 18px;border-top:1px solid var(--line2);display:flex;just
 @media (prefers-reduced-motion:reduce){.toast{transition:none}}
 
 
+.tag.st-무료체험,.tag.st-무상임대,.tag.st-경품,.tag.st-무상증정{background:#efe2ff;color:#6b21a8}.tag.st-철거{background:#fde2e2;color:#b42318}
+
 [hidden]{display:none!important}
 .badge.remove{background:#fde2e2;color:#b42318}.badge.addon{background:#fff3c4;color:#8a5a00}.badge.as{background:#efe2ff;color:#6b21a8}
 .sumt{border-collapse:collapse;font-size:13px;background:var(--panel)}
@@ -247,7 +249,7 @@ const CFIELDS=[
   ["설치장소","상점주소(설치장소)"],["모델명","제품"],["사이즈","사이즈"],["옵션","옵션(무턱·좌배수)"],["SN","시리얼"],["구매일자","계약일자"],["설치일자","설치일자"],
   ["담당자","담당자(3차 계약자)"],["설치기사","설치기사(설치1)"],["메모","비고"]
 ];
-const STAGES=["미정","보류","확정","미수","완료","취소"];
+const STAGES=["미정","보류","확정","미수","완료","취소","무료체험","무상임대","경품","철거","무상증정"];
 function modelText(c){c=c||{};return [c.모델명,c.사이즈,c.옵션?"("+c.옵션+")":""].filter(Boolean).join(" ")}
 const SYN={
   진행단계:["진행단계","진행상태","상태"],
@@ -601,7 +603,7 @@ function contractDlg(c,k){
      if(isOffice())p.sales3=f.get("sales3")||null;else if(isNew)p.sales3=me.id;
      let res;
      if(isNew){p.customer_id=c.id;res=await sb.from("contracts").insert(p).select().single()}else res=await sb.from("contracts").update(p).eq("id",k.id).select().single();
-     if(res.error)return toast("저장하지 못했습니다: "+res.error.message);
+     if(res.error)return toast(/contracts_stage_check/.test(res.error.message)?"새 진행단계가 아직 없습니다. Supabase에서 phase1f.sql을 실행해 주세요.":"저장하지 못했습니다: "+res.error.message);
      if(isNew&&f.get("mkjob")){const r2=await sb.from("jobs").insert(jobFromContract(c,res.data));if(r2.error)toast("설치 작업은 만들지 못했습니다: "+r2.error.message)}
      if(isOffice()&&p.sales3&&!c.owner)await sb.from("customers").update({owner:p.sales3}).eq("id",c.id);
      toast("저장했습니다");reload(["customers","contracts","jobs"])}]]);
