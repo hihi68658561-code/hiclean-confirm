@@ -1351,6 +1351,7 @@ function jobDlg(j,c,kind,tpl){
      if(j.kind==="addon"&&(off||isNew)){j.product={product:(f.get("add_item")||"").trim(),size:(f.get("add_size")||"").trim()}}
      const pt={kind:j.kind,...(j.kind==="addon"&&(off||isNew)?{product:j.product}:{}),status:f.get("status")||j.status,done_date:f.get("done_date")||null,result:f.get("result")||""};
      if(pt.status==="완료"&&!pt.done_date)pt.done_date=today();
+     if(pt.done_date&&pt.status!=="완료"&&pt.status!=="취소")pt.status="완료";
      if(j.kind==="as"){Object.assign(pt,{paid_type:f.get("paid_type")||"",cost:Number(f.get("cost")||0)||0,pay_status:f.get("pay_status")||"",pay_method:f.get("pay_method")||"",pay_date:f.get("pay_date")||null,pay_name:(f.get("pay_name")||"").trim(),pay_memo:(f.get("pay_memo")||"").trim()});
        if(pt.paid_type==="무상"){pt.cost=0;pt.pay_status="";pt.pay_method=""}else{if(pt.cost&&!pt.paid_type)pt.paid_type="유상";if(pt.pay_method&&!pt.pay_status&&pt.cost)pt.pay_status="완료";if(pt.pay_status==="완료"&&!pt.pay_date)pt.pay_date=today()}
        if(off)pt.closed=!!f.get("closed")}else{pt.sink_status=f.get("sink_status")||"";pt.sink_memo=f.get("sink_memo")||"";pt.parts=f.get("parts")||""}
@@ -1364,6 +1365,9 @@ function jobDlg(j,c,kind,tpl){
        pmsg=up.fail.length?` · 사진 ${up.ok}개 올림, ${up.fail.length}개 실패${fileErrHint(up.fail)}`:` · 사진 ${up.ok}개`;jpSel.forEach(x=>x.url&&URL.revokeObjectURL(x.url))}
      toast((isNew?`${KLABEL[j.kind]} 접수했습니다`:"저장했습니다")+pmsg);reload(["jobs","customers","files"])}]]:[])]);
   const jpSel=isNew?bindNewCustFiles("jp"):[];if(!isNew)renderJobFiles(j,c);
+  /* 완료일을 넣으면 상태를 '완료'로 자동 전환 */
+  (()=>{const jf=document.getElementById("jf");const dd=jf&&jf.querySelector('[name="done_date"]'),st=jf&&jf.querySelector('[name="status"]');
+    if(dd&&st&&!dd.readOnly)dd.addEventListener("change",()=>{if(dd.value&&st.value!=="완료"&&st.value!=="취소"){st.value="완료";st.classList.add("autocalc");setTimeout(()=>st.classList.remove("autocalc"),700)}})})();
   if(isNew&&!c)bindCustPicker(pickable);
   document.querySelectorAll('#jf input[name=kind]').forEach(x=>x.onchange=()=>{const as=x.value==="as";document.getElementById("payBox").hidden=!as;document.getElementById("sinkBox").hidden=as;document.getElementById("addonBox").hidden=x.value!=="addon";
     const t=document.getElementById("jf").querySelector('textarea[name=symptom]');if(t)t.previousSibling.textContent=as?"불편사항·접수 내용":"요청 사항";
