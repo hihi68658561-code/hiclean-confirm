@@ -920,7 +920,7 @@ function ctrCell(col,k,c,st,basis){
     case"product":return `<td>${esc(k.product||"")}</td>`;
     case"size":return `<td>${esc([k.size,k.options].filter(Boolean).join(" "))}</td>`;
     case"serial":return `<td>${esc(k.serial||"")}</td>`;
-    case"wash":return `<td>${k.wash_added?"구매":""}</td>`;
+    case"wash":return `<td>${k.wash_added?"수압식":""}</td>`;
     case"sink":return `<td>${ij?sinkCell(ij):""}</td>`;
     case"parts":return `<td>${esc(ij&&ij.parts||"")}</td>`;
     case"amount":return `<td class="num">${won0(k.amount)}</td>`;
@@ -1202,7 +1202,7 @@ function renderWorkView0(){
        return `<tr data-j="${j.id}">${admin?`<td><input type="checkbox" class="jsel" data-js="${j.id}" ${ui.jsel.has(j.id)?"checked":""} aria-label="선택"></td>`:""}<td>${i+1}</td><td>${esc(rd.slice(2,4)+rd.slice(5,7))}</td><td class="kc k-${j.kind}">${KLABEL[j.kind]||j.kind}</td>
         <td><b>${esc(j.customer_name||c.name||"")}</b></td><td>${esc(c.phone||c.phone2||"")}</td><td>${esc(region(j.address||c.address))}</td><td class="wrap">${esc(j.address||c.address||"")}</td>
         <td>${esc(ymd2(j.kind!=="as"&&k.contract_date?k.contract_date:rd))}</td><td class="${vcls}">${esc(vd||"")}</td><td>${wday(vd)}</td><td>${esc(j.visit_time||"")}</td>
-        <td>${esc(p.product||"")}</td><td>${esc(p.size||"")}</td><td>${esc(p.serial||"")}</td><td>${k.wash_added?"구매":""}</td>
+        <td>${esc(p.product||"")}</td><td>${esc(p.size||"")}</td><td>${esc(p.serial||"")}</td><td>${k.wash_added?"수압식":""}</td>
         <td>${j.kind==="as"?"":sinkCell(j)}</td><td class="wrap">${esc(j.symptom||"")}</td><td>${esc(sales)}</td><td>${esc(whoOf(j)||"")}</td>
         <td><span class="badge s-${j.status}">${esc(j.status)}</span>${j.kind==="as"&&j.pay_status==="미수"?` <span class="badge remove">미수</span>`:""}</td></tr>`}).join("")||`<tr><td colspan="21" class="mapt" style="cursor:default">해당하는 작업이 없습니다.</td></tr>`}</tbody></table></div>
      ${list.length>500?`<p class="mapt">앞의 500건만 보입니다. 검색이나 구분으로 좁혀 주세요.</p>`:""}</div>`};
