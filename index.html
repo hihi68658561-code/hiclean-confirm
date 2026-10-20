@@ -558,7 +558,7 @@ function render0(){
 
 /* ================= 고객 ================= */
 let ctrIdx={},jobIdx={};
-function buildIdx(){buildPayIdx();buildFileIdx();ctrIdx={};jobIdx={};contracts.forEach(k=>(ctrIdx[k.customer_id]=ctrIdx[k.customer_id]||[]).push(k));jobs.forEach(j=>(jobIdx[j.customer_id]=jobIdx[j.customer_id]||[]).push(j));
+function buildIdx(){buildPayIdx();buildFileIdx();const cm=new Map(customers.map(c=>[c.id,c]));jobs.forEach(j=>{const c=cm.get(j.customer_id);if(c){j.customer_name=c.name;if(c.address)j.address=c.address}});ctrIdx={};jobIdx={};contracts.forEach(k=>(ctrIdx[k.customer_id]=ctrIdx[k.customer_id]||[]).push(k));jobs.forEach(j=>(jobIdx[j.customer_id]=jobIdx[j.customer_id]||[]).push(j));
   Object.values(ctrIdx).forEach(a=>a.sort((a,b)=>(b.contract_date||"").localeCompare(a.contract_date||"")));Object.values(jobIdx).forEach(a=>a.sort((a,b)=>(b.visit_date||b.request_date||"").localeCompare(a.visit_date||a.request_date||"")))}
 function custContracts(id){return ctrIdx[id]||[]}
 function custJobs(id){return jobIdx[id]||[]}
@@ -631,7 +631,8 @@ function renderCustInfo(c){
     if(isOffice()){p.owner=fd.get("owner")||null;p.collector=fd.get("collector")||null}
     if(!p.name)return toast("업체명을 입력하세요");
     const {error}=await sb.from("customers").update(p).eq("id",c.id);if(error)return toast("저장하지 못했습니다: "+error.message);
-    toast("저장했습니다");reload(["customers"])};
+    if(isOffice()&&(p.name!==c.name||(p.address&&p.address!==c.address))){const up={customer_name:p.name};if(p.address)up.address=p.address;await sb.from("jobs").update(up).eq("customer_id",c.id)}
+    toast("저장했습니다");reload(["customers","jobs"])};
   const d=document.getElementById("bDelC");if(d)d.onclick=()=>openDlg("고객 삭제",`<p><b>${esc(c.name)}</b>과 그 계약·설치·A/S 기록을 모두 삭제합니다. 되돌릴 수 없습니다.</p>`,[["취소"],["삭제","danger",async()=>{const {error}=await sb.from("customers").delete().eq("id",c.id);if(error)return toast("삭제하지 못했습니다");ui.sel=null;toast("삭제했습니다");reload(["customers","contracts","jobs"])}]]);
 }
 function newCustomer(tpl){if(!tpl||!tpl.id)tpl=null;
