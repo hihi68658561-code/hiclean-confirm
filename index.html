@@ -571,7 +571,7 @@ function renderCustView(){
   document.getElementById("q").oninput=e=>{ui.q=e.target.value;renderCustList()};
   document.getElementById("stf").onchange=e=>{ui.stage=e.target.value;renderCustList()};
   document.getElementById("ctf").onchange=e=>{ui.ctype=e.target.value;renderCustList()};
-  const nb=document.getElementById("bNewC");if(nb)nb.onclick=newCustomer;
+  const nb=document.getElementById("bNewC");if(nb)nb.onclick=()=>newCustomer();
   document.getElementById("clist").onclick=e=>{const it=e.target.closest(".citem");if(it){ui.sel=it.dataset.id;ui.ctab="info";ui.draft=null;renderCustList();renderCustMain()}};
   renderCustList();renderCustMain();
 }
@@ -633,7 +633,7 @@ function renderCustInfo(c){
     toast("저장했습니다");reload(["customers"])};
   const d=document.getElementById("bDelC");if(d)d.onclick=()=>openDlg("고객 삭제",`<p><b>${esc(c.name)}</b>과 그 계약·설치·A/S 기록을 모두 삭제합니다. 되돌릴 수 없습니다.</p>`,[["취소"],["삭제","danger",async()=>{const {error}=await sb.from("customers").delete().eq("id",c.id);if(error)return toast("삭제하지 못했습니다");ui.sel=null;toast("삭제했습니다");reload(["customers","contracts","jobs"])}]]);
 }
-function newCustomer(tpl){
+function newCustomer(tpl){if(!tpl||!tpl.id)tpl=null;
   openDlg("새 고객",`${bizUploadBox("nBizUp")}<div class="g2"><label class="f">업체명<input id="nName"></label><label class="f">대표자<input id="nCeo"></label></div>
    <div class="g2"><label class="f">휴대번호<input id="nPhone"></label><label class="f">사업자등록번호<input id="nBiz"></label></div>
    <label class="f">상점주소<input id="nAddr"></label><label class="f">메모<input id="nMemo" placeholder="개업일·업태 등"></label>${ui.noFiles?"":newCustFilesBox()}${me.role==="sales"?`<p class="mapt">담당자는 본인으로 등록됩니다.</p>`:""}`,
