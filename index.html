@@ -125,6 +125,7 @@ dialog .df{padding:12px 18px;border-top:1px solid var(--line2);display:flex;just
 .wtbox{max-height:calc(100vh - 260px);overflow:auto;border:1px solid var(--line);border-radius:6px}
 .sumt th{white-space:nowrap}
 .wrapx.vis{overflow:visible}
+.pedit input,.pedit select{width:100%;min-width:0;padding:4px 6px;border:1px solid var(--accent);border-radius:5px;background:var(--field)}.pedit td{background:var(--accent-weak)}
 .kpi.kc{cursor:pointer}.kpi.kc:hover{border-color:var(--accent)}.kpi.kc.on{border-color:var(--accent);box-shadow:0 0 0 2px var(--accent-weak);background:var(--accent-weak)}
 .gbadge{display:inline-block;font-size:11px;font-weight:700;padding:0 6px;border-radius:9px;margin-left:4px;vertical-align:1px;color:#fff}.gbadge.g-red{background:#e8590c}.gbadge.g-black{background:#1f1f1f}
 .gwarn{margin:0;padding:6px 10px;border-radius:6px;font-size:13px;font-weight:600}.gwarn.g-red{background:#fff0e6;color:#b4410a}.gwarn.g-black{background:#2b2b2b;color:#fff}
@@ -1041,7 +1042,10 @@ function renderPaySec(k){
    <div class="paysum"><span>합계금액 <b>${won0(k.amount)}</b></span><span>입금합계 <b>${won0(s.paid)}</b></span><span>미수금 <b class="${s.unpaid>0?"neg":""}">${won0(s.unpaid)}</b></span><span>최종결제일 <b>${esc(s.last||"-")}</b></span></div>
    ${s.n&&s.unpaid<=0&&k.stage!=="완료"&&k.stage!=="취소"&&can?`<div class="donebox">미수금이 0원이 되었습니다. <button type="button" class="btn sm pri" id="pDone">진행단계를 ‘완료’로 바꾸기</button></div>`:""}
    <table class="stafft"><thead><tr><th>날짜</th><th>수단</th><th>카드사·입금자</th><th class="num">금액</th><th>메모</th>${can?"<th></th>":""}</tr></thead><tbody>
-   ${ps.map(p=>`<tr><td>${esc(p.pay_date||"")}</td><td>${esc(p.method)}</td><td>${esc(p.payer)}</td><td class="num ${p.amount<0?"neg":""}">${won0(p.amount)}</td><td>${esc(p.memo)}</td>${can?`<td><button type="button" class="btn sm danger" data-pdel="${p.id}" aria-label="입금 삭제">삭제</button></td>`:""}</tr>`).join("")||`<tr><td colspan="6" class="mapt">입금 기록이 없습니다.</td></tr>`}</tbody></table>
+   ${ps.map(p=>ui.payEdit===p.id&&can?`<tr class="pedit" data-pe="${p.id}"><td><input type="date" data-f="pay_date" value="${esc(p.pay_date||"")}" aria-label="날짜"></td><td><select data-f="method" aria-label="수단">${PMETH.map(m=>`<option ${m===p.method?"selected":""}>${m}</option>`).join("")}</select></td>
+     <td><input data-f="payer" value="${esc(p.payer||"")}" list="cardList2" aria-label="카드사·입금자"></td><td><input type="number" data-f="amount" value="${esc(p.amount)}" aria-label="금액" style="text-align:right"></td><td><input data-f="memo" value="${esc(p.memo||"")}" aria-label="메모"></td>
+     <td style="white-space:nowrap"><button type="button" class="btn sm pri" data-psave="${p.id}">저장</button> <button type="button" class="btn sm" data-pcancel>취소</button></td></tr>`
+   :`<tr><td>${esc(p.pay_date||"")}</td><td>${esc(p.method)}</td><td>${esc(p.payer)}</td><td class="num ${p.amount<0?"neg":""}">${won0(p.amount)}</td><td>${esc(p.memo)}</td>${can?`<td style="white-space:nowrap"><button type="button" class="btn sm" data-pedit="${p.id}" aria-label="입금 수정">수정</button> <button type="button" class="btn sm danger" data-pdel="${p.id}" aria-label="입금 삭제">삭제</button></td>`:""}</tr>`).join("")||`<tr><td colspan="6" class="mapt">입금 기록이 없습니다.</td></tr>`}</tbody></table>
    ${can?`<div class="payadd"><input id="pD" type="date" value="${today()}" aria-label="입금일"><select id="pM" aria-label="수단">${PMETH.map(m=>`<option>${m}</option>`).join("")}</select>
      <input id="pN" list="cardList2" placeholder="카드사·입금자" aria-label="카드사·입금자"><input id="pA" type="number" placeholder="금액" aria-label="금액"><input id="pMemo" placeholder="메모" aria-label="메모">
      <button type="button" class="btn pri" id="pAdd">입금 추가</button></div>
@@ -1052,6 +1056,13 @@ function renderPaySec(k){
   document.getElementById("pAdd").onclick=async()=>{let a=Number(val("pA")||0);const m=val("pM");if(!a)return toast("금액을 입력하세요");if(m==="승인취소"&&a>0)a=-a;
     const {error}=await sb.from("payments").insert({contract_id:k.id,customer_id:k.customer_id,pay_date:val("pD")||null,method:m,payer:val("pN").trim(),amount:a,memo:val("pMemo").trim()});
     if(error)return toast("입금을 저장하지 못했습니다: "+error.message);toast("입금을 추가했습니다");await after()};
+  box.querySelectorAll("[data-pedit]").forEach(b=>b.onclick=()=>{ui.payEdit=b.dataset.pedit;renderPaySec(k);const f=box.querySelector('.pedit [data-f="amount"]');if(f)f.focus()});
+  box.querySelectorAll("[data-pcancel]").forEach(b=>b.onclick=()=>{ui.payEdit=null;renderPaySec(k)});
+  box.querySelectorAll("[data-psave]").forEach(b=>b.onclick=async()=>{const tr=b.closest("tr");const g=n=>tr.querySelector(`[data-f="${n}"]`).value;
+    let a=Number(g("amount")||0);const m=g("method");if(!a)return toast("금액을 입력하세요");if(m==="승인취소"&&a>0)a=-a;
+    const {error}=await sb.from("payments").update({pay_date:g("pay_date")||null,method:m,payer:g("payer").trim(),amount:a,memo:g("memo").trim()}).eq("id",b.dataset.psave);
+    if(error)return toast("수정하지 못했습니다: "+error.message);ui.payEdit=null;toast("입금 기록을 수정했습니다");await after()});
+  box.querySelectorAll(".pedit input").forEach(x=>x.addEventListener("keydown",e=>{if(e.key==="Enter"&&!e.isComposing){e.preventDefault();e.stopPropagation();box.querySelector("[data-psave]").click()}if(e.key==="Escape"){e.preventDefault();e.stopPropagation();ui.payEdit=null;renderPaySec(k)}}));
   box.querySelectorAll("[data-pdel]").forEach(b=>b.onclick=async()=>{if(!await askConfirm("이 입금 기록을 삭제할까요?"))return;const {error}=await sb.from("payments").delete().eq("id",b.dataset.pdel);if(error)return toast("삭제하지 못했습니다: "+error.message);toast("삭제했습니다");await after()});
   const pd=document.getElementById("pDone");if(pd)pd.onclick=async()=>{const {error}=await sb.from("contracts").update({stage:"완료"}).eq("id",k.id);if(error)return toast("바꾸지 못했습니다: "+error.message);
     k.stage="완료";const s_=document.querySelector('#kf select[name=stage]');if(s_)s_.value="완료";toast("진행단계를 완료로 바꿨습니다");await reload(["contracts"],true);renderPaySec(k)};
@@ -1118,7 +1129,7 @@ function baseDate(k){const ij=installOf(k);return (ij&&(ij.done_date||ij.visit_d
 function hasTrialCol(){return contracts.some(k=>"trial_end" in k)}
 function trialCell(k){const d=k.trial_end;if(!d)return"";const td=today();const open=!["완료","취소","철거"].includes(k.stage);const days=Math.round((new Date(d)-new Date(td))/864e5);
   const cls=open&&days<0?"late":open&&days<=3?"soon":"";return `<span class="trial ${cls}" title="${open?(days<0?-days+"일 지남":days===0?"오늘 종료":days+"일 남음"):""}">${esc(ymd2(d))}</span>`}
-function contractDlg(c,k,tpl){
+function contractDlg(c,k,tpl){ui.payEdit=null;
   const isNew=!k;
   if(!k&&tpl){k=Object.assign({},tpl,{serial:"",trial_end:null,contract_date:today(),stage:"미정",contract_doc:"미수령",chk_cust:"",chk_slip:"",chk_sales:"",tax:{},settle_month:"",import_raw:null,memo:tpl.memo||""});delete k.id;delete k.created_at;delete k.updated_at;delete k.created_by}
   k=k||{stage:"미정",contract_type:"구매",contract_date:today(),sales3:me.role==="sales"?me.id:(c.owner||null),contract_doc:"미수령",pay_method:"",capital:{},cms:{},tax:{}};
