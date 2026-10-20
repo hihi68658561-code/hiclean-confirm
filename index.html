@@ -364,7 +364,8 @@ function fmtPhone(v){
   return String(v??"").trim();
 }
 function fmtBiz(v){const d=String(v??"").replace(/\D/g,"");return d.length===10?d.replace(/(\d{3})(\d{2})(\d{5})/,"$1-$2-$3"):String(v??"").trim()}
-function toDate(v){
+function toDate(v){const r=toDate0(v);if(!r)return"";const m=r.match(/^(\d{4})-(\d{2})-(\d{2})$/);if(!m)return"";const y=+m[1],mo=+m[2],d=+m[3];if(y<1990||y>2100||mo<1||mo>12||d<1||d>31)return"";return r}
+function toDate0(v){
   if(v==null||v==="")return"";
   if(v instanceof Date&&!isNaN(v)){const d=new Date(v.getTime()+12*3600e3);return d.getFullYear()+"-"+p2(d.getMonth()+1)+"-"+p2(d.getDate())}
   if(typeof v==="number"&&v>20000&&v<80000){const d=new Date(Math.round((v-25569)*864e5));return d.getUTCFullYear()+"-"+p2(d.getUTCMonth()+1)+"-"+p2(d.getUTCDate())}
@@ -372,7 +373,7 @@ function toDate(v){
   if(m)return m[1]+"-"+p2(m[2])+"-"+p2(m[3]);
   m=s.match(/^(\d{4})(\d{2})(\d{2})$/);if(m)return m[1]+"-"+m[2]+"-"+m[3];
   m=s.match(/^(\d{2})[.\-\/](\d{1,2})[.\-\/](\d{1,2})$/);if(m)return "20"+m[1]+"-"+p2(m[2])+"-"+p2(m[3]);
-  return s;
+  return "";
 }
 
 
@@ -1669,7 +1670,7 @@ function planImport(rows,fresh){
     const key=custKey(cu);let cust=byKey[key];
     if(!cust){const cand=(byName[nk(name)]||[]).filter(x=>(!x.biz_no||!biz||x.biz_no===biz)&&(!digits(x.phone)||!digits(phone)||digits(x.phone)===digits(phone)));
       if(cand.length===1&&(!biz||!phone||!cand[0].biz_no||!digits(cand[0].phone)))cust=cand[0]}
-    if(!cust){cust=cu;byKey[key]=cu;(byName[nk(name)]=byName[nk(name)]||[]).push(cu);newCust.push(cu)}
+    if(!cust){cust=cu;cu.__new=true;byKey[key]=cu;(byName[nk(name)]=byName[nk(name)]||[]).push(cu)}
     // 계약
     const stRaw=t("진행단계");let stage=STAGES.includes(stRaw)?stRaw:"확정";
     const g0=t("구분",0);const typeRaw=CTYPES.includes(g0)?g0:"";
@@ -1684,6 +1685,7 @@ function planImport(rows,fresh){
     const doc=t("계약서");const iss=g("발급일");
     const tax=iss instanceof Date?{type:"세금계산서",date:toDate(iss),supply:money(g("공급가액")),vat:money(g("부가세")),total:money(g("합계금액",2))}:(String(iss||"").trim()?{type:String(iss).trim()}:{});
     const sm=t("정산년월").match(/(\d{2,4})\s*년\s*(\d{1,2})\s*월/);
+    const badD=n=>{const v=g(n);const s=v instanceof Date?"":String(v??"").trim();if(s&&!toDate(v))notes.push(n+": "+s)};badD("계약일자");badD("설치일자");
     const memo=[t("비고"),...notes].filter(Boolean).join(" / ");
     const k={id:crypto.randomUUID(),customer_id:cust.id,contract_date:toDate(g("계약일자"))||null,stage,contract_type:ctype,channel,referrer:t("소개"),sales1:t("1차"),sales2:["무료체험","보상판매"].includes(s2)?"":s2,sales3_name:s3clean,free_trial:trial,
       product:t("제품")==="수압식"?"수압식":t("제품"),size,options:opts.join(", "),serial:t("시리얼"),wash_added:!!t("수압식")||t("제품")==="수압식",
@@ -1708,8 +1710,10 @@ function planImport(rows,fresh){
     const sg=k.customer_id+"|"+nk(k.product)+"|"+(k.contract_date||"")+"|"+k.amount;
     const ex=(k.serial&&bySerial[nk(k.serial)])||bySig[sg];
     if((k.serial&&serials.has(nk(k.serial)))||sig.has(sg)){skipped++;
+      if(cust.__new&&!newCust.includes(cust)){delete byKey[key];const bn=byName[nk(name)];if(bn){const i=bn.indexOf(cust);if(i>=0)bn.splice(i,1)}}
       if(ex&&withPay){updCtr.push({id:ex.id,patch:Object.assign({contract_type:ctype,channel,stage},extra,k.tax&&Object.keys(k.tax).length?{tax:k.tax}:{}),pays:paysOf(ex).length?[]:pays.map(p=>Object.assign(p,{contract_id:ex.id,customer_id:ex.customer_id}))})}
       return}
+    if(cust.__new&&!newCust.includes(cust))newCust.push(cust);
     if(k.serial)serials.add(nk(k.serial));sig.add(sg);newCtr.push(k);
     pays.forEach(p=>{p.contract_id=k.id;p.customer_id=k.customer_id;newPay.push(p)});
     // 설치 작업
