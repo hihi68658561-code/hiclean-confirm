@@ -125,6 +125,24 @@ dialog .df{padding:12px 18px;border-top:1px solid var(--line2);display:flex;just
 .wtbox{max-height:calc(100vh - 260px);overflow:auto;border:1px solid var(--line);border-radius:6px}
 .sumt th{white-space:nowrap}
 .wrapx.vis{overflow:visible}
+.fgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:10px;padding:14px 20px;border:2px dashed transparent;border-radius:10px;margin:0 8px}
+.fgrid.sm{grid-template-columns:repeat(auto-fill,minmax(96px,1fr));padding:8px 0;margin:0}
+.fgrid.drop{border-color:var(--accent);background:var(--accent-weak)}
+.fth{position:relative;display:grid;grid-template-rows:1fr auto;border:1px solid var(--line);border-radius:8px;background:var(--panel);padding:0;overflow:hidden;cursor:pointer;aspect-ratio:3/4;text-align:left;font:inherit;color:inherit}
+.fth:hover,.fth:focus-visible{border-color:var(--accent);box-shadow:0 0 0 2px var(--accent-weak)}
+.fth img{width:100%;height:100%;object-fit:cover;min-height:0;background:var(--line2)}
+.fpdf{display:grid;place-items:center;background:var(--line2);color:var(--mute);font-weight:700;font-size:18px;min-height:0;height:100%}
+.fpdf.big{width:160px;height:200px;margin:0 auto 12px;border-radius:8px}
+.fcap{display:flex;justify-content:space-between;gap:6px;padding:5px 8px;font-size:12px;color:var(--mute);border-top:1px solid var(--line2)}.fcap b{color:var(--fg)}
+.fx{position:absolute;top:4px;right:4px;z-index:1;width:22px;height:22px;border-radius:50%;border:0;background:rgba(0,0,0,.6);color:#fff;cursor:pointer;line-height:22px;padding:0}
+.nfiles{padding:8px 12px;border:1px solid var(--line);border-radius:8px}
+#lbx{max-width:min(1100px,96vw);width:96vw;height:92vh;padding:0;background:#111;border:0;color:#eee}#lbx::backdrop{background:rgba(0,0,0,.75)}
+#lbx .lbtop .btn{background:#2c2c2c;color:#fff;border-color:#555}#lbx .lbtop .btn.danger{color:#ff9b9b;border-color:#7a3b3b}
+.fgrid.sm .fcap{display:block;line-height:1.35}.fgrid.sm .fcap b{display:block}
+.lbwrap{display:grid;grid-template-rows:auto 1fr;height:100%}.lbtop{display:flex;gap:8px;align-items:center;padding:10px 14px;background:#1d1d1d}.lbcap{font-size:14px}
+.lbmid{display:grid;grid-template-columns:52px 1fr 52px;align-items:center;min-height:0}.lbimg{height:100%;min-height:0;display:grid;place-items:center;text-align:center;overflow:auto;padding:8px}
+.lbimg img{max-width:100%;max-height:calc(92vh - 80px);object-fit:contain}
+.lbnav{height:80px;border:0;background:rgba(255,255,255,.08);color:#fff;font-size:36px;border-radius:8px;margin:0 6px;cursor:pointer}.lbnav:disabled{opacity:.2;cursor:default}
 .wt.ct thead th{position:sticky}.wt.ct .rz{position:absolute;top:0;right:-3px;width:7px;height:100%;cursor:col-resize;z-index:2;touch-action:none}
 .wt.ct .rz::after{content:"";position:absolute;left:3px;top:20%;height:60%;border-left:1px solid var(--line)}.wt.ct .rz:hover::after{border-left:2px solid var(--accent)}
 body.resizing,body.resizing *{cursor:col-resize!important;user-select:none}
@@ -272,6 +290,8 @@ dialog{max-width:720px}
 </form></div>
 <div id="printRoot"></div>
 <dialog id="cfm" aria-labelledby="cfmMsg"><div class="cfmb"><p id="cfmMsg"></p><div class="cfmf"><button type="button" class="btn" id="cfmNo">취소</button><button type="button" class="btn pri" id="cfmYes">확인</button></div></div></dialog>
+<dialog id="lbx" aria-label="사진 크게 보기"><div class="lbwrap"><div class="lbtop"><span class="lbcap"></span><span style="flex:1"></span><button type="button" class="btn sm" id="lbOpen">원본 열기</button><button type="button" class="btn sm danger" id="lbDel">삭제</button><button type="button" class="btn sm" id="lbClose">닫기</button></div>
+<div class="lbmid"><button type="button" class="lbnav" id="lbPrev" aria-label="이전">‹</button><div class="lbimg"></div><button type="button" class="lbnav" id="lbNext" aria-label="다음">›</button></div></div></dialog>
 <dialog id="dlg"><form method="dialog" id="dlgForm"><div class="dh" id="dlgH"></div><div class="db" id="dlgB"></div><div class="df" id="dlgF"></div></form></dialog>
 <div class="toast" id="toast" role="status"></div>
 
@@ -433,7 +453,7 @@ const DOCS=["미수령","사진","원본","전자서명"];
 const SINKS=["해당없음","발주대기","발주완료","중고사용","재고사용","기타"];
 const JST=["접수","배정","보류","완료","취소"];
 const KINDS=["as","install","remove","addon"];
-let sb=null, me=null, staff=[], customers=[], contracts=[], jobs=[], payments=[];
+let sb=null, me=null, staff=[], customers=[], contracts=[], jobs=[], payments=[], files=[];
 let ui={view:"cust", sel:null, ctab:"info", q:"", stage:"", ctype:"", jscope:"mine", jkind:"", jpay:"", jview:"card", dkind:"as", dq:"", dsel:new Set(), jsel:new Set(), jst:"open", jq:"", draft:null, conf:null};
 const isAdmin=()=>me&&me.role==="admin", isOffice=()=>me&&(me.role==="admin"||me.role==="office");
 const custById=id=>customers.find(c=>c.id===id);
@@ -485,22 +505,23 @@ async function loadAll(){
   view().innerHTML=`<div class="empty"><h2>불러오는 중…</h2></div>`;
   try{
     [staff,customers,contracts,jobs]=await Promise.all([fetchAll("staff","user_id,name,role,aliases,active"),fetchAll("customers"),fetchAll("contracts"),fetchAll("jobs")]);
-    payments=await fetchPays();
+    payments=await fetchPays();files=await fetchFiles();
     const st=await sb.from("settings").select("bank").eq("id",1).maybeSingle();if(st.data&&st.data.bank)S.bank=st.data.bank;
   }catch(e){view().innerHTML=`<div class="empty"><h2>데이터를 불러오지 못했습니다</h2><p>${esc(e.message||"")}</p><p>1단계 데이터베이스 설정(phase1.sql)을 실행했는지 확인해 주세요.</p></div>`;return}
   if(ui.sel&&!custById(ui.sel))ui.sel=null;
   buildIdx();render();
 }
 async function fetchPays(){if(me&&me.role==="tech")return[];try{const r=await fetchAll("payments");ui.noPay=false;return r}catch(e){ui.noPay=true;return[]}}
-const TBL={payments:fetchPays,customers:()=>fetchAll("customers"),contracts:()=>fetchAll("contracts"),jobs:()=>fetchAll("jobs"),staff:()=>fetchAll("staff","user_id,name,role,aliases,active")};
+async function fetchFiles(){try{const r=await fetchAll("customer_files");ui.noFiles=false;return r}catch(e){ui.noFiles=true;return[]}}
+const TBL={files:fetchFiles,payments:fetchPays,customers:()=>fetchAll("customers"),contracts:()=>fetchAll("contracts"),jobs:()=>fetchAll("jobs"),staff:()=>fetchAll("staff","user_id,name,role,aliases,active")};
 let reloadSeq=0;
 async function reload(tables,quiet){
   const seq=++reloadSeq;let res;
   try{res=await Promise.all(tables.map(t=>TBL[t]()))}catch(e){if(!quiet)toast("최신 내용을 불러오지 못했습니다. 인터넷 연결을 확인해 주세요.");return false}
   if(seq!==reloadSeq&&quiet)return false;
   let changed=false;
-  tables.forEach((t,i)=>{const d=res[i];const old={customers,contracts,jobs,staff,payments}[t];if(JSON.stringify(old)!==JSON.stringify(d))changed=true;
-    if(t==="customers")customers=d;if(t==="contracts")contracts=d;if(t==="jobs")jobs=d;if(t==="staff")staff=d;if(t==="payments")payments=d});
+  tables.forEach((t,i)=>{const d=res[i];const old={customers,contracts,jobs,staff,payments,files}[t];if(JSON.stringify(old)!==JSON.stringify(d))changed=true;
+    if(t==="customers")customers=d;if(t==="contracts")contracts=d;if(t==="jobs")jobs=d;if(t==="staff")staff=d;if(t==="payments")payments=d;if(t==="files")files=d});
   if(tables.includes("staff")&&me){const s=staff.find(x=>x.user_id===me.id);if(s){me.name=s.name;me.role=s.role;document.getElementById("modeLabel").textContent=`${me.name||me.email} · ${ROLE[me.role]}`}}
   if(ui.sel&&!custById(ui.sel))ui.sel=null;
   buildIdx();if(!quiet||changed)render();return true;
@@ -509,7 +530,7 @@ async function reload(tables,quiet){
 function bgRefresh(){
   if(!me||!me.role||document.hidden||ui.dirty||document.getElementById("dlg").open)return;
   const a=document.activeElement;if(a&&a.closest&&a.closest("#view form,#view .stafft,#view fieldset"))return;
-  reload(["customers","contracts","jobs","staff","payments"],true);
+  reload(["customers","contracts","jobs","staff","payments","files"],true);
 }
 setInterval(bgRefresh,30000);
 window.addEventListener("focus",bgRefresh);
@@ -535,7 +556,7 @@ function render0(){
 
 /* ================= 고객 ================= */
 let ctrIdx={},jobIdx={};
-function buildIdx(){buildPayIdx();ctrIdx={};jobIdx={};contracts.forEach(k=>(ctrIdx[k.customer_id]=ctrIdx[k.customer_id]||[]).push(k));jobs.forEach(j=>(jobIdx[j.customer_id]=jobIdx[j.customer_id]||[]).push(j));
+function buildIdx(){buildPayIdx();buildFileIdx();ctrIdx={};jobIdx={};contracts.forEach(k=>(ctrIdx[k.customer_id]=ctrIdx[k.customer_id]||[]).push(k));jobs.forEach(j=>(jobIdx[j.customer_id]=jobIdx[j.customer_id]||[]).push(j));
   Object.values(ctrIdx).forEach(a=>a.sort((a,b)=>(b.contract_date||"").localeCompare(a.contract_date||"")));Object.values(jobIdx).forEach(a=>a.sort((a,b)=>(b.visit_date||b.request_date||"").localeCompare(a.visit_date||a.request_date||"")))}
 function custContracts(id){return ctrIdx[id]||[]}
 function custJobs(id){return jobIdx[id]||[]}
@@ -571,12 +592,12 @@ function renderCustMain(){
   const m=document.getElementById("main");const c=custById(ui.sel);
   if(!c){m.innerHTML=`<div class="empty"><h2>고객을 고르세요</h2><p>${me.role==="sales"?"본인이 담당하거나 수금을 배정받은 고객만 보입니다.":me.role==="tech"?"배정받은 작업의 고객만 보입니다. 위쪽 ‘작업현황’ 메뉴에서 설치·A/S 목록을 볼 수 있습니다.":"왼쪽에서 업체명, 전화번호, 시리얼, 담당자로 검색하세요."}</p></div>`;return}
   const ks=custContracts(c.id),js=custJobs(c.id);
-  const tabs=[["info","고객정보"]];if(me.role!=="tech")tabs.push(["ctr",`계약 (${ks.length})`]);tabs.push(["install",`설치·철거 (${js.filter(j=>j.kind!=="as").length})`],["as",`A/S (${js.filter(j=>j.kind==="as").length})`],["conf","확인서"]);
+  const tabs=[["info","고객정보"]];if(me.role!=="tech")tabs.push(["ctr",`계약 (${ks.length})`]);tabs.push(["install",`설치·철거 (${js.filter(j=>j.kind!=="as").length})`],["as",`A/S (${js.filter(j=>j.kind==="as").length})`],["files",`사진·서류 (${custFiles(c).filter(f=>!(me.role==="tech"&&f.kind==="계약서")).length})`],["conf","확인서"]);
   if(!tabs.some(t=>t[0]===ui.ctab))ui.ctab="info";
   m.innerHTML=`<div class="chead"><h2>${esc(c.name)}</h2><span class="meta">${esc([c.ceo,c.phone||c.phone2,"담당 "+(staffName(c.owner)||c.owner_name||"-")].filter(Boolean).join(" · "))}</span></div>
    <div class="tabs">${tabs.map(([k,l])=>`<button type="button" class="tab${ui.ctab===k?" on":""}" data-t="${k}">${l}</button>`).join("")}</div><div id="tabBody"></div>`;
   m.querySelectorAll(".tab").forEach(b=>b.onclick=()=>{ui.ctab=b.dataset.t;ui.draft=null;renderCustMain()});
-  if(ui.ctab==="info")renderCustInfo(c);else if(ui.ctab==="ctr")renderContracts(c);else if(ui.ctab==="install"||ui.ctab==="as")renderCustJobs(c,ui.ctab);else renderConf(c);
+  if(ui.ctab==="info")renderCustInfo(c);else if(ui.ctab==="ctr")renderContracts(c);else if(ui.ctab==="install"||ui.ctab==="as")renderCustJobs(c,ui.ctab);else if(ui.ctab==="files")renderCustFiles(c);else renderConf(c);
 }
 function inp(name,label,v,type="text",ro=false,extra=""){return `<label class="f">${label}<input name="${name}" type="${type}" value="${esc(v??"")}" ${ro?"readonly":""} ${extra}></label>`}
 function sel(name,label,opts,v,ro=false){return `<label class="f">${label}<select name="${name}" ${ro?"disabled":""}>${opts.map(o=>Array.isArray(o)?`<option value="${esc(o[0])}" ${o[0]===v?"selected":""}>${esc(o[1])}</option>`:`<option ${o===v?"selected":""}>${esc(o)}</option>`).join("")}</select></label>`}
@@ -613,7 +634,7 @@ function renderCustInfo(c){
 function newCustomer(){
   openDlg("새 고객",`${bizUploadBox("nBizUp")}<div class="g2"><label class="f">업체명<input id="nName"></label><label class="f">대표자<input id="nCeo"></label></div>
    <div class="g2"><label class="f">휴대번호<input id="nPhone"></label><label class="f">사업자등록번호<input id="nBiz"></label></div>
-   <label class="f">상점주소<input id="nAddr"></label><label class="f">메모<input id="nMemo" placeholder="개업일·업태 등"></label>${me.role==="sales"?`<p class="mapt">담당자는 본인으로 등록됩니다.</p>`:""}`,
+   <label class="f">상점주소<input id="nAddr"></label><label class="f">메모<input id="nMemo" placeholder="개업일·업태 등"></label>${ui.noFiles?"":newCustFilesBox()}${me.role==="sales"?`<p class="mapt">담당자는 본인으로 등록됩니다.</p>`:""}`,
    [["취소"],["등록","pri",async()=>{const name=val("nName").trim();if(!name)return toast("업체명을 입력하세요");
      const phone=fmtPhone(val("nPhone")),biz=fmtBiz(val("nBiz"));
      const dup=customers.find(c=>(biz&&c.biz_no&&c.biz_no===biz)||(phone&&c.phone===phone&&nk(c.name)===nk(name)));
@@ -622,7 +643,11 @@ function newCustomer(){
      const {data,error}=await sb.from("customers").insert(row).select().single();if(error)return toast("등록하지 못했습니다: "+error.message);
      const bf=document.getElementById("nBizUp").file;let msg="등록했습니다";
      if(bf){try{await storeBizDoc(data.id,bf);msg="등록했습니다 (사업자등록증 보관)"}catch(e){msg="고객은 등록했지만 등록증을 보관하지 못했습니다"+(/biz_doc|bucket|not found/i.test(e.message||"")?" — Supabase에서 phase1i.sql을 실행해 주세요":": "+(e.message||""))}}
-     ui.sel=data.id;ui.ctab="info";toast(msg);reload(["customers"])}]]);
+     if(nfSel&&nfSel.length){const groups={};nfSel.forEach(x=>(groups[x.kind]=groups[x.kind]||[]).push(x.file));let ok=0,fail=[];
+       for(const k of Object.keys(groups)){const r=await uploadCustFiles(data.id,groups[k],k,m=>toast(m));ok+=r.ok;fail=fail.concat(r.fail)}
+       msg+=fail.length?` · 사진 ${ok}개 올림, ${fail.length}개 실패${fileErrHint(fail)}`:` · 사진·서류 ${ok}개`;nfSel.forEach(x=>x.url&&URL.revokeObjectURL(x.url))}
+     ui.sel=data.id;ui.ctab="info";toast(msg);reload(["customers","files"])}]]);
+  const nfSel=bindNewCustFiles();
   bindBizUpload("nBizUp",fd=>{const set=(id,v)=>{const el=document.getElementById(id);if(el&&v)el.value=v};
     set("nName",fd.name);set("nCeo",fd.ceo);set("nBiz",fd.biz);set("nAddr",fd.addr);
     const memo=[fd.open&&"개업일 "+fd.open,fd.type&&"업태 "+fd.type,fd.item&&"종목 "+fd.item].filter(Boolean).join(" · ");set("nMemo",memo);
@@ -731,6 +756,78 @@ function bindBizUpload(id,onRead){
       box.dataset.raw=r.text;onRead(fd,f)}
     catch(e){st.textContent="글자 읽기에 실패했습니다(인터넷 연결 확인). 직접 입력해 주세요. 파일은 함께 보관됩니다.";onRead({},f)}};
 }
+
+/* ================= 고객 사진·서류 ================= */
+const FKINDS=[["계약서","ctr"],["설치사진","inst"],["A/S사진","as"],["사업자등록증","biz"],["기타","etc"]];
+const FCODE=Object.fromEntries(FKINDS);
+let fileIdx={};
+function buildFileIdx(){fileIdx={};files.forEach(f=>(fileIdx[f.customer_id]=fileIdx[f.customer_id]||[]).push(f));Object.values(fileIdx).forEach(a=>a.sort((x,y)=>(y.created_at||"").localeCompare(x.created_at||"")))}
+function custFiles(c){const a=(fileIdx[c.id]||[]).slice();if(c.biz_doc&&!a.some(f=>f.path===c.biz_doc))a.push({id:"biz:"+c.id,customer_id:c.id,path:c.biz_doc,kind:"사업자등록증",name:"사업자등록증",mime:/\.pdf$/i.test(c.biz_doc)?"application/pdf":"image/jpeg",created_at:"",pseudo:true});return a}
+function upKinds(){return FKINDS.map(k=>k[0]).filter(k=>!(me.role==="tech"&&k==="계약서"))}
+const isPdf=f=>/pdf/i.test(f.mime||"")||/\.pdf$/i.test(f.path||"");
+const _surl={};
+async function signUrls(paths){const now=Date.now();const need=[...new Set(paths)].filter(p=>!_surl[p]||_surl[p].exp<now+60000);
+  if(need.length){const {data,error}=await sb.storage.from("bizdocs").createSignedUrls(need,3600);
+    if(!error&&data)data.forEach(d=>{if(d&&d.signedUrl&&!d.error){const u=/^https?:/.test(d.signedUrl)?d.signedUrl:SB_URL+"/storage/v1"+d.signedUrl;_surl[d.path]={url:u,exp:now+3600000}}})}
+  return Object.fromEntries(paths.map(p=>[p,(_surl[p]||{}).url||""]))}
+async function uploadCustFiles(custId,list,kind,prog){
+  let ok=0,fail=[];const code=FCODE[kind]||"etc";
+  for(let i=0;i<list.length;i++){const f0=list[i];if(prog)prog(`올리는 중… ${i+1}/${list.length}`);
+    try{if(f0.size>15*1024*1024)throw new Error("15MB 초과");const f=await shrinkForStore(f0);const ext=((f.name.match(/\.(\w+)$/)||[,""])[1]||(isPdf(f)?"pdf":"jpg")).toLowerCase();
+      const path=`${custId}/f/${code}/${Date.now()}-${Math.random().toString(36).slice(2,7)}.${ext}`;
+      const up=await sb.storage.from("bizdocs").upload(path,f,{contentType:f.type||"application/octet-stream",upsert:false});if(up.error)throw up.error;
+      const {error}=await sb.from("customer_files").insert({customer_id:custId,path,kind,name:f0.name.slice(0,120),mime:f.type||"",size:f.size});if(error)throw error;ok++}
+    catch(e){fail.push(f0.name+": "+(e.message||"실패"))}}
+  return{ok,fail};
+}
+function fileErrHint(fail){const m=fail.join(" ");return /customer_files|bucket|not found|relation/i.test(m)?" — Supabase에서 phase1i.sql, phase1j.sql을 실행해 주세요":""}
+function renderCustFiles(c){
+  const tb=document.getElementById("tabBody");const all=custFiles(c);const fk=ui.fkind||"";
+  const list=all.filter(f=>!fk||f.kind===fk);const cnt=k=>all.filter(f=>f.kind===k).length;
+  tb.innerHTML=`${ui.noFiles?`<div class="sec" style="max-width:none"><p class="warnbox">사진·서류 칸이 아직 없습니다. Supabase에서 <b>phase1i.sql</b>, <b>phase1j.sql</b>을 실행해 주세요.</p></div>`:""}
+   <div class="toolbar"><div class="nav" role="group" aria-label="종류">${[["","전체 ("+all.length+")"],...FKINDS.map(k=>[k[0],k[0]+" ("+cnt(k[0])+")"])].filter(x=>!(me.role==="tech"&&x[0]==="계약서")).map(([k,l])=>`<button type="button" data-fk="${esc(k)}" class="${fk===k?"on":""}">${esc(l)}</button>`).join("")}</div>
+     <span style="flex:1"></span>${ui.noFiles?"":`<select id="fKind" aria-label="올릴 종류">${upKinds().map(k=>`<option ${k===(fk||ui.fupKind||"설치사진")?"selected":""}>${k}</option>`).join("")}</select>
+     <label class="btn pri"><input type="file" id="fIn" accept="image/*,application/pdf" multiple hidden>사진·서류 올리기</label>`}<span class="mapt" id="fSt"></span></div>
+   <div class="fgrid" id="fGrid">${list.map((f,i)=>`<button type="button" class="fth" data-fi="${i}" aria-label="${esc(f.kind)} ${esc(f.name)} 크게 보기">
+      ${isPdf(f)?`<span class="fpdf">PDF</span>`:`<img alt="" loading="lazy" data-p="${esc(f.path)}">`}<span class="fcap"><b>${esc(f.kind)}</b>${esc(f.created_at?f.created_at.slice(0,10):"")}</span></button>`).join("")
+     ||`<div class="empty" style="padding:24px 0;grid-column:1/-1">${fk?esc(fk)+" ":""}사진·서류가 없습니다.${ui.noFiles?"":" 여기에 파일을 끌어다 놓거나 ‘사진·서류 올리기’를 누르세요."}</div>`}</div>`;
+  tb.querySelectorAll("[data-fk]").forEach(b=>b.onclick=()=>{ui.fkind=b.dataset.fk;renderCustFiles(c)});
+  const paths=list.filter(f=>!isPdf(f)).map(f=>f.path);
+  if(paths.length)signUrls(paths).then(m=>tb.querySelectorAll("img[data-p]").forEach(im=>{const u=m[im.dataset.p];if(u)im.src=u;else im.replaceWith(Object.assign(document.createElement("span"),{className:"fpdf",textContent:"열 수 없음"}))}));
+  tb.querySelectorAll("[data-fi]").forEach(b=>b.onclick=()=>openViewer(list,+b.dataset.fi,c));
+  const st=document.getElementById("fSt");
+  const go=async fl=>{if(!fl.length)return;const kind=document.getElementById("fKind").value;ui.fupKind=kind;
+    const r=await uploadCustFiles(c.id,[...fl],kind,m=>st.textContent=m);st.textContent="";
+    toast(r.fail.length?`${r.ok}개 올림, ${r.fail.length}개 실패${fileErrHint(r.fail)}`:`${r.ok}개를 올렸습니다`);await reload(["files"],true);if(ui.ctab==="files"&&ui.sel===c.id)renderCustFiles(c)};
+  const fi=document.getElementById("fIn");if(fi)fi.onchange=()=>{const fl=fi.files;go(fl);fi.value=""};
+  const g=document.getElementById("fGrid");if(!ui.noFiles&&g){g.ondragover=e=>{e.preventDefault();g.classList.add("drop")};g.ondragleave=()=>g.classList.remove("drop");g.ondrop=e=>{e.preventDefault();g.classList.remove("drop");go([...e.dataTransfer.files].filter(f=>/^image\/|pdf/.test(f.type)))}}
+}
+/* 크게 보기 */
+function openViewer(list,i,c){
+  const d=document.getElementById("lbx");let cur=i;
+  const draw=async()=>{const f=list[cur];const m=await signUrls([f.path]);const u=m[f.path];
+    d.querySelector(".lbimg").innerHTML=!u?`<p class="mapt">파일을 열 수 없습니다.</p>`:isPdf(f)?`<div class="fpdf big">PDF</div><p><a class="btn pri" href="${esc(u)}" target="_blank" rel="noopener">PDF 열기</a></p>`:`<img alt="${esc(f.kind)}" src="${esc(u)}">`;
+    d.querySelector(".lbcap").textContent=`${f.kind} · ${f.name||""}${f.created_at?" · "+f.created_at.slice(0,10):""}  (${cur+1}/${list.length})`;
+    d.querySelector("#lbOpen").onclick=()=>{if(u)window.open(u,"_blank","noopener")};
+    const del=d.querySelector("#lbDel");del.hidden=!isOffice()||!!f.pseudo;
+    d.querySelector("#lbPrev").disabled=cur===0;d.querySelector("#lbNext").disabled=cur===list.length-1};
+  d.querySelector("#lbPrev").onclick=()=>{if(cur>0){cur--;draw()}};d.querySelector("#lbNext").onclick=()=>{if(cur<list.length-1){cur++;draw()}};
+  d.querySelector("#lbClose").onclick=()=>d.close();
+  d.onkeydown=e=>{if(e.key==="ArrowLeft"){e.preventDefault();d.querySelector("#lbPrev").click()}if(e.key==="ArrowRight"){e.preventDefault();d.querySelector("#lbNext").click()}};
+  d.onclick=e=>{if(e.target===d)d.close()};
+  d.querySelector("#lbDel").onclick=async()=>{const f=list[cur];if(!await askConfirm(`이 ${f.kind}을(를) 삭제할까요?`))return;
+    await sb.storage.from("bizdocs").remove([f.path]);const {error}=await sb.from("customer_files").delete().eq("id",f.id);if(error)return toast("삭제하지 못했습니다: "+error.message);
+    toast("삭제했습니다");d.close();await reload(["files"],true);if(ui.ctab==="files")renderCustFiles(c)};
+  d.showModal();draw();
+}
+/* 새 고객 창: 첨부 미리보기 */
+function newCustFilesBox(){return `<fieldset class="nfiles"><legend>사진·서류 첨부 (선택)</legend><div class="toolbar" style="padding:0"><select id="nfKind" aria-label="종류">${upKinds().map(k=>`<option ${k==="계약서"?"selected":""}>${k}</option>`).join("")}</select>
+  <label class="btn"><input type="file" id="nfIn" accept="image/*,application/pdf" multiple hidden>파일 고르기</label><span class="mapt">여러 장을 한 번에 고를 수 있습니다.</span></div><div class="fgrid sm" id="nfGrid"></div></fieldset>`}
+function bindNewCustFiles(){const sel=[];const g=document.getElementById("nfGrid"),inp=document.getElementById("nfIn");if(!inp)return sel;
+  const draw=()=>{g.innerHTML=sel.map((x,i)=>`<div class="fth"><button type="button" class="fx" data-rm="${i}" aria-label="빼기">×</button>${isPdf(x.file)?`<span class="fpdf">PDF</span>`:`<img alt="" src="${x.url}">`}<span class="fcap"><b>${esc(x.kind)}</b>${esc(x.file.name.slice(0,18))}</span></div>`).join("");
+    g.querySelectorAll("[data-rm]").forEach(b=>b.onclick=()=>{const x=sel.splice(+b.dataset.rm,1)[0];if(x&&x.url)URL.revokeObjectURL(x.url);draw()})};
+  inp.onchange=()=>{const k=document.getElementById("nfKind").value;[...inp.files].forEach(f=>sel.push({file:f,kind:k,url:/^image\//.test(f.type)?URL.createObjectURL(f):""}));inp.value="";draw()};
+  return sel}
 
 /* ================= 계약관리 (당월 계약·최종결제·미수) ================= */
 const PMETH=["카드","현금","입금","캐피탈","CMS","승인취소"];
