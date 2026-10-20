@@ -933,7 +933,7 @@ function colPicker(onDone,t="ctr"){
 function ctrCell(col,k,c,st,basis){
   const ij=installOf(k);
   switch(col){
-    case"basis":{const d=k.contract_date||"";return `<td title="${esc(basis.join("·"))}">${esc(d?d.slice(2,4)+d.slice(5,7):"")}</td>`}
+    case"basis":{const d=baseDate(k);const ij2=installOf(k);return `<td title="${esc((ij2&&(ij2.done_date||ij2.visit_date)?"설치일 기준":"설치일 없음 → 계약일 기준")+" · "+basis.join("·"))}">${esc(d?d.slice(2,4)+d.slice(5,7):"")}</td>`}
     case"ctype":return `<td><span class="tag ct-${esc(k.contract_type||"구매")}">${esc(k.contract_type||"구매")}</span></td>`;
     case"stage":return `<td><span class="tag st-${esc(k.stage)}">${esc(k.stage)}</span></td>`;
     case"trial":return `<td>${trialCell(k)}</td>`;
@@ -975,16 +975,16 @@ function renderCtrView0(){
   const [st0,en0]=monthRange(ui.cm);const inM=d=>d&&d>=st0&&d<en0;
   const rows=[];
   contracts.forEach(k=>{const s=payStat(k);const b=[];
-    if(inM(k.contract_date))b.push("계약");
+    if(inM(baseDate(k)))b.push("설치");
     if(inM(s.last))b.push("결제");
-    if(k.stage==="미수"&&(!k.contract_date||k.contract_date<en0)&&!b.length)b.push("미수");
+    if(k.stage==="미수"&&(!baseDate(k)||baseDate(k)<en0)&&!b.length)b.push("미수");
     if(b.length)rows.push({k,c:custById(k.customer_id)||{},s,b})});
   const cnt=(r,t)=>rows.filter(x=>(!r||CROWS.find(y=>y[0]===r)[2](x.k))&&(!t||(x.k.contract_type||"구매")===t)).length;
   const qq=ui.cq.trim().toLowerCase();
   const list=rows.filter(x=>(!ui.crow||CROWS.find(y=>y[0]===ui.crow)[2](x.k))&&(!ui.cct||(x.k.contract_type||"구매")===ui.cct)
     &&(!qq||[x.c.name,x.c.ceo,x.c.phone,x.c.phone2,x.k.serial,x.k.memo,x.k.approval,staffName(x.k.sales3),x.k.sales3_name].join(" ").toLowerCase().includes(qq)));
   const bo=x=>x.b[0]==="미수"?1:0;
-  list.sort((a,b)=>bo(a)-bo(b)||(b.k.contract_date||"").localeCompare(a.k.contract_date||""));
+  list.sort((a,b)=>bo(a)-bo(b)||(baseDate(b.k)||"").localeCompare(baseDate(a.k)||""));
   // 금액 요약
   const mC=contracts.filter(k=>inM(k.contract_date)&&k.stage!=="취소");
   const mP=payments.filter(p=>inM(p.pay_date));const mCard=mP.filter(p=>p.method==="카드").reduce((a,p)=>a+Number(p.amount||0),0),mOther=mP.filter(p=>p.method!=="카드").reduce((a,p)=>a+Number(p.amount||0),0);
@@ -1001,7 +1001,7 @@ function renderCtrView0(){
       <div class="kpis"><div class="kpi"><span>당월 계약</span><b>${mC.length}건 · ${won0(mC.reduce((a,k)=>a+Number(k.amount||0),0))}원</b></div>
        <div class="kpi"><span>당월 입금</span><b>${won0(mCard+mOther)}원</b><small>카드 ${won0(mCard)} · 현금+캐피탈 ${won0(mOther)}</small></div>
        <div class="kpi bad"><span>미수금 (미수 ${un.length}건)</span><b>${won0(unSum)}원</b></div></div>
-      <p class="mapt" style="margin:0">이달 계약한 건, 이달 최종결제된 건, 그리고 해결되지 않은 미수 건이 함께 나옵니다.<br>숫자를 누르면 아래 목록이 그 건들로 바뀝니다.</p></div>
+      <p class="mapt" style="margin:0">이달 설치한 건(설치 전이면 계약일 기준), 이달 최종결제된 건, 그리고 해결되지 않은 미수 건이 함께 나옵니다.<br>숫자를 누르면 아래 목록이 그 건들로 바뀝니다.</p></div>
      <div class="sumbox">${sumT}</div></div>
    <div class="toolbar"><input id="cQ" type="search" placeholder="업체명·대표자·전화·시리얼·담당 검색" value="${esc(ui.cq)}">
      <span class="mapt">${ui.crow?esc(CROWS.find(y=>y[0]===ui.crow)[1])+" · ":""}${ui.cct?esc(ui.cct)+" · ":""}${list.length}건</span>${ui.crow||ui.cct?`<button class="btn sm" type="button" id="cAll">전체 보기</button>`:""}
@@ -1107,6 +1107,8 @@ function gradeOf(c){if(!c||!me||me.role==="tech")return null;const r=gradeRow(c)
   const a=autoRed(c);return a?{g:"레드",reason:`미수 ${won0(a.amt)}원 · ${a.days}일 경과 (자동)`,auto:true}:null}
 function gradeWarn(c){const g=gradeOf(c);return g?`<p class="gwarn ${g.g==="블랙"?"g-black":"g-red"}">⚠ ${g.g} 고객${g.reason?" — "+esc(g.reason):""}</p>`:""}
 function gradeBadge(c){const g=gradeOf(c);return g?` <span class="gbadge ${g.g==="블랙"?"g-black":"g-red"}" title="${esc(g.reason)}">${g.g}</span>`:""}
+/* 계약관리 기준일: 설치일자(완료일, 없으면 방문 예정일), 설치 전이면 계약일자 */
+function baseDate(k){const ij=installOf(k);return (ij&&(ij.done_date||ij.visit_date))||k.contract_date||""}
 function hasTrialCol(){return contracts.some(k=>"trial_end" in k)}
 function trialCell(k){const d=k.trial_end;if(!d)return"";const td=today();const open=!["완료","취소","철거"].includes(k.stage);const days=Math.round((new Date(d)-new Date(td))/864e5);
   const cls=open&&days<0?"late":open&&days<=3?"soon":"";return `<span class="trial ${cls}" title="${open?(days<0?-days+"일 지남":days===0?"오늘 종료":days+"일 남음"):""}">${esc(ymd2(d))}</span>`}
