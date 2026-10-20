@@ -1147,7 +1147,7 @@ function sortVal(col,x){const k=x.k,c=x.c,s=x.s;
     case"stage":return STAGES.indexOf(k.stage);case"ctype":return CTYPES.indexOf(k.contract_type||"구매");case"name":return c.name||"";}
   return ctrCell(col,k,c,s,x.b).replace(/<[^>]*>/g,"").replace(/&amp;/g,"&").trim()}
 function sortCtrList(list){const S=getSort();const cache=new Map();const v=(x,col)=>{const key=col;let m=cache.get(x);if(!m){m={};cache.set(x,m)}if(!(key in m))m[key]=sortVal(col,x);return m[key]};
-  const grp=[DEFSORT,INSTSORT].some(x=>JSON.stringify(S)===JSON.stringify(x));const bo=x=>!x.b?0:x.b.includes("설치")?0:x.b.includes("결제")?1:2;
+  const grp=true;const bo=x=>!x.b?0:x.b.includes("설치")?0:x.b.includes("결제")?1:2;
   list.sort((a,b)=>{if(grp&&bo(a)!==bo(b))return bo(a)-bo(b);for(const {c,d} of S){const A=v(a,c),B=v(b,c);const ea=A===""||A==null,eb=B===""||B==null;if(ea&&eb)continue;if(ea)return 1;if(eb)return -1;
     const r=typeof A==="number"&&typeof B==="number"?A-B:String(A).localeCompare(String(B),"ko",{numeric:true});if(r)return r*d}return 0})}
 function sortPicker(onDone){let cur=getSort().map(x=>({...x}));
@@ -1156,7 +1156,7 @@ function sortPicker(onDone){let cur=getSort().map(x=>({...x}));
       <label class="f">방향<select data-sd="${i}"><option value="1" ${x.d===1?"selected":""}>오름차순 (빠른 날짜·작은 값·가나다)</option><option value="-1" ${x.d===-1?"selected":""}>내림차순 (최근 날짜·큰 값)</option></select></label><span></span></div>`}).join("");
     document.querySelectorAll("#spList [data-si]").forEach(s=>s.onchange=()=>{const i=+s.dataset.si;if(s.value)cur[i]={c:s.value,d:(cur[i]||{}).d||1};else cur.splice(i,1);cur=cur.filter(Boolean);draw()});
     document.querySelectorAll("#spList [data-sd]").forEach(s=>s.onchange=()=>{const i=+s.dataset.sd;if(cur[i])cur[i].d=+s.value})};
-  openDlg("정렬 설정",`<p class="mapt">1순위가 같으면 2순위, 2순위도 같으면 3순위로 정렬합니다. 열 제목을 눌러도 바로 정렬됩니다(한 번 더 누르면 반대로).<br>‘접수한 순서(기본)’와 ‘설치일자·시간 순’은 <b>당월 건 → 이달 결제된 예전 건 → 미수 건</b>으로 묶고, 묶음 안에서 그 순서대로 보여줍니다.</p><div id="spList" style="display:grid;gap:8px"></div>`,
+  openDlg("정렬 설정",`<p class="mapt">1순위가 같으면 2순위, 2순위도 같으면 3순위로 정렬합니다. 열 제목을 눌러도 바로 정렬됩니다(한 번 더 누르면 반대로).<br>목록은 항상 <b>당월 건 → 이달 결제된 예전 건 → 미수 건</b>으로 묶이고, 고른 정렬은 각 묶음 안에서 적용됩니다.</p><div id="spList" style="display:grid;gap:8px"></div>`,
     [["접수한 순서 (기본)","",()=>{cur=DEFSORT.map(x=>({...x}));draw();return true}],["설치일자·시간 순","",()=>{cur=INSTSORT.map(x=>({...x}));draw();return true}],["취소"],["적용","pri",()=>{cur=cur.filter(x=>x&&x.c);setSort(cur.length&&JSON.stringify(cur)!==JSON.stringify(DEFSORT)?cur:null);onDone()}]]);draw()}
 function hasTrialCol(){return contracts.some(k=>"trial_end" in k)}
 function trialCell(k){const d=k.trial_end;if(!d)return"";const td=today();const open=!["완료","취소","철거"].includes(k.stage);const days=Math.round((new Date(d)-new Date(td))/864e5);
