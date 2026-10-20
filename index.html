@@ -125,6 +125,7 @@ dialog .df{padding:12px 18px;border-top:1px solid var(--line2);display:flex;just
 .wtbox{max-height:calc(100vh - 260px);overflow:auto;border:1px solid var(--line);border-radius:6px}
 .sumt th{white-space:nowrap}
 .wrapx.vis{overflow:visible}
+.rofield{background:var(--line2)!important;color:var(--fg);cursor:default}
 .fgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:10px;padding:14px 20px;border:2px dashed transparent;border-radius:10px;margin:0 8px}
 .fgrid.sm{grid-template-columns:repeat(auto-fill,minmax(96px,1fr));padding:8px 0;margin:0}
 .fgrid.drop{border-color:var(--accent);background:var(--accent-weak)}
@@ -1034,8 +1035,8 @@ function contractDlg(c,k){
    <div class="g3">${inp("contract_date","계약일자",k.contract_date,"date",ro)}${sel("contract_type","구분",CTYPES,k.contract_type||"구매",ro)}${sel("stage","진행단계",STAGES,STAGES.includes(k.stage)?k.stage:"확정",ro)}</div>
    <div class="g3">${sel("contract_doc","계약서",DOCS.map(d=>[d,d==="사진"?"사진 수령(○)":d==="원본"?"원본 수령(●)":d]),k.contract_doc,ro)}<div style="grid-column:span 2">${inp("free_trial","무료체험 메모(날짜 등)",k.free_trial,"text",ro)}</div></div>
    <h3 class="ksec">영업 및 설치 담당자</h3>
-   <div class="g3">${inp("channel","영업 경로",k.channel,"text",ro,'list="chList"')}${inp("referrer","소개",k.referrer,"text",ro)}<span></span></div>
-   <div class="g3">${inp("sales1","1차 선행자",k.sales1,"text",ro,'list="stList"')}${inp("sales2","2차 상담자",k.sales2,"text",ro,'list="stList"')}${isOffice()?inp("sales3","3차 계약자(담당자) — 고르거나 직접 입력",staffName(k.sales3)||k.sales3_name||"","text",false,'list="s3List" placeholder="이름 입력 또는 목록에서 선택"'):inp("_s3","3차 계약자",staffName(k.sales3)||k.sales3_name,"text",true)}</div>
+   <div class="g3">${inp("channel","영업 경로",k.channel,"text",ro,'list="chList"')}${inp("referrer","소개",k.referrer,"text",ro)}${(()=>{const who=ij?whoOf(ij):"";const v=ij?(who?who+(ij.visit_date?` (${ij.visit_date.slice(5).replace("-","/")}${ij.visit_time?" "+ij.visit_time:""})`:""):"미배정"):(isNew?"계약 저장 후 설치 작업에서 배정":"설치 작업 없음");return `<label class="f" title="설치 작업에서 배정한 기사가 표시됩니다">설치 담당자<input value="${esc(v)}" readonly tabindex="-1" class="rofield"></label>`})()}</div>
+   <div class="g3">${inp("sales1","1차 선행자",k.sales1,"text",ro,'list="stList"')}${inp("sales2","2차 상담자",k.sales2,"text",ro,'list="stList"')}${isOffice()?inp("sales3","3차 계약자(담당자)",staffName(k.sales3)||k.sales3_name||"","text",false,'list="s3List" placeholder="이름 입력 또는 목록에서 선택"'):inp("_s3","3차 계약자",staffName(k.sales3)||k.sales3_name,"text",true)}</div>
    <h3 class="ksec">제품내역</h3>
    <div class="g3">${inp("product","제품",k.product,"text",ro,'list="pdList"')}${inp("size","사이즈",k.size,"text",ro)}${inp("serial","시리얼",k.serial,"text",ro)}</div>
    <div class="g3"><label class="f">수압식 추가 구매<select name="wash_added" ${ro?"disabled":""}><option value="0">아니오</option><option value="1" ${k.wash_added?"selected":""}>예</option></select></label>${sel("sink_status","싱크대 발주",["",...SINKS],(ij||{}).sink_status||"",sinkRo)}${inp("sink_memo","싱크대 메모(크기 등)",(ij||{}).sink_memo,"text",sinkRo)}</div>
