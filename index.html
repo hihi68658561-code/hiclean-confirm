@@ -1099,7 +1099,7 @@ function contractDlg(c,k,tpl){
   (()=>{const f=document.getElementById("kf");if(!f||ro)return;const q=n=>f.querySelector(`[name="${n}"]`);const parts=["amt_ultra","amt_wash","amt_parts"].map(q);const tot=q("amount");if(!tot)return;
     const sum=()=>parts.reduce((a,el)=>a+(Number(el&&el.value||0)||0),0);
     parts.forEach(el=>el&&el.addEventListener("input",()=>{tot.value=sum()||"";tot.classList.add("autocalc");setTimeout(()=>tot.classList.remove("autocalc"),600)}));
-    const hint=document.createElement("small");hint.className="mapt";hint.textContent="초음파+워시+부자재 자동 합계 (직접 고칠 수도 있음)";tot.insertAdjacentElement("afterend",hint)})();
+    tot.title="초음파+워시+부자재 자동 합계 (직접 고칠 수도 있음)"})();
 }
 function productOf(k){return k?{product:k.product,size:k.size,options:k.options,serial:k.serial}:{}}
 /* 추가설치: 계약에서 그대로 복사된 기존 제품은 빼고, 추가 품목만 */
