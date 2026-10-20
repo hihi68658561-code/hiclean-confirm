@@ -1040,8 +1040,8 @@ function renderContracts(c){
 }
 function contractDlg(c,k,tpl){
   const isNew=!k;
-  if(!k&&tpl){k=Object.assign({},tpl,{serial:"",contract_date:today(),stage:"확정",contract_doc:"미수령",chk_cust:"",chk_slip:"",chk_sales:"",tax:{},settle_month:"",import_raw:null,memo:tpl.memo||""});delete k.id;delete k.created_at;delete k.updated_at;delete k.created_by}
-  k=k||{stage:"확정",contract_type:"구매",contract_date:today(),sales3:me.role==="sales"?me.id:(c.owner||null),contract_doc:"미수령",pay_method:"",capital:{},cms:{},tax:{}};
+  if(!k&&tpl){k=Object.assign({},tpl,{serial:"",contract_date:today(),stage:"미정",contract_doc:"미수령",chk_cust:"",chk_slip:"",chk_sales:"",tax:{},settle_month:"",import_raw:null,memo:tpl.memo||""});delete k.id;delete k.created_at;delete k.updated_at;delete k.created_by}
+  k=k||{stage:"미정",contract_type:"구매",contract_date:today(),sales3:me.role==="sales"?me.id:(c.owner||null),contract_doc:"미수령",pay_method:"",capital:{},cms:{},tax:{}};
   const ro=!canEditCust(c);const cap=k.capital||{},cms=k.cms||{};
   const ij=isNew?null:installOf(k);const sinkRo=ro||!isOffice()||(!isNew&&!ij);const srcJ=ij||(tpl?installOf(tpl):null);
   openDlg(isNew?(tpl?"신규계약 (복사)":"신규계약"):"계약",`<div id="kf" style="display:grid;gap:10px">${tpl?`<p class="warnbox" style="margin:0">복사한 계약입니다. 시리얼·계약일·진행단계·계약서·마감·입금은 새로 입력하세요.</p>`:""}
