@@ -1415,7 +1415,7 @@ function jobDlg(j,c,kind,tpl){
    <label class="f">처리 내용<textarea name="result" ${can?"":"readonly"}>${esc(j.result)}</textarea></label>
    <fieldset id="payBox" style="padding:10px 12px" ${j.kind==="as"?"":"hidden"}><legend>A/S 비용·결제</legend>
      <div class="g3">${sel("paid_type","유상/무상",[["","(선택)"],["유상","유상"],["무상","무상"]],j.paid_type||"",!can)}${inp("cost","A/S 비용(원)",j.cost||"","number",!can)}${sel("pay_status","납부 여부",[["","(선택)"],["완료","완료"],["미수","미수"]],j.pay_status||"",!can)}</div>
-     <div class="g3">${sel("pay_method","결제수단",[["","(선택)"],["카드","카드"],["현금","현금"],["입금","입금(계좌)"]],j.pay_method||"",!can)}${inp("pay_date","결제·입금일",j.pay_date,"date",!can)}${inp("pay_name","카드사 / 입금자명",j.pay_name,"text",!can,'list="cardList"')}</div>
+     <div class="g3">${sel("pay_method","결제수단",[["","(선택)"],["카드","카드"],["현금","현금"]],j.pay_method==="입금"?"현금":(j.pay_method||""),!can)}${inp("pay_date","결제·입금일",j.pay_date,"date",!can)}${inp("pay_name","카드사 / 입금자명",j.pay_name,"text",!can,'list="cardList"')}</div>
      <label class="f">입금 메모<input name="pay_memo" value="${esc(j.pay_memo||"")}" ${can?"":"readonly"} placeholder="예: 10/14 이애경 명의로 입금, 2건 합산"></label>
      <label class="chip" style="justify-self:start"><input type="checkbox" name="closed" ${j.closed?"checked":""} ${off?"":"disabled"}>매출마감 ${off?"":"(사무실에서 처리)"}</label>
      <datalist id="cardList">${["농협카드","비씨카드","국민카드","신한카드","삼성카드","현대카드","롯데카드","하나카드","우리카드","네이버페이"].map(x=>`<option value="${x}">`).join("")}</datalist></fieldset>
