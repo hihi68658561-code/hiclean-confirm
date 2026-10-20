@@ -992,7 +992,7 @@ function renderCtrView0(){
      <div class="sumbox">${sumT}</div></div>
    <div class="toolbar"><input id="cQ" type="search" placeholder="업체명·대표자·전화·시리얼·담당 검색" value="${esc(ui.cq)}">
      <span class="mapt">${ui.crow?esc(CROWS.find(y=>y[0]===ui.crow)[1])+" · ":""}${ui.cct?esc(ui.cct)+" · ":""}${list.length}건</span>${ui.crow||ui.cct?`<button class="btn sm" type="button" id="cAll">전체 보기</button>`:""}
-     <span style="flex:1"></span><button class="btn" type="button" id="cCols">입력화면설정</button></div>
+     <span style="flex:1"></span><button class="btn" type="button" id="cCols">입력화면설정</button>${isOffice()||me.role==="sales"?`<button class="btn pri" type="button" id="cNewK">+ 신규계약</button>`:""}</div>
    <div class="wrapx vis" style="padding-top:10px"><div class="wtbox"><table class="wt ct"><thead><tr><th>#</th>${colHead(cols,"ctr",MONEYC)}</tr></thead><tbody>
     ${shown.map((x,i)=>`<tr data-ck="${x.k.id}" class="rs-${esc(x.k.stage)}"><td>${i+1}</td>${cols.map(c=>ctrCell(c,x.k,x.c,x.s,x.b)).join("")}</tr>`).join("")||`<tr><td colspan="${cols.length+1}" class="mapt" style="cursor:default">해당하는 계약이 없습니다.</td></tr>`}</tbody>
     ${shown.length?`<tfoot><tr><th></th>${cols.map(c=>`<th class="${MONEYC.has(c)?"num":""}">${MONEYC.has(c)?won0(tot[c]):c===cols[0]?"합계":""}</th>`).join("")}</tr></tfoot>`:""}</table></div>
@@ -1005,6 +1005,7 @@ function renderCtrView0(){
   const cn=document.getElementById("cNow");if(cn)cn.onclick=()=>{ui.cm=thisMonth();re()};
   const ca=document.getElementById("cAll");if(ca)ca.onclick=()=>{ui.crow="";ui.cct="";re()};
   document.getElementById("cCols").onclick=()=>colPicker(re);
+  const nk_=document.getElementById("cNewK");if(nk_)nk_.onclick=()=>newContractPick();
   const cq=document.getElementById("cQ");cq.oninput=e=>{ui.cq=e.target.value;clearTimeout(cq._t);cq._t=setTimeout(()=>{re();const n=document.getElementById("cQ");n.focus();n.setSelectionRange(n.value.length,n.value.length)},250)};
   view().querySelectorAll("tr[data-ck]").forEach(tr=>tr.onclick=e=>{
     const cell=e.target.closest("td[data-chk]");const k=contracts.find(x=>x.id===tr.dataset.ck);if(!k)return;
@@ -1074,6 +1075,13 @@ function goCust(c){if(!c)return;const d=document.getElementById("dlg");if(d.open
   setTimeout(()=>{const it=document.querySelector(`.citem[data-id="${c.id}"]`);if(it&&it.scrollIntoView)it.scrollIntoView({block:"nearest"});const n=document.querySelector('#cf [name="name"]');if(n)n.focus()},50)}
 function custSummary(c,k){if(!c)return"";const pr=k?[k.product,k.size,k.serial&&"SN "+k.serial].filter(Boolean).join(" "):"";
   return `<p class="mapt dsum"><b>${esc(c.name)}</b>${c.address?" · "+esc(c.address):""}${c.phone||c.phone2?" · "+esc(c.phone||c.phone2):""}${pr?" · 제품: "+esc(pr):""}</p>`}
+/* 계약관리에서 신규계약: 고객을 검색해 고른 뒤 계약 창 */
+function newContractPick(){const pool=customers.filter(x=>isOffice()||x.owner===me.id);
+  openDlg("신규계약 · 고객 선택",`<div id="jf" style="display:grid;gap:10px"><label class="f">고객 검색<input id="jcQ" type="search" autocomplete="off" placeholder="업체명·대표자·전화번호·주소·시리얼"></label>
+    <input type="hidden" id="jcId"><div id="jcSel"></div><div id="jcRes" class="pickres"></div>
+    <p class="mapt" id="jcHint">두 글자 이상 입력하면 고객 목록이 나옵니다. 처음 오는 고객은 ‘새 고객 등록’으로 먼저 등록하세요.</p></div>`,
+    [["새 고객 등록","gocust",()=>{newCustomer()}],["취소"],["다음","pri",()=>{const c=pool.find(x=>x.id===val("jcId"));if(!c){toast("고객을 검색해서 목록에서 골라 주세요");return true}contractDlg(c,null);return true}]]);
+  bindCustPicker(pool)}
 function hasTrialCol(){return contracts.some(k=>"trial_end" in k)}
 function trialCell(k){const d=k.trial_end;if(!d)return"";const td=today();const open=!["완료","취소","철거"].includes(k.stage);const days=Math.round((new Date(d)-new Date(td))/864e5);
   const cls=open&&days<0?"late":open&&days<=3?"soon":"";return `<span class="trial ${cls}" title="${open?(days<0?-days+"일 지남":days===0?"오늘 종료":days+"일 남음"):""}">${esc(ymd2(d))}</span>`}
