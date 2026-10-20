@@ -165,14 +165,14 @@ body.resizing,body.resizing *{cursor:col-resize!important;user-select:none}
 .bizup [data-pv],.bizup details{flex-basis:100%}.rawtxt{white-space:pre-wrap;font-size:12px;max-height:200px;overflow:auto;background:var(--panel);border:1px solid var(--line);border-radius:6px;padding:8px;margin:4px 0 0}.bizup img{max-height:160px;max-width:100%;border:1px solid var(--line);border-radius:4px}
 .bizrow{display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-top:6px}.bizrow .bizup{flex:1 1 100%}
 @media (hover:hover) and (pointer:fine){.wtbox.hb{overflow-x:hidden}}
-.wt.ct tr.rs-완료 td{background:#E2EFDA;color:#1b1b1b}.wt.ct tr.rs-미수 td{background:#FFE699;color:#1b1b1b}.wt.ct tr.rs-철거 td,.wt.ct tr.rs-보류 td,.wt.ct tr.rs-취소 td{background:#D9D9D9;color:#1b1b1b}
-.wt.ct tr.rs-완료:hover td{background:#cfe4c2}.wt.ct tr.rs-미수:hover td{background:#ffdb70}.wt.ct tr.rs-철거:hover td,.wt.ct tr.rs-보류:hover td,.wt.ct tr.rs-취소:hover td{background:#c8c8c8}
-.wt.ct tr[class^="rs-"] td.memo{color:#444}
+.wt.am tr.rs-완료 td,.wt.ct tr.rs-완료 td{background:#E2EFDA;color:#1b1b1b}.wt.am tr.rs-미수 td,.wt.ct tr.rs-미수 td{background:#FFE699;color:#1b1b1b}.wt.am tr.rs-보류 td,.wt.am tr.rs-취소 td,.wt.ct tr.rs-철거 td,.wt.ct tr.rs-보류 td,.wt.ct tr.rs-취소 td{background:#D9D9D9;color:#1b1b1b}
+.wt.am tr.rs-완료:hover td,.wt.ct tr.rs-완료:hover td{background:#cfe4c2}.wt.am tr.rs-미수:hover td,.wt.ct tr.rs-미수:hover td{background:#ffdb70}.wt.am tr.rs-보류:hover td,.wt.am tr.rs-취소:hover td,.wt.ct tr.rs-철거:hover td,.wt.ct tr.rs-보류:hover td,.wt.ct tr.rs-취소:hover td{background:#c8c8c8}
+.wt.ct tr[class^="rs-"] td.memo,.wt.am tr[class^="rs-"]:not(.rs-) td.memo{color:#444}
 .hbar{position:sticky;bottom:0;z-index:5;overflow-x:scroll;scrollbar-color:var(--mute) var(--line2);overflow-y:hidden;height:18px;background:var(--panel);border:1px solid var(--line);border-top:0;border-radius:0 0 6px 6px}
 .hbar>div{height:1px}
 .hbar::-webkit-scrollbar{height:14px}.hbar::-webkit-scrollbar-thumb{background:var(--mute);border-radius:7px;border:3px solid var(--panel)}.hbar::-webkit-scrollbar-track{background:var(--line2)}
 .num{text-align:right!important;font-variant-numeric:tabular-nums}.neg{color:var(--bad-fg);font-weight:700}
-.wt.ct tfoot th{position:sticky;bottom:0;background:var(--line2);border-top:1px solid var(--line);padding:6px 7px}
+.wt.am tfoot th,.wt.ct tfoot th{position:sticky;bottom:0;background:var(--line2);border-top:1px solid var(--line);padding:6px 7px}
 .wt td.memo{max-width:320px;min-width:200px;font-size:12px;color:var(--mute)}.clamp{display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
 .wt td.ckc{text-align:center;font-size:12px}.wt td.ckc.ok{color:var(--ok-fg);font-weight:700}.wt td.ckc.note{color:var(--warn-fg)}
 .tag.b-계약{background:var(--accent-weak);color:var(--accent)}.tag.b-결제{background:var(--ok-bg);color:var(--ok-fg)}.tag.b-미수{background:var(--bad-bg);color:var(--bad-fg)}
@@ -559,11 +559,11 @@ function restoreScroll(s){if(!s||s.v!==ui.view)return;const els=[...document.que
 function render(){if(ui._fresh){ui._fresh=false;render0();window.scrollTo(0,0);return}const _sv=snapScroll();try{render0()}finally{restoreScroll(_sv)}}
 function render0(){
   ui.dirty=false;
-  const tabs=[["cust","고객"]];if(me.role!=="tech")tabs.push(["ctrm","계약관리"]);tabs.push(["work","작업현황"]);if(isAdmin())tabs.push(["staff","직원"],["settings","설정"]);
+  const tabs=[["cust","고객"]];if(me.role!=="tech")tabs.push(["ctrm","계약관리"],["asm","A/S관리"]);tabs.push(["work","작업현황"]);if(isAdmin())tabs.push(["staff","직원"],["settings","설정"]);
   document.getElementById("nav").innerHTML=tabs.map(([k,l])=>`<button type="button" class="${ui.view===k?"on":""}" data-v="${k}">${l}</button>`).join("");
   document.querySelectorAll("#nav button").forEach(b=>b.onclick=()=>{ui.view=b.dataset.v;ui.jsel=new Set();ui._fresh=true;render()});
   if(ui.view==="install"||ui.view==="as")ui.view="work";
-  if(ui.view==="cust")renderCustView();else if(ui.view==="work")renderWorkView();else if(ui.view==="ctrm")renderCtrView();else if(ui.view==="staff")renderStaffView();else if(ui.view==="delete")renderDeleteView();else renderSettings();
+  if(ui.view==="cust")renderCustView();else if(ui.view==="work")renderWorkView();else if(ui.view==="ctrm")renderCtrView();else if(ui.view==="asm")renderAsView();else if(ui.view==="staff")renderStaffView();else if(ui.view==="delete")renderDeleteView();else renderSettings();
 }
 
 /* ================= 고객 ================= */
@@ -1076,6 +1076,205 @@ function renderPaySec(k){
     k.stage="완료";const s_=document.querySelector('#kf select[name=stage]');if(s_)s_.value="완료";toast("진행단계를 완료로 바꿨습니다");await reload(["contracts"],true);renderPaySec(k)};
 }
 
+/* ================= A/S관리 (엑셀 A/S 관리대장 양식 · 계약관리와 같은 틀) ================= */
+function hasAsx(){return jobs.some(j=>"trip_fee" in j)}
+const AS_ACTS=["방문조치","택배수리","입고수리","원격·전화안내","부품발송"];
+const ASTAT=[["open","미처리",j=>j.status==="접수"||j.status==="배정"],["hold","보류",j=>j.status==="보류"],["done","완료",j=>j.status==="완료"&&j.pay_status!=="미수"],["unpaid","미수",j=>j.pay_status==="미수"&&j.status!=="취소"],["cancel","취소",j=>j.status==="취소"]];
+const APT=["유상","무상",""];const aptLab=t=>t||"미정";
+function asPt(j){return j.paid_type==="무상"?"무상":j.paid_type==="유상"||Number(j.cost||0)>0?"유상":""}
+function asRowCls(j){return j.status==="취소"?"취소":j.pay_status==="미수"?"미수":j.status==="완료"?"완료":j.status==="보류"?"보류":""}
+let _instMap=null;
+function asInstDate(j){if(!_instMap){_instMap={};jobs.forEach(x=>{if(x.kind!=="install"||x.status==="취소")return;const d=x.done_date||x.visit_date||"";if(d&&(!_instMap[x.customer_id]||d>_instMap[x.customer_id]))_instMap[x.customer_id]=d})}
+  return (j.product||{}).install_date||_instMap[j.customer_id]||""}
+function asMoney(j){const c=Number(j.cost||0);const pay=j.pay_status==="완료"||(j.pay_date&&j.pay_status!=="미수");const card=j.pay_method==="카드";
+  return{cost:c,card:pay&&card?c:0,cash:pay&&!card?c:0,unpaid:j.pay_status==="미수"?c:0}}
+const ACOLS=[
+ ["basis","기준",1],["rdate","접수일자",1],["name","상호",1],["ceo","대표자",0],["phone","전화번호",1],["addr","주소",1],["symptom","접수내용",1],["result","내용",1],
+ ["visit","예정일",1],["wday","요일",1],["time","시간",0],["status","처리현황",1],["done","완료일",0],["idate","설치일",1],["product","제품",1],["size","규격",1],["serial","시리얼",1],["parts","교체부품",1],
+ ["tech","담당자",1],["action","조치내용",1],["cost","청구금액(총합계)",1],["trip","출장비",1],["pfee","부품비",1],["dist","거리",1],["sat","만족도",1],["pmeth","청구방법",1],["ptype","유상/무상",1],
+ ["pdate","입금일",1],["pname","입금자명",1],["unpaid","미수",1],["card","카드",1],["cash","현금",1],["tax","세금계산서발행일자",1],["closed","마감",1],["pmemo","입금 메모",0]];
+const AMONEY=new Set(["cost","trip","pfee","unpaid","card","cash"]);
+TCFG.as={cols:()=>ACOLS,sel:".wt.am",lead:()=>1};
+function md(d){return d?d.slice(5).replace("-","/"):""}
+function asCell(col,j,c,m){const p=j.product||{};const td=today();
+  switch(col){
+    case"basis":{const d=j.request_date||"";return `<td>${esc(d?d.slice(2,4)+d.slice(5,7):"")}</td>`}
+    case"rdate":return `<td>${esc(ymd2(j.request_date))}</td>`;
+    case"name":return `<td title="${esc(c.name||j.customer_name||"")}"><b>${esc(c.name||j.customer_name||"")}</b>${c.id?gradeBadge(c):""}</td>`;
+    case"ceo":return `<td>${esc(c.ceo||"")}</td>`;
+    case"phone":return `<td>${esc(c.phone||c.phone2||"")}</td>`;
+    case"addr":return `<td class="wrap memo" title="${esc(c.address||j.address||"")}"><div class="clamp">${esc(c.address||j.address||"")}</div></td>`;
+    case"symptom":return `<td class="wrap memo" title="${esc(j.symptom||"")}"><div class="clamp">${esc(j.symptom||"")}</div></td>`;
+    case"result":return `<td class="wrap memo" title="${esc(j.result||"")}"><div class="clamp">${esc(j.result||"")}</div></td>`;
+    case"visit":{const d=j.visit_date||"";const open=!["완료","취소"].includes(j.status);return `<td class="${open&&d?(d===td?"due":d<td?"late":""):""}">${esc(md(d))}</td>`}
+    case"wday":return `<td>${wday(j.visit_date)}</td>`;
+    case"time":return `<td>${esc(j.visit_time||"")}</td>`;
+    case"status":return `<td>${j.status==="접수"||j.status==="배정"?`<span class="badge s-${j.status}">${esc(j.status)}</span>`:esc(j.status)}</td>`;
+    case"done":return `<td>${esc(ymd2(j.done_date))}</td>`;
+    case"idate":return `<td>${esc(ymd2(asInstDate(j)))}</td>`;
+    case"product":return `<td>${esc(p.product||"")}</td>`;
+    case"size":return `<td>${esc(p.size||"")}</td>`;
+    case"serial":return `<td>${esc(p.serial||"")}</td>`;
+    case"parts":return `<td>${esc(j.parts||"")}</td>`;
+    case"tech":return `<td>${esc(whoOf(j))}</td>`;
+    case"action":return `<td>${esc(j.action||"")}</td>`;
+    case"cost":return `<td class="num">${m.cost?won0(m.cost):""}</td>`;
+    case"trip":return `<td class="num">${j.trip_fee?won0(j.trip_fee):""}</td>`;
+    case"pfee":return `<td class="num">${j.part_fee?won0(j.part_fee):""}</td>`;
+    case"dist":return `<td class="num">${j.distance??""}</td>`;
+    case"sat":return `<td>${esc(j.satisfaction||"")}</td>`;
+    case"pmeth":return `<td>${esc(j.pay_method==="입금"?"현금":j.pay_method||"")}</td>`;
+    case"ptype":return `<td>${esc(j.paid_type||"")}</td>`;
+    case"pdate":return `<td>${esc(md(j.pay_date))}</td>`;
+    case"pname":return `<td>${esc(j.pay_name||"")}</td>`;
+    case"unpaid":return `<td class="num ${m.unpaid?"neg":""}">${m.unpaid?won0(m.unpaid):""}</td>`;
+    case"card":return `<td class="num">${m.card?won0(m.card):""}</td>`;
+    case"cash":return `<td class="num">${m.cash?won0(m.cash):""}</td>`;
+    case"tax":return `<td>${esc(ymd2(j.tax_date))}</td>`;
+    case"closed":{const v=j.closed?(j.paid_type==="무상"?"무상":"매출마감"):"";return `<td class="ckc ${v?"ok":""}" data-aclose="${j.id}" title="${isOffice()?"누르면 마감 ↔ 빈칸":""}">${esc(v)}</td>`}
+    case"pmemo":return `<td class="wrap memo" title="${esc(j.pay_memo||"")}"><div class="clamp">${esc(j.pay_memo||"")}</div></td>`;
+  }
+  return "<td></td>"}
+/* 정렬 (A/S관리 전용, 브라우저별 기억) */
+const ADEFSORT=[{c:"reg",d:1},{c:"rdate",d:1}];
+function asSortKey(){return "hc.sort.as."+(me&&me.id||"")}
+function asGetSort(){try{const v=JSON.parse(localStorage.getItem(asSortKey())||"null");if(Array.isArray(v)&&v.length)return v}catch(e){}return ADEFSORT}
+function asSetSort(v){try{v?localStorage.setItem(asSortKey(),JSON.stringify(v)):localStorage.removeItem(asSortKey())}catch(e){}}
+function asSortVal(col,x){const j=x.j,m=x.m;
+  switch(col){case"reg":return j.created_at||"";case"basis":case"rdate":return j.request_date||"";case"visit":case"time":return j.visit_date?j.visit_date+" "+timeKey(j.visit_time):"";
+    case"wday":return j.visit_date?new Date(j.visit_date+"T00:00:00").getDay():"";case"done":return j.done_date||"";case"idate":return asInstDate(j);case"pdate":return j.pay_date||"";case"tax":return j.tax_date||"";
+    case"cost":return m.cost;case"trip":return Number(j.trip_fee||0);case"pfee":return Number(j.part_fee||0);case"dist":return j.distance??"";case"unpaid":return m.unpaid;case"card":return m.card;case"cash":return m.cash;
+    case"status":return JST.indexOf(j.status);case"name":return x.c.name||j.customer_name||"";}
+  return asCell(col,j,x.c,m).replace(/<[^>]*>/g,"").replace(/&amp;/g,"&").trim()}
+function asSortList(list){const S=asGetSort();const cache=new Map();const v=(x,col)=>{let o=cache.get(x);if(!o){o={};cache.set(x,o)}if(!(col in o))o[col]=asSortVal(col,x);return o[col]};
+  const bo=x=>x.b.includes("접수")?0:x.b.includes("처리")||x.b.includes("입금")?1:x.b.includes("미처리")?2:3;
+  list.sort((a,b)=>{if(bo(a)!==bo(b))return bo(a)-bo(b);for(const {c,d} of S){const A=v(a,c),B=v(b,c);const ea=A===""||A==null,eb=B===""||B==null;if(ea&&eb)continue;if(ea)return 1;if(eb)return -1;
+    const r=typeof A==="number"&&typeof B==="number"?A-B:String(A).localeCompare(String(B),"ko",{numeric:true});if(r)return r*d}return 0})}
+function asSortPicker(onDone){let cur=asGetSort().map(x=>({...x}));
+  const opts=v=>`<option value="">(없음)</option><option value="reg" ${v==="reg"?"selected":""}>접수한 순서 (등록순)</option>`+ACOLS.map(c=>`<option value="${c[0]}" ${c[0]===v?"selected":""}>${esc(c[1])}</option>`).join("");
+  const draw=()=>{document.getElementById("spList").innerHTML=[0,1,2].map(i=>{const x=cur[i]||{c:"",d:1};return `<div class="g3" style="align-items:end"><label class="f">${i+1}순위<select data-si="${i}">${opts(x.c)}</select></label>
+      <label class="f">방향<select data-sd="${i}"><option value="1" ${x.d===1?"selected":""}>오름차순 (빠른 날짜·작은 값·가나다)</option><option value="-1" ${x.d===-1?"selected":""}>내림차순 (최근 날짜·큰 값)</option></select></label><span></span></div>`}).join("");
+    document.querySelectorAll("#spList [data-si]").forEach(s=>s.onchange=()=>{const i=+s.dataset.si;if(s.value)cur[i]={c:s.value,d:(cur[i]||{}).d||1};else cur.splice(i,1);cur=cur.filter(Boolean);draw()});
+    document.querySelectorAll("#spList [data-sd]").forEach(s=>s.onchange=()=>{const i=+s.dataset.sd;if(cur[i])cur[i].d=+s.value})};
+  openDlg("정렬 설정",`<p class="mapt">1순위가 같으면 2순위, 2순위도 같으면 3순위로 정렬합니다. 열 제목을 눌러도 바로 정렬됩니다(한 번 더 누르면 반대로).<br>목록은 항상 <b>당월 접수 → 이달 처리·입금된 예전 건 → 지난달부터 남은 미처리 → 미수</b>로 묶이고, 고른 정렬은 각 묶음 안에서 적용됩니다.</p><div id="spList" style="display:grid;gap:8px"></div>`,
+    [["접수한 순서 (기본)","",()=>{cur=ADEFSORT.map(x=>({...x}));draw();return true}],["예정일·시간 순","",()=>{cur=[{c:"visit",d:1},{c:"rdate",d:1}];draw();return true}],["취소"],["적용","pri",()=>{cur=cur.filter(x=>x&&x.c);asSetSort(cur.length&&JSON.stringify(cur)!==JSON.stringify(ADEFSORT)?cur:null);onDone()}]]);draw()}
+function renderAsView(){const _sv=snapScroll();renderAsView0();restoreScroll(_sv)}
+function renderAsView0(){
+  _instMap=null;
+  if(!ui.am)ui.am=thisMonth();["arow","apt","aq","akpi"].forEach(k=>{if(ui[k]===undefined)ui[k]=""});
+  const [st0,en0]=monthRange(ui.am);const inM=d=>d&&d>=st0&&d<en0;
+  const all=jobs.filter(j=>j.kind==="as");
+  const rows=[];
+  all.forEach(j=>{const b=[];
+    if(inM(j.request_date))b.push("접수");
+    if(inM(j.done_date))b.push("처리");
+    if(inM(j.pay_date))b.push("입금");
+    if(!b.length&&(j.request_date||"")<st0){if(["접수","배정","보류"].includes(j.status))b.push("미처리");else if(j.pay_status==="미수"&&j.status!=="취소")b.push("미수")}
+    if(b.length)rows.push({j,c:custById(j.customer_id)||{},m:asMoney(j),b})});
+  const mR=all.filter(j=>inM(j.request_date));
+  const mP=all.filter(j=>inM(j.pay_date)&&j.pay_status!=="미수"&&j.status!=="취소");const mCard=mP.filter(j=>j.pay_method==="카드").reduce((a,j)=>a+Number(j.cost||0),0),mCash=mP.filter(j=>j.pay_method!=="카드").reduce((a,j)=>a+Number(j.cost||0),0);
+  const un=all.filter(j=>j.pay_status==="미수"&&j.status!=="취소");const unSum=un.reduce((a,j)=>a+Number(j.cost||0),0);
+  const op=all.filter(j=>["접수","배정","보류"].includes(j.status));
+  const KPI={rcv:["당월 접수",mR],pay:["당월 입금",mP],unpaid:["미수",un],open:["미처리",op]};
+  const src=ui.akpi&&KPI[ui.akpi]?KPI[ui.akpi][1].map(j=>({j,c:custById(j.customer_id)||{},m:asMoney(j),b:[KPI[ui.akpi][0]==="당월 접수"?"접수":KPI[ui.akpi][0]==="당월 입금"?"입금":KPI[ui.akpi][0]]})):rows;
+  const rf=r=>r?ASTAT.find(y=>y[0]===r)[2]:()=>true;
+  const cnt=(r,t)=>src.filter(x=>rf(r)(x.j)&&(t===null||asPt(x.j)===t)).length;
+  const qq=ui.aq.trim().toLowerCase();
+  const list=src.filter(x=>rf(ui.arow)(x.j)&&(ui.apt===""||asPt(x.j)===(ui.apt==="미정"?"":ui.apt))
+    &&(!qq||[x.c.name,x.j.customer_name,x.c.ceo,x.c.phone,x.c.phone2,x.j.address,(x.j.product||{}).serial,x.j.symptom,x.j.result,x.j.parts,x.j.pay_name,whoOf(x.j)].join(" ").toLowerCase().includes(qq)));
+  asSortList(list);
+  const ptKey=t=>t===""?"미정":t;
+  const sumT=`<table class="sumt" aria-label="${esc(ui.am)} A/S 집계"><thead><tr><th></th>${APT.map(t=>`<th>${aptLab(t)}</th>`).join("")}<th>합계</th></tr></thead><tbody>
+    ${ASTAT.map(([r,l])=>`<tr class="${r==="unpaid"?"open":""}"><th>${l}</th>${[...APT.map(ptKey),"*"].map(t=>`<td class="cl ${ui.arow===r&&(ui.apt||"*")===t?"on":""}" data-r="${r}" data-t="${t}">${cnt(r,t==="*"?null:t==="미정"?"":t)}</td>`).join("")}</tr>`).join("")}
+    <tr><th>합계</th>${[...APT.map(ptKey),"*"].map(t=>`<td class="cl ${ui.arow===""&&(ui.apt||"*")===t?"on":""}" data-r="" data-t="${t}"><b>${cnt("",t==="*"?null:t==="미정"?"":t)}</b></td>`).join("")}</tr></tbody></table>`;
+  const cols=getCols("as");const shown=list.slice(0,500);
+  const tot={cost:0,trip:0,pfee:0,unpaid:0,card:0,cash:0};shown.forEach(x=>{tot.cost+=x.m.cost;tot.trip+=Number(x.j.trip_fee||0);tot.pfee+=Number(x.j.part_fee||0);tot.unpaid+=x.m.unpaid;tot.card+=x.m.card;tot.cash+=x.m.cash});
+  const label=[ui.akpi&&KPI[ui.akpi]?KPI[ui.akpi][0]:"",ui.arow?ASTAT.find(y=>y[0]===ui.arow)[1]:"",ui.apt].filter(Boolean).join(" · ");
+  view().innerHTML=`${hasAsx()||!all.length?"":`<div class="sec" style="max-width:none"><p class="warnbox">A/S 상세 칸(조치내용·출장비·부품비·거리·만족도·세금계산서)이 아직 없습니다. Supabase SQL Editor에서 <b>phase1q.sql</b>을 실행해 주세요.</p></div>`}
+   <div class="sumwrap"><div style="display:grid;gap:8px;align-content:start"><div style="display:flex;gap:8px;align-items:center"><h2 style="margin:0;font-size:18px">A/S관리</h2>
+      <input id="aM" type="month" value="${esc(ui.am)}" aria-label="기준 월" style="padding:5px 8px;border:1px solid var(--line);border-radius:6px;background:var(--field)">${ui.am!==thisMonth()?`<button class="btn sm" type="button" id="aNow">이번 달</button>`:""}</div>
+      <div class="kpis"><div class="kpi kc ${ui.akpi==="rcv"?"on":""}" data-akpi="rcv" role="button" tabindex="0"><span>당월 접수</span><b>${mR.length}건</b><small>유상 ${mR.filter(j=>asPt(j)==="유상").length} · 무상 ${mR.filter(j=>asPt(j)==="무상").length}</small></div>
+       <div class="kpi kc ${ui.akpi==="pay"?"on":""}" data-akpi="pay" role="button" tabindex="0"><span>당월 입금</span><b>${won0(mCard+mCash)}원</b><small>카드 ${won0(mCard)} · 현금 ${won0(mCash)}</small></div>
+       <div class="kpi bad kc ${ui.akpi==="unpaid"?"on":""}" data-akpi="unpaid" role="button" tabindex="0"><span>미수금 (미수 ${un.length}건)</span><b>${won0(unSum)}원</b></div>
+       <div class="kpi kc ${ui.akpi==="open"?"on":""}" data-akpi="open" role="button" tabindex="0"><span>미처리 (전체)</span><b>${op.length}건</b></div></div>
+      <p class="mapt" style="margin:0">이달 접수한 건, 이달 처리·입금된 건, 그리고 지난달부터 남은 미처리·미수 건이 함께 나옵니다.<br>숫자를 누르면 아래 목록이 그 건들로 바뀝니다.</p></div>
+     <div class="sumbox">${sumT}</div></div>
+   <div class="toolbar"><input id="aQ" type="search" placeholder="상호·전화·시리얼·접수내용·담당자 검색" value="${esc(ui.aq)}">
+     <span class="mapt">${label?esc(label)+" · ":""}${list.length}건</span>${label?`<button class="btn sm" type="button" id="aAll">전체 보기</button>`:""}
+     <span style="flex:1"></span><button class="btn" type="button" id="aSort">정렬</button><button class="btn" type="button" id="aCols">입력화면설정</button>${isOffice()?`<button class="btn" type="button" id="aImp">엑셀 가져오기</button>`:""}${canNewJob(null)?`<button class="btn pri" type="button" id="aNew">+ A/S 접수</button>`:""}</div>
+   <div class="wrapx vis" style="padding-top:10px"><div class="wtbox"><table class="wt am"><thead><tr><th>순번</th>${colHead(cols,"as",AMONEY)}</tr></thead><tbody>
+    ${shown.map((x,i)=>`<tr data-aj="${x.j.id}" class="rs-${esc(asRowCls(x.j))}"><td>${i+1}</td>${cols.map(c=>asCell(c,x.j,x.c,x.m)).join("")}</tr>`).join("")||`<tr><td colspan="${cols.length+1}" class="mapt" style="cursor:default">해당하는 A/S가 없습니다.</td></tr>`}</tbody>
+    ${shown.length?`<tfoot><tr><th></th>${cols.map(c=>`<th class="${AMONEY.has(c)?"num":""}">${AMONEY.has(c)?won0(tot[c]):c===cols[0]?"합계":""}</th>`).join("")}</tr></tfoot>`:""}</table></div>
+    ${list.length>500?`<p class="mapt">앞의 500건만 보입니다. 검색으로 좁혀 주세요.</p>`:""}</div>`;
+  applyColW(cols,null,"as");bindColResize(cols,"as");
+  view().querySelectorAll(".wtbox").forEach(hbar);
+  const re=()=>renderAsView();
+  view().querySelectorAll(".sumt td.cl").forEach(td=>td.onclick=()=>{ui.arow=td.dataset.r;ui.apt=td.dataset.t==="*"?"":td.dataset.t;re()});
+  document.getElementById("aM").onchange=e=>{if(e.target.value){ui.am=e.target.value;re()}};
+  const an=document.getElementById("aNow");if(an)an.onclick=()=>{ui.am=thisMonth();re()};
+  const aa=document.getElementById("aAll");if(aa)aa.onclick=()=>{ui.arow="";ui.apt="";ui.akpi="";re()};
+  view().querySelectorAll("[data-akpi]").forEach(el=>{const go=()=>{ui.akpi=ui.akpi===el.dataset.akpi?"":el.dataset.akpi;ui.arow="";ui.apt="";re()};el.onclick=go;el.onkeydown=e=>{if(e.key==="Enter"||e.key===" "){e.preventDefault();go()}}});
+  document.getElementById("aCols").onclick=()=>colPicker(re,"as");
+  document.getElementById("aSort").onclick=()=>asSortPicker(re);
+  const ai=document.getElementById("aImp");if(ai)ai.onclick=()=>document.getElementById("fileIn").click();
+  const nw=document.getElementById("aNew");if(nw)nw.onclick=()=>jobDlg(null,null,"as");
+  view().querySelectorAll(".wt.am thead th[data-ck]").forEach(th=>{th.classList.add("sortable");const S=asGetSort();if(S[0]&&S[0].c===th.dataset.ck)th.dataset.sort=S[0].d===1?"asc":"desc";
+    th.onclick=e=>{if(e.target.closest(".rz"))return;const c=th.dataset.ck;const S=asGetSort();const d=S[0]&&S[0].c===c?-S[0].d:1;asSetSort([{c,d},...S.filter(x=>x.c!==c).slice(0,2)]);re()}});
+  const q=document.getElementById("aQ");q.oninput=e=>{ui.aq=e.target.value;clearTimeout(q._t);q._t=setTimeout(()=>{re();const n=document.getElementById("aQ");n.focus();n.setSelectionRange(n.value.length,n.value.length)},250)};
+  view().querySelectorAll("tr[data-aj]").forEach(tr=>tr.onclick=e=>{const j=jobs.find(x=>x.id===tr.dataset.aj);if(!j)return;
+    const cell=e.target.closest("td[data-aclose]");
+    if(cell&&isOffice()){const v=!j.closed;sb.from("jobs").update({closed:v}).eq("id",j.id).then(({error})=>{if(error)return toast("저장하지 못했습니다: "+error.message);j.closed=v;re()});return}
+    jobDlg(j,custById(j.customer_id),"as")});
+}
+/* A/S 관리대장 엑셀 가져오기: 상호·전화로 고객을 찾고(없으면 새로 등록), 같은 고객·접수일·접수내용은 건너뜀 */
+function parseAsSheet(rows,hr){const H=rows[hr].map(h=>nk(h));const ix=n=>H.indexOf(nk(n));const out=[];
+  rows.slice(hr+1).forEach(row=>{if(!row.some(v=>String(v).trim()!==""))return;const g=n=>{const i=ix(n);return i<0?"":row[i]};const t=n=>{const v=g(n);return v instanceof Date?toDate(v):String(v??"").trim()};
+    if(!t("상호"))return;out.push({g,t})});return out}
+function planAsImport(rows){
+  const dg=s=>String(s||"").replace(/\D/g,"");
+  const byPhone={},byName={};customers.forEach(c=>{[c.phone,c.phone2].forEach(p=>{const d=dg(p);if(d.length>=9)(byPhone[d]=byPhone[d]||[]).push(c)});const n=nk(c.name);(byName[n]=byName[n]||[]).push(c)});
+  const sig=new Set(jobs.filter(j=>j.kind==="as").map(j=>j.customer_id+"|"+(j.request_date||"")+"|"+nk(j.symptom)));
+  const newCust=[],newJob=[],warn=[];let skipped=0,matched=0;const made={};
+  const asx=hasAsx();
+  rows.forEach(({g,t},i)=>{
+    const name=t("상호"),ph=dg(t("전화번호"));
+    let c=null;const byP=(byPhone[ph]||[]);
+    if(ph.length>=9)c=byP.find(x=>nk(x.name)===nk(name))||(byP.length===1?byP[0]:null);
+    if(!c){const bn=byName[nk(name)]||[];if(bn.length===1)c=bn[0];else if(bn.length>1)c=bn.find(x=>dg(x.phone)===ph)||bn[0]}
+    if(!c){const key=nk(name)+"|"+ph;c=made[key];if(!c){c={id:crypto.randomUUID(),name,phone:t("전화번호"),address:t("주소"),__new:true};made[key]=c;newCust.push(c)}}else matched++;
+    const rd=toDate(g("접수일자"))||null,sym=t("접수내용");
+    const sg=c.id+"|"+(rd||"")+"|"+nk(sym);if(sig.has(sg)){skipped++;return}sig.add(sg);
+    const k=c.__new?null:(custContracts(c.id).find(x=>t("시리얼")&&nk(x.serial)===nk(t("시리얼")))||custContracts(c.id)[0]||null);
+    const idRaw=g("설치일");const idate=toDate(idRaw);
+    const prod={product:t("제품"),size:t("규격"),serial:t("시리얼")};if(!prod.product&&!prod.size&&!prod.serial&&k)Object.assign(prod,{product:k.product||"",size:k.size||"",serial:k.serial||""});
+    if(idate)prod.install_date=idate;else if(t("설치일"))prod.install_note=t("설치일");
+    const who=t("담당자");const s=who&&whoIs(who);
+    const stx=t("처리현황");const vd=toDate(g("예정일"))||null;
+    let status=stx==="완료"?"완료":stx==="취소"?"취소":stx==="보류"?"보류":t("마감")?"완료":(who?"배정":"접수");
+    const cost=money(g("청구금액(총합계)"))||money(g("청구금액"));const pm0=t("청구방법");const pm=/카드/.test(pm0)?"카드":pm0?"현금":"";
+    const un=money(g("미수"));const pd=toDate(g("입금일"))||null;
+    let pt=t("유상/무상");if(pt!=="유상"&&pt!=="무상")pt=cost?"유상":"";
+    const pay_status=pt==="무상"?"":un>0?"미수":(pd||money(g("카드"))||money(g("현금")))&&cost?"완료":"";
+    const bad=[];["접수일자","예정일","입금일","세금계산서발행일자"].forEach(n=>{const v=g(n);const s_=v instanceof Date?"":String(v??"").trim();if(s_&&!toDate(v))bad.push(n+": "+s_)});
+    if(bad.length)warn.push(`${i+1}번 ${name} (${bad.join(", ")})`);
+    const row={id:crypto.randomUUID(),kind:"as",customer_id:c.id,contract_id:k?k.id:null,customer_name:c.name,address:c.address||t("주소"),product:prod,status,request_date:rd||today(),visit_date:vd,visit_time:"",
+      techs:s&&s.id?[s.id]:[],tech_names:s&&s.id?"":who,symptom:sym,result:t("내용"),cost:pt==="무상"?0:cost,parts:t("교체부품"),done_date:status==="완료"?(vd||pd||rd):null,
+      paid_type:pt,pay_status,pay_method:pt==="무상"?"":pm,pay_date:pd,pay_name:t("입금자명"),pay_memo:bad.length?"엑셀 확인 필요: "+bad.join(", "):"",closed:!!t("마감"),sink_status:"",sink_memo:""};
+    if(asx)Object.assign(row,{action:t("조치내용"),trip_fee:money(g("출장비")),part_fee:money(g("부품비")),distance:money(g("거리"))||null,satisfaction:t("만족도"),tax_date:toDate(g("세금계산서발행일자"))||null});
+    newJob.push(row)});
+  newCust.forEach(c=>delete c.__new);
+  return{newCust,newJob,skipped,matched,warn,asx}}
+function asImportDlg(fname,rows){const plan=planAsImport(rows);
+  openDlg("A/S 엑셀 가져오기",`<p><b>${esc(fname)}</b> · ${rows.length}줄</p>
+   <table class="stafft"><tbody><tr><td>새 A/S 접수</td><td>${plan.newJob.length}건</td></tr><tr><td>기존 고객과 연결</td><td>${plan.matched}줄</td></tr><tr><td>새로 등록될 고객</td><td>${plan.newCust.length}곳${plan.newCust.length?` <small class="mapt">(${esc(plan.newCust.slice(0,6).map(c=>c.name).join(", "))}${plan.newCust.length>6?" 외":""})</small>`:""}</td></tr><tr><td>이미 있는 A/S (건너뜀)</td><td>${plan.skipped}건</td></tr></tbody></table>
+   ${plan.warn.length?`<p class="warnbox">날짜로 읽을 수 없는 칸이 있어 비워 둡니다. 원래 글자는 입금 메모에 남깁니다.<br>${plan.warn.slice(0,5).map(esc).join("<br>")}${plan.warn.length>5?"<br>…":""}</p>`:""}
+   ${plan.asx?"":`<p class="warnbox">조치내용·출장비·부품비·거리·만족도·세금계산서 칸은 phase1q.sql 실행 전이라 옮기지 않습니다.</p>`}
+   <p class="mapt">상호·전화번호가 같은 고객에 연결합니다. 같은 고객·접수일자·접수내용인 A/S는 이미 있는 것으로 보고 건너뜁니다.</p>`,
+   [["취소"],["가져오기","pri",async()=>{try{
+     const put=async(tb,rs)=>{for(let i=0;i<rs.length;i+=300){toast(`가져오는 중… ${tb==="customers"?"고객":"A/S"} ${Math.min(i+300,rs.length)}/${rs.length}`);const {error}=await sb.from(tb).insert(rs.slice(i,i+300));if(error)throw error}};
+     await put("customers",plan.newCust);await put("jobs",plan.newJob);
+     toast(`가져오기 완료: A/S ${plan.newJob.length}건 · 새 고객 ${plan.newCust.length}곳`);await loadAll()}catch(e){toast("가져오는 중 멈췄습니다: "+(e.message||""));await loadAll()}}]])}
+
 /* ================= 계약 ================= */
 function renderContracts(c){
   const ks=custContracts(c.id);const can=canEditCust(c);const tb=document.getElementById("tabBody");
@@ -1432,7 +1631,7 @@ function jobDlg(j,c,kind,tpl){
   if(isNew&&tpl){j=Object.assign({},tpl,{status:"접수",request_date:today(),visit_date:null,done_date:null,result:"",pay_status:"",pay_method:"",pay_date:null,pay_name:"",pay_memo:"",closed:false});
     ["id","created_at","updated_at","created_by"].forEach(x=>delete j[x]);kind=j.kind}
   else if(isNew){const k=c?custContracts(c.id)[0]:null;j={kind,customer_id:c?c.id:null,contract_id:k?k.id:null,customer_name:c?c.name:"",address:c?c.address:"",product:productOf(k),status:"접수",request_date:today(),techs:[],tech_names:"",symptom:"",result:"",cost:0,sink_status:"",sink_memo:"",parts:"",visit_time:""}}
-  const can=isNew||canEditJob(j);const off=isOffice();const p=j.product||{};
+  const can=isNew||canEditJob(j);const off=isOffice();const p=j.product||{};const asx=hasAsx();
   const techs=staff.filter(s=>s.active&&s.role==="tech");
   const pickable=customers.filter(x=>isOffice()||x.owner===me.id);
   const pick=isNew&&!c?`<label class="f">고객 검색<input id="jcQ" type="search" autocomplete="off" placeholder="업체명·대표자·전화번호·주소·시리얼"></label>
@@ -1448,9 +1647,16 @@ function jobDlg(j,c,kind,tpl){
    <div class="chk">${techs.map(t=>`<label><input type="checkbox" name="tech" value="${t.user_id}" ${(j.techs||[]).includes(t.user_id)?"checked":""} ${off?"":"disabled"}>${esc(t.name)}</label>`).join("")||`<span class="mapt">등록된 기사가 없습니다. ‘직원’ 화면에서 기사를 등록하세요.</span>`}</div>
    <label class="f">${j.kind==="as"?"불편사항·접수 내용":"요청 사항"}<textarea name="symptom" ${(off||isNew)?"":"readonly"}>${esc(j.symptom)}</textarea></label>
    <label class="f">처리 내용<textarea name="result" ${can?"":"readonly"}>${esc(j.result)}</textarea></label>
+   <fieldset id="asBox" style="padding:10px 12px" ${j.kind==="as"?"":"hidden"}><legend>A/S 제품·조치</legend>
+     <div class="g3">${inp("as_product","제품",p.product,"text",!(off||isNew),'list="pdList2"')}${inp("as_size","규격",p.size,"text",!(off||isNew))}${inp("as_serial","시리얼",p.serial,"text",!(off||isNew))}</div>
+     <div class="g3">${inp("as_idate","설치일",(()=>{_instMap=null;return asInstDate(j)})(),"date",!(off||isNew))}${inp("action","조치내용",j.action||"","text",!can||!asx,'list="actList"')}${inp("as_parts","교체부품",j.parts||"","text",!can,'placeholder="예: LCD, 파워"')}</div>
+     ${asx?`<div class="g3">${inp("distance","거리(km)",j.distance??"","number",!can)}${sel("satisfaction","만족도",[["","(선택)"],["상","상"],["중","중"],["하","하"]],j.satisfaction||"",!can)}<span></span></div>`:`<p class="mapt" style="margin:0">조치내용·출장비·부품비·거리·만족도·세금계산서 칸은 Supabase에서 phase1q.sql을 실행하면 쓸 수 있습니다.</p>`}
+     ${(p.install_note)?`<p class="mapt" style="margin:0">엑셀 설치일 칸: ${esc(p.install_note)}</p>`:""}
+     <datalist id="actList">${AS_ACTS.map(x=>`<option value="${esc(x)}">`).join("")}</datalist><datalist id="pdList2">${[...new Set(contracts.map(x=>x.product).filter(Boolean))].map(x=>`<option value="${esc(x)}">`).join("")}</datalist></fieldset>
    <fieldset id="payBox" style="padding:10px 12px" ${j.kind==="as"?"":"hidden"}><legend>A/S 비용·결제</legend>
-     <div class="g3">${sel("paid_type","유상/무상",[["","(선택)"],["유상","유상"],["무상","무상"]],j.paid_type||"",!can)}${inp("cost","A/S 비용(원)",j.cost||"","number",!can)}${sel("pay_status","납부 여부",[["","(선택)"],["완료","완료"],["미수","미수"]],j.pay_status||"",!can)}</div>
-     <div class="g3">${sel("pay_method","결제수단",[["","(선택)"],["카드","카드"],["현금","현금"]],j.pay_method==="입금"?"현금":(j.pay_method||""),!can)}${inp("pay_date","결제·입금일",j.pay_date,"date",!can)}${inp("pay_name","카드사 / 입금자명",j.pay_name,"text",!can,'list="cardList"')}</div>
+     <div class="g3">${sel("paid_type","유상/무상",[["","(선택)"],["유상","유상"],["무상","무상"]],j.paid_type||"",!can)}${asx?inp("trip_fee","출장비",j.trip_fee||"","number",!can)+inp("part_fee","부품비",j.part_fee||"","number",!can):"<span></span><span></span>"}</div>
+     <div class="g3">${inp("cost","청구금액 (총합계)",j.cost||"","number",!can)}${sel("pay_status","납부 여부",[["","(선택)"],["완료","완료"],["미수","미수"]],j.pay_status||"",!can)}${sel("pay_method","청구방법",[["","(선택)"],["카드","카드"],["현금","현금"]],j.pay_method==="입금"?"현금":(j.pay_method||""),!can)}</div>
+     <div class="g3">${inp("pay_date","입금일",j.pay_date,"date",!can)}${inp("pay_name","카드사 / 입금자명",j.pay_name,"text",!can,'list="cardList"')}${asx?inp("tax_date","세금계산서 발행일자",j.tax_date,"date",!off):"<span></span>"}</div>
      <label class="f">입금 메모<input name="pay_memo" value="${esc(j.pay_memo||"")}" ${can?"":"readonly"} placeholder="예: 10/14 이애경 명의로 입금, 2건 합산"></label>
      <label class="chip" style="justify-self:start"><input type="checkbox" name="closed" ${j.closed?"checked":""} ${off?"":"disabled"}>매출마감 ${off?"":"(사무실에서 처리)"}</label>
      <datalist id="cardList">${["농협카드","비씨카드","국민카드","신한카드","삼성카드","현대카드","롯데카드","하나카드","우리카드","네이버페이"].map(x=>`<option value="${x}">`).join("")}</datalist></fieldset>
@@ -1473,7 +1679,13 @@ function jobDlg(j,c,kind,tpl){
      if(pt.done_date&&pt.status!=="완료"&&pt.status!=="취소")pt.status="완료";
      if(j.kind==="as"){Object.assign(pt,{paid_type:f.get("paid_type")||"",cost:Number(f.get("cost")||0)||0,pay_status:f.get("pay_status")||"",pay_method:f.get("pay_method")||"",pay_date:f.get("pay_date")||null,pay_name:(f.get("pay_name")||"").trim(),pay_memo:(f.get("pay_memo")||"").trim()});
        if(pt.paid_type==="무상"){pt.cost=0;pt.pay_status="";pt.pay_method=""}else{if(pt.cost&&!pt.paid_type)pt.paid_type="유상";if(pt.pay_method&&!pt.pay_status&&pt.cost)pt.pay_status="완료";if(pt.pay_status==="완료"&&!pt.pay_date)pt.pay_date=today()}
-       if(off)pt.closed=!!f.get("closed")}else{pt.sink_status=f.get("sink_status")||"";pt.sink_memo=f.get("sink_memo")||"";pt.parts=f.get("parts")||""}
+       if(off)pt.closed=!!f.get("closed");
+       pt.parts=(f.get("as_parts")||"").trim();
+       if(off||isNew){_instMap=null;const base=asInstDate(Object.assign({},j,{product:{}}));const iv=f.get("as_idate")||"";const pr=Object.assign({},j.product||{},{product:(f.get("as_product")||"").trim(),size:(f.get("as_size")||"").trim(),serial:(f.get("as_serial")||"").trim()});
+         if(iv&&iv!==base){pr.install_date=iv;delete pr.install_note}else if(!iv||iv===base)delete pr.install_date;pt.product=pr}
+       if(asx){const nn=x=>Number(f.get(x)||0)||0;Object.assign(pt,{action:(f.get("action")||"").trim(),trip_fee:nn("trip_fee"),part_fee:nn("part_fee"),distance:f.get("distance")===""||f.get("distance")==null?null:nn("distance"),satisfaction:f.get("satisfaction")||""});
+         if(off)pt.tax_date=f.get("tax_date")||null;if(!pt.cost&&pt.paid_type!=="무상"){pt.cost=pt.trip_fee+pt.part_fee;if(pt.cost&&!pt.paid_type)pt.paid_type="유상"}}
+     }else{pt.sink_status=f.get("sink_status")||"";pt.sink_memo=f.get("sink_memo")||"";pt.parts=f.get("parts")||""}
      if(off||isNew){Object.assign(pt,{request_date:f.get("request_date")||today(),visit_date:f.get("visit_date")||null,visit_time:f.get("visit_time")||"",symptom:f.get("symptom")||""})}
      if(off){pt.techs=f.getAll("tech");pt.tech_names=f.get("tech_names")||"";if(pt.status==="접수"&&(pt.techs.length||pt.tech_names))pt.status="배정"}
      let r;if(isNew){const row=Object.assign({},j,pt);delete row.id;r=await sb.from("jobs").insert(row).select().single()}else r=await sb.from("jobs").update(pt).eq("id",j.id);
@@ -1484,11 +1696,14 @@ function jobDlg(j,c,kind,tpl){
        pmsg=up.fail.length?` · 사진 ${up.ok}개 올림, ${up.fail.length}개 실패${fileErrHint(up.fail)}`:` · 사진 ${up.ok}개`;jpSel.forEach(x=>x.url&&URL.revokeObjectURL(x.url))}
      toast((isNew?`${KLABEL[j.kind]} 접수했습니다`:"저장했습니다")+pmsg);reload(["jobs","customers","files"])}]]:[])]);
   const jpSel=isNew?bindNewCustFiles("jp"):[];if(!isNew)renderJobFiles(j,c);
+  /* 출장비+부품비 → 청구금액 자동 합계 */
+  (()=>{const jf=document.getElementById("jf");if(!jf)return;const q=n=>jf.querySelector(`[name="${n}"]`);const a=q("trip_fee"),b=q("part_fee"),tot=q("cost");if(!a||!b||!tot||tot.readOnly)return;
+    const go=()=>{const s=(Number(a.value||0)||0)+(Number(b.value||0)||0);tot.value=s||"";tot.classList.add("autocalc");setTimeout(()=>tot.classList.remove("autocalc"),600)};a.addEventListener("input",go);b.addEventListener("input",go);tot.title="출장비+부품비 자동 합계 (직접 고칠 수도 있음)"})();
   /* 완료일을 넣으면 상태를 '완료'로 자동 전환 */
   (()=>{const jf=document.getElementById("jf");const dd=jf&&jf.querySelector('[name="done_date"]'),st=jf&&jf.querySelector('[name="status"]');
     if(dd&&st&&!dd.readOnly)dd.addEventListener("change",()=>{if(dd.value&&st.value!=="완료"&&st.value!=="취소"){st.value="완료";st.classList.add("autocalc");setTimeout(()=>st.classList.remove("autocalc"),700)}})})();
   if(isNew&&!c)bindCustPicker(pickable);
-  document.querySelectorAll('#jf input[name=kind]').forEach(x=>x.onchange=()=>{const as=x.value==="as";document.getElementById("payBox").hidden=!as;document.getElementById("sinkBox").hidden=as;document.getElementById("addonBox").hidden=x.value!=="addon";
+  document.querySelectorAll('#jf input[name=kind]').forEach(x=>x.onchange=()=>{const as=x.value==="as";document.getElementById("payBox").hidden=!as;document.getElementById("asBox").hidden=!as;document.getElementById("sinkBox").hidden=as;document.getElementById("addonBox").hidden=x.value!=="addon";
     const t=document.getElementById("jf").querySelector('textarea[name=symptom]');if(t)t.previousSibling.textContent=as?"불편사항·접수 내용":"요청 사항";
     document.getElementById("dlgH").textContent=`${KLABEL[x.value]} ${isNew?"접수":"작업"}${j.customer_name?" · "+j.customer_name:""}`;
     const jk=document.getElementById("jpKind");if(jk&&JOBPHOTO[x.value])jk.value=JOBPHOTO[x.value]});
@@ -1619,6 +1834,8 @@ document.getElementById("fileIn").onchange=async e=>{
   const f=e.target.files[0];e.target.value="";if(!f)return;
   if(!window.XLSX)return toast("엑셀 도구를 불러오지 못했습니다");
   let wb;try{wb=XLSX.read(await f.arrayBuffer(),{type:"array",cellDates:true})}catch(err){return toast("파일을 읽지 못했습니다")}
+  for(const sn of wb.SheetNames){const rows=XLSX.utils.sheet_to_json(wb.Sheets[sn],{header:1,raw:true,defval:""});
+    for(let r=0;r<Math.min(10,rows.length);r++){const h=rows[r].map(nk);if(h.includes("상호")&&h.includes("접수내용")){const ar=parseAsSheet(rows,r);if(!ar.length)return toast("가져올 A/S 줄이 없습니다");return asImportDlg(f.name,ar)}}}
   let parsed=null;
   for(const sn of wb.SheetNames){const rows=XLSX.utils.sheet_to_json(wb.Sheets[sn],{header:1,raw:true,defval:""});
     for(let r=0;r<Math.min(10,rows.length);r++){if(rows[r].some(v=>nk(v)==="업체명")){parsed=parseSheet(rows,r);break}}if(parsed)break}
