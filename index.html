@@ -296,6 +296,7 @@ dialog{max-width:720px}
 <dialog id="cfm" aria-labelledby="cfmMsg"><div class="cfmb"><p id="cfmMsg"></p><div class="cfmf"><button type="button" class="btn" id="cfmNo">취소</button><button type="button" class="btn pri" id="cfmYes">확인</button></div></div></dialog>
 <dialog id="lbx" aria-label="사진 크게 보기"><div class="lbwrap"><div class="lbtop"><span class="lbcap"></span><span style="flex:1"></span><button type="button" class="btn sm" id="lbOpen">원본 열기</button><button type="button" class="btn sm danger" id="lbDel">삭제</button><button type="button" class="btn sm" id="lbClose">닫기</button></div>
 <div class="lbmid"><button type="button" class="lbnav" id="lbPrev" aria-label="이전">‹</button><div class="lbimg"></div><button type="button" class="lbnav" id="lbNext" aria-label="다음">›</button></div></div></dialog>
+<dialog id="cdlg" aria-labelledby="cdlgH"><div class="dh" id="cdlgH"></div><div class="db"><form id="cpf" style="display:grid;gap:10px"></form></div><div class="df"><button type="button" class="btn" id="cdlgNo">닫기</button><button type="button" class="btn pri" id="cdlgOk">저장</button></div></dialog>
 <dialog id="dlg"><form method="dialog" id="dlgForm"><div class="dh" id="dlgH"></div><div class="db" id="dlgB"></div><div class="df" id="dlgF"></div></form></dialog>
 <div class="toast" id="toast" role="status"></div>
 
@@ -606,10 +607,7 @@ function renderCustMain(){
 function inp(name,label,v,type="text",ro=false,extra=""){return `<label class="f">${label}<input name="${name}" type="${type}" value="${esc(v??"")}" ${ro?"readonly":""} ${extra}></label>`}
 function sel(name,label,opts,v,ro=false){return `<label class="f">${label}<select name="${name}" ${ro?"disabled":""}>${opts.map(o=>Array.isArray(o)?`<option value="${esc(o[0])}" ${o[0]===v?"selected":""}>${esc(o[1])}</option>`:`<option ${o===v?"selected":""}>${esc(o)}</option>`).join("")}</select></label>`}
 function staffOpts(roles){return [["","(없음)"],...staff.filter(s=>s.active&&(!roles||roles.includes(s.role))).map(s=>[s.user_id,`${s.name} (${ROLE[s.role]})`])]}
-function renderCustInfo(c){
-  const ro=!canEditCust(c);const tb=document.getElementById("tabBody");
-  tb.innerHTML=`<form class="cform" id="cf"><fieldset><legend>고객정보</legend>
-    <div class="g2">${inp("name","업체명(상호)",c.name,"text",ro)}${inp("biz_name","사업장명",c.biz_name,"text",ro)}</div>
+function custFieldsHtml(c,ro){return `    <div class="g2">${inp("name","업체명(상호)",c.name,"text",ro)}${inp("biz_name","사업장명",c.biz_name,"text",ro)}</div>
     <div class="g2">${inp("ceo","대표자",c.ceo,"text",ro)}${inp("biz_no","사업자등록번호",c.biz_no,"text",ro)}</div>
     <div class="g2">${inp("phone","휴대번호",c.phone,"text",ro)}${inp("phone2","일반전화",c.phone2,"text",ro)}</div>
     ${inp("address","상점주소",c.address,"text",ro)}
@@ -617,7 +615,22 @@ function renderCustInfo(c){
       ${isOffice()?inp("collector","수금 배정",staffName(c.collector)||c.collector_name||"","text",false,'list="ownList" placeholder="이름 입력 또는 목록에서 선택"'):inp("_c","수금 배정",staffName(c.collector)||c.collector_name,"text",true)}</div>
     <datalist id="ownList">${staff.filter(s=>s.active).map(s=>`<option value="${esc(s.name)}">${esc(ROLE[s.role])}</option>`).join("")}</datalist>
     ${c.owner_name&&!c.owner?`<p class="mapt">엑셀에 적힌 담당자: ${esc(c.owner_name)} (직원 계정과 아직 연결되지 않음)</p>`:""}
-    <label class="f">메모<textarea name="memo" ${ro?"readonly":""}>${esc(c.memo)}</textarea></label>
+    <label class="f">메모<textarea name="memo" ${ro?"readonly":""}>${esc(c.memo)}</textarea></label>`}
+async function saveCustomer(c,fd){
+    const p={name:fd.get("name").trim(),biz_name:fd.get("biz_name").trim(),ceo:fd.get("ceo").trim(),phone:fmtPhone(fd.get("phone")),phone2:fmtPhone(fd.get("phone2")),biz_no:fmtBiz(fd.get("biz_no")),address:fd.get("address").trim(),memo:fd.get("memo")};
+    if(isOffice()){const who=v=>{v=String(v||"").trim();const s=v&&staff.find(x=>x.name===v||(x.aliases||[]).includes(v));return{id:s?s.user_id:null,name:s?s.name:v}};
+      const o=who(fd.get("owner")),cl=who(fd.get("collector"));p.owner=o.id;p.owner_name=o.name;p.collector=cl.id;
+      if("collector_name" in c)p.collector_name=cl.name;else if(cl.name&&!cl.id){{toast("직원 목록에 없는 수금 담당자를 적으려면 Supabase에서 phase1n.sql을 실행해 주세요");return false}}}
+    if(!p.name){toast("업체명을 입력하세요");return false}
+    const {error}=await sb.from("customers").update(p).eq("id",c.id);if(error){toast("저장하지 못했습니다: "+error.message);return false}
+    if(isOffice()){const lk=custContracts(c.id)[0];if(lk){const o=p.owner_name||"",cl=p.collector?(staffName(p.collector)||""):(p.collector_name||"");const nm=o&&cl&&cl!==o?o+"/"+cl:o;
+      if(nm!==(lk.sales3_name||"")||p.owner!==(lk.sales3||null))await sb.from("contracts").update({sales3:p.owner,sales3_name:nm}).eq("id",lk.id)}}
+    if(isOffice()&&(p.name!==c.name||(p.address&&p.address!==c.address))){const up={customer_name:p.name};if(p.address)up.address=p.address;await sb.from("jobs").update(up).eq("customer_id",c.id)}
+    toast("저장했습니다");await reload(["customers","jobs","contracts"]);return true}
+function renderCustInfo(c){
+  const ro=!canEditCust(c);const tb=document.getElementById("tabBody");
+  tb.innerHTML=`<form class="cform" id="cf"><fieldset><legend>고객정보</legend>
+    ${custFieldsHtml(c,ro)}
     <div class="bizrow"><span class="mapt">사업자등록증</span>${c.biz_doc?`<button type="button" class="btn sm" id="bBizOpen">보관된 등록증 보기</button>`:`<span class="mapt">보관된 파일 없음</span>`}
       ${ro?"":bizUploadBox("cBizUp")}</div></fieldset>
     ${ro?`<p class="mapt">고객정보는 사무실·관리자와 담당자만 고칠 수 있습니다.</p>`:`<div class="actions"><button class="btn pri" type="submit">저장</button><span style="flex:1"></span>${isOffice()||me.role==="sales"?`<button class="btn" type="button" id="bCopyC">복사</button>`:""}${isAdmin()?`<button class="btn danger" type="button" id="bDelC">고객 삭제</button>`:""}</div>`}</form>`;
@@ -629,17 +642,7 @@ function renderCustInfo(c){
     const memo=[fd.open&&"개업일 "+fd.open,fd.type&&"업태 "+fd.type,fd.item&&"종목 "+fd.item].filter(Boolean).join(" · ");if(memo&&!f.elements.memo.value.includes(memo))f.elements.memo.value=(f.elements.memo.value?f.elements.memo.value+"\n":"")+memo;
     try{await storeBizDoc(c.id,file);c.biz_doc=(customers.find(x=>x.id===c.id)||{}).biz_doc;toast("등록증을 보관했습니다. 비어 있던 칸만 채웠으니 확인 후 ‘저장’을 누르세요.");await reload(["customers"],true)}
     catch(e){toast("등록증을 보관하지 못했습니다"+(/biz_doc|bucket|not found/i.test(e.message||"")?" — Supabase에서 phase1i.sql을 실행해 주세요":": "+(e.message||"")))}});
-  document.getElementById("cf").onsubmit=async e=>{e.preventDefault();const fd=new FormData(e.target);
-    const p={name:fd.get("name").trim(),biz_name:fd.get("biz_name").trim(),ceo:fd.get("ceo").trim(),phone:fmtPhone(fd.get("phone")),phone2:fmtPhone(fd.get("phone2")),biz_no:fmtBiz(fd.get("biz_no")),address:fd.get("address").trim(),memo:fd.get("memo")};
-    if(isOffice()){const who=v=>{v=String(v||"").trim();const s=v&&staff.find(x=>x.name===v||(x.aliases||[]).includes(v));return{id:s?s.user_id:null,name:s?s.name:v}};
-      const o=who(fd.get("owner")),cl=who(fd.get("collector"));p.owner=o.id;p.owner_name=o.name;p.collector=cl.id;
-      if("collector_name" in c)p.collector_name=cl.name;else if(cl.name&&!cl.id){return toast("직원 목록에 없는 수금 담당자를 적으려면 Supabase에서 phase1n.sql을 실행해 주세요")}}
-    if(!p.name)return toast("업체명을 입력하세요");
-    const {error}=await sb.from("customers").update(p).eq("id",c.id);if(error)return toast("저장하지 못했습니다: "+error.message);
-    if(isOffice()){const lk=custContracts(c.id)[0];if(lk){const o=p.owner_name||"",cl=p.collector?(staffName(p.collector)||""):(p.collector_name||"");const nm=o&&cl&&cl!==o?o+"/"+cl:o;
-      if(nm!==(lk.sales3_name||"")||p.owner!==(lk.sales3||null))await sb.from("contracts").update({sales3:p.owner,sales3_name:nm}).eq("id",lk.id)}}
-    if(isOffice()&&(p.name!==c.name||(p.address&&p.address!==c.address))){const up={customer_name:p.name};if(p.address)up.address=p.address;await sb.from("jobs").update(up).eq("customer_id",c.id)}
-    toast("저장했습니다");reload(["customers","jobs","contracts"])};
+  document.getElementById("cf").onsubmit=async e=>{e.preventDefault();await saveCustomer(c,new FormData(e.target))};
   const d=document.getElementById("bDelC");if(d)d.onclick=()=>openDlg("고객 삭제",`<p><b>${esc(c.name)}</b>과 그 계약·설치·A/S 기록을 모두 삭제합니다. 되돌릴 수 없습니다.</p>`,[["취소"],["삭제","danger",async()=>{const {error}=await sb.from("customers").delete().eq("id",c.id);if(error)return toast("삭제하지 못했습니다");ui.sel=null;toast("삭제했습니다");reload(["customers","contracts","jobs"])}]]);
 }
 function newCustomer(tpl){if(!tpl||!tpl.id)tpl=null;
@@ -1053,6 +1056,15 @@ function s3Text(k){return k.sales3_name||staffName(k.sales3)||""}
 function whoIs(v){v=String(v||"").trim();const s=v&&staff.find(x=>x.name===v||(x.aliases||[]).includes(v));return{id:s?s.user_id:null,name:s?s.name:v}}
 function splitS3(txt){const a=String(txt||"").split(/\s*[\/,·]\s*/).map(x=>x.trim()).filter(Boolean);return{owner:whoIs(a[0]),coll:whoIs(a[1]||"")}}
 function custS3(c){const o=staffName(c.owner)||c.owner_name||"",cl=staffName(c.collector)||c.collector_name||"";return o&&cl&&cl!==o?o+"/"+cl:o}
+/* 계약·작업 창 위에 고객정보 팝업 (그 자리에서 수정) */
+function openCustPopup(c,after){c=custById(c.id)||c;const d=document.getElementById("cdlg"),f=document.getElementById("cpf");const ro=!canEditCust(c);
+  document.getElementById("cdlgH").textContent="고객정보 · "+c.name;f.innerHTML=custFieldsHtml(c,ro);
+  const ok=document.getElementById("cdlgOk");ok.hidden=ro;
+  const save=async()=>{if(await saveCustomer(c,new FormData(f))){d.close();if(after)after(custById(c.id)||c)}};
+  ok.onclick=save;document.getElementById("cdlgNo").onclick=()=>d.close();
+  f.onsubmit=e=>e.preventDefault();
+  f.onkeydown=e=>{if(e.key!=="Enter"||e.isComposing||!e.target.matches("input"))return;e.preventDefault();if(!ro)askConfirm("저장하시겠습니까?").then(y=>{if(y)save()})};
+  d.showModal();setTimeout(()=>{const n=f.querySelector('[name="name"]');if(n&&!ro)n.focus()},30)}
 /* 창에서 고객정보 화면으로 바로 이동 */
 function goCust(c){if(!c)return;const d=document.getElementById("dlg");if(d.open)d.close();ui.view="cust";ui.sel=c.id;ui.ctab="info";ui._fresh=true;render();
   setTimeout(()=>{const it=document.querySelector(`.citem[data-id="${c.id}"]`);if(it&&it.scrollIntoView)it.scrollIntoView({block:"nearest"});const n=document.querySelector('#cf [name="name"]');if(n)n.focus()},50)}
@@ -1066,6 +1078,8 @@ function contractDlg(c,k,tpl){
   if(!k&&tpl){k=Object.assign({},tpl,{serial:"",trial_end:null,contract_date:today(),stage:"미정",contract_doc:"미수령",chk_cust:"",chk_slip:"",chk_sales:"",tax:{},settle_month:"",import_raw:null,memo:tpl.memo||""});delete k.id;delete k.created_at;delete k.updated_at;delete k.created_by}
   k=k||{stage:"미정",contract_type:"구매",contract_date:today(),sales3:me.role==="sales"?me.id:(c.owner||null),contract_doc:"미수령",pay_method:"",capital:{},cms:{},tax:{}};
   const ro=!canEditCust(c);const cap=k.capital||{},cms=k.cms||{};
+  const refreshK=c2=>{const el=document.querySelector("#kf .dsum");if(el)el.outerHTML=custSummary(c2,isNew?null:k);document.getElementById("dlgH").textContent=(isNew?(tpl?"신규계약 (복사)":"신규계약"):"계약")+" · "+c2.name;
+    const s3=document.querySelector('#kf [name="sales3"]');if(s3&&!isNew&&(custContracts(c2.id)[0]||{}).id===k.id){const v=custS3(c2);if(v)s3.value=v}};
   const ij=isNew?null:installOf(k);const sinkRo=ro||!isOffice()||(!isNew&&!ij);const srcJ=ij||(tpl?installOf(tpl):null);
   openDlg((isNew?(tpl?"신규계약 (복사)":"신규계약"):"계약")+" · "+esc(c.name),`<div id="kf" style="display:grid;gap:10px">${custSummary(c,isNew?null:k)}${tpl?`<p class="warnbox" style="margin:0">복사한 계약입니다. 시리얼·계약일·진행단계·계약서·마감·입금은 새로 입력하세요.</p>`:""}
    <h3 class="ksec">계약 정보</h3>
@@ -1097,7 +1111,7 @@ function contractDlg(c,k,tpl){
    <datalist id="s3List">${staff.filter(s=>s.active&&["admin","office","sales"].includes(s.role)).map(s=>`<option value="${esc(s.name)}">${esc(ROLE[s.role])}</option>`).join("")}</datalist>
    <datalist id="stList">${staff.filter(s=>s.active).map(s=>`<option value="${esc(s.name)}">`).join("")}<option value="무료체험"></datalist>
    <datalist id="pdList">${[...new Set(contracts.map(x=>x.product).filter(Boolean))].map(x=>`<option value="${esc(x)}">`).join("")}</datalist></div>`,
-   ro?[["고객정보","gocust",()=>goCust(c)],["닫기"]]:[["고객정보","gocust",()=>goCust(c)],["취소"],...(!isNew?[["복사","",()=>{contractDlg(c,null,k);return true}]]:[]),...(!isNew&&isAdmin()?[["삭제","danger",async()=>{const {error}=await sb.from("contracts").delete().eq("id",k.id);toast(error?"삭제하지 못했습니다":"삭제했습니다");reload(["contracts"])}]]:[]),["저장","pri",async()=>{
+   ro?[["고객정보","gocust",()=>{openCustPopup(c,refreshK);return true}],["닫기"]]:[["고객정보","gocust",()=>{openCustPopup(c,refreshK);return true}],["취소"],...(!isNew?[["복사","",()=>{contractDlg(c,null,k);return true}]]:[]),...(!isNew&&isAdmin()?[["삭제","danger",async()=>{const {error}=await sb.from("contracts").delete().eq("id",k.id);toast(error?"삭제하지 못했습니다":"삭제했습니다");reload(["contracts"])}]]:[]),["저장","pri",async()=>{
      const f=fdata("kf");const n=x=>Number(f.get(x)||0)||0;
      const p={contract_date:f.get("contract_date")||null,stage:f.get("stage"),contract_type:f.get("contract_type")||"구매",contract_doc:f.get("contract_doc"),channel:f.get("channel").trim(),referrer:f.get("referrer").trim(),free_trial:f.get("free_trial").trim(),...(hasTrialCol()||f.get("trial_end")?{trial_end:f.get("trial_end")||null}:{}),
        sales1:f.get("sales1").trim(),sales2:f.get("sales2").trim(),product:f.get("product").trim(),size:f.get("size").trim(),serial:f.get("serial").trim(),
@@ -1306,7 +1320,7 @@ function jobDlg(j,c,kind,tpl){
   const pick=isNew&&!c?`<label class="f">고객 검색<input id="jcQ" type="search" autocomplete="off" placeholder="업체명·대표자·전화번호·주소·시리얼"></label>
      <input type="hidden" name="custId" id="jcId"><div id="jcSel"></div><div id="jcRes" class="pickres"></div>
      <p class="mapt" id="jcHint">두 글자 이상 입력하면 고객 목록이 나옵니다. 없는 고객은 ‘고객’ 화면의 ‘+ 새 고객’으로 먼저 등록하세요.</p>`
-    :`<p class="mapt"><b>${esc(j.customer_name)}</b> · ${esc(j.address||"")}${c&&c.phone?" · "+esc(c.phone):""} · 제품: ${esc([p.product,p.size,p.options&&"("+p.options+")",p.serial&&"SN "+p.serial].filter(Boolean).join(" ")||"-")}</p>`;
+    :`<p class="mapt dsum"><b>${esc(j.customer_name)}</b> · ${esc(j.address||"")}${c&&c.phone?" · "+esc(c.phone):""} · 제품: ${esc([p.product,p.size,p.options&&"("+p.options+")",p.serial&&"SN "+p.serial].filter(Boolean).join(" ")||"-")}</p>`;
   openDlg(`${KLABEL[j.kind]} ${isNew?(tpl?"접수 (복사)":"접수"):"작업"}${j.customer_name?" · "+esc(j.customer_name):""}`,`<div id="jf" style="display:grid;gap:10px">${tpl?`<p class="warnbox" style="margin:0">복사한 접수입니다. 방문일·상태·처리 내용은 새로 입력하세요. 사진은 복사되지 않습니다.</p>`:""}
    ${pick}
    ${isNew||off?`<div class="kpick chk" role="radiogroup" aria-label="구분">${KINDS.map(k=>`<label><input type="radio" name="kind" value="${k}" ${j.kind===k?"checked":""}>${KLABEL[k]}</label>`).join("")}</div>`:""}
@@ -1327,7 +1341,8 @@ function jobDlg(j,c,kind,tpl){
    <div class="g3" id="sinkBox" ${j.kind==="as"?"hidden":""}>${sel("sink_status","싱크대 발주",["",...SINKS],j.sink_status,!can)}${inp("sink_memo","싱크대 메모(크기 등)",j.sink_memo,"text",!can)}${inp("parts","제공 부자재",j.parts,"text",!can)}</div>
    ${ui.noFiles?"":isNew?newCustFilesBox("jp",JOBPHOTO[j.kind]||"기타","사진 (선택)"):`<div id="jobFiles"></div>`}
    </div>`,
-   [...(c?[["고객정보","gocust",()=>goCust(c)]]:[]),["닫기"],...(!isNew&&canNewJob(c)?[["복사","",()=>{jobDlg(null,c,j.kind,j);return true}]]:[]),...(!isNew&&isAdmin()?[["삭제","danger",()=>{delJobs([j.id]);return true}]]:[]),...(isNew&&!c?[]:[["확인서 인쇄","",()=>{printJob(j,c);return true}]]),...(can?[["저장","pri",async()=>{
+   [...(c?[["고객정보","gocust",()=>{openCustPopup(c,c2=>{const el=document.querySelector("#jf .dsum");if(el){const pp=j.product||{};el.outerHTML=custSummary(c2,j.kind==="addon"?null:{product:pp.product,size:pp.size,serial:pp.serial})}j.customer_name=c2.name;j.address=c2.address||j.address;
+       document.getElementById("dlgH").textContent=`${KLABEL[j.kind]} ${isNew?"접수":"작업"} · ${c2.name}`});return true}]]:[]),["닫기"],...(!isNew&&canNewJob(c)?[["복사","",()=>{jobDlg(null,c,j.kind,j);return true}]]:[]),...(!isNew&&isAdmin()?[["삭제","danger",()=>{delJobs([j.id]);return true}]]:[]),...(isNew&&!c?[]:[["확인서 인쇄","",()=>{printJob(j,c);return true}]]),...(can?[["저장","pri",async()=>{
      const f=fdata("jf");
      if(isNew&&!c){const cc=pickable.find(x=>x.id===f.get("custId"));
        if(!cc)return toast("고객을 검색해서 목록에서 골라 주세요");c=cc;const k=custContracts(cc.id)[0];
