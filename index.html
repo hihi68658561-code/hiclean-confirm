@@ -1082,6 +1082,9 @@ function contractDlg(c,k){
   if(!isNew)renderPaySec(k);
 }
 function productOf(k){return k?{product:k.product,size:k.size,options:k.options,serial:k.serial}:{}}
+/* 추가설치: 계약에서 그대로 복사된 기존 제품은 빼고, 추가 품목만 */
+function addonItem(j){const p=j.product||{};if(j.kind!=="addon")return{product:"",size:""};const k=contracts.find(x=>x.id===j.contract_id);
+  if(k&&(p.product||"")===(k.product||"")&&(p.size||"")===(k.size||"")&&(p.serial||"")===(k.serial||""))return{product:"",size:""};return{product:p.product||"",size:p.size||""}}
 function jobFromContract(c,k){return{kind:"install",customer_id:c.id,contract_id:k.id,customer_name:c.name,address:c.address,product:productOf(k),status:"접수",request_date:k.contract_date||today()}}
 
 /* ================= 설치·A/S ================= */
@@ -1089,7 +1092,7 @@ function jobCard(j,sel_){
   const c=custById(j.customer_id);const p=j.product||{};
   const tn=(j.techs||[]).map(staffName).filter(Boolean);const extra=String(j.tech_names||"").split(/[\s,/]+/).filter(t=>t&&!tn.includes(t)&&!staff.some(x=>tn.includes(x.name)&&(x.aliases||[]).includes(t))).join(" ");const who=[tn.join(", "),extra].filter(Boolean).join(" · ");
   return `<div class="card click" data-j="${j.id}"><div class="t">${sel_?`<input type="checkbox" class="jsel" data-js="${j.id}" ${ui.jsel.has(j.id)?"checked":""} aria-label="선택" style="width:18px;height:18px">`:""}<span class="badge ${j.kind}">${KLABEL[j.kind]||j.kind}</span><span class="badge s-${j.status}">${j.status}</span>${esc(j.customer_name||(c&&c.name)||"")}${(n=>n?` <span class="badge" title="이 건의 사진">사진 ${n}</span>`:"")(jobFiles(j).length)}</div>
-   <div class="d"><span>${esc(j.visit_date?("방문 "+j.visit_date+(j.visit_time?" "+j.visit_time:"")):"접수 "+(j.request_date||""))}</span><span>${esc([p.product,p.size,p.options&&"("+p.options+")"].filter(Boolean).join(" "))}</span><span>기사 ${esc(who||"미배정")}</span>${j.address?`<span>${esc(j.address)}</span>`:""}</div>
+   <div class="d"><span>${esc(j.visit_date?("방문 "+j.visit_date+(j.visit_time?" "+j.visit_time:"")):"접수 "+(j.request_date||""))}</span><span>${esc(j.kind==="addon"?(a=>[a.product&&"추가: "+a.product,a.size].filter(Boolean).join(" "))(addonItem(j)):[p.product,p.size,p.options&&"("+p.options+")"].filter(Boolean).join(" "))}</span><span>기사 ${esc(who||"미배정")}</span>${j.address?`<span>${esc(j.address)}</span>`:""}</div>
    ${j.symptom?`<div class="d">${esc(j.symptom)}</div>`:""}
    ${j.kind==="as"&&(j.cost||j.pay_status||j.paid_type)?`<div class="d">${j.paid_type?`<span class="badge">${esc(j.paid_type)}</span>`:""}${j.cost?`<span class="money">비용 ${won0(j.cost)}원</span>`:""}${j.pay_status?`<span class="badge ${j.pay_status==="미수"?"as":"install"}">${esc(j.pay_status)}</span>`:""}${j.pay_method?`<span>${esc(j.pay_method)}${j.pay_name?" · "+esc(j.pay_name):""}</span>`:""}${j.closed?`<span class="badge">매출마감</span>`:""}</div>`:""}</div>`;
 }
@@ -1201,8 +1204,8 @@ function renderWorkView0(){
        const sales=staffName(k.sales3)||staffName(c.owner)||c.owner_name||"";
        return `<tr data-j="${j.id}">${admin?`<td><input type="checkbox" class="jsel" data-js="${j.id}" ${ui.jsel.has(j.id)?"checked":""} aria-label="선택"></td>`:""}<td>${i+1}</td><td>${esc(rd.slice(2,4)+rd.slice(5,7))}</td><td class="kc k-${j.kind}">${KLABEL[j.kind]||j.kind}</td>
         <td><b>${esc(j.customer_name||c.name||"")}</b></td><td>${esc(c.phone||c.phone2||"")}</td><td>${esc(region(j.address||c.address))}</td><td class="wrap">${esc(j.address||c.address||"")}</td>
-        <td>${esc(ymd2(j.kind!=="as"&&k.contract_date?k.contract_date:rd))}</td><td class="${vcls}">${esc(vd||"")}</td><td>${wday(vd)}</td><td>${esc(j.visit_time||"")}</td>
-        <td>${esc(p.product||"")}</td><td>${esc(p.size||"")}</td><td>${esc(p.serial||"")}</td><td>${k.wash_added?"수압식":""}</td>
+        <td>${esc(ymd2(j.kind==="install"&&k.contract_date?k.contract_date:rd))}</td><td class="${vcls}">${esc(vd||"")}</td><td>${wday(vd)}</td><td>${esc(j.visit_time||"")}</td>
+        <td>${esc(j.kind==="addon"?addonItem(j).product:p.product||"")}</td><td>${esc(j.kind==="addon"?addonItem(j).size:p.size||"")}</td><td>${esc(j.kind==="addon"?"":p.serial||"")}</td><td>${j.kind==="install"&&k.wash_added?"수압식":""}</td>
         <td>${j.kind==="as"?"":sinkCell(j)}</td><td class="wrap">${esc(j.symptom||"")}</td><td>${esc(sales)}</td><td>${esc(whoOf(j)||"")}</td>
         <td><span class="badge s-${j.status}">${esc(j.status)}</span>${j.kind==="as"&&j.pay_status==="미수"?` <span class="badge remove">미수</span>`:""}</td></tr>`}).join("")||`<tr><td colspan="21" class="mapt" style="cursor:default">해당하는 작업이 없습니다.</td></tr>`}</tbody></table></div>
      ${list.length>500?`<p class="mapt">앞의 500건만 보입니다. 검색이나 구분으로 좁혀 주세요.</p>`:""}</div>`};
@@ -1274,6 +1277,8 @@ function jobDlg(j,c,kind){
      <label class="f">입금 메모<input name="pay_memo" value="${esc(j.pay_memo||"")}" ${can?"":"readonly"} placeholder="예: 10/14 이애경 명의로 입금, 2건 합산"></label>
      <label class="chip" style="justify-self:start"><input type="checkbox" name="closed" ${j.closed?"checked":""} ${off?"":"disabled"}>매출마감 ${off?"":"(사무실에서 처리)"}</label>
      <datalist id="cardList">${["농협카드","비씨카드","국민카드","신한카드","삼성카드","현대카드","롯데카드","하나카드","우리카드","네이버페이"].map(x=>`<option value="${x}">`).join("")}</datalist></fieldset>
+   <div class="g3" id="addonBox" ${j.kind==="addon"?"":"hidden"}>${inp("add_item","추가 품목 (예: 싱크대·수압식·부자재)",addonItem(j).product,"text",!(off||isNew),'list="addList"')}${inp("add_size","규격·수량",addonItem(j).size,"text",!(off||isNew))}<span></span></div>
+   <datalist id="addList">${["싱크대","수압식 세척기","부자재","수전","선반","배수구"].map(x=>`<option value="${x}">`).join("")}</datalist>
    <div class="g3" id="sinkBox" ${j.kind==="as"?"hidden":""}>${sel("sink_status","싱크대 발주",["",...SINKS],j.sink_status,!can)}${inp("sink_memo","싱크대 메모(크기 등)",j.sink_memo,"text",!can)}${inp("parts","제공 부자재",j.parts,"text",!can)}</div>
    ${ui.noFiles?"":isNew?newCustFilesBox("jp",JOBPHOTO[j.kind]||"기타","사진 (선택)"):`<div id="jobFiles"></div>`}
    </div>`,
@@ -1283,7 +1288,8 @@ function jobDlg(j,c,kind){
        if(!cc)return toast("고객을 검색해서 목록에서 골라 주세요");c=cc;const k=custContracts(cc.id)[0];
        Object.assign(j,{customer_id:cc.id,contract_id:k?k.id:null,customer_name:cc.name,address:cc.address,product:productOf(k)})}
      const nk_=f.get("kind")||j.kind;if(nk_!==j.kind&&!isNew){j=Object.assign({},j,{kind:nk_})}else j.kind=nk_;
-     const pt={kind:j.kind,status:f.get("status")||j.status,done_date:f.get("done_date")||null,result:f.get("result")||""};
+     if(j.kind==="addon"&&(off||isNew)){j.product={product:(f.get("add_item")||"").trim(),size:(f.get("add_size")||"").trim()}}
+     const pt={kind:j.kind,...(j.kind==="addon"&&(off||isNew)?{product:j.product}:{}),status:f.get("status")||j.status,done_date:f.get("done_date")||null,result:f.get("result")||""};
      if(pt.status==="완료"&&!pt.done_date)pt.done_date=today();
      if(j.kind==="as"){Object.assign(pt,{paid_type:f.get("paid_type")||"",cost:Number(f.get("cost")||0)||0,pay_status:f.get("pay_status")||"",pay_method:f.get("pay_method")||"",pay_date:f.get("pay_date")||null,pay_name:(f.get("pay_name")||"").trim(),pay_memo:(f.get("pay_memo")||"").trim()});
        if(pt.paid_type==="무상"){pt.cost=0;pt.pay_status="";pt.pay_method=""}else{if(pt.cost&&!pt.paid_type)pt.paid_type="유상";if(pt.pay_method&&!pt.pay_status&&pt.cost)pt.pay_status="완료";if(pt.pay_status==="완료"&&!pt.pay_date)pt.pay_date=today()}
@@ -1299,7 +1305,7 @@ function jobDlg(j,c,kind){
      toast((isNew?`${KLABEL[j.kind]} 접수했습니다`:"저장했습니다")+pmsg);reload(["jobs","customers","files"])}]]:[])]);
   const jpSel=isNew?bindNewCustFiles("jp"):[];if(!isNew)renderJobFiles(j,c);
   if(isNew&&!c)bindCustPicker(pickable);
-  document.querySelectorAll('#jf input[name=kind]').forEach(x=>x.onchange=()=>{const as=x.value==="as";document.getElementById("payBox").hidden=!as;document.getElementById("sinkBox").hidden=as;
+  document.querySelectorAll('#jf input[name=kind]').forEach(x=>x.onchange=()=>{const as=x.value==="as";document.getElementById("payBox").hidden=!as;document.getElementById("sinkBox").hidden=as;document.getElementById("addonBox").hidden=x.value!=="addon";
     const t=document.getElementById("jf").querySelector('textarea[name=symptom]');if(t)t.previousSibling.textContent=as?"불편사항·접수 내용":"요청 사항";
     document.getElementById("dlgH").textContent=`${KLABEL[x.value]} ${isNew?"접수":"작업"}${j.customer_name?" · "+j.customer_name:""}`;
     const jk=document.getElementById("jpKind");if(jk&&JOBPHOTO[x.value])jk.value=JOBPHOTO[x.value]});
