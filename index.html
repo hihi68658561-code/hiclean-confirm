@@ -125,6 +125,7 @@ dialog .df{padding:12px 18px;border-top:1px solid var(--line2);display:flex;just
 .wtbox{max-height:calc(100vh - 260px);overflow:auto;border:1px solid var(--line);border-radius:6px}
 .sumt th{white-space:nowrap}
 .wrapx.vis{overflow:visible}
+.kpi.kc{cursor:pointer}.kpi.kc:hover{border-color:var(--accent)}.kpi.kc.on{border-color:var(--accent);box-shadow:0 0 0 2px var(--accent-weak);background:var(--accent-weak)}
 .gbadge{display:inline-block;font-size:11px;font-weight:700;padding:0 6px;border-radius:9px;margin-left:4px;vertical-align:1px;color:#fff}.gbadge.g-red{background:#e8590c}.gbadge.g-black{background:#1f1f1f}
 .gwarn{margin:0;padding:6px 10px;border-radius:6px;font-size:13px;font-weight:600}.gwarn.g-red{background:#fff0e6;color:#b4410a}.gwarn.g-black{background:#2b2b2b;color:#fff}
 #dlgF .gocust{margin-right:auto}
@@ -979,16 +980,20 @@ function renderCtrView0(){
     if(inM(s.last))b.push("결제");
     if(k.stage==="미수"&&(!baseDate(k)||baseDate(k)<en0)&&!b.length)b.push("미수");
     if(b.length)rows.push({k,c:custById(k.customer_id)||{},s,b})});
-  const cnt=(r,t)=>rows.filter(x=>(!r||CROWS.find(y=>y[0]===r)[2](x.k))&&(!t||(x.k.contract_type||"구매")===t)).length;
-  const qq=ui.cq.trim().toLowerCase();
-  const list=rows.filter(x=>(!ui.crow||CROWS.find(y=>y[0]===ui.crow)[2](x.k))&&(!ui.cct||(x.k.contract_type||"구매")===ui.cct)
-    &&(!qq||[x.c.name,x.c.ceo,x.c.phone,x.c.phone2,x.k.serial,x.k.memo,x.k.approval,staffName(x.k.sales3),x.k.sales3_name].join(" ").toLowerCase().includes(qq)));
-  const bo=x=>x.b[0]==="미수"?1:0;
-  list.sort((a,b)=>bo(a)-bo(b)||(baseDate(b.k)||"").localeCompare(baseDate(a.k)||""));
   // 금액 요약
   const mC=contracts.filter(k=>inM(k.contract_date)&&k.stage!=="취소");
   const mP=payments.filter(p=>inM(p.pay_date));const mCard=mP.filter(p=>p.method==="카드").reduce((a,p)=>a+Number(p.amount||0),0),mOther=mP.filter(p=>p.method!=="카드").reduce((a,p)=>a+Number(p.amount||0),0);
   const un=contracts.filter(k=>k.stage==="미수");const unSum=un.reduce((a,k)=>a+Math.max(0,payStat(k).unpaid),0);
+  /* 위쪽 요약 칸을 누르면 그 건들만 */
+  if(ui.ckpi===undefined)ui.ckpi="";
+  const KPI={ctr:["당월 계약",mC],pay:["당월 입금",contracts.filter(k=>paysOf(k).some(p=>inM(p.pay_date)))],unpaid:["미수",un]};
+  const src=ui.ckpi&&KPI[ui.ckpi]?KPI[ui.ckpi][1].map(k=>({k,c:custById(k.customer_id)||{},s:payStat(k),b:[KPI[ui.ckpi][0]]})):rows;
+  const cnt=(r,t)=>src.filter(x=>(!r||CROWS.find(y=>y[0]===r)[2](x.k))&&(!t||(x.k.contract_type||"구매")===t)).length;
+  const qq=ui.cq.trim().toLowerCase();
+  const list=src.filter(x=>(!ui.crow||CROWS.find(y=>y[0]===ui.crow)[2](x.k))&&(!ui.cct||(x.k.contract_type||"구매")===ui.cct)
+    &&(!qq||[x.c.name,x.c.ceo,x.c.phone,x.c.phone2,x.k.serial,x.k.memo,x.k.approval,staffName(x.k.sales3),x.k.sales3_name].join(" ").toLowerCase().includes(qq)));
+  const bo=x=>x.b[0]==="미수"?1:0;
+  list.sort((a,b)=>bo(a)-bo(b)||(baseDate(b.k)||"").localeCompare(baseDate(a.k)||""));
   const sumT=`<table class="sumt" aria-label="${esc(ui.cm)} 계약 집계"><thead><tr><th></th>${CTYPES.map(t=>`<th>${t}</th>`).join("")}<th>합계</th></tr></thead><tbody>
     ${CROWS.map(([r,l])=>`<tr class="${r==="unpaid"?"open":""}"><th>${l}</th>${[...CTYPES,""].map(t=>`<td class="cl ${ui.crow===r&&ui.cct===t?"on":""}" data-r="${r}" data-t="${t}">${cnt(r,t)}</td>`).join("")}</tr>`).join("")}
     <tr><th>합계</th>${[...CTYPES,""].map(t=>`<td class="cl ${ui.crow===""&&ui.cct===t?"on":""}" data-r="" data-t="${t}"><b>${cnt("",t)}</b></td>`).join("")}</tr></tbody></table>`;
@@ -998,13 +1003,13 @@ function renderCtrView0(){
   view().innerHTML=`${ui.noPay?`<div class="sec" style="max-width:none"><p class="warnbox">입금 내역 칸이 아직 없습니다. Supabase SQL Editor에서 <b>phase1h.sql</b>을 실행하면 입금·미수금·마감 체크를 쓸 수 있습니다.</p></div>`:""}
    <div class="sumwrap"><div style="display:grid;gap:8px;align-content:start"><div style="display:flex;gap:8px;align-items:center"><h2 style="margin:0;font-size:18px">계약관리</h2>
       <input id="cM" type="month" value="${esc(ui.cm)}" aria-label="기준 월" style="padding:5px 8px;border:1px solid var(--line);border-radius:6px;background:var(--field)">${ui.cm!==thisMonth()?`<button class="btn sm" type="button" id="cNow">이번 달</button>`:""}</div>
-      <div class="kpis"><div class="kpi"><span>당월 계약</span><b>${mC.length}건 · ${won0(mC.reduce((a,k)=>a+Number(k.amount||0),0))}원</b></div>
-       <div class="kpi"><span>당월 입금</span><b>${won0(mCard+mOther)}원</b><small>카드 ${won0(mCard)} · 현금+캐피탈 ${won0(mOther)}</small></div>
-       <div class="kpi bad"><span>미수금 (미수 ${un.length}건)</span><b>${won0(unSum)}원</b></div></div>
+      <div class="kpis"><div class="kpi kc ${ui.ckpi==="ctr"?"on":""}" data-kpi="ctr" role="button" tabindex="0"><span>당월 계약</span><b>${mC.length}건 · ${won0(mC.reduce((a,k)=>a+Number(k.amount||0),0))}원</b></div>
+       <div class="kpi kc ${ui.ckpi==="pay"?"on":""}" data-kpi="pay" role="button" tabindex="0"><span>당월 입금</span><b>${won0(mCard+mOther)}원</b><small>카드 ${won0(mCard)} · 현금+캐피탈 ${won0(mOther)}</small></div>
+       <div class="kpi bad kc ${ui.ckpi==="unpaid"?"on":""}" data-kpi="unpaid" role="button" tabindex="0"><span>미수금 (미수 ${un.length}건)</span><b>${won0(unSum)}원</b></div></div>
       <p class="mapt" style="margin:0">이달 설치한 건(설치 전이면 계약일 기준), 이달 최종결제된 건, 그리고 해결되지 않은 미수 건이 함께 나옵니다.<br>숫자를 누르면 아래 목록이 그 건들로 바뀝니다.</p></div>
      <div class="sumbox">${sumT}</div></div>
    <div class="toolbar"><input id="cQ" type="search" placeholder="업체명·대표자·전화·시리얼·담당 검색" value="${esc(ui.cq)}">
-     <span class="mapt">${ui.crow?esc(CROWS.find(y=>y[0]===ui.crow)[1])+" · ":""}${ui.cct?esc(ui.cct)+" · ":""}${list.length}건</span>${ui.crow||ui.cct?`<button class="btn sm" type="button" id="cAll">전체 보기</button>`:""}
+     <span class="mapt">${ui.ckpi&&KPI[ui.ckpi]?esc(KPI[ui.ckpi][0])+" · ":""}${ui.crow?esc(CROWS.find(y=>y[0]===ui.crow)[1])+" · ":""}${ui.cct?esc(ui.cct)+" · ":""}${list.length}건</span>${ui.crow||ui.cct||ui.ckpi?`<button class="btn sm" type="button" id="cAll">전체 보기</button>`:""}
      <span style="flex:1"></span><button class="btn" type="button" id="cCols">입력화면설정</button>${isOffice()||me.role==="sales"?`<button class="btn pri" type="button" id="cNewK">+ 신규계약</button>`:""}</div>
    <div class="wrapx vis" style="padding-top:10px"><div class="wtbox"><table class="wt ct"><thead><tr><th>#</th>${colHead(cols,"ctr",MONEYC)}</tr></thead><tbody>
     ${shown.map((x,i)=>`<tr data-ck="${x.k.id}" class="rs-${esc(x.k.stage)}"><td>${i+1}</td>${cols.map(c=>ctrCell(c,x.k,x.c,x.s,x.b)).join("")}</tr>`).join("")||`<tr><td colspan="${cols.length+1}" class="mapt" style="cursor:default">해당하는 계약이 없습니다.</td></tr>`}</tbody>
@@ -1016,7 +1021,8 @@ function renderCtrView0(){
   view().querySelectorAll(".sumt td.cl").forEach(td=>td.onclick=()=>{ui.crow=td.dataset.r;ui.cct=td.dataset.t;re()});
   document.getElementById("cM").onchange=e=>{if(e.target.value){ui.cm=e.target.value;re()}};
   const cn=document.getElementById("cNow");if(cn)cn.onclick=()=>{ui.cm=thisMonth();re()};
-  const ca=document.getElementById("cAll");if(ca)ca.onclick=()=>{ui.crow="";ui.cct="";re()};
+  const ca=document.getElementById("cAll");if(ca)ca.onclick=()=>{ui.crow="";ui.cct="";ui.ckpi="";re()};
+  view().querySelectorAll("[data-kpi]").forEach(el=>{const go=()=>{ui.ckpi=ui.ckpi===el.dataset.kpi?"":el.dataset.kpi;ui.crow="";ui.cct="";re()};el.onclick=go;el.onkeydown=e=>{if(e.key==="Enter"||e.key===" "){e.preventDefault();go()}}});
   document.getElementById("cCols").onclick=()=>colPicker(re);
   const nk_=document.getElementById("cNewK");if(nk_)nk_.onclick=()=>newContractPick();
   const cq=document.getElementById("cQ");cq.oninput=e=>{ui.cq=e.target.value;clearTimeout(cq._t);cq._t=setTimeout(()=>{re();const n=document.getElementById("cQ");n.focus();n.setSelectionRange(n.value.length,n.value.length)},250)};
