@@ -147,8 +147,8 @@ dialog .df{padding:12px 18px;border-top:1px solid var(--line2);display:flex;just
 .lbmid{display:grid;grid-template-columns:52px 1fr 52px;align-items:center;min-height:0}.lbimg{height:100%;min-height:0;display:grid;place-items:center;text-align:center;overflow:auto;padding:8px}
 .lbimg img{max-width:100%;max-height:calc(92vh - 80px);object-fit:contain}
 .lbnav{height:80px;border:0;background:rgba(255,255,255,.08);color:#fff;font-size:36px;border-radius:8px;margin:0 6px;cursor:pointer}.lbnav:disabled{opacity:.2;cursor:default}
-.wt.ct thead th{position:sticky}.wt.ct .rz{position:absolute;top:0;right:-3px;width:7px;height:100%;cursor:col-resize;z-index:2;touch-action:none}
-.wt.ct .rz::after{content:"";position:absolute;left:3px;top:20%;height:60%;border-left:1px solid var(--line)}.wt.ct .rz:hover::after{border-left:2px solid var(--accent)}
+.wt thead th{position:sticky}.wt .rz{position:absolute;top:0;right:-3px;width:7px;height:100%;cursor:col-resize;z-index:2;touch-action:none}
+.wt .rz::after{content:"";position:absolute;left:3px;top:20%;height:60%;border-left:1px solid var(--line)}.wt .rz:hover::after{border-left:2px solid var(--accent)}
 body.resizing,body.resizing *{cursor:col-resize!important;user-select:none}
 .hastip{border-bottom:1px dashed currentColor;cursor:help;position:relative;padding-right:9px}
 .hastip::after{content:"";position:absolute;right:0;top:1px;width:6px;height:6px;border-radius:50%;background:var(--accent)}
@@ -878,39 +878,43 @@ const CCOLS=[
  ["product","제품",1],["size","사이즈",1],["serial","시리얼",1],["wash","수압식",0],["sink","싱크준비",1],["parts","부자재",0],["amount","합계금액",1],["card","카드",1],["cash","현금+캐피탈",1],["paid","입금합계",0],["unpaid","미수금",1],["last","최종결제일",1],
  ["approval","승인처",1],["tax","계산서 발급",0],["chk_cust","고객등록",1],["chk_slip","전표마감",1],["chk_sales","매출마감",1],["memo","비고",1]];
 const MONEYC=new Set(["amount","card","cash","paid","unpaid"]);
-function colKey(){return "hc.cols.ctr."+(me&&me.id||"")}
-function getCols(){let v=null;try{v=JSON.parse(localStorage.getItem(colKey())||"null")}catch(e){}
-  const all=CCOLS.map(c=>c[0]);if(Array.isArray(v))v={cols:v,seen:all.filter(x=>!["sink","parts"].includes(x))};
-  if(!v||!Array.isArray(v.cols))return CCOLS.filter(c=>c[2]).map(c=>c[0]);
+/* 표 열 설정(넣고 빼기·순서·너비) — 계약관리(ctr)·작업현황(work) 공용, 브라우저별로 기억 */
+const TCFG={ctr:{cols:()=>CCOLS,sel:".wt.ct",lead:()=>1},work:{cols:()=>WCOLS,sel:".wt.wk",lead:()=>isAdmin()?2:1}};
+function colKey(t="ctr"){return "hc.cols."+t+"."+(me&&me.id||"")}
+function getCols(t="ctr"){const C=TCFG[t].cols();let v=null;try{v=JSON.parse(localStorage.getItem(colKey(t))||"null")}catch(e){}
+  const all=C.map(c=>c[0]);if(Array.isArray(v))v={cols:v,seen:all.filter(x=>!["sink","parts"].includes(x))};
+  if(!v||!Array.isArray(v.cols))return C.filter(c=>c[2]).map(c=>c[0]);
   const cols=v.cols.filter(x=>all.includes(x));const seen=v.seen||all;
-  CCOLS.forEach(([k,,d],i)=>{if(d&&!seen.includes(k)&&!cols.includes(k)){const prev=CCOLS.slice(0,i).map(c=>c[0]).reverse().find(x=>cols.includes(x));cols.splice(prev?cols.indexOf(prev)+1:cols.length,0,k)}});
+  C.forEach(([k,,d],i)=>{if(d&&!seen.includes(k)&&!cols.includes(k)){const prev=C.slice(0,i).map(c=>c[0]).reverse().find(x=>cols.includes(x));cols.splice(prev?cols.indexOf(prev)+1:cols.length,0,k)}});
   return cols}
-function setCols(v){try{localStorage.setItem(colKey(),JSON.stringify({cols:v,seen:CCOLS.map(c=>c[0])}))}catch(e){}}
-/* 열 너비 조절 (브라우저별로 기억) */
-function cwKey(){return "hc.colw.ctr."+(me&&me.id||"")}
-function getColW(){try{return JSON.parse(localStorage.getItem(cwKey())||"{}")||{}}catch(e){return{}}}
-function setColW(o){try{localStorage.setItem(cwKey(),JSON.stringify(o))}catch(e){}}
-function applyColW(cols,live){const w=Object.assign(getColW(),live||{});let st=document.getElementById("colwStyle");if(!st){st=document.createElement("style");st.id="colwStyle";document.head.appendChild(st)}
-  st.textContent=cols.map((c,i)=>w[c]?`.wt.ct tr>*:nth-child(${i+2}){width:${w[c]}px;min-width:${w[c]}px;max-width:${w[c]}px;overflow:hidden;text-overflow:ellipsis}`:"").join("\n")}
-function bindColResize(cols){
-  view().querySelectorAll(".wt.ct .rz").forEach(h=>{
+function setCols(v,t="ctr"){try{localStorage.setItem(colKey(t),JSON.stringify({cols:v,seen:TCFG[t].cols().map(c=>c[0])}))}catch(e){}}
+function cwKey(t="ctr"){return "hc.colw."+t+"."+(me&&me.id||"")}
+function getColW(t="ctr"){try{return JSON.parse(localStorage.getItem(cwKey(t))||"{}")||{}}catch(e){return{}}}
+function setColW(o,t="ctr"){try{localStorage.setItem(cwKey(t),JSON.stringify(o))}catch(e){}}
+function applyColW(cols,live,t="ctr"){const w=Object.assign(getColW(t),live||{});const id="colwStyle_"+t;let st=document.getElementById(id);if(!st){st=document.createElement("style");st.id=id;document.head.appendChild(st)}
+  const sel=TCFG[t].sel,lead=TCFG[t].lead();
+  st.textContent=cols.map((c,i)=>w[c]?`${sel} tr>*:nth-child(${i+lead+1}){width:${w[c]}px;min-width:${w[c]}px;max-width:${w[c]}px;overflow:hidden;text-overflow:ellipsis}`:"").join("\n")}
+function bindColResize(cols,t="ctr"){
+  view().querySelectorAll(TCFG[t].sel+" .rz").forEach(h=>{
     h.onclick=e=>e.stopPropagation();
-    h.ondblclick=e=>{e.stopPropagation();const w=getColW();delete w[h.dataset.rz];setColW(w);applyColW(cols)};
+    h.ondblclick=e=>{e.stopPropagation();const w=getColW(t);delete w[h.dataset.rz];setColW(w,t);applyColW(cols,null,t)};
     h.onpointerdown=e=>{e.preventDefault();e.stopPropagation();const th=h.parentElement,k=h.dataset.rz,x0=e.clientX,w0=th.getBoundingClientRect().width;let w=w0;
       h.setPointerCapture(e.pointerId);document.body.classList.add("resizing");
-      h.onpointermove=ev=>{w=Math.max(36,Math.round(w0+ev.clientX-x0));applyColW(cols,{[k]:w})};
-      h.onpointerup=()=>{h.onpointermove=null;h.onpointerup=null;document.body.classList.remove("resizing");const o=getColW();o[k]=w;setColW(o);applyColW(cols)}};
+      h.onpointermove=ev=>{w=Math.max(36,Math.round(w0+ev.clientX-x0));applyColW(cols,{[k]:w},t)};
+      h.onpointerup=()=>{h.onpointermove=null;h.onpointerup=null;document.body.classList.remove("resizing");const o=getColW(t);o[k]=w;setColW(o,t);applyColW(cols,null,t)}};
   });
 }
-function colPicker(onDone){
-  let cur=getCols();const lab=Object.fromEntries(CCOLS.map(c=>[c[0],c[1]]));
-  const draw=()=>{const order=[...cur,...CCOLS.map(c=>c[0]).filter(x=>!cur.includes(x))];
+function colHead(cols,t,numCols){const lab=Object.fromEntries(TCFG[t].cols().map(c=>[c[0],c[1]]));
+  return cols.map(c=>`<th class="${numCols&&numCols.has(c)?"num":""}" data-ck="${c}">${esc(lab[c])}<span class="rz" data-rz="${c}" title="끌어서 너비 조절 · 두 번 클릭하면 원래대로"></span></th>`).join("")}
+function colPicker(onDone,t="ctr"){
+  const C=TCFG[t].cols();let cur=getCols(t);const lab=Object.fromEntries(C.map(c=>[c[0],c[1]]));
+  const draw=()=>{const order=[...cur,...C.map(c=>c[0]).filter(x=>!cur.includes(x))];
     document.getElementById("cpList").innerHTML=order.map(k=>{const on=cur.includes(k);const i=cur.indexOf(k);return `<div class="cprow"><label class="chip"><input type="checkbox" data-ck="${k}" ${on?"checked":""}>${esc(lab[k])}</label>
       ${on?`<span><button type="button" class="btn sm" data-up="${k}" ${i===0?"disabled":""} aria-label="${esc(lab[k])} 위로">↑</button><button type="button" class="btn sm" data-dn="${k}" ${i===cur.length-1?"disabled":""} aria-label="${esc(lab[k])} 아래로">↓</button></span>`:""}</div>`}).join("");
     document.querySelectorAll("#cpList [data-ck]").forEach(x=>x.onchange=()=>{const k=x.dataset.ck;cur=x.checked?[...cur,k]:cur.filter(y=>y!==k);draw()});
     document.querySelectorAll("#cpList [data-up],#cpList [data-dn]").forEach(b=>b.onclick=()=>{const k=b.dataset.up||b.dataset.dn;const i=cur.indexOf(k),j=b.dataset.up?i-1:i+1;if(j<0||j>=cur.length)return;[cur[i],cur[j]]=[cur[j],cur[i]];draw()})};
   openDlg("입력화면설정",`<p class="mapt">체크한 열만 목록에 보입니다. ↑↓로 순서를 바꿀 수 있습니다. 이 컴퓨터(브라우저)에 기억됩니다.</p><div id="cpList" class="cplist"></div>`,
-    [["열 너비 초기화","",()=>{setColW({});applyColW(getCols());toast("열 너비를 원래대로 돌렸습니다");return true}],["기본값으로","",()=>{cur=CCOLS.filter(c=>c[2]).map(c=>c[0]);draw();return true}],["취소"],["적용","pri",()=>{if(!cur.length){toast("열을 하나 이상 고르세요");return true}setCols(cur);onDone()}]]);
+    [["열 너비 초기화","",()=>{setColW({},t);applyColW(getCols(t),null,t);toast("열 너비를 원래대로 돌렸습니다");return true}],["기본값으로","",()=>{cur=C.filter(c=>c[2]).map(c=>c[0]);draw();return true}],["취소"],["적용","pri",()=>{if(!cur.length){toast("열을 하나 이상 고르세요");return true}setCols(cur,t);onDone()}]]);
   draw();
 }
 function ctrCell(col,k,c,st,basis){
@@ -989,7 +993,7 @@ function renderCtrView0(){
    <div class="toolbar"><input id="cQ" type="search" placeholder="업체명·대표자·전화·시리얼·담당 검색" value="${esc(ui.cq)}">
      <span class="mapt">${ui.crow?esc(CROWS.find(y=>y[0]===ui.crow)[1])+" · ":""}${ui.cct?esc(ui.cct)+" · ":""}${list.length}건</span>${ui.crow||ui.cct?`<button class="btn sm" type="button" id="cAll">전체 보기</button>`:""}
      <span style="flex:1"></span><button class="btn" type="button" id="cCols">입력화면설정</button></div>
-   <div class="wrapx vis" style="padding-top:10px"><div class="wtbox"><table class="wt ct"><thead><tr><th>#</th>${cols.map(c=>`<th class="${MONEYC.has(c)?"num":""}" data-ck="${c}">${esc(lab[c])}<span class="rz" data-rz="${c}" title="끌어서 너비 조절 · 두 번 클릭하면 원래대로"></span></th>`).join("")}</tr></thead><tbody>
+   <div class="wrapx vis" style="padding-top:10px"><div class="wtbox"><table class="wt ct"><thead><tr><th>#</th>${colHead(cols,"ctr",MONEYC)}</tr></thead><tbody>
     ${shown.map((x,i)=>`<tr data-ck="${x.k.id}" class="rs-${esc(x.k.stage)}"><td>${i+1}</td>${cols.map(c=>ctrCell(c,x.k,x.c,x.s,x.b)).join("")}</tr>`).join("")||`<tr><td colspan="${cols.length+1}" class="mapt" style="cursor:default">해당하는 계약이 없습니다.</td></tr>`}</tbody>
     ${shown.length?`<tfoot><tr><th></th>${cols.map(c=>`<th class="${MONEYC.has(c)?"num":""}">${MONEYC.has(c)?won0(tot[c]):c===cols[0]?"합계":""}</th>`).join("")}</tr></tfoot>`:""}</table></div>
     ${list.length>500?`<p class="mapt">앞의 500건만 보입니다. 검색으로 좁혀 주세요.</p>`:""}</div>`;
@@ -1234,6 +1238,36 @@ function monthBuckets(list,ym){
   return out;
 }
 function whoOf(j){const tn=(j.techs||[]).map(staffName).filter(Boolean);const extra=String(j.tech_names||"").split(/[\s,/]+/).filter(t=>t&&!tn.includes(t)&&!staff.some(x=>tn.includes(x.name)&&(x.aliases||[]).includes(t))).join(" ");return [tn.join(", "),extra].filter(Boolean).join(" · ")}
+const WCOLS=[["rmon","접수월",1],["kind","구분",1],["name","업체명",1],["ceo","대표자",0],["phone","전화번호",1],["region","지역",1],["addr","상세주소",1],["cdate","계약/접수",1],["rdate","접수일",0],["visit","예정일",1],["wday","요일",1],["time","시간",1],
+ ["product","제품",1],["size","규격",1],["serial","시리얼",1],["wash","수압식",1],["sink","싱크대",1],["parts","제공 부자재",0],["symptom","접수내용",1],["result","처리내용",0],["sales","영업담당",1],["tech","배정",1],["status","처리현황",1],["done","완료일",0],["photo","사진",0]];
+function wCell(col,j,c,k,td){const p=j.product||{};const rd=rdOf(j);const vd=j.visit_date;const openJ=!["완료","취소"].includes(j.status);
+  switch(col){
+    case"rmon":return `<td>${esc(rd.slice(2,4)+rd.slice(5,7))}</td>`;
+    case"kind":return `<td class="kc k-${j.kind}">${KLABEL[j.kind]||j.kind}</td>`;
+    case"name":return `<td title="${esc(j.customer_name||c.name||"")}"><b>${esc(j.customer_name||c.name||"")}</b></td>`;
+    case"ceo":return `<td>${esc(c.ceo||"")}</td>`;
+    case"phone":return `<td>${esc(c.phone||c.phone2||"")}</td>`;
+    case"region":return `<td>${esc(region(j.address||c.address))}</td>`;
+    case"addr":return `<td class="wrap">${esc(j.address||c.address||"")}</td>`;
+    case"cdate":return `<td>${esc(ymd2(j.kind==="install"&&k.contract_date?k.contract_date:rd))}</td>`;
+    case"rdate":return `<td>${esc(ymd2(rd))}</td>`;
+    case"visit":{const vcls=openJ&&vd?(vd===td?"due":vd<td?"late":""):"";return `<td class="${vcls}">${esc(vd||"")}</td>`}
+    case"wday":return `<td>${wday(vd)}</td>`;
+    case"time":return `<td>${esc(j.visit_time||"")}</td>`;
+    case"product":return `<td>${esc(j.kind==="addon"?addonItem(j).product:p.product||"")}</td>`;
+    case"size":return `<td>${esc(j.kind==="addon"?addonItem(j).size:p.size||"")}</td>`;
+    case"serial":return `<td>${esc(j.kind==="addon"?"":p.serial||"")}</td>`;
+    case"wash":return `<td>${j.kind==="install"&&k.wash_added?"수압식":""}</td>`;
+    case"sink":return `<td>${j.kind==="as"?"":sinkCell(j)}</td>`;
+    case"parts":return `<td>${esc(j.parts||"")}</td>`;
+    case"symptom":return `<td class="wrap">${esc(j.symptom||"")}</td>`;
+    case"result":return `<td class="wrap">${esc(j.result||"")}</td>`;
+    case"sales":return `<td>${esc(s3Text(k)||staffName(c.owner)||c.owner_name||"")}</td>`;
+    case"tech":return `<td>${esc(whoOf(j)||"")}</td>`;
+    case"status":return `<td><span class="badge s-${j.status}">${esc(j.status)}</span>${j.kind==="as"&&j.pay_status==="미수"?` <span class="badge remove">미수</span>`:""}</td>`;
+    case"done":return `<td>${esc(ymd2(j.done_date||""))}</td>`;
+    case"photo":{const n=jobFiles(j).length;return `<td>${n?n+"장":""}</td>`}
+  }return "<td></td>"}
 function renderWorkView(){const _sv=snapScroll();renderWorkView0();restoreScroll(_sv)}
 function renderWorkView0(){
   if(!ui.wm)ui.wm=thisMonth();if(!ui.wrow)ui.wrow="open";if(ui.wkind===undefined)ui.wkind="";
@@ -1254,17 +1288,11 @@ function renderWorkView0(){
   const sumT=`<table class="sumt" aria-label="${esc(ui.wm)} 작업 집계"><thead><tr><th></th>${KINDS.map(k=>`<th class="k-${k}">${KLABEL[k]}</th>`).join("")}<th>합계</th></tr></thead><tbody>
     ${WROWS.map(([r,l])=>`<tr class="${r==="open"?"open":""}"><th>${l}</th>${[...KINDS,""].map(k=>`<td class="cl ${ui.wrow===r&&ui.wkind===k&&!ui.jpay?"on":""}" data-r="${r}" data-k="${k}" title="${l}${k?" · "+KLABEL[k]:""} 목록 보기">${cnt(r,k)}</td>`).join("")}</tr>`).join("")}</tbody></table>`;
   const admin=isAdmin();
+  const wcols=getCols("work");
   const tbl=()=>{const rows=list.slice(0,500);const td=today();
-    return `<div class="wrapx vis" style="padding-top:12px"><div class="wtbox"><table class="wt"><thead><tr>${admin?`<th></th>`:""}<th>순번</th><th>접수월</th><th>구분</th><th>업체명</th><th>전화번호</th><th>지역</th><th>상세주소</th><th>계약/접수</th><th>예정일</th><th>요일</th><th>시간</th><th>제품</th><th>규격</th><th>시리얼</th><th>수압식</th><th>싱크대</th><th>접수내용</th><th>영업담당</th><th>배정</th><th>처리현황</th></tr></thead><tbody>
-     ${rows.map((j,i)=>{const c=custById(j.customer_id)||{};const k=contracts.find(x=>x.id===j.contract_id)||custContracts(j.customer_id)[0]||{};const p=j.product||{};const rd=rdOf(j);
-       const openJ=!["완료","취소"].includes(j.status);const vd=j.visit_date;const vcls=openJ&&vd?(vd===td?"due":vd<td?"late":""):"";
-       const sales=staffName(k.sales3)||staffName(c.owner)||c.owner_name||"";
-       return `<tr data-j="${j.id}">${admin?`<td><input type="checkbox" class="jsel" data-js="${j.id}" ${ui.jsel.has(j.id)?"checked":""} aria-label="선택"></td>`:""}<td>${i+1}</td><td>${esc(rd.slice(2,4)+rd.slice(5,7))}</td><td class="kc k-${j.kind}">${KLABEL[j.kind]||j.kind}</td>
-        <td><b>${esc(j.customer_name||c.name||"")}</b></td><td>${esc(c.phone||c.phone2||"")}</td><td>${esc(region(j.address||c.address))}</td><td class="wrap">${esc(j.address||c.address||"")}</td>
-        <td>${esc(ymd2(j.kind==="install"&&k.contract_date?k.contract_date:rd))}</td><td class="${vcls}">${esc(vd||"")}</td><td>${wday(vd)}</td><td>${esc(j.visit_time||"")}</td>
-        <td>${esc(j.kind==="addon"?addonItem(j).product:p.product||"")}</td><td>${esc(j.kind==="addon"?addonItem(j).size:p.size||"")}</td><td>${esc(j.kind==="addon"?"":p.serial||"")}</td><td>${j.kind==="install"&&k.wash_added?"수압식":""}</td>
-        <td>${j.kind==="as"?"":sinkCell(j)}</td><td class="wrap">${esc(j.symptom||"")}</td><td>${esc(sales)}</td><td>${esc(whoOf(j)||"")}</td>
-        <td><span class="badge s-${j.status}">${esc(j.status)}</span>${j.kind==="as"&&j.pay_status==="미수"?` <span class="badge remove">미수</span>`:""}</td></tr>`}).join("")||`<tr><td colspan="21" class="mapt" style="cursor:default">해당하는 작업이 없습니다.</td></tr>`}</tbody></table></div>
+    return `<div class="wrapx vis" style="padding-top:12px"><div class="wtbox"><table class="wt wk"><thead><tr>${admin?`<th></th>`:""}<th>순번</th>${colHead(wcols,"work")}</tr></thead><tbody>
+     ${rows.map((j,i)=>{const c=custById(j.customer_id)||{};const k=contracts.find(x=>x.id===j.contract_id)||custContracts(j.customer_id)[0]||{};
+       return `<tr data-j="${j.id}">${admin?`<td><input type="checkbox" class="jsel" data-js="${j.id}" ${ui.jsel.has(j.id)?"checked":""} aria-label="선택"></td>`:""}<td>${i+1}</td>${wcols.map(col=>wCell(col,j,c,k,td)).join("")}</tr>`}).join("")||`<tr><td colspan="${wcols.length+2}" class="mapt" style="cursor:default">해당하는 작업이 없습니다.</td></tr>`}</tbody></table></div>
      ${list.length>500?`<p class="mapt">앞의 500건만 보입니다. 검색이나 구분으로 좁혀 주세요.</p>`:""}</div>`};
   view().innerHTML=`<div class="sumwrap"><div style="display:grid;gap:6px"><div style="display:flex;gap:8px;align-items:center"><h2 style="margin:0;font-size:18px">작업현황</h2>
       <input id="wM" type="month" value="${esc(ui.wm)}" aria-label="기준 월" style="padding:5px 8px;border:1px solid var(--line);border-radius:6px;background:var(--field)">${ui.wm!==thisMonth()?`<button class="btn sm" type="button" id="wNow">이번 달</button>`:""}</div>
@@ -1278,10 +1306,12 @@ function renderWorkView0(){
     <div class="nav" role="group" aria-label="보기"><button type="button" data-wv="table" class="${ui.wview==="table"?"on":""}">표</button><button type="button" data-wv="card" class="${ui.wview==="card"?"on":""}">카드</button><button type="button" data-wv="pay" class="${ui.wview==="pay"?"on":""}">결제 표</button></div>
     <span class="mapt">${ui.jpay?"":esc(rowLabel)+" · "}${ui.wview==="pay"?"A/S "+list.filter(j=>j.kind==="as").length:list.length}건</span><span style="flex:1"></span>
     ${admin?`<label class="chip"><input type="checkbox" id="jAll">전체 선택</label><button class="btn danger" type="button" id="bJDel" disabled>선택 삭제 (0)</button>`:""}
-    ${canNewJob(null)?`<button class="btn pri" id="bNewJ">+ 접수</button>`:""}</div>
+    ${ui.wview==="table"?`<button class="btn" type="button" id="wCols">입력화면설정</button>`:""}${canNewJob(null)?`<button class="btn pri" id="bNewJ">+ 접수</button>`:""}</div>
     ${ui.wview==="pay"?payTable(list.filter(j=>j.kind==="as")):ui.wview==="card"?`<div class="cards">${list.slice(0,300).map(j=>jobCard(j,admin)).join("")||`<div class="empty" style="padding:8px 0">해당하는 작업이 없습니다.</div>`}</div>`:tbl()}`;
+  if(ui.wview==="table"){applyColW(wcols,null,"work");bindColResize(wcols,"work")}
   view().querySelectorAll(".wtbox").forEach(hbar);
   const re=()=>renderWorkView();
+  const wc=document.getElementById("wCols");if(wc)wc.onclick=()=>colPicker(re,"work");
   view().querySelectorAll(".sumt td.cl").forEach(td=>td.onclick=()=>{ui.wrow=td.dataset.r;ui.wkind=td.dataset.k;ui.jpay="";if(ui.wview==="pay")ui.wview="table";re()});
   view().querySelectorAll("[data-wk]").forEach(b=>b.onclick=()=>{ui.wkind=b.dataset.wk;if(ui.wview==="pay"&&ui.wkind!=="as")ui.wview="table";re()});
   view().querySelectorAll("[data-wv]").forEach(b=>b.onclick=()=>{ui.wview=b.dataset.wv;if(ui.wview==="pay")ui.wkind="as";re()});
