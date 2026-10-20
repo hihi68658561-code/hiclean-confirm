@@ -1239,7 +1239,7 @@ function jobCard(j,sel_){
   const tn=(j.techs||[]).map(staffName).filter(Boolean);const extra=String(j.tech_names||"").split(/[\s,/]+/).filter(t=>t&&!tn.includes(t)&&!staff.some(x=>tn.includes(x.name)&&(x.aliases||[]).includes(t))).join(" ");const who=[tn.join(", "),extra].filter(Boolean).join(" · ");
   return `<div class="card click" data-j="${j.id}"><div class="t">${sel_?`<input type="checkbox" class="jsel" data-js="${j.id}" ${ui.jsel.has(j.id)?"checked":""} aria-label="선택" style="width:18px;height:18px">`:""}<span class="badge ${j.kind}">${KLABEL[j.kind]||j.kind}</span><span class="badge s-${j.status}">${j.status}</span>${esc(j.customer_name||(c&&c.name)||"")}${c?gradeBadge(c):""}${(n=>n?` <span class="badge" title="이 건의 사진">사진 ${n}</span>`:"")(jobFiles(j).length)}</div>
    <div class="d"><span>${esc(j.visit_date?("방문 "+j.visit_date+(j.visit_time?" "+j.visit_time:"")):"접수 "+(j.request_date||""))}</span><span>${esc(j.kind==="addon"?(a=>[a.product&&"추가: "+a.product,a.size].filter(Boolean).join(" "))(addonItem(j)):[p.product,p.size,p.options&&"("+p.options+")"].filter(Boolean).join(" "))}</span><span>기사 ${esc(who||"미배정")}</span>${j.address?`<span>${esc(j.address)}</span>`:""}</div>
-   ${j.symptom?`<div class="d">${esc(j.symptom)}</div>`:""}
+   ${(n=>n?`<div class="d">${esc(n)}</div>`:"")(jobNote(j))}
    ${j.kind==="as"&&(j.cost||j.pay_status||j.paid_type)?`<div class="d">${j.paid_type?`<span class="badge">${esc(j.paid_type)}</span>`:""}${j.cost?`<span class="money">비용 ${won0(j.cost)}원</span>`:""}${j.pay_status?`<span class="badge ${j.pay_status==="미수"?"as":"install"}">${esc(j.pay_status)}</span>`:""}${j.pay_method?`<span>${esc(j.pay_method)}${j.pay_name?" · "+esc(j.pay_name):""}</span>`:""}${j.closed?`<span class="badge">매출마감</span>`:""}</div>`:""}</div>`;
 }
 function bindJobCards(root){
@@ -1325,6 +1325,8 @@ function monthBuckets(list,ym){
 function whoOf(j){const tn=(j.techs||[]).map(staffName).filter(Boolean);const extra=String(j.tech_names||"").split(/[\s,/]+/).filter(t=>t&&!tn.includes(t)&&!staff.some(x=>tn.includes(x.name)&&(x.aliases||[]).includes(t))).join(" ");return [tn.join(", "),extra].filter(Boolean).join(" · ")}
 const WCOLS=[["rmon","접수월",1],["kind","구분",1],["name","업체명",1],["ceo","대표자",0],["phone","전화번호",1],["region","지역",1],["addr","상세주소",1],["cdate","계약/접수",1],["rdate","접수일",0],["visit","예정일",1],["wday","요일",1],["time","시간",1],
  ["product","제품",1],["size","규격",1],["serial","시리얼",1],["wash","수압식",1],["sink","싱크대",1],["parts","제공 부자재",0],["symptom","접수내용",1],["result","처리내용",0],["sales","영업담당",1],["tech","배정",1],["status","처리현황",1],["done","완료일",0],["photo","사진",0]];
+/* 설치 접수내용 = 계약 비고 (+ 작업에 적은 요청 사항) */
+function jobNote(j,k){if(j.kind!=="install")return j.symptom||"";const kk=(k&&k.id?k:contracts.find(x=>x.id===j.contract_id))||{};return [kk.memo,j.symptom].map(x=>String(x||"").trim()).filter(Boolean).filter((x,i,a)=>a.indexOf(x)===i).join(" / ")}
 function wCell(col,j,c,k,td){const p=j.product||{};const rd=rdOf(j);const vd=j.visit_date;const openJ=!["완료","취소"].includes(j.status);
   switch(col){
     case"rmon":return `<td>${esc(rd.slice(2,4)+rd.slice(5,7))}</td>`;
@@ -1345,7 +1347,7 @@ function wCell(col,j,c,k,td){const p=j.product||{};const rd=rdOf(j);const vd=j.v
     case"wash":return `<td>${j.kind==="install"&&k.wash_added?"수압식":""}</td>`;
     case"sink":return `<td>${j.kind==="as"?"":sinkCell(j)}</td>`;
     case"parts":return `<td>${esc(j.parts||"")}</td>`;
-    case"symptom":return `<td class="wrap">${esc(j.symptom||"")}</td>`;
+    case"symptom":{const v=jobNote(j,k);return `<td class="wrap memo" title="${esc(v)}"><div class="clamp">${esc(v)}</div></td>`}
     case"result":return `<td class="wrap">${esc(j.result||"")}</td>`;
     case"sales":return `<td>${esc(s3Text(k)||staffName(c.owner)||c.owner_name||"")}</td>`;
     case"tech":return `<td>${esc(whoOf(j)||"")}</td>`;
