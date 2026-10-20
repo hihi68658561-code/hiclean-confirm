@@ -125,6 +125,7 @@ dialog .df{padding:12px 18px;border-top:1px solid var(--line2);display:flex;just
 .wtbox{max-height:calc(100vh - 260px);overflow:auto;border:1px solid var(--line);border-radius:6px}
 .sumt th{white-space:nowrap}
 .wrapx.vis{overflow:visible}
+.trial.late{color:var(--bad-fg);font-weight:700}.trial.soon{color:var(--warn-fg);font-weight:700}
 .autocalc{background:var(--ok-bg)!important;transition:background .3s}
 .rofield{background:var(--line2)!important;color:var(--fg);cursor:default}
 .fgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:10px;padding:14px 20px;border:2px dashed transparent;border-radius:10px;margin:0 8px}
@@ -863,7 +864,7 @@ const CROWS=[["done","설치완료",k=>k.stage==="완료"],["open","미완료",k
 function installOf(k){const j=jobs.filter(x=>x.kind==="install"&&(x.contract_id===k.id||(!x.contract_id&&x.customer_id===k.customer_id))&&x.status!=="취소")[0];return j||null}
 /* 목록 열: 넣고 빼기·순서 바꾸기 (브라우저별로 기억) */
 const CCOLS=[
- ["basis","기준",1],["ctype","구분",1],["stage","진행단계",1],["name","업체명",1],["ceo","대표자",1],["phone","휴대번호",1],["addr","상점주소",0],
+ ["basis","기준",1],["ctype","구분",1],["stage","진행단계",1],["trial","무료체험 종료일",1],["name","업체명",1],["ceo","대표자",1],["phone","휴대번호",1],["addr","상점주소",0],
  ["cdate","계약일자",1],["idate","설치일자",1],["channel","영업 경로",0],["referrer","소개",0],["s1","1차",0],["s2","2차",0],["s3","3차(담당)",1],["doc","계약서",0],["tech","설치기사",0],
  ["product","제품",1],["size","사이즈",1],["serial","시리얼",1],["wash","수압식",0],["sink","싱크준비",1],["parts","부자재",0],["amount","합계금액",1],["card","카드",1],["cash","현금+캐피탈",1],["paid","입금합계",0],["unpaid","미수금",1],["last","최종결제일",1],
  ["approval","승인처",1],["tax","계산서 발급",0],["chk_cust","고객등록",1],["chk_slip","전표마감",1],["chk_sales","매출마감",1],["memo","비고",1]];
@@ -909,6 +910,7 @@ function ctrCell(col,k,c,st,basis){
     case"basis":{const d=k.contract_date||"";return `<td title="${esc(basis.join("·"))}">${esc(d?d.slice(2,4)+d.slice(5,7):"")}</td>`}
     case"ctype":return `<td><span class="tag ct-${esc(k.contract_type||"구매")}">${esc(k.contract_type||"구매")}</span></td>`;
     case"stage":return `<td><span class="tag st-${esc(k.stage)}">${esc(k.stage)}</span></td>`;
+    case"trial":return `<td>${trialCell(k)}</td>`;
     case"name":return `<td title="${esc(c.name||"")}"><b>${esc(c.name||"")}</b></td>`;
     case"ceo":return `<td>${esc(c.ceo||"")}</td>`;
     case"phone":return `<td>${esc(c.phone||c.phone2||"")}</td>`;
@@ -1040,16 +1042,19 @@ function renderContracts(c){
       [["취소"],["삭제","danger",async()=>{const {error}=await sb.from("contracts").delete().in("id",ids);if(error)return toast("삭제하지 못했습니다: "+error.message);ids.forEach(id=>ui.ksel.delete(id));toast(`계약 ${ids.length}건 삭제했습니다`);reload(["contracts","payments","jobs"])}]])};
   upd();
 }
+function hasTrialCol(){return contracts.some(k=>"trial_end" in k)}
+function trialCell(k){const d=k.trial_end;if(!d)return"";const td=today();const open=!["완료","취소","철거"].includes(k.stage);const days=Math.round((new Date(d)-new Date(td))/864e5);
+  const cls=open&&days<0?"late":open&&days<=3?"soon":"";return `<span class="trial ${cls}" title="${open?(days<0?-days+"일 지남":days===0?"오늘 종료":days+"일 남음"):""}">${esc(ymd2(d))}</span>`}
 function contractDlg(c,k,tpl){
   const isNew=!k;
-  if(!k&&tpl){k=Object.assign({},tpl,{serial:"",contract_date:today(),stage:"미정",contract_doc:"미수령",chk_cust:"",chk_slip:"",chk_sales:"",tax:{},settle_month:"",import_raw:null,memo:tpl.memo||""});delete k.id;delete k.created_at;delete k.updated_at;delete k.created_by}
+  if(!k&&tpl){k=Object.assign({},tpl,{serial:"",trial_end:null,contract_date:today(),stage:"미정",contract_doc:"미수령",chk_cust:"",chk_slip:"",chk_sales:"",tax:{},settle_month:"",import_raw:null,memo:tpl.memo||""});delete k.id;delete k.created_at;delete k.updated_at;delete k.created_by}
   k=k||{stage:"미정",contract_type:"구매",contract_date:today(),sales3:me.role==="sales"?me.id:(c.owner||null),contract_doc:"미수령",pay_method:"",capital:{},cms:{},tax:{}};
   const ro=!canEditCust(c);const cap=k.capital||{},cms=k.cms||{};
   const ij=isNew?null:installOf(k);const sinkRo=ro||!isOffice()||(!isNew&&!ij);const srcJ=ij||(tpl?installOf(tpl):null);
   openDlg(isNew?(tpl?"신규계약 (복사)":"신규계약"):"계약",`<div id="kf" style="display:grid;gap:10px">${tpl?`<p class="warnbox" style="margin:0">복사한 계약입니다. 시리얼·계약일·진행단계·계약서·마감·입금은 새로 입력하세요.</p>`:""}
    <h3 class="ksec">계약 정보</h3>
    <div class="g3">${inp("contract_date","계약일자",k.contract_date,"date",ro)}${sel("contract_type","구분",CTYPES,k.contract_type||"구매",ro)}${sel("stage","진행단계",STAGES,STAGES.includes(k.stage)?k.stage:"확정",ro)}</div>
-   <div class="g3">${sel("contract_doc","계약서",DOCS.map(d=>[d,d==="사진"?"사진 수령(○)":d==="원본"?"원본 수령(●)":d]),k.contract_doc,ro)}<div style="grid-column:span 2">${inp("free_trial","무료체험 메모(날짜 등)",k.free_trial,"text",ro)}</div></div>
+   <div class="g3">${sel("contract_doc","계약서",DOCS.map(d=>[d,d==="사진"?"사진 수령(○)":d==="원본"?"원본 수령(●)":d]),k.contract_doc,ro)}${inp("trial_end","무료체험 종료일",k.trial_end,"date",ro)}${inp("free_trial","무료체험 메모",k.free_trial,"text",ro)}</div>
    <h3 class="ksec">영업 및 설치 담당자</h3>
    <div class="g3">${inp("channel","영업 경로",k.channel,"text",ro,'list="chList"')}${inp("referrer","소개",k.referrer,"text",ro)}${(()=>{const who=ij?whoOf(ij):"";const v=ij?(who?who+(ij.visit_date?` (${ij.visit_date.slice(5).replace("-","/")}${ij.visit_time?" "+ij.visit_time:""})`:""):"미배정"):(isNew?"계약 저장 후 설치 작업에서 배정":"설치 작업 없음");return `<label class="f" title="설치 작업에서 배정한 기사가 표시됩니다">설치 담당자<input value="${esc(v)}" readonly tabindex="-1" class="rofield"></label>`})()}</div>
    <div class="g3">${inp("sales1","1차 선행자",k.sales1,"text",ro,'list="stList"')}${inp("sales2","2차 상담자",k.sales2,"text",ro,'list="stList"')}${isOffice()?inp("sales3","3차 계약자(담당자)",staffName(k.sales3)||k.sales3_name||"","text",false,'list="s3List" placeholder="이름 입력 또는 목록에서 선택"'):inp("_s3","3차 계약자",staffName(k.sales3)||k.sales3_name,"text",true)}</div>
@@ -1078,7 +1083,7 @@ function contractDlg(c,k,tpl){
    <datalist id="pdList">${[...new Set(contracts.map(x=>x.product).filter(Boolean))].map(x=>`<option value="${esc(x)}">`).join("")}</datalist></div>`,
    ro?[["닫기"]]:[["취소"],...(!isNew?[["복사해서 새 계약","",()=>{contractDlg(c,null,k);return true}]]:[]),...(!isNew&&isAdmin()?[["삭제","danger",async()=>{const {error}=await sb.from("contracts").delete().eq("id",k.id);toast(error?"삭제하지 못했습니다":"삭제했습니다");reload(["contracts"])}]]:[]),["저장","pri",async()=>{
      const f=fdata("kf");const n=x=>Number(f.get(x)||0)||0;
-     const p={contract_date:f.get("contract_date")||null,stage:f.get("stage"),contract_type:f.get("contract_type")||"구매",contract_doc:f.get("contract_doc"),channel:f.get("channel").trim(),referrer:f.get("referrer").trim(),free_trial:f.get("free_trial").trim(),
+     const p={contract_date:f.get("contract_date")||null,stage:f.get("stage"),contract_type:f.get("contract_type")||"구매",contract_doc:f.get("contract_doc"),channel:f.get("channel").trim(),referrer:f.get("referrer").trim(),free_trial:f.get("free_trial").trim(),...(hasTrialCol()||f.get("trial_end")?{trial_end:f.get("trial_end")||null}:{}),
        sales1:f.get("sales1").trim(),sales2:f.get("sales2").trim(),product:f.get("product").trim(),size:f.get("size").trim(),serial:f.get("serial").trim(),
        wash_added:f.get("wash_added")==="1",pay_method:f.get("pay_method"),amt_ultra:n("amt_ultra"),amt_wash:n("amt_wash"),amt_parts:n("amt_parts"),amount:n("amount"),
        capital:Object.assign({},cap,{company:f.get("cap_company").trim(),monthly:n("cap_monthly"),months:n("cap_months")}),cms:Object.assign({},cms,{day:f.get("cms_day").trim()}),
@@ -1089,7 +1094,7 @@ function contractDlg(c,k,tpl){
      if(isOffice()){const nm=(f.get("sales3")||"").trim();const s=nm&&staff.find(x=>x.name===nm||(x.aliases||[]).includes(nm));p.sales3=s?s.user_id:null;p.sales3_name=s?s.name:nm}else if(isNew){p.sales3=me.id;p.sales3_name=me.name||""}
      let res;
      if(isNew){p.customer_id=c.id;res=await sb.from("contracts").insert(p).select().single()}else res=await sb.from("contracts").update(p).eq("id",k.id).select().single();
-     if(res.error)return toast(/contracts_stage_check|contract_type/.test(res.error.message)?"계약 구분 칸이 아직 없습니다. Supabase에서 phase1g.sql을 실행해 주세요.":"저장하지 못했습니다: "+res.error.message);
+     if(res.error)return toast(/trial_end/.test(res.error.message)?"무료체험 종료일 칸이 아직 없습니다. Supabase에서 phase1m.sql을 실행해 주세요.":/contracts_stage_check|contract_type/.test(res.error.message)?"계약 구분 칸이 아직 없습니다. Supabase에서 phase1g.sql을 실행해 주세요.":"저장하지 못했습니다: "+res.error.message);
      const sk={sink_status:f.get("sink_status")||"",sink_memo:(f.get("sink_memo")||"").trim(),parts:(f.get("parts")||"").trim()};
      if(isNew&&f.get("mkjob")){const r2=await sb.from("jobs").insert(Object.assign(jobFromContract(c,res.data),isOffice()?sk:{}));if(r2.error)toast("설치 작업은 만들지 못했습니다: "+r2.error.message)}
      else if(ij&&!sinkRo&&(sk.sink_status!==(ij.sink_status||"")||sk.sink_memo!==(ij.sink_memo||"")||sk.parts!==(ij.parts||""))){const r3=await sb.from("jobs").update(sk).eq("id",ij.id);if(r3.error)toast("싱크대·부자재는 저장하지 못했습니다: "+r3.error.message)}
