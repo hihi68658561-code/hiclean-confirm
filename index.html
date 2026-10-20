@@ -758,7 +758,10 @@ function bindBizUpload(id,onRead){
 }
 
 /* ================= 고객 사진·서류 ================= */
-const FKINDS=[["계약서","ctr"],["설치사진","inst"],["A/S사진","as"],["사업자등록증","biz"],["기타","etc"]];
+const FKINDS=[["계약서","ctr"],["설치사진","inst"],["철거사진","rm"],["A/S사진","as"],["사업자등록증","biz"],["기타","etc"]];
+const JOBPHOTO={install:"설치사진",addon:"설치사진",remove:"철거사진",as:"A/S사진"};
+function jobFiles(j){return files.filter(f=>f.job_id===j.id).sort((a,b)=>(b.created_at||"").localeCompare(a.created_at||""))}
+function jobLabel(id){const j=jobs.find(x=>x.id===id);return j?`${KLABEL[j.kind]||""} ${(j.visit_date||j.request_date||"").slice(5).replace("-","/")}`:""}
 const FCODE=Object.fromEntries(FKINDS);
 let fileIdx={};
 function buildFileIdx(){fileIdx={};files.forEach(f=>(fileIdx[f.customer_id]=fileIdx[f.customer_id]||[]).push(f));Object.values(fileIdx).forEach(a=>a.sort((x,y)=>(y.created_at||"").localeCompare(x.created_at||"")))}
@@ -770,17 +773,17 @@ async function signUrls(paths){const now=Date.now();const need=[...new Set(paths
   if(need.length){const {data,error}=await sb.storage.from("bizdocs").createSignedUrls(need,3600);
     if(!error&&data)data.forEach(d=>{if(d&&d.signedUrl&&!d.error){const u=/^https?:/.test(d.signedUrl)?d.signedUrl:SB_URL+"/storage/v1"+d.signedUrl;_surl[d.path]={url:u,exp:now+3600000}}})}
   return Object.fromEntries(paths.map(p=>[p,(_surl[p]||{}).url||""]))}
-async function uploadCustFiles(custId,list,kind,prog){
+async function uploadCustFiles(custId,list,kind,prog,jobId){
   let ok=0,fail=[];const code=FCODE[kind]||"etc";
   for(let i=0;i<list.length;i++){const f0=list[i];if(prog)prog(`올리는 중… ${i+1}/${list.length}`);
     try{if(f0.size>15*1024*1024)throw new Error("15MB 초과");const f=await shrinkForStore(f0);const ext=((f.name.match(/\.(\w+)$/)||[,""])[1]||(isPdf(f)?"pdf":"jpg")).toLowerCase();
       const path=`${custId}/f/${code}/${Date.now()}-${Math.random().toString(36).slice(2,7)}.${ext}`;
       const up=await sb.storage.from("bizdocs").upload(path,f,{contentType:f.type||"application/octet-stream",upsert:false});if(up.error)throw up.error;
-      const {error}=await sb.from("customer_files").insert({customer_id:custId,path,kind,name:f0.name.slice(0,120),mime:f.type||"",size:f.size});if(error)throw error;ok++}
+      const row={customer_id:custId,path,kind,name:f0.name.slice(0,120),mime:f.type||"",size:f.size};if(jobId)row.job_id=jobId;const {error}=await sb.from("customer_files").insert(row);if(error)throw error;ok++}
     catch(e){fail.push(f0.name+": "+(e.message||"실패"))}}
   return{ok,fail};
 }
-function fileErrHint(fail){const m=fail.join(" ");return /customer_files|bucket|not found|relation/i.test(m)?" — Supabase에서 phase1i.sql, phase1j.sql을 실행해 주세요":""}
+function fileErrHint(fail){const m=fail.join(" ");return /job_id|kind_check/i.test(m)?" — Supabase에서 phase1k.sql을 실행해 주세요":/customer_files|bucket|not found|relation/i.test(m)?" — Supabase에서 phase1i.sql, phase1j.sql을 실행해 주세요":""}
 function renderCustFiles(c){
   const tb=document.getElementById("tabBody");const all=custFiles(c);const fk=ui.fkind||"";
   const list=all.filter(f=>!fk||f.kind===fk);const cnt=k=>all.filter(f=>f.kind===k).length;
@@ -789,7 +792,7 @@ function renderCustFiles(c){
      <span style="flex:1"></span>${ui.noFiles?"":`<select id="fKind" aria-label="올릴 종류">${upKinds().map(k=>`<option ${k===(fk||ui.fupKind||"설치사진")?"selected":""}>${k}</option>`).join("")}</select>
      <label class="btn pri"><input type="file" id="fIn" accept="image/*,application/pdf" multiple hidden>사진·서류 올리기</label>`}<span class="mapt" id="fSt"></span></div>
    <div class="fgrid" id="fGrid">${list.map((f,i)=>`<button type="button" class="fth" data-fi="${i}" aria-label="${esc(f.kind)} ${esc(f.name)} 크게 보기">
-      ${isPdf(f)?`<span class="fpdf">PDF</span>`:`<img alt="" loading="lazy" data-p="${esc(f.path)}">`}<span class="fcap"><b>${esc(f.kind)}</b>${esc(f.created_at?f.created_at.slice(0,10):"")}</span></button>`).join("")
+      ${isPdf(f)?`<span class="fpdf">PDF</span>`:`<img alt="" loading="lazy" data-p="${esc(f.path)}">`}<span class="fcap"><b>${esc(f.kind)}</b>${esc(f.job_id?jobLabel(f.job_id):(f.created_at?f.created_at.slice(0,10):""))}</span></button>`).join("")
      ||`<div class="empty" style="padding:24px 0;grid-column:1/-1">${fk?esc(fk)+" ":""}사진·서류가 없습니다.${ui.noFiles?"":" 여기에 파일을 끌어다 놓거나 ‘사진·서류 올리기’를 누르세요."}</div>`}</div>`;
   tb.querySelectorAll("[data-fk]").forEach(b=>b.onclick=()=>{ui.fkind=b.dataset.fk;renderCustFiles(c)});
   const paths=list.filter(f=>!isPdf(f)).map(f=>f.path);
@@ -803,11 +806,11 @@ function renderCustFiles(c){
   const g=document.getElementById("fGrid");if(!ui.noFiles&&g){g.ondragover=e=>{e.preventDefault();g.classList.add("drop")};g.ondragleave=()=>g.classList.remove("drop");g.ondrop=e=>{e.preventDefault();g.classList.remove("drop");go([...e.dataTransfer.files].filter(f=>/^image\/|pdf/.test(f.type)))}}
 }
 /* 크게 보기 */
-function openViewer(list,i,c){
+function openViewer(list,i,c,after){
   const d=document.getElementById("lbx");let cur=i;
   const draw=async()=>{const f=list[cur];const m=await signUrls([f.path]);const u=m[f.path];
     d.querySelector(".lbimg").innerHTML=!u?`<p class="mapt">파일을 열 수 없습니다.</p>`:isPdf(f)?`<div class="fpdf big">PDF</div><p><a class="btn pri" href="${esc(u)}" target="_blank" rel="noopener">PDF 열기</a></p>`:`<img alt="${esc(f.kind)}" src="${esc(u)}">`;
-    d.querySelector(".lbcap").textContent=`${f.kind} · ${f.name||""}${f.created_at?" · "+f.created_at.slice(0,10):""}  (${cur+1}/${list.length})`;
+    d.querySelector(".lbcap").textContent=`${f.kind}${f.job_id?" ("+jobLabel(f.job_id)+")":""} · ${f.name||""}${f.created_at?" · "+f.created_at.slice(0,10):""}  (${cur+1}/${list.length})`;
     d.querySelector("#lbOpen").onclick=()=>{if(u)window.open(u,"_blank","noopener")};
     const del=d.querySelector("#lbDel");del.hidden=!isOffice()||!!f.pseudo;
     d.querySelector("#lbPrev").disabled=cur===0;d.querySelector("#lbNext").disabled=cur===list.length-1};
@@ -817,16 +820,28 @@ function openViewer(list,i,c){
   d.onclick=e=>{if(e.target===d)d.close()};
   d.querySelector("#lbDel").onclick=async()=>{const f=list[cur];if(!await askConfirm(`이 ${f.kind}을(를) 삭제할까요?`))return;
     await sb.storage.from("bizdocs").remove([f.path]);const {error}=await sb.from("customer_files").delete().eq("id",f.id);if(error)return toast("삭제하지 못했습니다: "+error.message);
-    toast("삭제했습니다");d.close();await reload(["files"],true);if(ui.ctab==="files")renderCustFiles(c)};
+    toast("삭제했습니다");d.close();await reload(["files"],true);if(after)after();else if(ui.ctab==="files")renderCustFiles(c)};
   d.showModal();draw();
 }
+/* 접수건 사진 (설치·철거·A/S 창 안) */
+function renderJobFiles(j,c){const box=document.getElementById("jobFiles");if(!box)return;const list=jobFiles(j);const can=!ui.noFiles&&(isOffice()||canEditJob(j)||(c&&canEditCust(c)));
+  box.innerHTML=`<fieldset class="nfiles"><legend>이 건의 사진 (${list.length})</legend>
+   ${can?`<div class="toolbar" style="padding:0"><select id="jfKind" aria-label="종류">${upKinds().map(k=>`<option ${k===(JOBPHOTO[j.kind]||"기타")?"selected":""}>${k}</option>`).join("")}</select>
+   <label class="btn"><input type="file" id="jfIn" accept="image/*,application/pdf" multiple hidden>사진 올리기</label><span class="mapt" id="jfSt">여러 장을 한 번에 올릴 수 있습니다.</span></div>`:""}
+   <div class="fgrid sm">${list.map((f,i)=>`<button type="button" class="fth" data-jfi="${i}" aria-label="${esc(f.kind)} 크게 보기">${isPdf(f)?`<span class="fpdf">PDF</span>`:`<img alt="" loading="lazy" data-p="${esc(f.path)}">`}<span class="fcap"><b>${esc(f.kind)}</b>${esc((f.created_at||"").slice(5,10).replace("-","/"))}</span></button>`).join("")||`<span class="mapt">아직 사진이 없습니다.</span>`}</div></fieldset>`;
+  const ps=list.filter(f=>!isPdf(f)).map(f=>f.path);if(ps.length)signUrls(ps).then(m=>box.querySelectorAll("img[data-p]").forEach(im=>{if(m[im.dataset.p])im.src=m[im.dataset.p]}));
+  box.querySelectorAll("[data-jfi]").forEach(b=>b.onclick=()=>openViewer(list,+b.dataset.jfi,c,()=>renderJobFiles(j,c)));
+  const fi=document.getElementById("jfIn");if(fi)fi.onchange=async()=>{const fl=[...fi.files];fi.value="";if(!fl.length)return;const st=document.getElementById("jfSt");
+    const r=await uploadCustFiles(j.customer_id,fl,document.getElementById("jfKind").value,m=>st.textContent=m,j.id);
+    toast(r.fail.length?`${r.ok}개 올림, ${r.fail.length}개 실패${fileErrHint(r.fail)}`:`사진 ${r.ok}개를 올렸습니다`);await reload(["files"],true);renderJobFiles(j,c)};
+}
 /* 새 고객 창: 첨부 미리보기 */
-function newCustFilesBox(){return `<fieldset class="nfiles"><legend>사진·서류 첨부 (선택)</legend><div class="toolbar" style="padding:0"><select id="nfKind" aria-label="종류">${upKinds().map(k=>`<option ${k==="계약서"?"selected":""}>${k}</option>`).join("")}</select>
-  <label class="btn"><input type="file" id="nfIn" accept="image/*,application/pdf" multiple hidden>파일 고르기</label><span class="mapt">여러 장을 한 번에 고를 수 있습니다.</span></div><div class="fgrid sm" id="nfGrid"></div></fieldset>`}
-function bindNewCustFiles(){const sel=[];const g=document.getElementById("nfGrid"),inp=document.getElementById("nfIn");if(!inp)return sel;
+function newCustFilesBox(px="nf",defKind="계약서",title="사진·서류 첨부 (선택)"){return `<fieldset class="nfiles"><legend>${title}</legend><div class="toolbar" style="padding:0"><select id="${px}Kind" aria-label="종류">${upKinds().map(k=>`<option ${k===defKind?"selected":""}>${k}</option>`).join("")}</select>
+  <label class="btn"><input type="file" id="${px}In" accept="image/*,application/pdf" multiple hidden>파일 고르기</label><span class="mapt">여러 장을 한 번에 고를 수 있습니다.</span></div><div class="fgrid sm" id="${px}Grid"></div></fieldset>`}
+function bindNewCustFiles(px="nf"){const sel=[];const g=document.getElementById(px+"Grid"),inp=document.getElementById(px+"In");if(!inp)return sel;
   const draw=()=>{g.innerHTML=sel.map((x,i)=>`<div class="fth"><button type="button" class="fx" data-rm="${i}" aria-label="빼기">×</button>${isPdf(x.file)?`<span class="fpdf">PDF</span>`:`<img alt="" src="${x.url}">`}<span class="fcap"><b>${esc(x.kind)}</b>${esc(x.file.name.slice(0,18))}</span></div>`).join("");
     g.querySelectorAll("[data-rm]").forEach(b=>b.onclick=()=>{const x=sel.splice(+b.dataset.rm,1)[0];if(x&&x.url)URL.revokeObjectURL(x.url);draw()})};
-  inp.onchange=()=>{const k=document.getElementById("nfKind").value;[...inp.files].forEach(f=>sel.push({file:f,kind:k,url:/^image\//.test(f.type)?URL.createObjectURL(f):""}));inp.value="";draw()};
+  inp.onchange=()=>{const k=document.getElementById(px+"Kind").value;[...inp.files].forEach(f=>sel.push({file:f,kind:k,url:/^image\//.test(f.type)?URL.createObjectURL(f):""}));inp.value="";draw()};
   return sel}
 
 /* ================= 계약관리 (당월 계약·최종결제·미수) ================= */
@@ -1071,7 +1086,7 @@ function jobFromContract(c,k){return{kind:"install",customer_id:c.id,contract_id
 function jobCard(j,sel_){
   const c=custById(j.customer_id);const p=j.product||{};
   const tn=(j.techs||[]).map(staffName).filter(Boolean);const extra=String(j.tech_names||"").split(/[\s,/]+/).filter(t=>t&&!tn.includes(t)&&!staff.some(x=>tn.includes(x.name)&&(x.aliases||[]).includes(t))).join(" ");const who=[tn.join(", "),extra].filter(Boolean).join(" · ");
-  return `<div class="card click" data-j="${j.id}"><div class="t">${sel_?`<input type="checkbox" class="jsel" data-js="${j.id}" ${ui.jsel.has(j.id)?"checked":""} aria-label="선택" style="width:18px;height:18px">`:""}<span class="badge ${j.kind}">${KLABEL[j.kind]||j.kind}</span><span class="badge s-${j.status}">${j.status}</span>${esc(j.customer_name||(c&&c.name)||"")}</div>
+  return `<div class="card click" data-j="${j.id}"><div class="t">${sel_?`<input type="checkbox" class="jsel" data-js="${j.id}" ${ui.jsel.has(j.id)?"checked":""} aria-label="선택" style="width:18px;height:18px">`:""}<span class="badge ${j.kind}">${KLABEL[j.kind]||j.kind}</span><span class="badge s-${j.status}">${j.status}</span>${esc(j.customer_name||(c&&c.name)||"")}${(n=>n?` <span class="badge" title="이 건의 사진">사진 ${n}</span>`:"")(jobFiles(j).length)}</div>
    <div class="d"><span>${esc(j.visit_date?("방문 "+j.visit_date+(j.visit_time?" "+j.visit_time:"")):"접수 "+(j.request_date||""))}</span><span>${esc([p.product,p.size,p.options&&"("+p.options+")"].filter(Boolean).join(" "))}</span><span>기사 ${esc(who||"미배정")}</span>${j.address?`<span>${esc(j.address)}</span>`:""}</div>
    ${j.symptom?`<div class="d">${esc(j.symptom)}</div>`:""}
    ${j.kind==="as"&&(j.cost||j.pay_status||j.paid_type)?`<div class="d">${j.paid_type?`<span class="badge">${esc(j.paid_type)}</span>`:""}${j.cost?`<span class="money">비용 ${won0(j.cost)}원</span>`:""}${j.pay_status?`<span class="badge ${j.pay_status==="미수"?"as":"install"}">${esc(j.pay_status)}</span>`:""}${j.pay_method?`<span>${esc(j.pay_method)}${j.pay_name?" · "+esc(j.pay_name):""}</span>`:""}${j.closed?`<span class="badge">매출마감</span>`:""}</div>`:""}</div>`;
@@ -1258,6 +1273,7 @@ function jobDlg(j,c,kind){
      <label class="chip" style="justify-self:start"><input type="checkbox" name="closed" ${j.closed?"checked":""} ${off?"":"disabled"}>매출마감 ${off?"":"(사무실에서 처리)"}</label>
      <datalist id="cardList">${["농협카드","비씨카드","국민카드","신한카드","삼성카드","현대카드","롯데카드","하나카드","우리카드","네이버페이"].map(x=>`<option value="${x}">`).join("")}</datalist></fieldset>
    <div class="g3" id="sinkBox" ${j.kind==="as"?"hidden":""}>${sel("sink_status","싱크대 발주",["",...SINKS],j.sink_status,!can)}${inp("sink_memo","싱크대 메모(크기 등)",j.sink_memo,"text",!can)}${inp("parts","제공 부자재",j.parts,"text",!can)}</div>
+   ${ui.noFiles?"":isNew?newCustFilesBox("jp",JOBPHOTO[j.kind]||"기타","사진 (선택)"):`<div id="jobFiles"></div>`}
    </div>`,
    [["닫기"],...(!isNew&&isAdmin()?[["삭제","danger",()=>{delJobs([j.id]);return true}]]:[]),...(isNew&&!c?[]:[["확인서 인쇄","",()=>{printJob(j,c);return true}]]),...(can?[["저장","pri",async()=>{
      const f=fdata("jf");
@@ -1272,13 +1288,19 @@ function jobDlg(j,c,kind){
        if(off)pt.closed=!!f.get("closed")}else{pt.sink_status=f.get("sink_status")||"";pt.sink_memo=f.get("sink_memo")||"";pt.parts=f.get("parts")||""}
      if(off||isNew){Object.assign(pt,{request_date:f.get("request_date")||today(),visit_date:f.get("visit_date")||null,visit_time:f.get("visit_time")||"",symptom:f.get("symptom")||""})}
      if(off){pt.techs=f.getAll("tech");pt.tech_names=f.get("tech_names")||"";if(pt.status==="접수"&&(pt.techs.length||pt.tech_names))pt.status="배정"}
-     let r;if(isNew){const row=Object.assign({},j,pt);delete row.id;r=await sb.from("jobs").insert(row)}else r=await sb.from("jobs").update(pt).eq("id",j.id);
+     let r;if(isNew){const row=Object.assign({},j,pt);delete row.id;r=await sb.from("jobs").insert(row).select().single()}else r=await sb.from("jobs").update(pt).eq("id",j.id);
      if(r.error&&/jobs_kind_check/.test(r.error.message))return toast("철거·추가설치 구분이 아직 없습니다. Supabase에서 phase1e.sql을 실행해 주세요.");
-     if(r.error)return toast(/pay_status|pay_method/.test(r.error.message)?"납부 칸이 아직 없습니다. Supabase에서 phase1b.sql을 실행해 주세요.":/paid_type|pay_date|pay_name|pay_memo|closed/.test(r.error.message)?"결제 상세 칸이 아직 없습니다. Supabase에서 phase1c.sql을 실행해 주세요.":"저장하지 못했습니다: "+r.error.message);toast(isNew?`${KLABEL[j.kind]} 접수했습니다`:"저장했습니다");reload(["jobs","customers"])}]]:[])]);
+     if(r.error)return toast(/pay_status|pay_method/.test(r.error.message)?"납부 칸이 아직 없습니다. Supabase에서 phase1b.sql을 실행해 주세요.":/paid_type|pay_date|pay_name|pay_memo|closed/.test(r.error.message)?"결제 상세 칸이 아직 없습니다. Supabase에서 phase1c.sql을 실행해 주세요.":"저장하지 못했습니다: "+r.error.message);
+     let pmsg="";if(isNew&&jpSel.length&&r.data){const up={ok:0,fail:[]};const gr={};jpSel.forEach(x=>(gr[x.kind]=gr[x.kind]||[]).push(x.file));
+       for(const k of Object.keys(gr)){const u=await uploadCustFiles(r.data.customer_id,gr[k],k,m=>toast(m),r.data.id);up.ok+=u.ok;up.fail=up.fail.concat(u.fail)}
+       pmsg=up.fail.length?` · 사진 ${up.ok}개 올림, ${up.fail.length}개 실패${fileErrHint(up.fail)}`:` · 사진 ${up.ok}개`;jpSel.forEach(x=>x.url&&URL.revokeObjectURL(x.url))}
+     toast((isNew?`${KLABEL[j.kind]} 접수했습니다`:"저장했습니다")+pmsg);reload(["jobs","customers","files"])}]]:[])]);
+  const jpSel=isNew?bindNewCustFiles("jp"):[];if(!isNew)renderJobFiles(j,c);
   if(isNew&&!c)bindCustPicker(pickable);
   document.querySelectorAll('#jf input[name=kind]').forEach(x=>x.onchange=()=>{const as=x.value==="as";document.getElementById("payBox").hidden=!as;document.getElementById("sinkBox").hidden=as;
     const t=document.getElementById("jf").querySelector('textarea[name=symptom]');if(t)t.previousSibling.textContent=as?"불편사항·접수 내용":"요청 사항";
-    document.getElementById("dlgH").textContent=`${KLABEL[x.value]} ${isNew?"접수":"작업"}${j.customer_name?" · "+j.customer_name:""}`});
+    document.getElementById("dlgH").textContent=`${KLABEL[x.value]} ${isNew?"접수":"작업"}${j.customer_name?" · "+j.customer_name:""}`;
+    const jk=document.getElementById("jpKind");if(jk&&JOBPHOTO[x.value])jk.value=JOBPHOTO[x.value]});
 }
 function bindCustPicker(pool){
   const q=document.getElementById("jcQ"),res=document.getElementById("jcRes"),selBox=document.getElementById("jcSel"),hid=document.getElementById("jcId"),hint=document.getElementById("jcHint");
