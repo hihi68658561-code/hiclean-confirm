@@ -892,7 +892,7 @@ function installOf(k){const j=jobs.filter(x=>x.kind==="install"&&(x.contract_id=
 /* 목록 열: 넣고 빼기·순서 바꾸기 (브라우저별로 기억) */
 const CCOLS=[
  ["basis","기준",1],["ctype","구분",1],["stage","진행단계",1],["trial","무료체험 종료일",1],["name","업체명",1],["ceo","대표자",1],["phone","휴대번호",1],["addr","상점주소",0],
- ["cdate","계약일자",1],["idate","설치일자",1],["channel","영업 경로",0],["referrer","소개",0],["s1","1차",0],["s2","2차",0],["s3","3차(담당)",1],["doc","계약서",0],["tech","설치기사",0],
+ ["cdate","계약일자",1],["idate","예정일",1],["iwday","요일",1],["itime","시간",1],["channel","영업 경로",0],["referrer","소개",0],["s1","1차",0],["s2","2차",0],["s3","3차(담당)",1],["doc","계약서",0],["tech","설치기사",0],
  ["product","제품",1],["size","사이즈",1],["serial","시리얼",1],["wash","수압식",0],["sink","싱크준비",1],["parts","부자재",0],["amount","합계금액",1],["card","카드",1],["cash","현금+캐피탈",1],["paid","입금합계",0],["unpaid","미수금",1],["last","최종결제일",1],
  ["approval","승인처",1],["tax","계산서 발급",0],["chk_cust","고객등록",1],["chk_slip","전표마감",1],["chk_sales","매출마감",1],["memo","비고",1]];
 const MONEYC=new Set(["amount","card","cash","paid","unpaid"]);
@@ -947,7 +947,9 @@ function ctrCell(col,k,c,st,basis){
     case"phone":return `<td>${esc(c.phone||c.phone2||"")}</td>`;
     case"addr":return `<td class="wrap">${esc(c.address||"")}</td>`;
     case"cdate":return `<td>${esc(ymd2(k.contract_date))}</td>`;
-    case"idate":return `<td>${esc(ij?ymd2(ij.done_date||ij.visit_date):"")}</td>`;
+    case"idate":{const d=ij?(ij.visit_date||ij.done_date):"";const td=today();const open=ij&&!["완료","취소"].includes(ij.status);const cls=open&&d?(d===td?"due":d<td?"late":""):"";return `<td class="${cls}" title="${ij&&ij.done_date?"설치 완료 "+esc(ij.done_date):"설치 예정"}">${esc(d||"")}</td>`}
+    case"iwday":return `<td>${ij?wday(ij.visit_date||ij.done_date):""}</td>`;
+    case"itime":return `<td>${esc(ij?ij.visit_time||"":"")}</td>`;
     case"channel":return `<td>${esc(k.channel||"")}</td>`;
     case"referrer":return `<td>${esc(k.referrer||"")}</td>`;
     case"s1":return `<td>${esc(k.sales1||"")}</td>`;
@@ -1140,7 +1142,7 @@ function sortKey(){return "hc.sort.ctr."+(me&&me.id||"")}
 function getSort(){try{const v=JSON.parse(localStorage.getItem(sortKey())||"null");if(Array.isArray(v)&&v.length)return v}catch(e){}return DEFSORT}
 function setSort(v){try{v?localStorage.setItem(sortKey(),JSON.stringify(v)):localStorage.removeItem(sortKey())}catch(e){}}
 function sortVal(col,x){const k=x.k,c=x.c,s=x.s;
-  switch(col){case"reg":return k.created_at||"";case"idate":return instKey(k);case"basis":return baseDate(k);case"cdate":return k.contract_date||"";case"last":return s.last||"";case"trial":return k.trial_end||"";
+  switch(col){case"reg":return k.created_at||"";case"idate":case"itime":return instKey(k);case"iwday":{const ij=installOf(k);const d=ij&&(ij.visit_date||ij.done_date);return d?new Date(d+"T00:00:00").getDay():""}case"basis":return baseDate(k);case"cdate":return k.contract_date||"";case"last":return s.last||"";case"trial":return k.trial_end||"";
     case"amount":return Number(k.amount||0);case"card":return s.card;case"cash":return s.other;case"paid":return s.paid;case"unpaid":return s.n||k.stage==="미수"?s.unpaid:-1e15;
     case"stage":return STAGES.indexOf(k.stage);case"ctype":return CTYPES.indexOf(k.contract_type||"구매");case"name":return c.name||"";}
   return ctrCell(col,k,c,s,x.b).replace(/<[^>]*>/g,"").replace(/&amp;/g,"&").trim()}
