@@ -616,7 +616,8 @@ function renderCustInfo(c){
     <label class="f">메모<textarea name="memo" ${ro?"readonly":""}>${esc(c.memo)}</textarea></label>
     <div class="bizrow"><span class="mapt">사업자등록증</span>${c.biz_doc?`<button type="button" class="btn sm" id="bBizOpen">보관된 등록증 보기</button>`:`<span class="mapt">보관된 파일 없음</span>`}
       ${ro?"":bizUploadBox("cBizUp")}</div></fieldset>
-    ${ro?`<p class="mapt">고객정보는 사무실·관리자와 담당자만 고칠 수 있습니다.</p>`:`<div class="actions"><button class="btn pri" type="submit">저장</button><span style="flex:1"></span>${isAdmin()?`<button class="btn danger" type="button" id="bDelC">고객 삭제</button>`:""}</div>`}</form>`;
+    ${ro?`<p class="mapt">고객정보는 사무실·관리자와 담당자만 고칠 수 있습니다.</p>`:`<div class="actions"><button class="btn pri" type="submit">저장</button><span style="flex:1"></span>${isOffice()||me.role==="sales"?`<button class="btn" type="button" id="bCopyC">복사해서 새 고객</button>`:""}${isAdmin()?`<button class="btn danger" type="button" id="bDelC">고객 삭제</button>`:""}</div>`}</form>`;
+  const cc=document.getElementById("bCopyC");if(cc)cc.onclick=()=>newCustomer(c);
   const bo=document.getElementById("bBizOpen");if(bo)bo.onclick=()=>openBizDoc(c.biz_doc);
   if(ro)return;
   bindBizUpload("cBizUp",async(fd,file)=>{const f=document.getElementById("cf");const set=(n,v)=>{const el=f.elements[n];if(el&&v&&!el.value.trim())el.value=v};
@@ -632,7 +633,7 @@ function renderCustInfo(c){
     toast("저장했습니다");reload(["customers"])};
   const d=document.getElementById("bDelC");if(d)d.onclick=()=>openDlg("고객 삭제",`<p><b>${esc(c.name)}</b>과 그 계약·설치·A/S 기록을 모두 삭제합니다. 되돌릴 수 없습니다.</p>`,[["취소"],["삭제","danger",async()=>{const {error}=await sb.from("customers").delete().eq("id",c.id);if(error)return toast("삭제하지 못했습니다");ui.sel=null;toast("삭제했습니다");reload(["customers","contracts","jobs"])}]]);
 }
-function newCustomer(){
+function newCustomer(tpl){
   openDlg("새 고객",`${bizUploadBox("nBizUp")}<div class="g2"><label class="f">업체명<input id="nName"></label><label class="f">대표자<input id="nCeo"></label></div>
    <div class="g2"><label class="f">휴대번호<input id="nPhone"></label><label class="f">사업자등록번호<input id="nBiz"></label></div>
    <label class="f">상점주소<input id="nAddr"></label><label class="f">메모<input id="nMemo" placeholder="개업일·업태 등"></label>${ui.noFiles?"":newCustFilesBox()}${me.role==="sales"?`<p class="mapt">담당자는 본인으로 등록됩니다.</p>`:""}`,
@@ -649,6 +650,8 @@ function newCustomer(){
        msg+=fail.length?` · 사진 ${ok}개 올림, ${fail.length}개 실패${fileErrHint(fail)}`:` · 사진·서류 ${ok}개`;nfSel.forEach(x=>x.url&&URL.revokeObjectURL(x.url))}
      ui.sel=data.id;ui.ctab="info";toast(msg);reload(["customers","files"])}]]);
   const nfSel=bindNewCustFiles();
+  if(tpl){document.getElementById("dlgH").textContent="새 고객 (복사)";[["nName",tpl.name],["nCeo",tpl.ceo],["nPhone",tpl.phone||tpl.phone2],["nBiz",tpl.biz_no],["nAddr",tpl.address],["nMemo",tpl.memo]].forEach(([id,v])=>{const el=document.getElementById(id);if(el&&v)el.value=v});
+    const b=document.getElementById("dlgB");b.insertAdjacentHTML("afterbegin",`<p class="warnbox" style="margin:0">‘${esc(tpl.name)}’의 정보를 복사했습니다. 업체명·사업자번호처럼 다른 부분을 고친 뒤 등록하세요.</p>`)}
   bindBizUpload("nBizUp",fd=>{const set=(id,v)=>{const el=document.getElementById(id);if(el&&v)el.value=v};
     set("nName",fd.name);set("nCeo",fd.ceo);set("nBiz",fd.biz);set("nAddr",fd.addr);
     const memo=[fd.open&&"개업일 "+fd.open,fd.type&&"업태 "+fd.type,fd.item&&"종목 "+fd.item].filter(Boolean).join(" · ");set("nMemo",memo);
@@ -1254,9 +1257,11 @@ function payTable(list){
    <tfoot><tr><th colspan="${isAdmin()?5:4}">합계 (납부 완료 기준)</th><th class="money" style="text-align:right">${won0(sumCard)}</th><th class="money" style="text-align:right">${won0(sumCash)}</th><th colspan="3">미수 ${won0(sumUn)}원</th></tr></tfoot></table></div>`;
 }
 function custLabel(c){return `${c.name} · ${c.phone||c.phone2||"전화 없음"}`}
-function jobDlg(j,c,kind){
+function jobDlg(j,c,kind,tpl){
   const isNew=!j;c=c||(j&&custById(j.customer_id))||null;
-  if(isNew){const k=c?custContracts(c.id)[0]:null;j={kind,customer_id:c?c.id:null,contract_id:k?k.id:null,customer_name:c?c.name:"",address:c?c.address:"",product:productOf(k),status:"접수",request_date:today(),techs:[],tech_names:"",symptom:"",result:"",cost:0,sink_status:"",sink_memo:"",parts:"",visit_time:""}}
+  if(isNew&&tpl){j=Object.assign({},tpl,{status:"접수",request_date:today(),visit_date:null,done_date:null,result:"",pay_status:"",pay_method:"",pay_date:null,pay_name:"",pay_memo:"",closed:false});
+    ["id","created_at","updated_at","created_by"].forEach(x=>delete j[x]);kind=j.kind}
+  else if(isNew){const k=c?custContracts(c.id)[0]:null;j={kind,customer_id:c?c.id:null,contract_id:k?k.id:null,customer_name:c?c.name:"",address:c?c.address:"",product:productOf(k),status:"접수",request_date:today(),techs:[],tech_names:"",symptom:"",result:"",cost:0,sink_status:"",sink_memo:"",parts:"",visit_time:""}}
   const can=isNew||canEditJob(j);const off=isOffice();const p=j.product||{};
   const techs=staff.filter(s=>s.active&&s.role==="tech");
   const pickable=customers.filter(x=>isOffice()||x.owner===me.id);
@@ -1264,7 +1269,7 @@ function jobDlg(j,c,kind){
      <input type="hidden" name="custId" id="jcId"><div id="jcSel"></div><div id="jcRes" class="pickres"></div>
      <p class="mapt" id="jcHint">두 글자 이상 입력하면 고객 목록이 나옵니다. 없는 고객은 ‘고객’ 화면의 ‘+ 새 고객’으로 먼저 등록하세요.</p>`
     :`<p class="mapt"><b>${esc(j.customer_name)}</b> · ${esc(j.address||"")}${c&&c.phone?" · "+esc(c.phone):""} · 제품: ${esc([p.product,p.size,p.options&&"("+p.options+")",p.serial&&"SN "+p.serial].filter(Boolean).join(" ")||"-")}</p>`;
-  openDlg(`${KLABEL[j.kind]} ${isNew?"접수":"작업"}${j.customer_name?" · "+esc(j.customer_name):""}`,`<div id="jf" style="display:grid;gap:10px">
+  openDlg(`${KLABEL[j.kind]} ${isNew?(tpl?"접수 (복사)":"접수"):"작업"}${j.customer_name?" · "+esc(j.customer_name):""}`,`<div id="jf" style="display:grid;gap:10px">${tpl?`<p class="warnbox" style="margin:0">복사한 접수입니다. 방문일·상태·처리 내용은 새로 입력하세요. 사진은 복사되지 않습니다.</p>`:""}
    ${pick}
    ${isNew||off?`<div class="kpick chk" role="radiogroup" aria-label="구분">${KINDS.map(k=>`<label><input type="radio" name="kind" value="${k}" ${j.kind===k?"checked":""}>${KLABEL[k]}</label>`).join("")}</div>`:""}
    <div class="g3">${sel("status","상태",JST,j.status,!can)}${inp("request_date","접수일",j.request_date,"date",!off&&!isNew)}${inp("done_date","완료일",j.done_date,"date",!can)}</div>
@@ -1284,7 +1289,7 @@ function jobDlg(j,c,kind){
    <div class="g3" id="sinkBox" ${j.kind==="as"?"hidden":""}>${sel("sink_status","싱크대 발주",["",...SINKS],j.sink_status,!can)}${inp("sink_memo","싱크대 메모(크기 등)",j.sink_memo,"text",!can)}${inp("parts","제공 부자재",j.parts,"text",!can)}</div>
    ${ui.noFiles?"":isNew?newCustFilesBox("jp",JOBPHOTO[j.kind]||"기타","사진 (선택)"):`<div id="jobFiles"></div>`}
    </div>`,
-   [["닫기"],...(!isNew&&isAdmin()?[["삭제","danger",()=>{delJobs([j.id]);return true}]]:[]),...(isNew&&!c?[]:[["확인서 인쇄","",()=>{printJob(j,c);return true}]]),...(can?[["저장","pri",async()=>{
+   [["닫기"],...(!isNew&&canNewJob(c)?[["복사해서 새 접수","",()=>{jobDlg(null,c,j.kind,j);return true}]]:[]),...(!isNew&&isAdmin()?[["삭제","danger",()=>{delJobs([j.id]);return true}]]:[]),...(isNew&&!c?[]:[["확인서 인쇄","",()=>{printJob(j,c);return true}]]),...(can?[["저장","pri",async()=>{
      const f=fdata("jf");
      if(isNew&&!c){const cc=pickable.find(x=>x.id===f.get("custId"));
        if(!cc)return toast("고객을 검색해서 목록에서 골라 주세요");c=cc;const k=custContracts(cc.id)[0];
