@@ -587,7 +587,7 @@ function renderCustList(){
   document.getElementById("clist").innerHTML=shown.map(({c,k})=>`<div class="citem${ui.sel===c.id?" sel":""}" data-id="${c.id}" tabindex="0">
     <span class="n">${esc(c.name)}</span>
     <span class="s"><span>${esc(c.phone||c.phone2)}</span>${k?`<span>${esc([k.product,k.size].filter(Boolean).join(" "))}${k.serial?" · "+esc(k.serial):""}</span>`:""}<span>담당 ${esc(staffName(c.owner)||c.owner_name||"-")}</span></span>
-    <span class="s">${k?`${k.contract_type&&k.contract_type!=="구매"?`<span class="tag ct-${esc(k.contract_type)}">${esc(k.contract_type)}</span>`:""}<span class="tag st-${esc(k.stage)}">${esc(k.stage)}</span>`:""}${c.collector?`<span class="tag">수금 ${esc(staffName(c.collector))}</span>`:""}</span></div>`).join("")
+    <span class="s">${k?`${k.contract_type&&k.contract_type!=="구매"?`<span class="tag ct-${esc(k.contract_type)}">${esc(k.contract_type)}</span>`:""}<span class="tag st-${esc(k.stage)}">${esc(k.stage)}</span>`:""}${c.collector||c.collector_name?`<span class="tag">수금 ${esc(staffName(c.collector)||c.collector_name||"")}</span>`:""}</span></div>`).join("")
     +(list.length>shown.length?`<div class="empty" style="padding:14px">${list.length-shown.length}곳 더 있습니다. 검색으로 좁혀 주세요.</div>`:"")
     ||`<div class="empty" style="padding:16px">${customers.length?"검색 결과가 없습니다.":(isOffice()?"‘엑셀 이관’으로 기존 고객관리 엑셀을 올려 주세요.":"볼 수 있는 고객이 없습니다.")}</div>`;
 }
@@ -612,8 +612,9 @@ function renderCustInfo(c){
     <div class="g2">${inp("ceo","대표자",c.ceo,"text",ro)}${inp("biz_no","사업자등록번호",c.biz_no,"text",ro)}</div>
     <div class="g2">${inp("phone","휴대번호",c.phone,"text",ro)}${inp("phone2","일반전화",c.phone2,"text",ro)}</div>
     ${inp("address","상점주소",c.address,"text",ro)}
-    <div class="g2">${isOffice()?sel("owner","담당자(3차 계약자)",staffOpts(),c.owner||""):inp("_o","담당자",staffName(c.owner)||c.owner_name,"text",true)}
-      ${isOffice()?sel("collector","수금 배정",staffOpts(),c.collector||""):inp("_c","수금 배정",staffName(c.collector),"text",true)}</div>
+    <div class="g2">${isOffice()?inp("owner","담당자(3차 계약자)",staffName(c.owner)||c.owner_name||"","text",false,'list="ownList" placeholder="이름 입력 또는 목록에서 선택"'):inp("_o","담당자",staffName(c.owner)||c.owner_name,"text",true)}
+      ${isOffice()?inp("collector","수금 배정",staffName(c.collector)||c.collector_name||"","text",false,'list="ownList" placeholder="이름 입력 또는 목록에서 선택"'):inp("_c","수금 배정",staffName(c.collector)||c.collector_name,"text",true)}</div>
+    <datalist id="ownList">${staff.filter(s=>s.active).map(s=>`<option value="${esc(s.name)}">${esc(ROLE[s.role])}</option>`).join("")}</datalist>
     ${c.owner_name&&!c.owner?`<p class="mapt">엑셀에 적힌 담당자: ${esc(c.owner_name)} (직원 계정과 아직 연결되지 않음)</p>`:""}
     <label class="f">메모<textarea name="memo" ${ro?"readonly":""}>${esc(c.memo)}</textarea></label>
     <div class="bizrow"><span class="mapt">사업자등록증</span>${c.biz_doc?`<button type="button" class="btn sm" id="bBizOpen">보관된 등록증 보기</button>`:`<span class="mapt">보관된 파일 없음</span>`}
@@ -629,7 +630,9 @@ function renderCustInfo(c){
     catch(e){toast("등록증을 보관하지 못했습니다"+(/biz_doc|bucket|not found/i.test(e.message||"")?" — Supabase에서 phase1i.sql을 실행해 주세요":": "+(e.message||"")))}});
   document.getElementById("cf").onsubmit=async e=>{e.preventDefault();const fd=new FormData(e.target);
     const p={name:fd.get("name").trim(),biz_name:fd.get("biz_name").trim(),ceo:fd.get("ceo").trim(),phone:fmtPhone(fd.get("phone")),phone2:fmtPhone(fd.get("phone2")),biz_no:fmtBiz(fd.get("biz_no")),address:fd.get("address").trim(),memo:fd.get("memo")};
-    if(isOffice()){p.owner=fd.get("owner")||null;p.collector=fd.get("collector")||null}
+    if(isOffice()){const who=v=>{v=String(v||"").trim();const s=v&&staff.find(x=>x.name===v||(x.aliases||[]).includes(v));return{id:s?s.user_id:null,name:s?s.name:v}};
+      const o=who(fd.get("owner")),cl=who(fd.get("collector"));p.owner=o.id;p.owner_name=o.name;p.collector=cl.id;
+      if("collector_name" in c)p.collector_name=cl.name;else if(cl.name&&!cl.id){return toast("직원 목록에 없는 수금 담당자를 적으려면 Supabase에서 phase1n.sql을 실행해 주세요")}}
     if(!p.name)return toast("업체명을 입력하세요");
     const {error}=await sb.from("customers").update(p).eq("id",c.id);if(error)return toast("저장하지 못했습니다: "+error.message);
     if(isOffice()&&(p.name!==c.name||(p.address&&p.address!==c.address))){const up={customer_name:p.name};if(p.address)up.address=p.address;await sb.from("jobs").update(up).eq("customer_id",c.id)}
