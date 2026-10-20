@@ -1023,11 +1023,20 @@ function renderPaySec(k){
 /* ================= 계약 ================= */
 function renderContracts(c){
   const ks=custContracts(c.id);const can=canEditCust(c);const tb=document.getElementById("tabBody");
-  tb.innerHTML=`<div class="toolbar">${can?`<button class="btn pri" id="bNewK">+ 신규계약</button>`:""}</div><div class="cards">${ks.map(k=>`<div class="card click" data-k="${k.id}">
-    <div class="t">${k.contract_type&&k.contract_type!=="구매"?`<span class="tag ct-${esc(k.contract_type)}">${esc(k.contract_type)}</span>`:""}<span class="tag st-${esc(k.stage)}">${esc(k.stage)}</span>${esc([k.product,k.size,k.options&&"("+k.options+")"].filter(Boolean).join(" "))}${k.serial?` · SN ${esc(k.serial)}`:""}${k.wash_added?` <span class="badge">수압식</span>`:""}</div>
+  const adm=isAdmin()&&ks.length>0;ui.ksel=ui.ksel||new Set();[...ui.ksel].forEach(id=>{if(!ks.some(k=>k.id===id))ui.ksel.delete(id)});
+  tb.innerHTML=`<div class="toolbar">${can?`<button class="btn pri" id="bNewK">+ 신규계약</button>`:""}<span style="flex:1"></span>
+    ${adm?`<label class="chip"><input type="checkbox" id="kAll">전체 선택</label><button class="btn danger" type="button" id="bKDel" disabled>선택 삭제 (0)</button>`:""}</div><div class="cards">${ks.map(k=>`<div class="card click" data-k="${k.id}">
+    <div class="t">${adm?`<input type="checkbox" class="ksel" data-ks="${k.id}" ${ui.ksel.has(k.id)?"checked":""} aria-label="선택" style="width:18px;height:18px">`:""}${k.contract_type&&k.contract_type!=="구매"?`<span class="tag ct-${esc(k.contract_type)}">${esc(k.contract_type)}</span>`:""}<span class="tag st-${esc(k.stage)}">${esc(k.stage)}</span>${esc([k.product,k.size,k.options&&"("+k.options+")"].filter(Boolean).join(" "))}${k.serial?` · SN ${esc(k.serial)}`:""}${k.wash_added?` <span class="badge">수압식</span>`:""}</div>
     <div class="d"><span>계약 ${esc(k.contract_date||"-")}</span><span class="money">${won0(k.amount)}원</span><span>${esc(k.pay_method||"결제방식 미정")}</span><span>계약서 ${esc(k.contract_doc)}</span><span>3차 ${esc(staffName(k.sales3)||k.sales3_name||"-")}</span>${k.channel?`<span>${esc(k.channel)}</span>`:""}</div></div>`).join("")||`<div class="empty" style="padding:8px 0">계약이 없습니다.</div>`}</div>`;
   const nb=document.getElementById("bNewK");if(nb)nb.onclick=()=>contractDlg(c,null);
-  tb.querySelectorAll("[data-k]").forEach(el=>el.onclick=()=>contractDlg(c,contracts.find(k=>k.id===el.dataset.k)));
+  tb.querySelectorAll("[data-k]").forEach(el=>el.onclick=e=>{if(e.target.closest(".ksel"))return;contractDlg(c,contracts.find(k=>k.id===el.dataset.k))});
+  const upd=()=>{const b=document.getElementById("bKDel");if(b){b.disabled=!ui.ksel.size;b.textContent=`선택 삭제 (${ui.ksel.size})`}const a=document.getElementById("kAll");if(a){const all=[...tb.querySelectorAll(".ksel")];a.checked=all.length>0&&all.every(x=>x.checked)}};
+  tb.querySelectorAll(".ksel").forEach(x=>x.onchange=()=>{x.checked?ui.ksel.add(x.dataset.ks):ui.ksel.delete(x.dataset.ks);upd()});
+  const ka=document.getElementById("kAll");if(ka)ka.onchange=()=>{tb.querySelectorAll(".ksel").forEach(x=>{x.checked=ka.checked;ka.checked?ui.ksel.add(x.dataset.ks):ui.ksel.delete(x.dataset.ks)});upd()};
+  const kd=document.getElementById("bKDel");if(kd)kd.onclick=()=>{const ids=[...ui.ksel];if(!ids.length)return;const sel_=ks.filter(k=>ids.includes(k.id));
+    openDlg(`계약 ${ids.length}건 삭제`,`<p>${sel_.map(k=>esc([k.product,k.size,k.serial&&"SN "+k.serial].filter(Boolean).join(" ")||k.contract_date||"계약")).join(", ")}</p><p><b>되돌릴 수 없습니다.</b> 그 계약의 입금 기록도 함께 지워지고, 연결된 설치·A/S 기록은 남습니다.</p>`,
+      [["취소"],["삭제","danger",async()=>{const {error}=await sb.from("contracts").delete().in("id",ids);if(error)return toast("삭제하지 못했습니다: "+error.message);ids.forEach(id=>ui.ksel.delete(id));toast(`계약 ${ids.length}건 삭제했습니다`);reload(["contracts","payments","jobs"])}]])};
+  upd();
 }
 function contractDlg(c,k,tpl){
   const isNew=!k;
