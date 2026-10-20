@@ -660,7 +660,7 @@ function renderCustInfo(c){
   document.getElementById("cf").onsubmit=async e=>{e.preventDefault();await saveCustomer(c,new FormData(e.target))};
   const d=document.getElementById("bDelC");if(d)d.onclick=()=>openDlg("고객 삭제",`<p><b>${esc(c.name)}</b>과 그 계약·설치·A/S 기록을 모두 삭제합니다. 되돌릴 수 없습니다.</p>`,[["취소"],["삭제","danger",async()=>{const {error}=await sb.from("customers").delete().eq("id",c.id);if(error)return toast("삭제하지 못했습니다");ui.sel=null;toast("삭제했습니다");reload(["customers","contracts","jobs"])}]]);
 }
-function newCustomer(tpl){if(!tpl||!tpl.id)tpl=null;
+function newCustomer(tpl,afterNew){if(!tpl||!tpl.id)tpl=null;
   openDlg("새 고객",`${bizUploadBox("nBizUp")}<div class="g2"><label class="f">업체명<input id="nName"></label><label class="f">대표자<input id="nCeo"></label></div>
    <div class="g2"><label class="f">휴대번호<input id="nPhone"></label><label class="f">사업자등록번호<input id="nBiz"></label></div>
    <label class="f">상점주소<input id="nAddr"></label><label class="f">메모<input id="nMemo" placeholder="개업일·업태 등"></label>${ui.noFiles?"":newCustFilesBox()}${me.role==="sales"?`<p class="mapt">담당자는 본인으로 등록됩니다.</p>`:""}`,
@@ -675,7 +675,9 @@ function newCustomer(tpl){if(!tpl||!tpl.id)tpl=null;
      if(nfSel&&nfSel.length){const groups={};nfSel.forEach(x=>(groups[x.kind]=groups[x.kind]||[]).push(x.file));let ok=0,fail=[];
        for(const k of Object.keys(groups)){const r=await uploadCustFiles(data.id,groups[k],k,m=>toast(m));ok+=r.ok;fail=fail.concat(r.fail)}
        msg+=fail.length?` · 사진 ${ok}개 올림, ${fail.length}개 실패${fileErrHint(fail)}`:` · 사진·서류 ${ok}개`;nfSel.forEach(x=>x.url&&URL.revokeObjectURL(x.url))}
-     ui.sel=data.id;ui.ctab="info";toast(msg);reload(["customers","files"])}]]);
+     ui.sel=data.id;ui.ctab="info";toast(msg);
+     if(afterNew){await reload(["customers","files"]);afterNew(custById(data.id)||data);return true}
+     reload(["customers","files"])}]]);
   const nfSel=bindNewCustFiles();
   if(tpl){document.getElementById("dlgH").textContent="새 고객 (복사)";[["nName",tpl.name],["nCeo",tpl.ceo],["nPhone",tpl.phone||tpl.phone2],["nBiz",tpl.biz_no],["nAddr",tpl.address],["nMemo",tpl.memo]].forEach(([id,v])=>{const el=document.getElementById(id);if(el&&v)el.value=v});
     const b=document.getElementById("dlgB");b.insertAdjacentHTML("afterbegin",`<p class="warnbox" style="margin:0">‘${esc(tpl.name)}’의 정보를 복사했습니다. 업체명·사업자번호처럼 다른 부분을 고친 뒤 등록하세요.</p>`)}
@@ -1110,7 +1112,7 @@ function newContractPick(){const pool=customers.filter(x=>isOffice()||x.owner===
   openDlg("신규계약 · 고객 선택",`<div id="jf" style="display:grid;gap:10px"><label class="f">고객 검색<input id="jcQ" type="search" autocomplete="off" placeholder="업체명·대표자·전화번호·주소·시리얼"></label>
     <input type="hidden" id="jcId"><div id="jcSel"></div><div id="jcRes" class="pickres"></div>
     <p class="mapt" id="jcHint">두 글자 이상 입력하면 고객 목록이 나옵니다. 처음 오는 고객은 ‘새 고객 등록’으로 먼저 등록하세요.</p></div>`,
-    [["새 고객 등록","gocust",()=>{newCustomer()}],["취소"],["다음","pri",()=>{const c=pool.find(x=>x.id===val("jcId"));if(!c){toast("고객을 검색해서 목록에서 골라 주세요");return true}contractDlg(c,null);return true}]]);
+    [["새 고객 등록","gocust",()=>{newCustomer(null,c=>contractDlg(c,null));return true}],["취소"],["다음","pri",()=>{const c=pool.find(x=>x.id===val("jcId"));if(!c){toast("고객을 검색해서 목록에서 골라 주세요");return true}contractDlg(c,null);return true}]]);
   bindCustPicker(pool)}
 /* 관리등급: 레드(주의)·블랙(거래 중지). 수동 지정이 우선, 없으면 미수 60일 이상 자동 레드. 기사에게는 표시 안 함 */
 const RED_DAYS=60;
