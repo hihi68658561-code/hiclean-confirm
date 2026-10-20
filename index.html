@@ -1417,10 +1417,10 @@ function bindCustPicker(pool){
   const show=()=>{const t=q.value.trim().toLowerCase().replace(/-/g,"");
     if(t.length<2){res.innerHTML="";return}
     const hits=pool.filter(x=>custSearchText(x).includes(t)).slice(0,8);
-    res.innerHTML=hits.map(x=>{const k=custContracts(x.id)[0];return `<button type="button" data-id="${x.id}"><b>${esc(x.name)}</b><small>${esc([x.ceo,x.phone||x.phone2,x.address].filter(Boolean).join(" · "))}</small>${k?`<small>${esc([k.product,k.size,k.serial&&"SN "+k.serial].filter(Boolean).join(" "))}</small>`:""}</button>`}).join("")||`<p class="mapt">찾는 고객이 없습니다.</p>`;
+    res.innerHTML=hits.map(x=>{const k=custContracts(x.id)[0];return `<button type="button" data-id="${x.id}"><b>${esc(x.name)}</b><small>${esc([x.ceo,x.phone||x.phone2,x.address].filter(Boolean).join(" · "))}</small>${k||instTxt(x)?`<small>${esc([k&&k.product,k&&k.size,k&&k.serial&&"SN "+k.serial].filter(Boolean).join(" "))}${instTxt(x)?`${k?" · ":""}<b class="instd">${esc(instTxt(x))}</b>`:""}</small>`:""}</button>`}).join("")||`<p class="mapt">찾는 고객이 없습니다.</p>`;
     res.querySelectorAll("[data-id]").forEach(b=>b.onclick=()=>pickIt(pool.find(x=>x.id===b.dataset.id)))};
   const pickIt=x=>{hid.value=x.id;res.innerHTML="";q.parentElement.hidden=true;hint.hidden=true;const k=custContracts(x.id)[0];
-    selBox.innerHTML=`<div class="picked"><span><b>${esc(x.name)}</b> · ${esc(x.phone||x.phone2||"")} · ${esc(x.address||"")}${k?" · "+esc([k.product,k.size,k.serial&&"SN "+k.serial].filter(Boolean).join(" ")):""}</span><button class="btn sm" type="button" id="jcChg">다른 고객</button></div>`;
+    selBox.innerHTML=`<div class="picked"><span><b>${esc(x.name)}</b> · ${esc(x.phone||x.phone2||"")} · ${esc(x.address||"")}${k?" · "+esc([k.product,k.size,k.serial&&"SN "+k.serial].filter(Boolean).join(" ")):""}${instTxt(x)?" · "+esc(instTxt(x)):""}</span><button class="btn sm" type="button" id="jcChg">다른 고객</button></div>`;
     document.getElementById("jcChg").onclick=()=>{hid.value="";selBox.innerHTML="";q.parentElement.hidden=false;hint.hidden=false;q.focus();show()}};
   q.addEventListener("input",show);q.addEventListener("keydown",e=>{if(e.key==="Enter"){e.preventDefault();const b=res.querySelector("[data-id]");if(b)b.click()}});
   setTimeout(()=>q.focus(),50);
@@ -1432,6 +1432,8 @@ function printJob(j,c){
   const r={접수일자:j.request_date,불편사항:j.symptom,신청일자:k?k.contract_date:"",설치일자:j.done_date||j.visit_date||"",업장명:cu.사업장명||cu.상호};
   doPrint(j.kind==="as"?sheetAS(r,cu):sheetIS(r,cu));
 }
+function instTxt(c){const i=jobs.filter(x=>x.customer_id===c.id&&x.kind==="install"&&x.status!=="취소").sort((a,b)=>((b.done_date||b.visit_date||"")).localeCompare(a.done_date||a.visit_date||""))[0];
+  if(!i)return"";if(i.status==="완료")return "설치 "+(i.done_date||i.visit_date||"");return i.visit_date?"설치예정 "+i.visit_date:"설치 미정"}
 function installDate(cid){const i=jobs.filter(x=>x.customer_id===cid&&x.kind==="install"&&x.status!=="취소").sort((a,b)=>(b.done_date||"").localeCompare(a.done_date||""))[0];return i?(i.done_date||i.visit_date||""):""}
 async function doPrint(html){const pr=document.getElementById("printRoot");pr.innerHTML=html;const imgs=[...pr.querySelectorAll("img")];await Promise.all(imgs.map(i=>i.complete?1:new Promise(z=>{i.onload=i.onerror=z})));window.print()}
 window.addEventListener("afterprint",()=>{document.getElementById("printRoot").innerHTML=""});
