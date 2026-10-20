@@ -1026,11 +1026,13 @@ function renderContracts(c){
   const nb=document.getElementById("bNewK");if(nb)nb.onclick=()=>contractDlg(c,null);
   tb.querySelectorAll("[data-k]").forEach(el=>el.onclick=()=>contractDlg(c,contracts.find(k=>k.id===el.dataset.k)));
 }
-function contractDlg(c,k){
-  const isNew=!k;k=k||{stage:"확정",contract_type:"구매",contract_date:today(),sales3:me.role==="sales"?me.id:(c.owner||null),contract_doc:"미수령",pay_method:"",capital:{},cms:{},tax:{}};
+function contractDlg(c,k,tpl){
+  const isNew=!k;
+  if(!k&&tpl){k=Object.assign({},tpl,{serial:"",contract_date:today(),stage:"확정",contract_doc:"미수령",chk_cust:"",chk_slip:"",chk_sales:"",tax:{},settle_month:"",import_raw:null,memo:tpl.memo||""});delete k.id;delete k.created_at;delete k.updated_at;delete k.created_by}
+  k=k||{stage:"확정",contract_type:"구매",contract_date:today(),sales3:me.role==="sales"?me.id:(c.owner||null),contract_doc:"미수령",pay_method:"",capital:{},cms:{},tax:{}};
   const ro=!canEditCust(c);const cap=k.capital||{},cms=k.cms||{};
-  const ij=isNew?null:installOf(k);const sinkRo=ro||!isOffice()||(!isNew&&!ij);
-  openDlg(isNew?"신규계약":"계약",`<div id="kf" style="display:grid;gap:10px">
+  const ij=isNew?null:installOf(k);const sinkRo=ro||!isOffice()||(!isNew&&!ij);const srcJ=ij||(tpl?installOf(tpl):null);
+  openDlg(isNew?(tpl?"신규계약 (복사)":"신규계약"):"계약",`<div id="kf" style="display:grid;gap:10px">${tpl?`<p class="warnbox" style="margin:0">복사한 계약입니다. 시리얼·계약일·진행단계·계약서·마감·입금은 새로 입력하세요.</p>`:""}
    <h3 class="ksec">계약 정보</h3>
    <div class="g3">${inp("contract_date","계약일자",k.contract_date,"date",ro)}${sel("contract_type","구분",CTYPES,k.contract_type||"구매",ro)}${sel("stage","진행단계",STAGES,STAGES.includes(k.stage)?k.stage:"확정",ro)}</div>
    <div class="g3">${sel("contract_doc","계약서",DOCS.map(d=>[d,d==="사진"?"사진 수령(○)":d==="원본"?"원본 수령(●)":d]),k.contract_doc,ro)}<div style="grid-column:span 2">${inp("free_trial","무료체험 메모(날짜 등)",k.free_trial,"text",ro)}</div></div>
@@ -1039,8 +1041,8 @@ function contractDlg(c,k){
    <div class="g3">${inp("sales1","1차 선행자",k.sales1,"text",ro,'list="stList"')}${inp("sales2","2차 상담자",k.sales2,"text",ro,'list="stList"')}${isOffice()?inp("sales3","3차 계약자(담당자)",staffName(k.sales3)||k.sales3_name||"","text",false,'list="s3List" placeholder="이름 입력 또는 목록에서 선택"'):inp("_s3","3차 계약자",staffName(k.sales3)||k.sales3_name,"text",true)}</div>
    <h3 class="ksec">제품내역</h3>
    <div class="g3">${inp("product","제품",k.product,"text",ro,'list="pdList"')}${inp("size","사이즈",k.size,"text",ro)}${inp("serial","시리얼",k.serial,"text",ro)}</div>
-   <div class="g3"><label class="f">수압식 추가 구매<select name="wash_added" ${ro?"disabled":""}><option value="0">아니오</option><option value="1" ${k.wash_added?"selected":""}>예</option></select></label>${sel("sink_status","싱크대 발주",["",...SINKS],(ij||{}).sink_status||"",sinkRo)}${inp("sink_memo","싱크대 메모(크기 등)",(ij||{}).sink_memo,"text",sinkRo)}</div>
-   <div class="g3"><div style="grid-column:span 2">${inp("parts","제공 부자재",(ij||{}).parts,"text",sinkRo)}</div><span></span></div>
+   <div class="g3"><label class="f">수압식 추가 구매<select name="wash_added" ${ro?"disabled":""}><option value="0">아니오</option><option value="1" ${k.wash_added?"selected":""}>예</option></select></label>${sel("sink_status","싱크대 발주",["",...SINKS],(srcJ||{}).sink_status||"",sinkRo)}${inp("sink_memo","싱크대 메모(크기 등)",(srcJ||{}).sink_memo,"text",sinkRo)}</div>
+   <div class="g3"><div style="grid-column:span 2">${inp("parts","제공 부자재",(srcJ||{}).parts,"text",sinkRo)}</div><span></span></div>
    ${!isNew&&!ij?`<p class="mapt" style="margin:-4px 0 0">이 계약에 연결된 설치 작업이 없어 싱크대·부자재는 입력할 수 없습니다.</p>`:""}
    <h3 class="ksec">계약금액(부가세포함)</h3>
    <div class="g3">${inp("amt_ultra","초음파",k.amt_ultra||"","number",ro)}${inp("amt_wash","워시(수압식)",k.amt_wash||"","number",ro)}${inp("amt_parts","부자재",k.amt_parts||"","number",ro)}</div>
@@ -1060,7 +1062,7 @@ function contractDlg(c,k){
    <datalist id="s3List">${staff.filter(s=>s.active&&["admin","office","sales"].includes(s.role)).map(s=>`<option value="${esc(s.name)}">${esc(ROLE[s.role])}</option>`).join("")}</datalist>
    <datalist id="stList">${staff.filter(s=>s.active).map(s=>`<option value="${esc(s.name)}">`).join("")}<option value="무료체험"></datalist>
    <datalist id="pdList">${[...new Set(contracts.map(x=>x.product).filter(Boolean))].map(x=>`<option value="${esc(x)}">`).join("")}</datalist></div>`,
-   ro?[["닫기"]]:[["취소"],...(!isNew&&isAdmin()?[["삭제","danger",async()=>{const {error}=await sb.from("contracts").delete().eq("id",k.id);toast(error?"삭제하지 못했습니다":"삭제했습니다");reload(["contracts"])}]]:[]),["저장","pri",async()=>{
+   ro?[["닫기"]]:[["취소"],...(!isNew?[["복사해서 새 계약","",()=>{contractDlg(c,null,k);return true}]]:[]),...(!isNew&&isAdmin()?[["삭제","danger",async()=>{const {error}=await sb.from("contracts").delete().eq("id",k.id);toast(error?"삭제하지 못했습니다":"삭제했습니다");reload(["contracts"])}]]:[]),["저장","pri",async()=>{
      const f=fdata("kf");const n=x=>Number(f.get(x)||0)||0;
      const p={contract_date:f.get("contract_date")||null,stage:f.get("stage"),contract_type:f.get("contract_type")||"구매",contract_doc:f.get("contract_doc"),channel:f.get("channel").trim(),referrer:f.get("referrer").trim(),free_trial:f.get("free_trial").trim(),
        sales1:f.get("sales1").trim(),sales2:f.get("sales2").trim(),product:f.get("product").trim(),size:f.get("size").trim(),serial:f.get("serial").trim(),
