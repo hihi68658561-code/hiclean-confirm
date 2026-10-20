@@ -125,6 +125,7 @@ dialog .df{padding:12px 18px;border-top:1px solid var(--line2);display:flex;just
 .wtbox{max-height:calc(100vh - 260px);overflow:auto;border:1px solid var(--line);border-radius:6px}
 .sumt th{white-space:nowrap}
 .wrapx.vis{overflow:visible}
+.autocalc{background:var(--ok-bg)!important;transition:background .3s}
 .rofield{background:var(--line2)!important;color:var(--fg);cursor:default}
 .fgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:10px;padding:14px 20px;border:2px dashed transparent;border-radius:10px;margin:0 8px}
 .fgrid.sm{grid-template-columns:repeat(auto-fill,minmax(96px,1fr));padding:8px 0;margin:0}
@@ -1094,6 +1095,11 @@ function contractDlg(c,k,tpl){
      if(isOffice()&&p.sales3&&!c.owner)await sb.from("customers").update({owner:p.sales3}).eq("id",c.id);
      toast("저장했습니다");reload(["customers","contracts","jobs"])}]]);
   if(!isNew)renderPaySec(k);
+  /* 초음파·워시·부자재를 고치면 합계금액 자동 계산 */
+  (()=>{const f=document.getElementById("kf");if(!f||ro)return;const q=n=>f.querySelector(`[name="${n}"]`);const parts=["amt_ultra","amt_wash","amt_parts"].map(q);const tot=q("amount");if(!tot)return;
+    const sum=()=>parts.reduce((a,el)=>a+(Number(el&&el.value||0)||0),0);
+    parts.forEach(el=>el&&el.addEventListener("input",()=>{tot.value=sum()||"";tot.classList.add("autocalc");setTimeout(()=>tot.classList.remove("autocalc"),600)}));
+    const hint=document.createElement("small");hint.className="mapt";hint.textContent="초음파+워시+부자재 자동 합계 (직접 고칠 수도 있음)";tot.insertAdjacentElement("afterend",hint)})();
 }
 function productOf(k){return k?{product:k.product,size:k.size,options:k.options,serial:k.serial}:{}}
 /* 추가설치: 계약에서 그대로 복사된 기존 제품은 빼고, 추가 품목만 */
