@@ -1035,7 +1035,7 @@ function contractDlg(c,k){
    <div class="g3">${sel("contract_doc","계약서",DOCS.map(d=>[d,d==="사진"?"사진 수령(○)":d==="원본"?"원본 수령(●)":d]),k.contract_doc,ro)}<div style="grid-column:span 2">${inp("free_trial","무료체험 메모(날짜 등)",k.free_trial,"text",ro)}</div></div>
    <h3 class="ksec">영업 및 설치 담당자</h3>
    <div class="g3">${inp("channel","영업 경로",k.channel,"text",ro,'list="chList"')}${inp("referrer","소개",k.referrer,"text",ro)}<span></span></div>
-   <div class="g3">${inp("sales1","1차 선행자",k.sales1,"text",ro,'list="stList"')}${inp("sales2","2차 상담자",k.sales2,"text",ro,'list="stList"')}${isOffice()?sel("sales3","3차 계약자(담당자)",staffOpts(["admin","office","sales"]),k.sales3||""):inp("_s3","3차 계약자",staffName(k.sales3)||k.sales3_name,"text",true)}</div>
+   <div class="g3">${inp("sales1","1차 선행자",k.sales1,"text",ro,'list="stList"')}${inp("sales2","2차 상담자",k.sales2,"text",ro,'list="stList"')}${isOffice()?inp("sales3","3차 계약자(담당자) — 고르거나 직접 입력",staffName(k.sales3)||k.sales3_name||"","text",false,'list="s3List" placeholder="이름 입력 또는 목록에서 선택"'):inp("_s3","3차 계약자",staffName(k.sales3)||k.sales3_name,"text",true)}</div>
    <h3 class="ksec">제품내역</h3>
    <div class="g3">${inp("product","제품",k.product,"text",ro,'list="pdList"')}${inp("size","사이즈",k.size,"text",ro)}${inp("serial","시리얼",k.serial,"text",ro)}</div>
    <div class="g3"><label class="f">수압식 추가 구매<select name="wash_added" ${ro?"disabled":""}><option value="0">아니오</option><option value="1" ${k.wash_added?"selected":""}>예</option></select></label>${sel("sink_status","싱크대 발주",["",...SINKS],(ij||{}).sink_status||"",sinkRo)}${inp("sink_memo","싱크대 메모(크기 등)",(ij||{}).sink_memo,"text",sinkRo)}</div>
@@ -1056,6 +1056,7 @@ function contractDlg(c,k){
    ${isNew?`<p class="mapt" style="margin:0">입금 기록은 계약을 저장한 뒤 다시 열어서 추가할 수 있습니다.</p>`:`<div id="paySec"></div>`}
    ${isNew?`<label class="chip"><input type="checkbox" name="mkjob" checked>설치 작업도 함께 만들기 (기사에게 설치 건으로 보임)</label>`:""}
    <datalist id="chList">${["중앙회","인바운드","MOU","보상판매","기존고객","하이클린","소개"].map(x=>`<option value="${x}">`).join("")}</datalist>
+   <datalist id="s3List">${staff.filter(s=>s.active&&["admin","office","sales"].includes(s.role)).map(s=>`<option value="${esc(s.name)}">${esc(ROLE[s.role])}</option>`).join("")}</datalist>
    <datalist id="stList">${staff.filter(s=>s.active).map(s=>`<option value="${esc(s.name)}">`).join("")}<option value="무료체험"></datalist>
    <datalist id="pdList">${[...new Set(contracts.map(x=>x.product).filter(Boolean))].map(x=>`<option value="${esc(x)}">`).join("")}</datalist></div>`,
    ro?[["닫기"]]:[["취소"],...(!isNew&&isAdmin()?[["삭제","danger",async()=>{const {error}=await sb.from("contracts").delete().eq("id",k.id);toast(error?"삭제하지 못했습니다":"삭제했습니다");reload(["contracts"])}]]:[]),["저장","pri",async()=>{
@@ -1068,7 +1069,7 @@ function contractDlg(c,k){
      if(!ui.noPay){Object.assign(p,{approval:(f.get("approval")||"").trim(),chk_cust:(f.get("chk_cust")||"").trim(),chk_slip:(f.get("chk_slip")||"").trim(),chk_sales:(f.get("chk_sales")||"").trim()});
        const td_=f.get("tax_date")||"",tt_=(f.get("tax_type")||"").trim();p.tax=Object.assign({},k.tax||{},td_?{type:(k.tax||{}).type&&(k.tax||{}).date?(k.tax||{}).type:"세금계산서",date:td_}:{type:tt_,date:""})}
      if(!p.amount)p.amount=p.amt_ultra+p.amt_wash+p.amt_parts;
-     if(isOffice())p.sales3=f.get("sales3")||null;else if(isNew)p.sales3=me.id;
+     if(isOffice()){const nm=(f.get("sales3")||"").trim();const s=nm&&staff.find(x=>x.name===nm||(x.aliases||[]).includes(nm));p.sales3=s?s.user_id:null;p.sales3_name=s?s.name:nm}else if(isNew){p.sales3=me.id;p.sales3_name=me.name||""}
      let res;
      if(isNew){p.customer_id=c.id;res=await sb.from("contracts").insert(p).select().single()}else res=await sb.from("contracts").update(p).eq("id",k.id).select().single();
      if(res.error)return toast(/contracts_stage_check|contract_type/.test(res.error.message)?"계약 구분 칸이 아직 없습니다. Supabase에서 phase1g.sql을 실행해 주세요.":"저장하지 못했습니다: "+res.error.message);
