@@ -618,7 +618,7 @@ function renderCustInfo(c){
     <label class="f">메모<textarea name="memo" ${ro?"readonly":""}>${esc(c.memo)}</textarea></label>
     <div class="bizrow"><span class="mapt">사업자등록증</span>${c.biz_doc?`<button type="button" class="btn sm" id="bBizOpen">보관된 등록증 보기</button>`:`<span class="mapt">보관된 파일 없음</span>`}
       ${ro?"":bizUploadBox("cBizUp")}</div></fieldset>
-    ${ro?`<p class="mapt">고객정보는 사무실·관리자와 담당자만 고칠 수 있습니다.</p>`:`<div class="actions"><button class="btn pri" type="submit">저장</button><span style="flex:1"></span>${isOffice()||me.role==="sales"?`<button class="btn" type="button" id="bCopyC">복사해서 새 고객</button>`:""}${isAdmin()?`<button class="btn danger" type="button" id="bDelC">고객 삭제</button>`:""}</div>`}</form>`;
+    ${ro?`<p class="mapt">고객정보는 사무실·관리자와 담당자만 고칠 수 있습니다.</p>`:`<div class="actions"><button class="btn pri" type="submit">저장</button><span style="flex:1"></span>${isOffice()||me.role==="sales"?`<button class="btn" type="button" id="bCopyC">복사</button>`:""}${isAdmin()?`<button class="btn danger" type="button" id="bDelC">고객 삭제</button>`:""}</div>`}</form>`;
   const cc=document.getElementById("bCopyC");if(cc)cc.onclick=()=>newCustomer(c);
   const bo=document.getElementById("bBizOpen");if(bo)bo.onclick=()=>openBizDoc(c.biz_doc);
   if(ro)return;
@@ -1081,7 +1081,7 @@ function contractDlg(c,k,tpl){
    <datalist id="s3List">${staff.filter(s=>s.active&&["admin","office","sales"].includes(s.role)).map(s=>`<option value="${esc(s.name)}">${esc(ROLE[s.role])}</option>`).join("")}</datalist>
    <datalist id="stList">${staff.filter(s=>s.active).map(s=>`<option value="${esc(s.name)}">`).join("")}<option value="무료체험"></datalist>
    <datalist id="pdList">${[...new Set(contracts.map(x=>x.product).filter(Boolean))].map(x=>`<option value="${esc(x)}">`).join("")}</datalist></div>`,
-   ro?[["닫기"]]:[["취소"],...(!isNew?[["복사해서 새 계약","",()=>{contractDlg(c,null,k);return true}]]:[]),...(!isNew&&isAdmin()?[["삭제","danger",async()=>{const {error}=await sb.from("contracts").delete().eq("id",k.id);toast(error?"삭제하지 못했습니다":"삭제했습니다");reload(["contracts"])}]]:[]),["저장","pri",async()=>{
+   ro?[["닫기"]]:[["취소"],...(!isNew?[["복사","",()=>{contractDlg(c,null,k);return true}]]:[]),...(!isNew&&isAdmin()?[["삭제","danger",async()=>{const {error}=await sb.from("contracts").delete().eq("id",k.id);toast(error?"삭제하지 못했습니다":"삭제했습니다");reload(["contracts"])}]]:[]),["저장","pri",async()=>{
      const f=fdata("kf");const n=x=>Number(f.get(x)||0)||0;
      const p={contract_date:f.get("contract_date")||null,stage:f.get("stage"),contract_type:f.get("contract_type")||"구매",contract_doc:f.get("contract_doc"),channel:f.get("channel").trim(),referrer:f.get("referrer").trim(),free_trial:f.get("free_trial").trim(),...(hasTrialCol()||f.get("trial_end")?{trial_end:f.get("trial_end")||null}:{}),
        sales1:f.get("sales1").trim(),sales2:f.get("sales2").trim(),product:f.get("product").trim(),size:f.get("size").trim(),serial:f.get("serial").trim(),
@@ -1310,7 +1310,7 @@ function jobDlg(j,c,kind,tpl){
    <div class="g3" id="sinkBox" ${j.kind==="as"?"hidden":""}>${sel("sink_status","싱크대 발주",["",...SINKS],j.sink_status,!can)}${inp("sink_memo","싱크대 메모(크기 등)",j.sink_memo,"text",!can)}${inp("parts","제공 부자재",j.parts,"text",!can)}</div>
    ${ui.noFiles?"":isNew?newCustFilesBox("jp",JOBPHOTO[j.kind]||"기타","사진 (선택)"):`<div id="jobFiles"></div>`}
    </div>`,
-   [["닫기"],...(!isNew&&canNewJob(c)?[["복사해서 새 접수","",()=>{jobDlg(null,c,j.kind,j);return true}]]:[]),...(!isNew&&isAdmin()?[["삭제","danger",()=>{delJobs([j.id]);return true}]]:[]),...(isNew&&!c?[]:[["확인서 인쇄","",()=>{printJob(j,c);return true}]]),...(can?[["저장","pri",async()=>{
+   [["닫기"],...(!isNew&&canNewJob(c)?[["복사","",()=>{jobDlg(null,c,j.kind,j);return true}]]:[]),...(!isNew&&isAdmin()?[["삭제","danger",()=>{delJobs([j.id]);return true}]]:[]),...(isNew&&!c?[]:[["확인서 인쇄","",()=>{printJob(j,c);return true}]]),...(can?[["저장","pri",async()=>{
      const f=fdata("jf");
      if(isNew&&!c){const cc=pickable.find(x=>x.id===f.get("custId"));
        if(!cc)return toast("고객을 검색해서 목록에서 골라 주세요");c=cc;const k=custContracts(cc.id)[0];
