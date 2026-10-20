@@ -125,6 +125,8 @@ dialog .df{padding:12px 18px;border-top:1px solid var(--line2);display:flex;just
 .wtbox{max-height:calc(100vh - 260px);overflow:auto;border:1px solid var(--line);border-radius:6px}
 .sumt th{white-space:nowrap}
 .wrapx.vis{overflow:visible}
+.gbadge{display:inline-block;font-size:11px;font-weight:700;padding:0 6px;border-radius:9px;margin-left:4px;vertical-align:1px;color:#fff}.gbadge.g-red{background:#e8590c}.gbadge.g-black{background:#1f1f1f}
+.gwarn{margin:0;padding:6px 10px;border-radius:6px;font-size:13px;font-weight:600}.gwarn.g-red{background:#fff0e6;color:#b4410a}.gwarn.g-black{background:#2b2b2b;color:#fff}
 #dlgF .gocust{margin-right:auto}
 .trial.late{color:var(--bad-fg);font-weight:700}.trial.soon{color:var(--warn-fg);font-weight:700}
 .autocalc{background:var(--ok-bg)!important;transition:background .3s}
@@ -458,7 +460,7 @@ const DOCS=["미수령","사진","원본","전자서명"];
 const SINKS=["해당없음","발주대기","발주완료","중고사용","재고사용","기타"];
 const JST=["접수","배정","보류","완료","취소"];
 const KINDS=["as","install","remove","addon"];
-let sb=null, me=null, staff=[], customers=[], contracts=[], jobs=[], payments=[], files=[];
+let sb=null, me=null, staff=[], customers=[], contracts=[], jobs=[], payments=[], files=[], grades=[];
 let ui={view:"cust", sel:null, ctab:"info", q:"", stage:"", ctype:"", jscope:"mine", jkind:"", jpay:"", jview:"card", dkind:"as", dq:"", dsel:new Set(), jsel:new Set(), jst:"open", jq:"", draft:null, conf:null};
 const isAdmin=()=>me&&me.role==="admin", isOffice=()=>me&&(me.role==="admin"||me.role==="office");
 const custById=id=>customers.find(c=>c.id===id);
@@ -510,7 +512,7 @@ async function loadAll(){
   view().innerHTML=`<div class="empty"><h2>불러오는 중…</h2></div>`;
   try{
     [staff,customers,contracts,jobs]=await Promise.all([fetchAll("staff","user_id,name,role,aliases,active"),fetchAll("customers"),fetchAll("contracts"),fetchAll("jobs")]);
-    payments=await fetchPays();files=await fetchFiles();
+    payments=await fetchPays();files=await fetchFiles();grades=await fetchGrades();
     const st=await sb.from("settings").select("bank").eq("id",1).maybeSingle();if(st.data&&st.data.bank)S.bank=st.data.bank;
   }catch(e){view().innerHTML=`<div class="empty"><h2>데이터를 불러오지 못했습니다</h2><p>${esc(e.message||"")}</p><p>1단계 데이터베이스 설정(phase1.sql)을 실행했는지 확인해 주세요.</p></div>`;return}
   if(ui.sel&&!custById(ui.sel))ui.sel=null;
@@ -518,15 +520,16 @@ async function loadAll(){
 }
 async function fetchPays(){if(me&&me.role==="tech")return[];try{const r=await fetchAll("payments");ui.noPay=false;return r}catch(e){ui.noPay=true;return[]}}
 async function fetchFiles(){try{const r=await fetchAll("customer_files");ui.noFiles=false;return r}catch(e){ui.noFiles=true;return[]}}
-const TBL={files:fetchFiles,payments:fetchPays,customers:()=>fetchAll("customers"),contracts:()=>fetchAll("contracts"),jobs:()=>fetchAll("jobs"),staff:()=>fetchAll("staff","user_id,name,role,aliases,active")};
+async function fetchGrades(){if(me&&me.role==="tech")return[];try{const r=await fetchAll("customer_grades");ui.noGrades=false;return r}catch(e){ui.noGrades=true;return[]}}
+const TBL={grades:fetchGrades,files:fetchFiles,payments:fetchPays,customers:()=>fetchAll("customers"),contracts:()=>fetchAll("contracts"),jobs:()=>fetchAll("jobs"),staff:()=>fetchAll("staff","user_id,name,role,aliases,active")};
 let reloadSeq=0;
 async function reload(tables,quiet){
   const seq=++reloadSeq;let res;
   try{res=await Promise.all(tables.map(t=>TBL[t]()))}catch(e){if(!quiet)toast("최신 내용을 불러오지 못했습니다. 인터넷 연결을 확인해 주세요.");return false}
   if(seq!==reloadSeq&&quiet)return false;
   let changed=false;
-  tables.forEach((t,i)=>{const d=res[i];const old={customers,contracts,jobs,staff,payments,files}[t];if(JSON.stringify(old)!==JSON.stringify(d))changed=true;
-    if(t==="customers")customers=d;if(t==="contracts")contracts=d;if(t==="jobs")jobs=d;if(t==="staff")staff=d;if(t==="payments")payments=d;if(t==="files")files=d});
+  tables.forEach((t,i)=>{const d=res[i];const old={customers,contracts,jobs,staff,payments,files,grades}[t];if(JSON.stringify(old)!==JSON.stringify(d))changed=true;
+    if(t==="customers")customers=d;if(t==="contracts")contracts=d;if(t==="jobs")jobs=d;if(t==="staff")staff=d;if(t==="payments")payments=d;if(t==="files")files=d;if(t==="grades")grades=d});
   if(tables.includes("staff")&&me){const s=staff.find(x=>x.user_id===me.id);if(s){me.name=s.name;me.role=s.role;document.getElementById("modeLabel").textContent=`${me.name||me.email} · ${ROLE[me.role]}`}}
   if(ui.sel&&!custById(ui.sel))ui.sel=null;
   buildIdx();if(!quiet||changed)render();return true;
@@ -535,7 +538,7 @@ async function reload(tables,quiet){
 function bgRefresh(){
   if(!me||!me.role||document.hidden||ui.dirty||document.getElementById("dlg").open)return;
   const a=document.activeElement;if(a&&a.closest&&a.closest("#view form,#view .stafft,#view fieldset"))return;
-  reload(["customers","contracts","jobs","staff","payments","files"],true);
+  reload(["customers","contracts","jobs","staff","payments","files","grades"],true);
 }
 setInterval(bgRefresh,30000);
 window.addEventListener("focus",bgRefresh);
@@ -569,11 +572,12 @@ function lastStage(id){const k=custContracts(id)[0];return k?k.stage:""}
 function renderCustView(){
   view().innerHTML=`<div class="body"><aside><div class="search">
     <input id="q" type="search" placeholder="업체명·전화·시리얼·담당자 검색" value="${esc(ui.q)}" aria-label="고객 검색">
-    <select id="ctf" aria-label="구분"><option value="">구분 전체</option>${CTYPES.map(x=>`<option ${ui.ctype===x?"selected":""}>${x}</option>`).join("")}</select><select id="stf" aria-label="진행단계"><option value="">진행단계 전체</option>${STAGES.map(x=>`<option ${ui.stage===x?"selected":""}>${x}</option>`).join("")}</select>
+    ${me.role!=="tech"?`<select id="grf" aria-label="관리등급"><option value="">관리등급 전체</option><option value="레드" ${ui.grade==="레드"?"selected":""}>레드만</option><option value="블랙" ${ui.grade==="블랙"?"selected":""}>블랙만</option><option value="any" ${ui.grade==="any"?"selected":""}>레드·블랙</option></select>`:""}<select id="ctf" aria-label="구분"><option value="">구분 전체</option>${CTYPES.map(x=>`<option ${ui.ctype===x?"selected":""}>${x}</option>`).join("")}</select><select id="stf" aria-label="진행단계"><option value="">진행단계 전체</option>${STAGES.map(x=>`<option ${ui.stage===x?"selected":""}>${x}</option>`).join("")}</select>
     <div class="row"><span id="cnt"></span>${isOffice()||me.role==="sales"?`<button class="btn pri sm" id="bNewC">+ 새 고객</button>`:""}</div></div>
     <div class="clist" id="clist"></div></aside><main id="main"></main></div>`;
   document.getElementById("q").oninput=e=>{ui.q=e.target.value;renderCustList()};
   document.getElementById("stf").onchange=e=>{ui.stage=e.target.value;renderCustList()};
+  const grf=document.getElementById("grf");if(grf)grf.onchange=e=>{ui.grade=e.target.value;renderCustList()};
   document.getElementById("ctf").onchange=e=>{ui.ctype=e.target.value;renderCustList()};
   const nb=document.getElementById("bNewC");if(nb)nb.onclick=()=>newCustomer();
   document.getElementById("clist").onclick=e=>{const it=e.target.closest(".citem");if(it){ui.sel=it.dataset.id;ui.ctab="info";ui.draft=null;renderCustList();renderCustMain()}};
@@ -582,12 +586,13 @@ function renderCustView(){
 function custSearchText(c){const ks=custContracts(c.id);return [c.name,c.biz_name,c.ceo,c.phone,c.phone2,c.address,c.biz_no,c.owner_name,staffName(c.owner),...ks.map(k=>k.serial+" "+k.product)].join(" ").toLowerCase().replace(/-/g,"")}
 function renderCustList(){
   const q=ui.q.trim().toLowerCase().replace(/-/g,"");
-  const list=customers.filter(c=>(!ui.stage||custContracts(c.id).some(k=>k.stage===ui.stage))&&(!ui.ctype||custContracts(c.id).some(k=>(k.contract_type||"구매")===ui.ctype))&&(!q||custSearchText(c).includes(q)))
+  const gOk=c=>{if(!ui.grade)return true;const g=gradeOf(c);return g&&(ui.grade==="any"||g.g===ui.grade)};
+  const list=customers.filter(c=>gOk(c)&&(!ui.stage||custContracts(c.id).some(k=>k.stage===ui.stage))&&(!ui.ctype||custContracts(c.id).some(k=>(k.contract_type||"구매")===ui.ctype))&&(!q||custSearchText(c).includes(q)))
     .map(c=>({c,k:custContracts(c.id)[0]})).sort((a,b)=>((b.k&&b.k.contract_date)||b.c.created_at||"").localeCompare((a.k&&a.k.contract_date)||a.c.created_at||""));
-  document.getElementById("cnt").textContent=`고객 ${customers.length}곳${q||ui.stage||ui.ctype?` · 표시 ${list.length}`:""}`;
+  document.getElementById("cnt").textContent=`고객 ${customers.length}곳${q||ui.stage||ui.ctype||ui.grade?` · 표시 ${list.length}`:""}`;
   const shown=list.slice(0,300);
   document.getElementById("clist").innerHTML=shown.map(({c,k})=>`<div class="citem${ui.sel===c.id?" sel":""}" data-id="${c.id}" tabindex="0">
-    <span class="n">${esc(c.name)}</span>
+    <span class="n">${esc(c.name)}${gradeBadge(c)}</span>
     <span class="s"><span>${esc(c.phone||c.phone2)}</span>${k?`<span>${esc([k.product,k.size].filter(Boolean).join(" "))}${k.serial?" · "+esc(k.serial):""}</span>`:""}<span>담당 ${esc(staffName(c.owner)||c.owner_name||"-")}</span></span>
     <span class="s">${k?`${k.contract_type&&k.contract_type!=="구매"?`<span class="tag ct-${esc(k.contract_type)}">${esc(k.contract_type)}</span>`:""}<span class="tag st-${esc(k.stage)}">${esc(k.stage)}</span>`:""}${c.collector||c.collector_name?`<span class="tag">수금 ${esc(staffName(c.collector)||c.collector_name||"")}</span>`:""}</span></div>`).join("")
     +(list.length>shown.length?`<div class="empty" style="padding:14px">${list.length-shown.length}곳 더 있습니다. 검색으로 좁혀 주세요.</div>`:"")
@@ -615,7 +620,12 @@ function custFieldsHtml(c,ro){return `    <div class="g2">${inp("name","업체�
       ${isOffice()?inp("collector","수금 배정",staffName(c.collector)||c.collector_name||"","text",false,'list="ownList" placeholder="이름 입력 또는 목록에서 선택"'):inp("_c","수금 배정",staffName(c.collector)||c.collector_name,"text",true)}</div>
     <datalist id="ownList">${staff.filter(s=>s.active).map(s=>`<option value="${esc(s.name)}">${esc(ROLE[s.role])}</option>`).join("")}</datalist>
     ${c.owner_name&&!c.owner?`<p class="mapt">엑셀에 적힌 담당자: ${esc(c.owner_name)} (직원 계정과 아직 연결되지 않음)</p>`:""}
-    <label class="f">메모<textarea name="memo" ${ro?"readonly":""}>${esc(c.memo)}</textarea></label>`}
+    <label class="f">메모<textarea name="memo" ${ro?"readonly":""}>${esc(c.memo)}</textarea></label>${gradeFieldsHtml(c)}`}
+function gradeFieldsHtml(c){if(!me||me.role==="tech"||ui.noGrades&&!isOffice())return"";const r=gradeRow(c)||{};const g=gradeOf(c);const a=autoRed(c);
+  if(ui.noGrades)return `<p class="warnbox">관리등급을 쓰려면 Supabase에서 phase1o.sql을 실행해 주세요.</p>`;
+  if(!isOffice())return g?`<p class="gwarn ${g.g==="블랙"?"g-black":"g-red"}">관리등급: ${g.g}${g.reason?" — "+esc(g.reason):""}</p>`:"";
+  return `<fieldset class="nfiles"><legend>관리등급</legend><div class="g2">${sel("grade","등급",[["","자동 (미수 60일 이상이면 레드)"],["레드","레드 (주의)"],["블랙","블랙 (거래 중지)"],["정상","정상 (자동 레드 안 붙임)"]],r.grade||"")}${inp("grade_reason","사유 (사실 위주로)",r.reason||"","text",false,'placeholder="예: 미수 120만원, 3회 독촉 / 분쟁 중"')}</div>
+    <p class="mapt" style="margin:4px 0 0">지금 표시: <b>${g?g.g:"없음"}</b>${g&&g.reason?" — "+esc(g.reason):""}${a&&r.grade!=="정상"?"":a?` · 자동 기준 해당(미수 ${won0(a.amt)}원, ${a.days}일)`:""}${r.set_at?` · ${esc(r.set_at.slice(0,10))} 지정`:""}</p></fieldset>`}
 async function saveCustomer(c,fd){
     const p={name:fd.get("name").trim(),biz_name:fd.get("biz_name").trim(),ceo:fd.get("ceo").trim(),phone:fmtPhone(fd.get("phone")),phone2:fmtPhone(fd.get("phone2")),biz_no:fmtBiz(fd.get("biz_no")),address:fd.get("address").trim(),memo:fd.get("memo")};
     if(isOffice()){const who=v=>{v=String(v||"").trim();const s=v&&staff.find(x=>x.name===v||(x.aliases||[]).includes(v));return{id:s?s.user_id:null,name:s?s.name:v}};
@@ -623,10 +633,13 @@ async function saveCustomer(c,fd){
       if("collector_name" in c)p.collector_name=cl.name;else if(cl.name&&!cl.id){{toast("직원 목록에 없는 수금 담당자를 적으려면 Supabase에서 phase1n.sql을 실행해 주세요");return false}}}
     if(!p.name){toast("업체명을 입력하세요");return false}
     const {error}=await sb.from("customers").update(p).eq("id",c.id);if(error){toast("저장하지 못했습니다: "+error.message);return false}
+    if(isOffice()&&!ui.noGrades&&fd.get("grade")!==null){const g=fd.get("grade")||"",rs=(fd.get("grade_reason")||"").trim(),r=gradeRow(c);
+      if(g&&(!r||r.grade!==g||(r.reason||"")!==rs)){const {error:e2}=await sb.from("customer_grades").upsert({customer_id:c.id,grade:g,reason:rs,set_at:new Date().toISOString(),set_by:me.id});if(e2)toast("관리등급은 저장하지 못했습니다: "+e2.message)}
+      else if(!g&&r){await sb.from("customer_grades").delete().eq("customer_id",c.id)}}
     if(isOffice()){const lk=custContracts(c.id)[0];if(lk){const o=p.owner_name||"",cl=p.collector?(staffName(p.collector)||""):(p.collector_name||"");const nm=o&&cl&&cl!==o?o+"/"+cl:o;
       if(nm!==(lk.sales3_name||"")||p.owner!==(lk.sales3||null))await sb.from("contracts").update({sales3:p.owner,sales3_name:nm}).eq("id",lk.id)}}
     if(isOffice()&&(p.name!==c.name||(p.address&&p.address!==c.address))){const up={customer_name:p.name};if(p.address)up.address=p.address;await sb.from("jobs").update(up).eq("customer_id",c.id)}
-    toast("저장했습니다");await reload(["customers","jobs","contracts"]);return true}
+    toast("저장했습니다");await reload(["customers","jobs","contracts","grades"]);return true}
 function renderCustInfo(c){
   const ro=!canEditCust(c);const tb=document.getElementById("tabBody");
   tb.innerHTML=`<form class="cform" id="cf"><fieldset><legend>고객정보</legend>
@@ -924,7 +937,7 @@ function ctrCell(col,k,c,st,basis){
     case"ctype":return `<td><span class="tag ct-${esc(k.contract_type||"구매")}">${esc(k.contract_type||"구매")}</span></td>`;
     case"stage":return `<td><span class="tag st-${esc(k.stage)}">${esc(k.stage)}</span></td>`;
     case"trial":return `<td>${trialCell(k)}</td>`;
-    case"name":return `<td title="${esc(c.name||"")}"><b>${esc(c.name||"")}</b></td>`;
+    case"name":return `<td title="${esc(c.name||"")}"><b>${esc(c.name||"")}</b>${gradeBadge(c)}</td>`;
     case"ceo":return `<td>${esc(c.ceo||"")}</td>`;
     case"phone":return `<td>${esc(c.phone||c.phone2||"")}</td>`;
     case"addr":return `<td class="wrap">${esc(c.address||"")}</td>`;
@@ -1074,7 +1087,7 @@ function openCustPopup(c,after){c=custById(c.id)||c;const d=document.getElementB
 function goCust(c){if(!c)return;const d=document.getElementById("dlg");if(d.open)d.close();ui.view="cust";ui.sel=c.id;ui.ctab="info";ui._fresh=true;render();
   setTimeout(()=>{const it=document.querySelector(`.citem[data-id="${c.id}"]`);if(it&&it.scrollIntoView)it.scrollIntoView({block:"nearest"});const n=document.querySelector('#cf [name="name"]');if(n)n.focus()},50)}
 function custSummary(c,k){if(!c)return"";const pr=k?[k.product,k.size,k.serial&&"SN "+k.serial].filter(Boolean).join(" "):"";
-  return `<p class="mapt dsum"><b>${esc(c.name)}</b>${c.address?" · "+esc(c.address):""}${c.phone||c.phone2?" · "+esc(c.phone||c.phone2):""}${pr?" · 제품: "+esc(pr):""}</p>`}
+  const g=gradeOf(c);return `<p class="mapt dsum"><b>${esc(c.name)}</b>${gradeBadge(c)}${c.address?" · "+esc(c.address):""}${c.phone||c.phone2?" · "+esc(c.phone||c.phone2):""}${pr?" · 제품: "+esc(pr):""}</p>${g?`<p class="gwarn ${g.g==="블랙"?"g-black":"g-red"}">⚠ ${g.g} 고객${g.reason?" — "+esc(g.reason):""}</p>`:""}`}
 /* 계약관리에서 신규계약: 고객을 검색해 고른 뒤 계약 창 */
 function newContractPick(){const pool=customers.filter(x=>isOffice()||x.owner===me.id);
   openDlg("신규계약 · 고객 선택",`<div id="jf" style="display:grid;gap:10px"><label class="f">고객 검색<input id="jcQ" type="search" autocomplete="off" placeholder="업체명·대표자·전화번호·주소·시리얼"></label>
@@ -1082,6 +1095,18 @@ function newContractPick(){const pool=customers.filter(x=>isOffice()||x.owner===
     <p class="mapt" id="jcHint">두 글자 이상 입력하면 고객 목록이 나옵니다. 처음 오는 고객은 ‘새 고객 등록’으로 먼저 등록하세요.</p></div>`,
     [["새 고객 등록","gocust",()=>{newCustomer()}],["취소"],["다음","pri",()=>{const c=pool.find(x=>x.id===val("jcId"));if(!c){toast("고객을 검색해서 목록에서 골라 주세요");return true}contractDlg(c,null);return true}]]);
   bindCustPicker(pool)}
+/* 관리등급: 레드(주의)·블랙(거래 중지). 수동 지정이 우선, 없으면 미수 60일 이상 자동 레드. 기사에게는 표시 안 함 */
+const RED_DAYS=60;
+function gradeRow(c){return grades.find(g=>g.customer_id===c.id)||null}
+function autoRed(c){let amt=0,days=0;const td=new Date(today());
+  custContracts(c.id).forEach(k=>{if(["취소","완료"].includes(k.stage))return;const st=payStat(k);const un=k.stage==="미수"||(st.n&&st.unpaid>0)?Math.max(0,st.unpaid):0;if(!un)return;
+    const ij=installOf(k);const ref=(ij&&ij.done_date)||k.contract_date;if(!ref)return;const d=Math.floor((td-new Date(ref))/864e5);if(d>=RED_DAYS){amt+=un;days=Math.max(days,d)}});
+  return amt?{amt,days}:null}
+function gradeOf(c){if(!c||!me||me.role==="tech")return null;const r=gradeRow(c);
+  if(r&&r.grade!=="정상")return{g:r.grade,reason:r.reason||"",auto:false};if(r)return null;
+  const a=autoRed(c);return a?{g:"레드",reason:`미수 ${won0(a.amt)}원 · ${a.days}일 경과 (자동)`,auto:true}:null}
+function gradeWarn(c){const g=gradeOf(c);return g?`<p class="gwarn ${g.g==="블랙"?"g-black":"g-red"}">⚠ ${g.g} 고객${g.reason?" — "+esc(g.reason):""}</p>`:""}
+function gradeBadge(c){const g=gradeOf(c);return g?` <span class="gbadge ${g.g==="블랙"?"g-black":"g-red"}" title="${esc(g.reason)}">${g.g}</span>`:""}
 function hasTrialCol(){return contracts.some(k=>"trial_end" in k)}
 function trialCell(k){const d=k.trial_end;if(!d)return"";const td=today();const open=!["완료","취소","철거"].includes(k.stage);const days=Math.round((new Date(d)-new Date(td))/864e5);
   const cls=open&&days<0?"late":open&&days<=3?"soon":"";return `<span class="trial ${cls}" title="${open?(days<0?-days+"일 지남":days===0?"오늘 종료":days+"일 남음"):""}">${esc(ymd2(d))}</span>`}
@@ -1124,6 +1149,7 @@ function contractDlg(c,k,tpl){
    <datalist id="stList">${staff.filter(s=>s.active).map(s=>`<option value="${esc(s.name)}">`).join("")}<option value="무료체험"></datalist>
    <datalist id="pdList">${[...new Set(contracts.map(x=>x.product).filter(Boolean))].map(x=>`<option value="${esc(x)}">`).join("")}</datalist></div>`,
    ro?[["고객정보","gocust",()=>{openCustPopup(c,refreshK);return true}],["닫기"]]:[["고객정보","gocust",()=>{openCustPopup(c,refreshK);return true}],["취소"],...(!isNew?[["복사","",()=>{contractDlg(c,null,k);return true}]]:[]),...(!isNew&&isAdmin()?[["삭제","danger",async()=>{const {error}=await sb.from("contracts").delete().eq("id",k.id);toast(error?"삭제하지 못했습니다":"삭제했습니다");reload(["contracts"])}]]:[]),["저장","pri",async()=>{
+     if(isNew){const gg=gradeOf(c);if(gg&&gg.g==="블랙"&&!(await askConfirm(`블랙(거래 중지) 고객입니다.${gg.reason?" ("+gg.reason+")":""} 계속 등록할까요?`)))return true}
      const f=fdata("kf");const n=x=>Number(f.get(x)||0)||0;
      const p={contract_date:f.get("contract_date")||null,stage:f.get("stage"),contract_type:f.get("contract_type")||"구매",contract_doc:f.get("contract_doc"),channel:f.get("channel").trim(),referrer:f.get("referrer").trim(),free_trial:f.get("free_trial").trim(),...(hasTrialCol()||f.get("trial_end")?{trial_end:f.get("trial_end")||null}:{}),
        sales1:f.get("sales1").trim(),sales2:f.get("sales2").trim(),product:f.get("product").trim(),size:f.get("size").trim(),serial:f.get("serial").trim(),
@@ -1160,7 +1186,7 @@ function jobFromContract(c,k){return{kind:"install",customer_id:c.id,contract_id
 function jobCard(j,sel_){
   const c=custById(j.customer_id);const p=j.product||{};
   const tn=(j.techs||[]).map(staffName).filter(Boolean);const extra=String(j.tech_names||"").split(/[\s,/]+/).filter(t=>t&&!tn.includes(t)&&!staff.some(x=>tn.includes(x.name)&&(x.aliases||[]).includes(t))).join(" ");const who=[tn.join(", "),extra].filter(Boolean).join(" · ");
-  return `<div class="card click" data-j="${j.id}"><div class="t">${sel_?`<input type="checkbox" class="jsel" data-js="${j.id}" ${ui.jsel.has(j.id)?"checked":""} aria-label="선택" style="width:18px;height:18px">`:""}<span class="badge ${j.kind}">${KLABEL[j.kind]||j.kind}</span><span class="badge s-${j.status}">${j.status}</span>${esc(j.customer_name||(c&&c.name)||"")}${(n=>n?` <span class="badge" title="이 건의 사진">사진 ${n}</span>`:"")(jobFiles(j).length)}</div>
+  return `<div class="card click" data-j="${j.id}"><div class="t">${sel_?`<input type="checkbox" class="jsel" data-js="${j.id}" ${ui.jsel.has(j.id)?"checked":""} aria-label="선택" style="width:18px;height:18px">`:""}<span class="badge ${j.kind}">${KLABEL[j.kind]||j.kind}</span><span class="badge s-${j.status}">${j.status}</span>${esc(j.customer_name||(c&&c.name)||"")}${c?gradeBadge(c):""}${(n=>n?` <span class="badge" title="이 건의 사진">사진 ${n}</span>`:"")(jobFiles(j).length)}</div>
    <div class="d"><span>${esc(j.visit_date?("방문 "+j.visit_date+(j.visit_time?" "+j.visit_time:"")):"접수 "+(j.request_date||""))}</span><span>${esc(j.kind==="addon"?(a=>[a.product&&"추가: "+a.product,a.size].filter(Boolean).join(" "))(addonItem(j)):[p.product,p.size,p.options&&"("+p.options+")"].filter(Boolean).join(" "))}</span><span>기사 ${esc(who||"미배정")}</span>${j.address?`<span>${esc(j.address)}</span>`:""}</div>
    ${j.symptom?`<div class="d">${esc(j.symptom)}</div>`:""}
    ${j.kind==="as"&&(j.cost||j.pay_status||j.paid_type)?`<div class="d">${j.paid_type?`<span class="badge">${esc(j.paid_type)}</span>`:""}${j.cost?`<span class="money">비용 ${won0(j.cost)}원</span>`:""}${j.pay_status?`<span class="badge ${j.pay_status==="미수"?"as":"install"}">${esc(j.pay_status)}</span>`:""}${j.pay_method?`<span>${esc(j.pay_method)}${j.pay_name?" · "+esc(j.pay_name):""}</span>`:""}${j.closed?`<span class="badge">매출마감</span>`:""}</div>`:""}</div>`;
@@ -1252,7 +1278,7 @@ function wCell(col,j,c,k,td){const p=j.product||{};const rd=rdOf(j);const vd=j.v
   switch(col){
     case"rmon":return `<td>${esc(rd.slice(2,4)+rd.slice(5,7))}</td>`;
     case"kind":return `<td class="kc k-${j.kind}">${KLABEL[j.kind]||j.kind}</td>`;
-    case"name":return `<td title="${esc(j.customer_name||c.name||"")}"><b>${esc(j.customer_name||c.name||"")}</b></td>`;
+    case"name":return `<td title="${esc(j.customer_name||c.name||"")}"><b>${esc(j.customer_name||c.name||"")}</b>${c.id?gradeBadge(c):""}</td>`;
     case"ceo":return `<td>${esc(c.ceo||"")}</td>`;
     case"phone":return `<td>${esc(c.phone||c.phone2||"")}</td>`;
     case"region":return `<td>${esc(region(j.address||c.address))}</td>`;
@@ -1358,7 +1384,7 @@ function jobDlg(j,c,kind,tpl){
   const pick=isNew&&!c?`<label class="f">고객 검색<input id="jcQ" type="search" autocomplete="off" placeholder="업체명·대표자·전화번호·주소·시리얼"></label>
      <input type="hidden" name="custId" id="jcId"><div id="jcSel"></div><div id="jcRes" class="pickres"></div>
      <p class="mapt" id="jcHint">두 글자 이상 입력하면 고객 목록이 나옵니다. 없는 고객은 ‘고객’ 화면의 ‘+ 새 고객’으로 먼저 등록하세요.</p>`
-    :`<p class="mapt dsum"><b>${esc(j.customer_name)}</b> · ${esc(j.address||"")}${c&&c.phone?" · "+esc(c.phone):""} · 제품: ${esc([p.product,p.size,p.options&&"("+p.options+")",p.serial&&"SN "+p.serial].filter(Boolean).join(" ")||"-")}</p>`;
+    :`<p class="mapt dsum"><b>${esc(j.customer_name)}</b> · ${esc(j.address||"")}${c&&c.phone?" · "+esc(c.phone):""} · 제품: ${esc([p.product,p.size,p.options&&"("+p.options+")",p.serial&&"SN "+p.serial].filter(Boolean).join(" ")||"-")}</p>${c?gradeWarn(c):""}`;
   openDlg(`${KLABEL[j.kind]} ${isNew?(tpl?"접수 (복사)":"접수"):"작업"}${j.customer_name?" · "+esc(j.customer_name):""}`,`<div id="jf" style="display:grid;gap:10px">${tpl?`<p class="warnbox" style="margin:0">복사한 접수입니다. 방문일·상태·처리 내용은 새로 입력하세요. 사진은 복사되지 않습니다.</p>`:""}
    ${pick}
    ${isNew||off?`<div class="kpick chk" role="radiogroup" aria-label="구분">${KINDS.map(k=>`<label><input type="radio" name="kind" value="${k}" ${j.kind===k?"checked":""}>${KLABEL[k]}</label>`).join("")}</div>`:""}
@@ -1385,6 +1411,7 @@ function jobDlg(j,c,kind,tpl){
      if(isNew&&!c){const cc=pickable.find(x=>x.id===f.get("custId"));
        if(!cc)return toast("고객을 검색해서 목록에서 골라 주세요");c=cc;const k=custContracts(cc.id)[0];
        Object.assign(j,{customer_id:cc.id,contract_id:k?k.id:null,customer_name:cc.name,address:cc.address,product:productOf(k)})}
+     if(isNew){const gg=gradeOf(c);if(gg&&gg.g==="블랙"&&!(await askConfirm(`블랙(거래 중지) 고객입니다.${gg.reason?" ("+gg.reason+")":""} 계속 접수할까요?`)))return true}
      const nk_=f.get("kind")||j.kind;if(nk_!==j.kind&&!isNew){j=Object.assign({},j,{kind:nk_})}else j.kind=nk_;
      if(j.kind==="addon"&&(off||isNew)){j.product={product:(f.get("add_item")||"").trim(),size:(f.get("add_size")||"").trim()}}
      const pt={kind:j.kind,...(j.kind==="addon"&&(off||isNew)?{product:j.product}:{}),status:f.get("status")||j.status,done_date:f.get("done_date")||null,result:f.get("result")||""};
