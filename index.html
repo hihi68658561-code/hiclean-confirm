@@ -876,7 +876,7 @@ function bindNewCustFiles(px="nf"){const sel=[];const g=document.getElementById(
   return sel}
 
 /* ================= 계약관리 (당월 계약·최종결제·미수) ================= */
-const PMETH=["카드","현금","입금","캐피탈","CMS","승인취소"];
+const PMETH=["카드","현금","캐피탈","CMS","승인취소"];
 const CHKV=["OK","임시코드","기존고객","소매마감","소매매출","결제방법??"];
 let payIdx={};
 function buildPayIdx(){payIdx={};payments.forEach(p=>(payIdx[p.contract_id]=payIdx[p.contract_id]||[]).push(p));Object.values(payIdx).forEach(a=>a.sort((x,y)=>(x.pay_date||"").localeCompare(y.pay_date||"")))}
@@ -1042,7 +1042,7 @@ function renderPaySec(k){
    <div class="paysum"><span>합계금액 <b>${won0(k.amount)}</b></span><span>입금합계 <b>${won0(s.paid)}</b></span><span>미수금 <b class="${s.unpaid>0?"neg":""}">${won0(s.unpaid)}</b></span><span>최종결제일 <b>${esc(s.last||"-")}</b></span></div>
    ${s.n&&s.unpaid<=0&&k.stage!=="완료"&&k.stage!=="취소"&&can?`<div class="donebox">미수금이 0원이 되었습니다. <button type="button" class="btn sm pri" id="pDone">진행단계를 ‘완료’로 바꾸기</button></div>`:""}
    <table class="stafft"><thead><tr><th>날짜</th><th>수단</th><th>카드사·입금자</th><th class="num">금액</th><th>메모</th>${can?"<th></th>":""}</tr></thead><tbody>
-   ${ps.map(p=>ui.payEdit===p.id&&can?`<tr class="pedit" data-pe="${p.id}"><td><input type="date" data-f="pay_date" value="${esc(p.pay_date||"")}" aria-label="날짜"></td><td><select data-f="method" aria-label="수단">${PMETH.map(m=>`<option ${m===p.method?"selected":""}>${m}</option>`).join("")}</select></td>
+   ${ps.map(p=>ui.payEdit===p.id&&can?`<tr class="pedit" data-pe="${p.id}"><td><input type="date" data-f="pay_date" value="${esc(p.pay_date||"")}" aria-label="날짜"></td><td><select data-f="method" aria-label="수단">${PMETH.map(m=>`<option ${m===(p.method==="입금"?"현금":p.method)?"selected":""}>${m}</option>`).join("")}</select></td>
      <td><input data-f="payer" value="${esc(p.payer||"")}" list="cardList2" aria-label="카드사·입금자"></td><td><input type="number" data-f="amount" value="${esc(p.amount)}" aria-label="금액" style="text-align:right"></td><td><input data-f="memo" value="${esc(p.memo||"")}" aria-label="메모"></td>
      <td style="white-space:nowrap"><button type="button" class="btn sm pri" data-psave="${p.id}">저장</button> <button type="button" class="btn sm" data-pcancel>취소</button></td></tr>`
    :`<tr><td>${esc(p.pay_date||"")}</td><td>${esc(p.method)}</td><td>${esc(p.payer)}</td><td class="num ${p.amount<0?"neg":""}">${won0(p.amount)}</td><td>${esc(p.memo)}</td>${can?`<td style="white-space:nowrap"><button type="button" class="btn sm" data-pedit="${p.id}" aria-label="입금 수정">수정</button> <button type="button" class="btn sm danger" data-pdel="${p.id}" aria-label="입금 삭제">삭제</button></td>`:""}</tr>`).join("")||`<tr><td colspan="6" class="mapt">입금 기록이 없습니다.</td></tr>`}</tbody></table>
