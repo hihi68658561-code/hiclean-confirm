@@ -179,7 +179,6 @@ body.resizing,body.resizing *{cursor:col-resize!important;user-select:none}
 .wt.sch td.sres.ok{background:#5B9BD5;color:#fff;font-weight:700}.wt.sch td.sres.no{background:#FF0000;color:#fff;font-weight:700}.wt.sch td.sres.hold{background:#D9D9D9;color:#1b1b1b}
 .wt.sch td.sday{font-weight:700;cursor:default}.wt.sch td.sref{color:#c00000;text-align:left;min-width:90px;font-size:12px}.wt.sch tr.ssat td.sday{background:#F4CCCC;color:#1b1b1b}.wt.sch tr.shol td:not(.sk):not(.sres):not(.stm):not(.lv){background:#D9D9D9;color:#1b1b1b}
 .wt.sch tr.sfirst td{border-top:2px solid var(--mute)}.wt.sch tr.stoday td.sday{background:var(--accent);color:#fff}.wt.sch td.se{height:24px}.wt.sch td.se:hover{background:var(--accent-weak)}.wt.sch tr:hover td{filter:none}
-.wt.am .badge.s-완료{background:#fff;color:#2e7d32;border:1px solid #2e7d32}.wt.am .badge.s-취소{background:#e53935;color:#fff;text-decoration:none}.wt.am .badge.s-보류{color:#1b1b1b}
 .wt.am tfoot th,.wt.ct tfoot th{position:sticky;bottom:0;background:var(--line2);border-top:1px solid var(--line);padding:6px 7px}
 .wt td.memo{max-width:320px;min-width:200px;font-size:12px;color:var(--mute)}.clamp{display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
 .wt td.ckc{text-align:center;font-size:12px}.wt td.ckc.ok{color:var(--ok-fg);font-weight:700}.wt td.ckc.note{color:var(--warn-fg)}
@@ -280,6 +279,20 @@ dialog{max-width:720px}
   #printRoot{display:block}
   #printRoot .sheet{height:297mm;min-height:0;overflow:hidden}
 }
+
+/* ===== 아이콘(배지) 통일: 같은 크기, 상태·구분별 색 ===== */
+.badge,.tag{display:inline-block;box-sizing:border-box;min-width:44px;font-size:11.5px;line-height:18px;padding:0 9px;border-radius:10px;font-weight:700;text-align:center;white-space:nowrap;vertical-align:middle;border:1px solid transparent;text-decoration:none;outline:none;background:#f1f3f5;color:#495057}
+.badge.s-접수,.tag.st-미정{background:#FFF3C4;color:#8a5a00;border-color:#FFF3C4}
+.badge.s-배정,.tag.st-확정{background:#DCEBFF;color:#1d4ed8;border-color:#DCEBFF}
+.badge.s-완료,.tag.st-완료{background:#fff;color:#2e7d32;border-color:#2e7d32}
+.badge.s-취소,.tag.st-취소{background:#e53935;color:#fff;border-color:#e53935}
+.badge.s-미수,.tag.st-미수{background:#fff;color:#c62828;border-color:#c62828}
+.badge.s-보류,.tag.st-보류{background:#e9ecef;color:#495057;border-color:#adb5bd;border-style:dashed}
+.tag.st-철거{background:#868e96;color:#fff;border-color:#868e96}
+.tag.ct-구매{background:#fff;color:#343a40;border-color:#adb5bd}
+.tag.ct-무료체험,.tag.ct-무상임대,.tag.ct-경품,.tag.ct-무상증정{background:#fff;color:#7e22ce;border-color:#9933FF}
+.badge.install{background:#00CC66;color:#1b1b1b;border-color:#00CC66}.badge.as{background:#9933FF;color:#fff;border-color:#9933FF}.badge.addon{background:#FFC000;color:#1b1b1b;border-color:#FFC000}.badge.remove{background:#BFBFBF;color:#1b1b1b;border-color:#BFBFBF}
+.wt td.k-install,.sumt .k-install{background:#00CC66;color:#1b1b1b}.wt td.k-as,.sumt .k-as{background:#9933FF;color:#fff}.wt td.k-addon,.sumt .k-addon{background:#FFC000;color:#1b1b1b}.wt td.k-remove,.sumt .k-remove{background:#BFBFBF;color:#1b1b1b}
 </style>
 </head>
 <body>
@@ -1548,7 +1561,7 @@ function jobCard(j,sel_){
   return `<div class="card click" data-j="${j.id}"><div class="t">${sel_?`<input type="checkbox" class="jsel" data-js="${j.id}" ${ui.jsel.has(j.id)?"checked":""} aria-label="선택" style="width:18px;height:18px">`:""}<span class="badge ${j.kind}">${KLABEL[j.kind]||j.kind}</span><span class="badge s-${j.status}">${j.status}</span>${esc(j.customer_name||(c&&c.name)||"")}${c?gradeBadge(c):""}${(n=>n?` <span class="badge" title="이 건의 사진">사진 ${n}</span>`:"")(jobFiles(j).length)}</div>
    <div class="d"><span>${esc(j.visit_date?("방문 "+j.visit_date+(j.visit_time?" "+j.visit_time:"")):"접수 "+(j.request_date||""))}</span><span>${esc(j.kind==="addon"?(a=>[a.product&&"추가: "+a.product,a.size].filter(Boolean).join(" "))(addonItem(j)):[p.product,p.size,p.options&&"("+p.options+")"].filter(Boolean).join(" "))}</span><span>기사 ${esc(who||"미배정")}</span>${j.address?`<span>${esc(j.address)}</span>`:""}</div>
    ${(n=>n?`<div class="d">${esc(n)}</div>`:"")(jobNote(j))}
-   ${j.kind==="as"&&(j.cost||j.pay_status||j.paid_type)?`<div class="d">${j.paid_type?`<span class="badge">${esc(j.paid_type)}</span>`:""}${j.cost?`<span class="money">비용 ${won0(j.cost)}원</span>`:""}${j.pay_status?`<span class="badge ${j.pay_status==="미수"?"as":"install"}">${esc(j.pay_status)}</span>`:""}${j.pay_method?`<span>${esc(j.pay_method)}${j.pay_name?" · "+esc(j.pay_name):""}</span>`:""}${j.closed?`<span class="badge">마감 OK</span>`:""}</div>`:""}</div>`;
+   ${j.kind==="as"&&(j.cost||j.pay_status||j.paid_type)?`<div class="d">${j.paid_type?`<span class="badge">${esc(j.paid_type)}</span>`:""}${j.cost?`<span class="money">비용 ${won0(j.cost)}원</span>`:""}${j.pay_status?`<span class="badge ${j.pay_status==="미수"?"s-미수":"s-완료"}">${esc(j.pay_status)}</span>`:""}${j.pay_method?`<span>${esc(j.pay_method)}${j.pay_name?" · "+esc(j.pay_name):""}</span>`:""}${j.closed?`<span class="badge">마감 OK</span>`:""}</div>`:""}</div>`;
 }
 function bindJobCards(root){
   root.querySelectorAll("[data-j]").forEach(el=>el.onclick=e=>{if(e.target.closest(".jsel"))return;jobDlg(jobs.find(j=>j.id===el.dataset.j))});
@@ -1659,7 +1672,7 @@ function wCell(col,j,c,k,td){const p=j.kind==="as"?asProd(j):(j.product||{});con
     case"result":return `<td class="wrap">${esc(j.result||"")}</td>`;
     case"sales":return `<td>${esc(s3Text(k)||staffName(c.owner)||c.owner_name||"")}</td>`;
     case"tech":return `<td>${esc(whoOf(j)||"")}</td>`;
-    case"status":return `<td><span class="badge s-${j.status}">${esc(j.status)}</span>${j.kind==="as"&&j.pay_status==="미수"?` <span class="badge remove">미수</span>`:""}</td>`;
+    case"status":return `<td><span class="badge s-${j.status}">${esc(j.status)}</span>${j.kind==="as"&&j.pay_status==="미수"?` <span class="badge s-미수">미수</span>`:""}</td>`;
     case"done":return `<td>${esc(ymd2(j.done_date||""))}</td>`;
     case"photo":{const n=jobFiles(j).length;return `<td>${n?n+"장":""}</td>`}
   }return "<td></td>"}
@@ -1726,7 +1739,7 @@ function payTable(list){
   return `<div class="wrapx" style="padding-top:12px"><table class="stafft paytable"><thead><tr>${isAdmin()?`<th style="width:30px"></th>`:""}<th>결제수단</th><th>유상</th><th>결제일</th><th>카드사·입금자</th><th style="text-align:right">카드</th><th style="text-align:right">현금·입금</th><th>업체명</th><th>메모</th><th>상태</th></tr></thead><tbody>
    ${rows.map(j=>{const amt=won0(j.cost);const card=j.pay_method==="카드";return `<tr data-j="${j.id}" style="cursor:pointer">${isAdmin()?`<td><input type="checkbox" class="jsel" data-js="${j.id}" ${ui.jsel.has(j.id)?"checked":""} aria-label="선택"></td>`:""}<td>${esc(j.pay_method||"-")}</td><td>${esc(j.paid_type||"")}</td><td>${esc(j.pay_date?j.pay_date.slice(5).replace("-","/"):"")}</td><td>${esc(j.pay_name||"")}</td>
      <td class="money" style="text-align:right">${card&&j.cost?amt:""}</td><td class="money" style="text-align:right">${!card&&j.cost?amt:""}</td><td>${esc(j.customer_name)}</td><td>${esc(j.pay_memo||"")}</td>
-     <td>${j.pay_status==="미수"?`<span class="badge as">미수</span>`:j.closed?`<span class="badge">마감 OK</span>`:j.pay_status==="완료"?`<span class="badge install">납부</span>`:""}</td></tr>`}).join("")||`<tr><td colspan="10" class="mapt">해당하는 A/S 건이 없습니다.</td></tr>`}</tbody>
+     <td>${j.pay_status==="미수"?`<span class="badge s-미수">미수</span>`:j.closed?`<span class="badge">마감 OK</span>`:j.pay_status==="완료"?`<span class="badge s-완료">납부</span>`:""}</td></tr>`}).join("")||`<tr><td colspan="10" class="mapt">해당하는 A/S 건이 없습니다.</td></tr>`}</tbody>
    <tfoot><tr><th colspan="${isAdmin()?5:4}">합계 (납부 완료 기준)</th><th class="money" style="text-align:right">${won0(sumCard)}</th><th class="money" style="text-align:right">${won0(sumCash)}</th><th colspan="3">미수 ${won0(sumUn)}원</th></tr></tfoot></table></div>`;
 }
 function custLabel(c){return `${c.name} · ${c.phone||c.phone2||"전화 없음"}`}
