@@ -1971,7 +1971,7 @@ document.getElementById("fileIn").onchange=async e=>{
   if(!parsed)return openDlg("이관할 수 없습니다",`<p>첫 줄 제목에서 ‘업체명’ 열을 찾지 못했습니다. 고객관리 엑셀이 맞는지 확인해 주세요.</p>`,[["닫기"]]);
   const plan=planImport(parsed);
   openDlg("엑셀 이관",`<p><b>${esc(f.name)}</b> · ${parsed.length}줄</p>
-   <table class="stafft"><tbody><tr><td>새 고객</td><td>${plan.newCust.length}곳</td></tr><tr><td>새 계약</td><td>${plan.newCtr.length}건</td></tr><tr><td>새 설치 작업</td><td>${plan.newJob.length}건</td></tr><tr><td>새 입금 내역</td><td>${plan.newPay.length}건</td></tr><tr><td>이미 있는 계약</td><td>${plan.skipped}건</td></tr></tbody></table>
+   <table class="stafft"><tbody><tr><td>새 고객</td><td>${plan.newCust.length}곳</td></tr><tr><td>새 계약</td><td>${plan.newCtr.length}건</td></tr><tr><td>새 설치 작업</td><td>${plan.newJob.length}건${plan.missJob.length?` <small class="mapt">(이 중 ${plan.missJob.length}건은 설치 작업이 빠져 있던 기존 계약에 추가)</small>`:""}</td></tr><tr><td>새 입금 내역</td><td>${plan.newPay.length}건</td></tr><tr><td>이미 있는 계약</td><td>${plan.skipped}건</td></tr></tbody></table>
    ${plan.updCtr.length?`<label class="chip"><input type="checkbox" id="updEx" checked>이미 있는 계약 ${plan.updCtr.length}건도 엑셀 기준으로 구분·영업 경로·진행단계·승인처·마감 체크를 갱신 (입금 기록이 없는 계약은 입금 ${plan.updCtr.reduce((a,u)=>a+u.pays.length,0)}건 추가)</label>`:""}
    ${plan.payWarn?`<p class="mapt">입금 칸 합계가 엑셀 ‘합계금액’과 다른 줄이 ${plan.payWarn}건 있습니다. 이관 후 계약관리에서 미수금을 확인해 주세요.</p>`:""}
    <p class="mapt">엑셀 한 줄이 계약 1건과 설치 작업 1건이 됩니다. 같은 사업자번호 또는 같은 업체명·휴대번호는 한 고객으로 묶습니다. 입금일자 묶음(1차·2차·최종)은 계약별 입금 내역으로 들어갑니다.${ui.noPay?" (입금 내역 칸이 아직 없어 입금은 옮기지 않습니다. phase1h.sql을 먼저 실행하세요.)":""}</p>
@@ -2003,7 +2003,7 @@ function planImport(rows,fresh){
   const serials=new Set(exCtr.map(k=>nk(k.serial)).filter(Boolean));
   const sig=new Set(exCtr.map(k=>k.customer_id+"|"+nk(k.product)+"|"+(k.contract_date||"")+"|"+k.amount));
   const bySerial={},bySig={};exCtr.forEach(k=>{if(k.serial)bySerial[nk(k.serial)]=k;bySig[k.customer_id+"|"+nk(k.product)+"|"+(k.contract_date||"")+"|"+k.amount]=k});
-  const newCust=[],newCtr=[],newJob=[],newPay=[],updCtr=[];let skipped=0,payWarn=0;const td=today();const withPay=!ui.noPay;
+  const newCust=[],newCtr=[],newJob=[],newPay=[],updCtr=[],missJob=[];let skipped=0,payWarn=0;const td=today();const withPay=!ui.noPay;
   rows.forEach(({t,g,raw,has})=>{
     let name=t("업체명");const notes=[];
     const ft=name.match(/\s*\(([^)]*체험[^)]*)\)\s*$/);let trial="";if(ft){trial=ft[1].replace(/무료체험\s*/,"").trim()||"예";name=name.replace(ft[0],"").trim()}
@@ -2055,7 +2055,14 @@ function planImport(rows,fresh){
     }
     const sg=k.customer_id+"|"+nk(k.product)+"|"+(k.contract_date||"")+"|"+k.amount;
     const ex=(k.serial&&bySerial[nk(k.serial)])||bySig[sg];
+    /* 설치 작업 (엑셀 한 줄 = 설치 1건) */
+    const mkJob=(cu,kk)=>{const vd=toDate(g("설치일자"))||null;const tn=t("설치1");
+      const status=(kk.stage||stage)==="취소"?"취소":(vd&&vd<=td?"완료":(vd||tn?"배정":"접수"));
+      const sinkRaw=t("싱크준비")||t("싱크발주");
+      return{id:crypto.randomUUID(),kind:"install",customer_id:cu.id,contract_id:kk.id,customer_name:cu.name,address:cu.address,product:productOf(kk),status,request_date:kk.contract_date||vd||td,visit_date:vd,visit_time:t("시간"),
+        techs:[],tech_names:tn,symptom:"",result:"",cost:0,sink_status:SINKS.includes(sinkRaw)?sinkRaw:(sinkRaw?"기타":""),sink_memo:SINKS.includes(sinkRaw)?"":sinkRaw,parts:partsText,done_date:status==="완료"?vd:null}};
     if((k.serial&&serials.has(nk(k.serial)))||sig.has(sg)){skipped++;
+      if(ex&&!jobs.some(j=>j.contract_id===ex.id&&j.kind!=="as")&&!installOf(ex)&&!missJob.some(j=>j.contract_id===ex.id)){const cu=custById(ex.customer_id);if(cu)missJob.push(mkJob(cu,ex))}
       if(cust.__new&&!newCust.includes(cust)){delete byKey[key];const bn=byName[nk(name)];if(bn){const i=bn.indexOf(cust);if(i>=0)bn.splice(i,1)}}
       if(ex&&withPay){updCtr.push({id:ex.id,patch:Object.assign({contract_type:ctype,channel,stage},extra,k.tax&&Object.keys(k.tax).length?{tax:k.tax}:{}),pays:paysOf(ex).length?[]:pays.map(p=>Object.assign(p,{contract_id:ex.id,customer_id:ex.customer_id}))})}
       return}
@@ -2063,13 +2070,9 @@ function planImport(rows,fresh){
     if(k.serial)serials.add(nk(k.serial));sig.add(sg);newCtr.push(k);
     pays.forEach(p=>{p.contract_id=k.id;p.customer_id=k.customer_id;newPay.push(p)});
     // 설치 작업
-    const vd=toDate(g("설치일자"))||null;const tn=t("설치1");
-    let status=stage==="취소"?"취소":(vd&&vd<=td?"완료":(vd||tn?"배정":"접수"));
-    const sinkRaw=t("싱크준비")||t("싱크발주");
-    newJob.push({id:crypto.randomUUID(),kind:"install",customer_id:cust.id,contract_id:k.id,customer_name:cust.name,address:cust.address,product:productOf(k),status,request_date:k.contract_date||vd||td,visit_date:vd,visit_time:t("시간"),
-      techs:[],tech_names:tn,symptom:"",result:"",cost:0,sink_status:SINKS.includes(sinkRaw)?sinkRaw:(sinkRaw?"기타":""),sink_memo:SINKS.includes(sinkRaw)?"":sinkRaw,parts:partsText,done_date:status==="완료"?vd:null});
+    newJob.push(mkJob(cust,k));
   });
-  return{newCust,newCtr,newJob,newPay,updCtr,skipped,payWarn};
+  return{newCust,newCtr,newJob:newJob.concat(missJob),missJob,newPay,updCtr,skipped,payWarn};
 }
 async function runImport(plan,replace){
   try{
