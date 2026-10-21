@@ -172,12 +172,13 @@ body.resizing,body.resizing *{cursor:col-resize!important;user-select:none}
 .hbar>div{height:1px}
 .hbar::-webkit-scrollbar{height:14px}.hbar::-webkit-scrollbar-thumb{background:var(--mute);border-radius:7px;border:3px solid var(--panel)}.hbar::-webkit-scrollbar-track{background:var(--line2)}
 .num{text-align:right!important;font-variant-numeric:tabular-nums}.neg{color:var(--bad-fg);font-weight:700}
-.wt.sch{border-collapse:collapse}.wt.sch td,.wt.sch th{border:1px solid var(--line);padding:4px 6px;text-align:center;font-size:12.5px;cursor:pointer}.wt.sch thead th{position:sticky;top:0}.wt.sch thead tr:nth-child(2) th{top:29px}
+.wt.sch{border-collapse:separate;border-spacing:0}.wt.sch td,.wt.sch th{border:0;border-right:1px solid var(--line);border-bottom:1px solid var(--line);padding:4px 6px;text-align:center;font-size:12.5px;cursor:pointer}.wt.sch thead th{position:sticky;top:0}.wt.sch thead tr:nth-child(2) th{top:29px}
 .wt.sch th.sgh{font-size:15px;letter-spacing:4px;color:#1b1b1b}.wt.sch th.sgh.sg0{background:#E6B8B7}.wt.sch th.sgh.sg1{background:#DAEEF3}.wt.sch th.sgh.sg2{background:#E4DFEC}.wt.sch th.sgh.sg3{background:#EBF1DE}
 .wt.sch th.stm,.wt.sch td.stm{background:#FFF2CC;color:#1b1b1b}.wt.sch td.snm{text-align:left;min-width:150px;font-weight:600}.wt.sch td.snm.lv{background:#FFFF00;color:#c00000;font-weight:700}
 .wt.sch td.sk{font-weight:700;color:#1b1b1b}.wt.sch td.k-install{background:#00CC66}.wt.sch td.k-as{background:#9933FF;color:#fff}.wt.sch td.k-addon{background:#FFC000}.wt.sch td.k-remove{background:#FF0000;color:#1b1b1b}.wt.sch td.k-move{background:#FFFF00;color:#c00000}.wt.sch td.sup{background:#FFFF00;color:#c00000}
 .wt.sch td.sres.ok{background:#5B9BD5;color:#fff;font-weight:700}.wt.sch td.sres.no{background:#FF0000;color:#fff;font-weight:700}.wt.sch td.sres.hold{background:#D9D9D9;color:#1b1b1b}
-.wt.sch td.sday{font-weight:700;cursor:default}.wt.sch td.sref{color:#c00000;text-align:left;min-width:90px;font-size:12px}.wt.sch td.sref .khol{color:#c00000}.wt.sch tr.swork td.sref{font-weight:700}.wt.sch tr.shol td:not(.sk):not(.sres):not(.stm):not(.lv){background:#D9D9D9;color:#1b1b1b}
+.wt.sch td.sday{font-weight:700;cursor:default}.wt.sch td.sref{color:#c00000;text-align:left;min-width:90px;font-size:12px}.wt.sch .sf1,.wt.sch .sf2,.wt.sch .sf3{position:sticky;z-index:3;background:var(--panel)}.wt.sch thead .sf1,.wt.sch thead .sf2,.wt.sch thead .sf3{z-index:5;background:var(--line2)}.wt.sch tr.shol .sf1,.wt.sch tr.shol .sf2,.wt.sch tr.shol .sf3{background:#D9D9D9}.wt.sch .sf3{box-shadow:inset -3px 0 0 #555}
+.wt.sch .gs{border-left:3px solid #555}.wt.sch td.sref .khol{color:#c00000}.wt.sch tr.swork td.sref{font-weight:700}.wt.sch tr.shol td:not(.sk):not(.sres):not(.stm):not(.lv){background:#D9D9D9;color:#1b1b1b}
 .wt.sch tr.sfirst td{border-top:2px solid var(--mute)}.wt.sch tr.stoday td.sday{background:var(--accent);color:#fff}.wt.sch td.se{height:24px}.wt.sch td.se:hover{background:var(--accent-weak)}.wt.sch tr:hover td{filter:none}
 .wt.am tfoot th,.wt.ct tfoot th{position:sticky;bottom:0;background:var(--line2);border-top:1px solid var(--line);padding:6px 7px}
 .wt td.memo{max-width:320px;min-width:200px;font-size:12px;color:var(--mute)}.clamp{display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
@@ -1372,26 +1373,30 @@ function renderSchedView0(){
   const [y,m]=ui.sm.split("-").map(Number);const last=new Date(y,m,0).getDate();const td=today();
   const days=[];for(let i=1;i<=last;i++)days.push(ui.sm+"-"+String(i).padStart(2,"0"));
   const cell7=(g,d,e)=>{
-    if(!e)return `<td class="se" data-sadd="${g.id}|${d}"></td>`.repeat(7);
-    if(e.n){const lv=LEAVE.test(e.n.note);return `<td data-snote="${e.n.id}"></td><td data-snote="${e.n.id}"></td><td class="stm" data-snote="${e.n.id}">${esc(e.n.time_text||"")}</td><td class="stm" data-snote="${e.n.id}"></td><td class="snm ${lv?"lv":""}" data-snote="${e.n.id}" colspan="3">${esc(e.n.note)}</td>`}
+    if(!e)return `<td class="se gs" data-sadd="${g.id}|${d}"></td>`+`<td class="se" data-sadd="${g.id}|${d}"></td>`.repeat(6);
+    if(e.n){const lv=LEAVE.test(e.n.note);return `<td class="gs" data-snote="${e.n.id}"></td><td data-snote="${e.n.id}"></td><td class="stm" data-snote="${e.n.id}">${esc(e.n.time_text||"")}</td><td class="stm" data-snote="${e.n.id}"></td><td class="snm ${lv?"lv":""}" data-snote="${e.n.id}" colspan="3">${esc(e.n.note)}</td>`}
     const j=e.j;const sup=g.id!=="_out"&&gk(j)[0]!==g.id;const outN=g.id==="_out"?[...(j.techs||[]).map(staffName),...schNames(j)].filter(n=>SCH_OUT.includes(n)||keyOfName(n)==="_out"):[];const c=custById(j.customer_id)||{};
     const res=j.status==="완료"?`<td class="sres ok" data-sj="${j.id}">완료</td>`:j.status==="취소"?`<td class="sres no" data-sj="${j.id}">취소</td>`:j.status==="보류"?`<td class="sres hold" data-sj="${j.id}">보류</td>`:`<td data-sj="${j.id}"></td>`;
-    return `<td class="sk ${sup?"sup":"k-"+j.kind}" data-sj="${j.id}">${sup?"지원":SKL[j.kind]||""}</td><td data-sj="${j.id}">${esc(schRegion(c.address||j.address))}</td><td class="stm" data-sj="${j.id}">${esc(j.visit_time||"")}</td><td class="stm" data-sj="${j.id}">${esc(j.end_time||"")}</td>
+    return `<td class="sk gs ${sup?"sup":"k-"+j.kind}" data-sj="${j.id}">${sup?"지원":SKL[j.kind]||""}</td><td data-sj="${j.id}">${esc(schRegion(c.address||j.address))}</td><td class="stm" data-sj="${j.id}">${esc(j.visit_time||"")}</td><td class="stm" data-sj="${j.id}">${esc(j.end_time||"")}</td>
       <td class="snm" data-sj="${j.id}" title="${esc([c.name||j.customer_name,j.symptom].filter(Boolean).join(" · "))}">${esc(c.name||j.customer_name||"")}${outN.length?` <small class="mapt">(${esc([...new Set(outN)].join(", "))})</small>`:""}</td><td data-sj="${j.id}">${["install","addon","remove"].includes(j.kind)?esc(schSales(j)):""}</td>${res}`};
   const body=days.map(d=>{const dt=new Date(d+"T00:00:00");const wd=dt.getDay();const dn=mn.filter(n=>n.day===d&&!n.user_id);const work=dn.some(n=>/휴일근로|휴일 근로|근무/.test(n.note));const hol=!work&&(wd===0||wd===6||!!KHOL[d]||dn.some(n=>/휴일|공휴|휴무/.test(n.note)));
     const per=groups.map(g=>entries(g,d));const n0=Math.max(0,...per.map(a=>a.length));const R=Math.max(1,n0+(off&&(n0>0||!hol)?1:0));const cls=`${hol?"shol":work?"swork":""} ${d===td?"stoday":""}`;
-    let h="";for(let r=0;r<R;r++){h+=`<tr class="${cls} ${r===0?"sfirst":""}">${r===0?`<td class="sday" rowspan="${R}">${dt.getDate()}일</td><td class="sday" rowspan="${R}">${WDAY[wd]}${wd===6&&R>1&&!hol?"":""}</td><td class="sref" rowspan="${R}" data-sref="${d}">${[KHOL[d]&&!dn.some(n=>n.note.includes(KHOL[d]))?`<span class="khol">${esc(KHOL[d])}</span>`:"",...dn.map(n=>esc(n.note))].filter(Boolean).join("<br>")}</td>`:""}${groups.map((g,i)=>cell7(g,d,per[i][r])).join("")}</tr>`}
+    let h="";for(let r=0;r<R;r++){h+=`<tr class="${cls} ${r===0?"sfirst":""}">${r===0?`<td class="sday sf1" rowspan="${R}">${dt.getDate()}일</td><td class="sday sf2" rowspan="${R}">${WDAY[wd]}${wd===6&&R>1&&!hol?"":""}</td><td class="sref sf3" rowspan="${R}" data-sref="${d}">${[KHOL[d]&&!dn.some(n=>n.note.includes(KHOL[d]))?`<span class="khol">${esc(KHOL[d])}</span>`:"",...dn.map(n=>esc(n.note))].filter(Boolean).join("<br>")}</td>`:""}${groups.map((g,i)=>cell7(g,d,per[i][r])).join("")}</tr>`}
     return h}).join("");
   const sub=["작업구분","지역","작업시작","작업종료","업체명(상호)","영업담당","결과"];
   view().innerHTML=`${ui.noNotes||!hasEnd()?`<div class="sec" style="max-width:none"><p class="warnbox">일정표의 작업종료 시간과 메모(연차·참조)를 쓰려면 Supabase SQL Editor에서 <b>phase1r.sql</b>을 실행해 주세요.</p></div>`:""}
    <div class="toolbar" style="flex-wrap:wrap"><h2 style="margin:0;font-size:18px">${y}년 ${m}월 설치팀 업무일정표</h2>
      <input id="sM" type="month" value="${esc(ui.sm)}" aria-label="기준 월" style="padding:5px 8px;border:1px solid var(--line);border-radius:6px;background:var(--field)">${ui.sm!==thisMonth()?`<button class="btn sm" type="button" id="sNow">이번 달</button>`:""}
      <span style="flex:1"></span><span class="mapt">보일 기사</span>${allGroups.map(g=>[g.id,g.name]).map(([id,n])=>`<label class="chip"><input type="checkbox" data-shide="${id}" ${hid.has(id)?"":"checked"}>${esc(n)}</label>`).join("")}</div>
-   <p class="mapt" style="margin:0 0 6px">${off?"빈 칸을 누르면 그 날짜·기사로 작업을 접수하거나 연차 같은 메모를 넣을 수 있습니다. 참조 칸을 누르면 그날 메모(휴일근로·회사 휴무 등)를 적습니다.":"작업을 누르면 내용을 볼 수 있습니다."}</p>
-   <div class="wrapx vis"><div class="wtbox"><table class="wt sch"><thead><tr><th rowspan="2">일자</th><th rowspan="2">요일</th><th rowspan="2">참조</th>${groups.map((g,i)=>`<th colspan="7" class="sgh sg${i%4}">${esc(g.name)}</th>`).join("")}</tr>
-     <tr>${groups.map(()=>sub.map((s,i)=>`<th class="${i===2||i===3?"stm":""} ${i===0?"sgl":""}">${s}</th>`).join("")).join("")}</tr></thead><tbody>${body}</tbody></table></div></div>
+   <p class="mapt" style="margin:6px 0 6px;padding:0 20px">${off?"빈 칸을 누르면 그 날짜·기사로 작업을 접수하거나 연차 같은 메모를 넣을 수 있습니다. 참조 칸을 누르면 그날 메모(휴일근로·회사 휴무 등)를 적습니다.":"작업을 누르면 내용을 볼 수 있습니다."}</p>
+   <div class="wrapx vis"><div class="wtbox"><table class="wt sch"><thead><tr><th rowspan="2" class="sf1">일자</th><th rowspan="2" class="sf2">요일</th><th rowspan="2" class="sf3">참조</th>${groups.map((g,i)=>`<th colspan="7" class="sgh gs sg${i%4}">${esc(g.name)}</th>`).join("")}</tr>
+     <tr>${groups.map(()=>sub.map((s,i)=>`<th class="${i===2||i===3?"stm":""} ${i===0?"gs":""}">${s}</th>`).join("")).join("")}</tr></thead><tbody>${body}</tbody></table></div></div>
    ${groups.length?"":`<p class="mapt">표시할 기사가 없습니다. ‘직원’ 화면에서 기사를 등록하세요.</p>`}`;
   view().querySelectorAll(".wtbox").forEach(hbar);
+  /* 일자·요일·참조 틀 고정 */
+  (()=>{const tb=view().querySelector(".wt.sch");if(!tb)return;const w=[".sf1",".sf2"].map(s=>tb.querySelector("thead "+s).getBoundingClientRect().width);
+    let st=document.getElementById("frzSch");if(!st){st=document.createElement("style");st.id="frzSch";document.head.appendChild(st)}
+    st.textContent=`.wt.sch .sf1{left:0}.wt.sch .sf2{left:${w[0]}px}.wt.sch .sf3{left:${w[0]+w[1]}px}`})();
   const re=()=>renderSchedView();
   document.getElementById("sM").onchange=e=>{if(e.target.value){ui.sm=e.target.value;re()}};
   const sn=document.getElementById("sNow");if(sn)sn.onclick=()=>{ui.sm=thisMonth();re()};
