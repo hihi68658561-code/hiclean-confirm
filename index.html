@@ -1093,6 +1093,7 @@ const APT=["유상","무상",""];const aptLab=t=>t||"미정";
 function asPt(j){return j.paid_type==="무상"?"무상":j.paid_type==="유상"||Number(j.cost||0)>0?"유상":""}
 function asRowCls(j){return j.status==="취소"?"취소":j.pay_status==="미수"?"미수":j.status==="완료"?"완료":j.status==="보류"?"보류":""}
 let _instMap=null;
+function asProd(j){const p=j.product||{};if(p.product||p.size||p.serial)return p;const k=contracts.find(x=>x.id===j.contract_id)||custContracts(j.customer_id)[0];return k?Object.assign({},p,{product:k.product||"",size:k.size||"",serial:k.serial||""}):p}
 function asInstDate(j){if(!_instMap){_instMap={};jobs.forEach(x=>{if(x.kind!=="install"||x.status==="취소")return;const d=x.done_date||x.visit_date||"";if(d&&(!_instMap[x.customer_id]||d>_instMap[x.customer_id]))_instMap[x.customer_id]=d})}
   return (j.product||{}).install_date||_instMap[j.customer_id]||""}
 function asMoney(j){const c=Number(j.cost||0);const pay=j.pay_status==="완료"||(j.pay_date&&j.pay_status!=="미수");const card=j.pay_method==="카드";
@@ -1105,7 +1106,7 @@ const ACOLS=[
 const AMONEY=new Set(["cost","trip","pfee","unpaid","card","cash"]);
 TCFG.as={cols:()=>ACOLS,sel:".wt.am",lead:()=>1};
 function md(d){return d?d.slice(5).replace("-","/"):""}
-function asCell(col,j,c,m){const p=j.product||{};const td=today();
+function asCell(col,j,c,m){const p=asProd(j);const td=today();
   switch(col){
     case"basis":{const d=j.request_date||"";return `<td>${esc(d?d.slice(2,4)+d.slice(5,7):"")}</td>`}
     case"rdate":return `<td>${esc(ymd2(j.request_date))}</td>`;
@@ -1620,7 +1621,7 @@ const WCOLS=[["rmon","접수월",1],["kind","구분",1],["name","업체명",1],[
  ["product","제품",1],["size","규격",1],["serial","시리얼",1],["wash","수압식",1],["sink","싱크대",1],["parts","제공 부자재",0],["symptom","접수내용",1],["result","처리내용",0],["sales","영업담당",1],["tech","배정",1],["status","처리현황",1],["done","완료일",0],["photo","사진",0]];
 /* 설치 접수내용 = 계약 비고 (+ 작업에 적은 요청 사항) */
 function jobNote(j,k){if(j.kind!=="install")return j.symptom||"";const kk=(k&&k.id?k:contracts.find(x=>x.id===j.contract_id))||{};return [kk.memo,j.symptom].map(x=>String(x||"").trim()).filter(Boolean).filter((x,i,a)=>a.indexOf(x)===i).join(" / ")}
-function wCell(col,j,c,k,td){const p=j.product||{};const rd=rdOf(j);const vd=j.visit_date;const openJ=!["완료","취소"].includes(j.status);
+function wCell(col,j,c,k,td){const p=j.kind==="as"?asProd(j):(j.product||{});const rd=rdOf(j);const vd=j.visit_date;const openJ=!["완료","취소"].includes(j.status);
   switch(col){
     case"rmon":return `<td>${esc(rd.slice(2,4)+rd.slice(5,7))}</td>`;
     case"kind":return `<td class="kc k-${j.kind}">${KLABEL[j.kind]||j.kind}</td>`;
@@ -1721,7 +1722,7 @@ function jobDlg(j,c,kind,tpl,preset){
     ["id","created_at","updated_at","created_by"].forEach(x=>delete j[x]);kind=j.kind}
   else if(isNew){const k=c?custContracts(c.id)[0]:null;j={kind,customer_id:c?c.id:null,contract_id:k?k.id:null,customer_name:c?c.name:"",address:c?c.address:"",product:productOf(k),status:"접수",request_date:today(),techs:[],tech_names:"",symptom:"",result:"",cost:0,sink_status:"",sink_memo:"",parts:"",visit_time:""}}
   if(isNew&&preset)Object.assign(j,preset);
-  const can=isNew||canEditJob(j);const off=isOffice();const p=j.product||{};const asx=hasAsx();const he=hasEnd();
+  const can=isNew||canEditJob(j);const off=isOffice();const p=j.kind==="as"?asProd(j):(j.product||{});const asx=hasAsx();const he=hasEnd();
   const techs=staff.filter(s=>s.active&&s.role==="tech");
   const pickable=customers.filter(x=>isOffice()||x.owner===me.id);
   const pick=isNew&&!c?`<label class="f">고객 검색<input id="jcQ" type="search" autocomplete="off" placeholder="업체명·대표자·전화번호·주소·시리얼"></label>
@@ -1772,6 +1773,7 @@ function jobDlg(j,c,kind,tpl,preset){
        if(off)pt.closed=!!f.get("closed");
        pt.parts=(f.get("as_parts")||"").trim();
        if(off||isNew){_instMap=null;const base=asInstDate(Object.assign({},j,{product:{}}));const iv=f.get("as_idate")||"";const pr=Object.assign({},j.product||{},{product:(f.get("as_product")||"").trim(),size:(f.get("as_size")||"").trim(),serial:(f.get("as_serial")||"").trim()});
+         if(!pr.product&&!pr.size&&!pr.serial){const k0=contracts.find(x=>x.id===j.contract_id)||custContracts(j.customer_id)[0];if(k0)Object.assign(pr,{product:k0.product||"",size:k0.size||"",serial:k0.serial||""})}
          if(f.get("as_used")){delete pr.install_date;pr.install_note="중고구매"}else{if(/중고/.test(pr.install_note||""))delete pr.install_note;if(iv&&iv!==base){pr.install_date=iv;delete pr.install_note}else delete pr.install_date}pt.product=pr}
        if(asx){const nn=x=>Number(f.get(x)||0)||0;Object.assign(pt,{action:(f.get("action")||"").trim(),trip_fee:nn("trip_fee"),part_fee:nn("part_fee"),distance:f.get("distance")===""||f.get("distance")==null?null:nn("distance"),satisfaction:f.get("satisfaction")||""});
          if(off)pt.tax_date=f.get("tax_date")||null;if(!pt.cost&&pt.paid_type!=="무상"){pt.cost=pt.trip_fee+pt.part_fee;if(pt.cost&&!pt.paid_type)pt.paid_type="유상"}}
@@ -1796,7 +1798,9 @@ function jobDlg(j,c,kind,tpl,preset){
   /* 완료일을 넣으면 상태를 '완료'로 자동 전환 */
   (()=>{const jf=document.getElementById("jf");const dd=jf&&jf.querySelector('[name="done_date"]'),st=jf&&jf.querySelector('[name="status"]');
     if(dd&&st&&!dd.readOnly)dd.addEventListener("change",()=>{if(dd.value&&st.value!=="완료"&&st.value!=="취소"){st.value="완료";st.classList.add("autocalc");setTimeout(()=>st.classList.remove("autocalc"),700)}})})();
-  if(isNew&&!c)bindCustPicker(pickable);
+  if(isNew&&!c){bindCustPicker(pickable);const h=document.getElementById("jcId");if(h)h.addEventListener("change",()=>{const cc=pickable.find(x=>x.id===h.value);if(!cc)return;const k=custContracts(cc.id)[0];const jf=document.getElementById("jf");const q=n=>jf.querySelector(`[name="${n}"]`);
+    if(k){[["as_product",k.product],["as_size",k.size],["as_serial",k.serial]].forEach(([n,v])=>{const el=q(n);if(el&&!el.value)el.value=v||""})}
+    _instMap=null;const d=asInstDate({customer_id:cc.id,product:{}});const di=q("as_idate");if(di&&!di.value&&d)di.value=d})}
   document.querySelectorAll('#jf input[name=kind]').forEach(x=>x.onchange=()=>{const as=x.value==="as";document.getElementById("payBox").hidden=!as;document.getElementById("asBox").hidden=!as;document.getElementById("sinkBox").hidden=as;document.getElementById("addonBox").hidden=x.value!=="addon";
     const t=document.getElementById("jf").querySelector('textarea[name=symptom]');if(t)t.previousSibling.textContent=as?"불편사항·접수 내용":"요청 사항";
     document.getElementById("dlgH").textContent=`${KLABEL[x.value]} ${isNew?"접수":"작업"}${j.customer_name?" · "+j.customer_name:""}`;
@@ -1809,7 +1813,7 @@ function bindCustPicker(pool){
     const hits=pool.filter(x=>custSearchText(x).includes(t)).slice(0,8);
     res.innerHTML=hits.map(x=>{const k=custContracts(x.id)[0];return `<button type="button" data-id="${x.id}"><b>${esc(x.name)}</b><small>${esc([x.ceo,x.phone||x.phone2,x.address].filter(Boolean).join(" · "))}</small>${k||instTxt(x)?`<small>${esc([k&&k.product,k&&k.size,k&&k.serial&&"SN "+k.serial].filter(Boolean).join(" "))}${instTxt(x)?`${k?" · ":""}<b class="instd">${esc(instTxt(x))}</b>`:""}</small>`:""}</button>`}).join("")||`<p class="mapt">찾는 고객이 없습니다.</p>`;
     res.querySelectorAll("[data-id]").forEach(b=>b.onclick=()=>pickIt(pool.find(x=>x.id===b.dataset.id)))};
-  const pickIt=x=>{hid.value=x.id;res.innerHTML="";q.parentElement.hidden=true;hint.hidden=true;const k=custContracts(x.id)[0];
+  const pickIt=x=>{hid.value=x.id;hid.dispatchEvent(new Event("change"));res.innerHTML="";q.parentElement.hidden=true;hint.hidden=true;const k=custContracts(x.id)[0];
     selBox.innerHTML=`<div class="picked"><span><b>${esc(x.name)}</b> · ${esc(x.phone||x.phone2||"")} · ${esc(x.address||"")}${k?" · "+esc([k.product,k.size,k.serial&&"SN "+k.serial].filter(Boolean).join(" ")):""}${instTxt(x)?" · "+esc(instTxt(x)):""}</span><button class="btn sm" type="button" id="jcChg">다른 고객</button></div>`;
     document.getElementById("jcChg").onclick=()=>{hid.value="";selBox.innerHTML="";q.parentElement.hidden=false;hint.hidden=false;q.focus();show()}};
   q.addEventListener("input",show);q.addEventListener("keydown",e=>{if(e.key==="Enter"){e.preventDefault();const b=res.querySelector("[data-id]");if(b)b.click()}});
