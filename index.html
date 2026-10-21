@@ -1155,7 +1155,7 @@ function asSortVal(col,x){const j=x.j,m=x.m;
     case"status":return JST.indexOf(j.status);case"name":return x.c.name||j.customer_name||"";}
   return asCell(col,j,x.c,m).replace(/<[^>]*>/g,"").replace(/&amp;/g,"&").trim()}
 function asSortList(list){const S=asGetSort();const cache=new Map();const v=(x,col)=>{let o=cache.get(x);if(!o){o={};cache.set(x,o)}if(!(col in o))o[col]=asSortVal(col,x);return o[col]};
-  const bo=x=>x.b.includes("접수")?0:x.b.includes("처리")||x.b.includes("입금")?1:x.b.includes("미처리")?2:3;
+  const bo=x=>x.b.includes("미처리")?0:x.b.includes("접수")?1:x.b.includes("처리")||x.b.includes("입금")?2:3;
   list.sort((a,b)=>{if(bo(a)!==bo(b))return bo(a)-bo(b);for(const {c,d} of S){const A=v(a,c),B=v(b,c);const ea=A===""||A==null,eb=B===""||B==null;if(ea&&eb)continue;if(ea)return 1;if(eb)return -1;
     const r=typeof A==="number"&&typeof B==="number"?A-B:String(A).localeCompare(String(B),"ko",{numeric:true});if(r)return r*d}return 0})}
 function asSortPicker(onDone){let cur=asGetSort().map(x=>({...x}));
@@ -1164,7 +1164,7 @@ function asSortPicker(onDone){let cur=asGetSort().map(x=>({...x}));
       <label class="f">방향<select data-sd="${i}"><option value="1" ${x.d===1?"selected":""}>오름차순 (빠른 날짜·작은 값·가나다)</option><option value="-1" ${x.d===-1?"selected":""}>내림차순 (최근 날짜·큰 값)</option></select></label><span></span></div>`}).join("");
     document.querySelectorAll("#spList [data-si]").forEach(s=>s.onchange=()=>{const i=+s.dataset.si;if(s.value)cur[i]={c:s.value,d:(cur[i]||{}).d||1};else cur.splice(i,1);cur=cur.filter(Boolean);draw()});
     document.querySelectorAll("#spList [data-sd]").forEach(s=>s.onchange=()=>{const i=+s.dataset.sd;if(cur[i])cur[i].d=+s.value})};
-  openDlg("정렬 설정",`<p class="mapt">1순위가 같으면 2순위, 2순위도 같으면 3순위로 정렬합니다. 열 제목을 눌러도 바로 정렬됩니다(한 번 더 누르면 반대로).<br>목록은 항상 <b>당월 접수 → 이달 처리·입금된 예전 건 → 지난달부터 남은 미처리 → 미수</b>로 묶이고, 고른 정렬은 각 묶음 안에서 적용됩니다.</p><div id="spList" style="display:grid;gap:8px"></div>`,
+  openDlg("정렬 설정",`<p class="mapt">1순위가 같으면 2순위, 2순위도 같으면 3순위로 정렬합니다. 열 제목을 눌러도 바로 정렬됩니다(한 번 더 누르면 반대로).<br>목록은 항상 <b>지난달부터 남은 미처리 → 당월 접수 → 이달 처리·입금된 예전 건 → 미수</b>로 묶이고, 고른 정렬은 각 묶음 안에서 적용됩니다.</p><div id="spList" style="display:grid;gap:8px"></div>`,
     [["접수한 순서 (기본)","",()=>{cur=ADEFSORT.map(x=>({...x}));draw();return true}],["예정일·시간 순","",()=>{cur=[{c:"visit",d:1},{c:"rdate",d:1}];draw();return true}],["취소"],["적용","pri",()=>{cur=cur.filter(x=>x&&x.c);asSetSort(cur.length&&JSON.stringify(cur)!==JSON.stringify(ADEFSORT)?cur:null);onDone()}]]);draw()}
 function renderAsView(){const _sv=snapScroll();renderAsView0();restoreScroll(_sv)}
 function renderAsView0(){
@@ -1205,7 +1205,7 @@ function renderAsView0(){
        <div class="kpi kc ${ui.akpi==="pay"?"on":""}" data-akpi="pay" role="button" tabindex="0"><span>당월 입금</span><b>${won0(mCard+mCash)}원</b><small>카드 ${won0(mCard)} · 현금 ${won0(mCash)}</small></div>
        <div class="kpi bad kc ${ui.akpi==="unpaid"?"on":""}" data-akpi="unpaid" role="button" tabindex="0"><span>미수금 (미수 ${un.length}건)</span><b>${won0(unSum)}원</b></div>
        <div class="kpi kc ${ui.akpi==="open"?"on":""}" data-akpi="open" role="button" tabindex="0"><span>미처리 (전체)</span><b>${op.length}건</b></div></div>
-      <p class="mapt" style="margin:0">이달 접수한 건, 이달 처리·입금된 건, 그리고 지난달부터 남은 미처리·미수 건이 함께 나옵니다.<br>숫자를 누르면 아래 목록이 그 건들로 바뀝니다.</p></div>
+      <p class="mapt" style="margin:0">지난달부터 남은 미처리 건이 맨 위에, 그 아래로 이달 접수한 건, 이달 처리·입금된 건, 미수 건이 나옵니다.<br>숫자를 누르면 아래 목록이 그 건들로 바뀝니다.</p></div>
      <div class="sumbox">${sumT}</div></div>
    <div class="toolbar"><input id="aQ" type="search" placeholder="상호·전화·시리얼·접수내용·담당자 검색" value="${esc(ui.aq)}">
      <span class="mapt">${label?esc(label)+" · ":""}${list.length}건</span>${label?`<button class="btn sm" type="button" id="aAll">전체 보기</button>`:""}
