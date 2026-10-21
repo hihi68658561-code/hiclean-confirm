@@ -1687,7 +1687,7 @@ function wCell(col,j,c,k,td){const p=j.kind==="as"?asProd(j):(j.product||{});con
     case"parts":return `<td>${esc(j.parts||"")}</td>`;
     case"symptom":{const v=jobNote(j,k);return `<td class="wrap memo" title="${esc(v)}"><div class="clamp">${esc(v)}</div></td>`}
     case"result":return `<td class="wrap">${esc(j.result||"")}</td>`;
-    case"sales":return `<td>${esc(s3Text(k)||staffName(c.owner)||c.owner_name||"")}</td>`;
+    case"sales":return `<td>${j.kind==="as"||j.kind==="move"?"":esc(s3Text(k)||staffName(c.owner)||c.owner_name||"")}</td>`;
     case"tech":return `<td>${esc(whoOf(j)||"")}</td>`;
     case"status":return `<td><span class="badge s-${j.status}">${esc(j.status)}</span>${j.kind==="as"&&j.pay_status==="미수"?` <span class="badge s-미수">미수</span>`:""}</td>`;
     case"done":return `<td>${esc(ymd2(j.done_date||""))}</td>`;
