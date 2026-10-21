@@ -173,7 +173,7 @@ body.resizing,body.resizing *{cursor:col-resize!important;user-select:none}
 .hbar::-webkit-scrollbar{height:14px}.hbar::-webkit-scrollbar-thumb{background:var(--mute);border-radius:7px;border:3px solid var(--panel)}.hbar::-webkit-scrollbar-track{background:var(--line2)}
 .num{text-align:right!important;font-variant-numeric:tabular-nums}.neg{color:var(--bad-fg);font-weight:700}
 .wt.sch{border-collapse:collapse}.wt.sch td,.wt.sch th{border:1px solid var(--line);padding:4px 6px;text-align:center;font-size:12.5px;cursor:pointer}.wt.sch thead th{position:sticky;top:0}.wt.sch thead tr:nth-child(2) th{top:29px}
-.wt.sch th.sgh{font-size:15px;letter-spacing:4px;color:#1b1b1b}.wt.sch th.sgh.g0{background:#E6B8B7}.wt.sch th.sgh.g1{background:#DAEEF3}.wt.sch th.sgh.g2{background:#E4DFEC}.wt.sch th.sgh.g3{background:#EBF1DE}
+.wt.sch th.sgh{font-size:15px;letter-spacing:4px;color:#1b1b1b}.wt.sch th.sgh.sg0{background:#E6B8B7}.wt.sch th.sgh.sg1{background:#DAEEF3}.wt.sch th.sgh.sg2{background:#E4DFEC}.wt.sch th.sgh.sg3{background:#EBF1DE}
 .wt.sch th.stm,.wt.sch td.stm{background:#FFF2CC;color:#1b1b1b}.wt.sch td.snm{text-align:left;min-width:150px;font-weight:600}.wt.sch td.snm.lv{background:#FFFF00;color:#c00000;font-weight:700}
 .wt.sch td.sk{font-weight:700;color:#1b1b1b}.wt.sch td.k-install{background:#00CC66}.wt.sch td.k-as{background:#9933FF;color:#fff}.wt.sch td.k-addon{background:#FFC000}.wt.sch td.k-remove{background:#FF0000;color:#1b1b1b}.wt.sch td.k-move{background:#FFFF00;color:#c00000}.wt.sch td.sup{background:#FFFF00;color:#c00000}
 .wt.sch td.sres.ok{background:#5B9BD5;color:#fff;font-weight:700}.wt.sch td.sres.no{background:#FF0000;color:#fff;font-weight:700}.wt.sch td.sres.hold{background:#D9D9D9;color:#1b1b1b}
@@ -1345,31 +1345,37 @@ const LEAVE=/연차|반차|휴무|휴가|병가|월차/;
 const KHOL={"2025-01-01":"신정","2025-01-27":"임시공휴일","2025-01-28":"설날 연휴","2025-01-29":"설날","2025-01-30":"설날 연휴","2025-03-01":"삼일절","2025-03-03":"대체공휴일","2025-05-01":"근로자의 날","2025-05-05":"어린이날·부처님오신날","2025-05-06":"대체공휴일","2025-06-03":"대통령선거","2025-06-06":"현충일","2025-08-15":"광복절","2025-10-03":"개천절","2025-10-05":"추석 연휴","2025-10-06":"추석","2025-10-07":"추석 연휴","2025-10-08":"대체공휴일","2025-10-09":"한글날","2025-12-25":"크리스마스",
  "2026-01-01":"신정","2026-02-16":"설날 연휴","2026-02-17":"설날","2026-02-18":"설날 연휴","2026-03-01":"삼일절","2026-03-02":"대체공휴일","2026-05-01":"근로자의 날","2026-05-05":"어린이날","2026-05-24":"부처님오신날","2026-05-25":"대체공휴일","2026-06-03":"지방선거","2026-06-06":"현충일","2026-07-17":"제헌절","2026-08-15":"광복절","2026-08-17":"대체공휴일","2026-09-24":"추석 연휴","2026-09-25":"추석","2026-09-26":"추석 연휴","2026-10-03":"개천절","2026-10-05":"대체공휴일","2026-10-09":"한글날","2026-12-25":"크리스마스",
  "2027-01-01":"신정","2027-02-06":"설날 연휴","2027-02-07":"설날","2027-02-08":"설날 연휴","2027-02-09":"대체공휴일","2027-03-01":"삼일절","2027-05-01":"근로자의 날","2027-05-03":"대체공휴일","2027-05-05":"어린이날","2027-05-13":"부처님오신날","2027-06-06":"현충일","2027-07-17":"제헌절","2027-07-19":"대체공휴일","2027-08-15":"광복절","2027-08-16":"대체공휴일","2027-09-14":"추석 연휴","2027-09-15":"추석","2027-09-16":"추석 연휴","2027-10-03":"개천절","2027-10-04":"대체공휴일","2027-10-09":"한글날","2027-10-11":"대체공휴일","2027-12-25":"크리스마스","2027-12-27":"대체공휴일"};
+function schNames(j){return (j.techs||[]).length?[]:String(j.tech_names||"").split(/[\s,\/·]+/).map(x=>x.trim()).filter(Boolean)}
 function schDay(j){return j.visit_date||j.done_date||""}
 function renderSchedView(){const _sv=snapScroll();renderSchedView0();restoreScroll(_sv)}
 function renderSchedView0(){
   if(!ui.sm)ui.sm=thisMonth();const [st0,en0]=monthRange(ui.sm);const inM=d=>d&&d>=st0&&d<en0;
   const mj=jobs.filter(j=>inM(schDay(j)));
   const mn=notes.filter(n=>inM(n.day));
-  const used=new Set(mj.flatMap(j=>j.techs||[]));
+  /* 기사 계정이 없는 담당(외부업체·이름만 적힌 기사)도 이름별로 일정표를 따로 */
+  const keyOfName=n=>{const s=staff.find(x=>x.name===n||(x.aliases||[]).includes(n));return s?s.user_id:"n:"+n};
+  const gk=j=>(j.techs||[]).length?j.techs:schNames(j).map(keyOfName);
+  const used=new Set(mj.flatMap(gk));
   const people=staff.filter(s=>(s.active&&s.role==="tech")||used.has(s.user_id));
+  const nameKeys=[...used].filter(k=>String(k).startsWith("n:")).sort((a,b)=>a.localeCompare(b,"ko"));
   const hid=schHidden();
-  const groups=people.filter(s=>!hid.has(s.user_id)).map(s=>({id:s.user_id,name:s.name}));
-  const ext=mj.filter(j=>!(j.techs||[]).length);
-  if(ext.length&&!hid.has("_ext"))groups.push({id:"_ext",name:"외부·미배정"});
+  const allGroups=[...people.map(s=>({id:s.user_id,name:s.name})),...nameKeys.map(k=>({id:k,name:k.slice(2)}))];
+  const ext=mj.filter(j=>!gk(j).length);
+  if(ext.length)allGroups.push({id:"_ext",name:"미배정"});
+  const groups=allGroups.filter(g=>!hid.has(g.id));
   const off=isOffice();
-  const entries=(g,d)=>{const js=g.id==="_ext"?ext.filter(j=>schDay(j)===d):mj.filter(j=>schDay(j)===d&&(j.techs||[]).includes(g.id));
-    const ns=g.id==="_ext"?[]:mn.filter(n=>n.day===d&&n.user_id===g.id);
+  const entries=(g,d)=>{const js=g.id==="_ext"?ext.filter(j=>schDay(j)===d):mj.filter(j=>schDay(j)===d&&gk(j).includes(g.id));
+    const ns=g.id==="_ext"||g.id.startsWith("n:")?[]:mn.filter(n=>n.day===d&&n.user_id===g.id);
     return [...ns.map(n=>({n,t:timeKey(n.time_text)})).sort((a,b)=>a.t.localeCompare(b.t)),...js.map(j=>({j,t:timeKey(j.visit_time)})).sort((a,b)=>a.t.localeCompare(b.t))]};
   const [y,m]=ui.sm.split("-").map(Number);const last=new Date(y,m,0).getDate();const td=today();
   const days=[];for(let i=1;i<=last;i++)days.push(ui.sm+"-"+String(i).padStart(2,"0"));
   const cell7=(g,d,e)=>{
     if(!e)return `<td class="se" data-sadd="${g.id}|${d}"></td>`.repeat(7);
     if(e.n){const lv=LEAVE.test(e.n.note);return `<td data-snote="${e.n.id}"></td><td data-snote="${e.n.id}"></td><td class="stm" data-snote="${e.n.id}">${esc(e.n.time_text||"")}</td><td class="stm" data-snote="${e.n.id}"></td><td class="snm ${lv?"lv":""}" data-snote="${e.n.id}" colspan="3">${esc(e.n.note)}</td>`}
-    const j=e.j;const sup=g.id!=="_ext"&&(j.techs||[])[0]!==g.id;const c=custById(j.customer_id)||{};
+    const j=e.j;const sup=g.id!=="_ext"&&gk(j)[0]!==g.id;const c=custById(j.customer_id)||{};
     const res=j.status==="완료"?`<td class="sres ok" data-sj="${j.id}">완료</td>`:j.status==="취소"?`<td class="sres no" data-sj="${j.id}">취소</td>`:j.status==="보류"?`<td class="sres hold" data-sj="${j.id}">보류</td>`:`<td data-sj="${j.id}"></td>`;
     return `<td class="sk ${sup?"sup":"k-"+j.kind}" data-sj="${j.id}">${sup?"지원":SKL[j.kind]||""}</td><td data-sj="${j.id}">${esc(schRegion(c.address||j.address))}</td><td class="stm" data-sj="${j.id}">${esc(j.visit_time||"")}</td><td class="stm" data-sj="${j.id}">${esc(j.end_time||"")}</td>
-      <td class="snm" data-sj="${j.id}" title="${esc([c.name||j.customer_name,j.symptom].filter(Boolean).join(" · "))}">${esc(c.name||j.customer_name||"")}${g.id==="_ext"&&j.tech_names?` <small class="mapt">(${esc(j.tech_names)})</small>`:""}</td><td data-sj="${j.id}">${["install","addon","remove"].includes(j.kind)?esc(schSales(j)):""}</td>${res}`};
+      <td class="snm" data-sj="${j.id}" title="${esc([c.name||j.customer_name,j.symptom].filter(Boolean).join(" · "))}">${esc(c.name||j.customer_name||"")}</td><td data-sj="${j.id}">${["install","addon","remove"].includes(j.kind)?esc(schSales(j)):""}</td>${res}`};
   const body=days.map(d=>{const dt=new Date(d+"T00:00:00");const wd=dt.getDay();const dn=mn.filter(n=>n.day===d&&!n.user_id);const work=dn.some(n=>/휴일근로|휴일 근로|근무/.test(n.note));const hol=!work&&(wd===0||wd===6||!!KHOL[d]||dn.some(n=>/휴일|공휴|휴무/.test(n.note)));
     const per=groups.map(g=>entries(g,d));const n0=Math.max(0,...per.map(a=>a.length));const R=Math.max(1,n0+(off&&(n0>0||!hol)?1:0));const cls=`${hol?"shol":work?"swork":""} ${d===td?"stoday":""}`;
     let h="";for(let r=0;r<R;r++){h+=`<tr class="${cls} ${r===0?"sfirst":""}">${r===0?`<td class="sday" rowspan="${R}">${dt.getDate()}일</td><td class="sday" rowspan="${R}">${WDAY[wd]}${wd===6&&R>1&&!hol?"":""}</td><td class="sref" rowspan="${R}" data-sref="${d}">${[KHOL[d]&&!dn.some(n=>n.note.includes(KHOL[d]))?`<span class="khol">${esc(KHOL[d])}</span>`:"",...dn.map(n=>esc(n.note))].filter(Boolean).join("<br>")}</td>`:""}${groups.map((g,i)=>cell7(g,d,per[i][r])).join("")}</tr>`}
@@ -1378,9 +1384,9 @@ function renderSchedView0(){
   view().innerHTML=`${ui.noNotes||!hasEnd()?`<div class="sec" style="max-width:none"><p class="warnbox">일정표의 작업종료 시간과 메모(연차·참조)를 쓰려면 Supabase SQL Editor에서 <b>phase1r.sql</b>을 실행해 주세요.</p></div>`:""}
    <div class="toolbar" style="flex-wrap:wrap"><h2 style="margin:0;font-size:18px">${y}년 ${m}월 설치팀 업무일정표</h2>
      <input id="sM" type="month" value="${esc(ui.sm)}" aria-label="기준 월" style="padding:5px 8px;border:1px solid var(--line);border-radius:6px;background:var(--field)">${ui.sm!==thisMonth()?`<button class="btn sm" type="button" id="sNow">이번 달</button>`:""}
-     <span style="flex:1"></span><span class="mapt">보일 기사</span>${[...people.map(s=>[s.user_id,s.name]),...(ext.length?[["_ext","외부·미배정"]]:[])].map(([id,n])=>`<label class="chip"><input type="checkbox" data-shide="${id}" ${hid.has(id)?"":"checked"}>${esc(n)}</label>`).join("")}</div>
+     <span style="flex:1"></span><span class="mapt">보일 기사</span>${allGroups.map(g=>[g.id,g.name]).map(([id,n])=>`<label class="chip"><input type="checkbox" data-shide="${id}" ${hid.has(id)?"":"checked"}>${esc(n)}</label>`).join("")}</div>
    <p class="mapt" style="margin:0 0 6px">${off?"빈 칸을 누르면 그 날짜·기사로 작업을 접수하거나 연차 같은 메모를 넣을 수 있습니다. 참조 칸을 누르면 그날 메모(휴일근로·회사 휴무 등)를 적습니다.":"작업을 누르면 내용을 볼 수 있습니다."}</p>
-   <div class="wrapx vis"><div class="wtbox"><table class="wt sch"><thead><tr><th rowspan="2">일자</th><th rowspan="2">요일</th><th rowspan="2">참조</th>${groups.map((g,i)=>`<th colspan="7" class="sgh g${i%4}">${esc(g.name)}</th>`).join("")}</tr>
+   <div class="wrapx vis"><div class="wtbox"><table class="wt sch"><thead><tr><th rowspan="2">일자</th><th rowspan="2">요일</th><th rowspan="2">참조</th>${groups.map((g,i)=>`<th colspan="7" class="sgh sg${i%4}">${esc(g.name)}</th>`).join("")}</tr>
      <tr>${groups.map(()=>sub.map((s,i)=>`<th class="${i===2||i===3?"stm":""} ${i===0?"sgl":""}">${s}</th>`).join("")).join("")}</tr></thead><tbody>${body}</tbody></table></div></div>
    ${groups.length?"":`<p class="mapt">표시할 기사가 없습니다. ‘직원’ 화면에서 기사를 등록하세요.</p>`}`;
   view().querySelectorAll(".wtbox").forEach(hbar);
@@ -1393,7 +1399,7 @@ function renderSchedView0(){
     if(t.dataset.sj){const j=jobs.find(x=>x.id===t.dataset.sj);if(j)jobDlg(j,custById(j.customer_id),j.kind);return}
     if(t.dataset.snote){const n=notes.find(x=>x.id===t.dataset.snote);if(n&&off)noteDlg(n.user_id,n.day,n);return}
     if(t.dataset.sref&&off){const n=notes.find(x=>x.day===t.dataset.sref&&!x.user_id);noteDlg(null,t.dataset.sref,n);return}
-    if(t.dataset.sadd&&(off||canNewJob(null))){const [uid,d]=t.dataset.sadd.split("|");schAdd(uid==="_ext"?null:uid,d)}};
+    if(t.dataset.sadd&&(off||canNewJob(null))){const [uid,d]=t.dataset.sadd.split("|");if(uid.startsWith("n:"))return jobDlg(null,null,"install",null,{visit_date:d,tech_names:uid.slice(2)});schAdd(uid==="_ext"?null:uid,d)}};
 }
 function schLabel(uid,d){const s=uid&&staff.find(x=>x.user_id===uid);return `${md(d)} (${wday(d)})${s?" · "+s.name:""}`}
 function schAdd(uid,d){const off=isOffice();
