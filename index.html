@@ -177,7 +177,7 @@ body.resizing,body.resizing *{cursor:col-resize!important;user-select:none}
 .wt.sch th.stm,.wt.sch td.stm{background:#FFF2CC;color:#1b1b1b}.wt.sch td.snm{text-align:left;min-width:150px;font-weight:600}.wt.sch td.snm.lv{background:#FFFF00;color:#c00000;font-weight:700}
 .wt.sch td.sk{font-weight:700;color:#1b1b1b}.wt.sch td.k-install{background:#00CC66}.wt.sch td.k-as{background:#9933FF;color:#fff}.wt.sch td.k-addon{background:#FFC000}.wt.sch td.k-remove{background:#BFBFBF}.wt.sch td.sup{background:#FFFF00;color:#c00000}
 .wt.sch td.sres.ok{background:#5B9BD5;color:#fff;font-weight:700}.wt.sch td.sres.no{background:#FF0000;color:#fff;font-weight:700}.wt.sch td.sres.hold{background:#D9D9D9;color:#1b1b1b}
-.wt.sch td.sday{font-weight:700;cursor:default}.wt.sch td.sref{color:#c00000;text-align:left;min-width:90px;font-size:12px}.wt.sch tr.ssat td.sday{background:#F4CCCC;color:#1b1b1b}.wt.sch tr.shol td:not(.sk):not(.sres):not(.stm):not(.lv){background:#D9D9D9;color:#1b1b1b}
+.wt.sch td.sday{font-weight:700;cursor:default}.wt.sch td.sref{color:#c00000;text-align:left;min-width:90px;font-size:12px}.wt.sch td.sref .khol{color:#c00000}.wt.sch tr.swork td.sref{font-weight:700}.wt.sch tr.shol td:not(.sk):not(.sres):not(.stm):not(.lv){background:#D9D9D9;color:#1b1b1b}
 .wt.sch tr.sfirst td{border-top:2px solid var(--mute)}.wt.sch tr.stoday td.sday{background:var(--accent);color:#fff}.wt.sch td.se{height:24px}.wt.sch td.se:hover{background:var(--accent-weak)}.wt.sch tr:hover td{filter:none}
 .wt.am tfoot th,.wt.ct tfoot th{position:sticky;bottom:0;background:var(--line2);border-top:1px solid var(--line);padding:6px 7px}
 .wt td.memo{max-width:320px;min-width:200px;font-size:12px;color:var(--mute)}.clamp{display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
@@ -1328,6 +1328,10 @@ function schHideKey(){return "hc.sch.hide."+(me&&me.id||"")}
 function schHidden(){try{return new Set(JSON.parse(localStorage.getItem(schHideKey())||"[]"))}catch(e){return new Set()}}
 function schSetHidden(s){try{localStorage.setItem(schHideKey(),JSON.stringify([...s]))}catch(e){}}
 const LEAVE=/연차|반차|휴무|휴가|병가|월차/;
+/* 공휴일·대체공휴일·임시공휴일 (달력 기준). 다른 해는 참조 칸에 '공휴일' 메모로 넣으면 회색 */
+const KHOL={"2025-01-01":"신정","2025-01-27":"임시공휴일","2025-01-28":"설날 연휴","2025-01-29":"설날","2025-01-30":"설날 연휴","2025-03-01":"삼일절","2025-03-03":"대체공휴일","2025-05-01":"근로자의 날","2025-05-05":"어린이날·부처님오신날","2025-05-06":"대체공휴일","2025-06-03":"대통령선거","2025-06-06":"현충일","2025-08-15":"광복절","2025-10-03":"개천절","2025-10-05":"추석 연휴","2025-10-06":"추석","2025-10-07":"추석 연휴","2025-10-08":"대체공휴일","2025-10-09":"한글날","2025-12-25":"크리스마스",
+ "2026-01-01":"신정","2026-02-16":"설날 연휴","2026-02-17":"설날","2026-02-18":"설날 연휴","2026-03-01":"삼일절","2026-03-02":"대체공휴일","2026-05-01":"근로자의 날","2026-05-05":"어린이날","2026-05-24":"부처님오신날","2026-05-25":"대체공휴일","2026-06-03":"지방선거","2026-06-06":"현충일","2026-07-17":"제헌절","2026-08-15":"광복절","2026-08-17":"대체공휴일","2026-09-24":"추석 연휴","2026-09-25":"추석","2026-09-26":"추석 연휴","2026-10-03":"개천절","2026-10-05":"대체공휴일","2026-10-09":"한글날","2026-12-25":"크리스마스",
+ "2027-01-01":"신정","2027-02-06":"설날 연휴","2027-02-07":"설날","2027-02-08":"설날 연휴","2027-02-09":"대체공휴일","2027-03-01":"삼일절","2027-05-01":"근로자의 날","2027-05-03":"대체공휴일","2027-05-05":"어린이날","2027-05-13":"부처님오신날","2027-06-06":"현충일","2027-07-17":"제헌절","2027-07-19":"대체공휴일","2027-08-15":"광복절","2027-08-16":"대체공휴일","2027-09-14":"추석 연휴","2027-09-15":"추석","2027-09-16":"추석 연휴","2027-10-03":"개천절","2027-10-04":"대체공휴일","2027-10-09":"한글날","2027-10-11":"대체공휴일","2027-12-25":"크리스마스","2027-12-27":"대체공휴일"};
 function schDay(j){return j.visit_date||j.done_date||""}
 function renderSchedView(){const _sv=snapScroll();renderSchedView0();restoreScroll(_sv)}
 function renderSchedView0(){
@@ -1353,16 +1357,16 @@ function renderSchedView0(){
     const res=j.status==="완료"?`<td class="sres ok" data-sj="${j.id}">완료</td>`:j.status==="취소"?`<td class="sres no" data-sj="${j.id}">취소</td>`:j.status==="보류"?`<td class="sres hold" data-sj="${j.id}">보류</td>`:`<td data-sj="${j.id}"></td>`;
     return `<td class="sk ${sup?"sup":"k-"+j.kind}" data-sj="${j.id}">${sup?"지원":SKL[j.kind]||""}</td><td data-sj="${j.id}">${esc(schRegion(c.address||j.address))}</td><td class="stm" data-sj="${j.id}">${esc(j.visit_time||"")}</td><td class="stm" data-sj="${j.id}">${esc(j.end_time||"")}</td>
       <td class="snm" data-sj="${j.id}" title="${esc([c.name||j.customer_name,j.symptom].filter(Boolean).join(" · "))}">${esc(c.name||j.customer_name||"")}${g.id==="_ext"&&j.tech_names?` <small class="mapt">(${esc(j.tech_names)})</small>`:""}</td><td data-sj="${j.id}">${j.kind==="install"||j.kind==="addon"?esc(schSales(j)):""}</td>${res}`};
-  const body=days.map(d=>{const dt=new Date(d+"T00:00:00");const wd=dt.getDay();const dn=mn.filter(n=>n.day===d&&!n.user_id);const hol=wd===0||dn.some(n=>/휴일|공휴/.test(n.note));
-    const per=groups.map(g=>entries(g,d));const n0=Math.max(0,...per.map(a=>a.length));const R=Math.max(1,n0+(off&&(n0>0||!hol)?1:0));const cls=`${hol?"shol":wd===6?"ssat":""} ${d===td?"stoday":""}`;
-    let h="";for(let r=0;r<R;r++){h+=`<tr class="${cls} ${r===0?"sfirst":""}">${r===0?`<td class="sday" rowspan="${R}">${dt.getDate()}일</td><td class="sday" rowspan="${R}">${WDAY[wd]}${wd===6&&R>1&&!hol?"":""}</td><td class="sref" rowspan="${R}" data-sref="${d}">${dn.map(n=>esc(n.note)).join("<br>")}</td>`:""}${groups.map((g,i)=>cell7(g,d,per[i][r])).join("")}</tr>`}
+  const body=days.map(d=>{const dt=new Date(d+"T00:00:00");const wd=dt.getDay();const dn=mn.filter(n=>n.day===d&&!n.user_id);const work=dn.some(n=>/휴일근로|휴일 근로|근무/.test(n.note));const hol=!work&&(wd===0||wd===6||!!KHOL[d]||dn.some(n=>/휴일|공휴|휴무/.test(n.note)));
+    const per=groups.map(g=>entries(g,d));const n0=Math.max(0,...per.map(a=>a.length));const R=Math.max(1,n0+(off&&(n0>0||!hol)?1:0));const cls=`${hol?"shol":work?"swork":""} ${d===td?"stoday":""}`;
+    let h="";for(let r=0;r<R;r++){h+=`<tr class="${cls} ${r===0?"sfirst":""}">${r===0?`<td class="sday" rowspan="${R}">${dt.getDate()}일</td><td class="sday" rowspan="${R}">${WDAY[wd]}${wd===6&&R>1&&!hol?"":""}</td><td class="sref" rowspan="${R}" data-sref="${d}">${[KHOL[d]&&!dn.some(n=>n.note.includes(KHOL[d]))?`<span class="khol">${esc(KHOL[d])}</span>`:"",...dn.map(n=>esc(n.note))].filter(Boolean).join("<br>")}</td>`:""}${groups.map((g,i)=>cell7(g,d,per[i][r])).join("")}</tr>`}
     return h}).join("");
   const sub=["작업구분","지역","작업시작","작업종료","업체명","영업담당","결과"];
   view().innerHTML=`${ui.noNotes||!hasEnd()?`<div class="sec" style="max-width:none"><p class="warnbox">일정표의 작업종료 시간과 메모(연차·참조)를 쓰려면 Supabase SQL Editor에서 <b>phase1r.sql</b>을 실행해 주세요.</p></div>`:""}
    <div class="toolbar" style="flex-wrap:wrap"><h2 style="margin:0;font-size:18px">${y}년 ${m}월 설치팀 업무일정표</h2>
      <input id="sM" type="month" value="${esc(ui.sm)}" aria-label="기준 월" style="padding:5px 8px;border:1px solid var(--line);border-radius:6px;background:var(--field)">${ui.sm!==thisMonth()?`<button class="btn sm" type="button" id="sNow">이번 달</button>`:""}
      <span style="flex:1"></span><span class="mapt">보일 기사</span>${[...people.map(s=>[s.user_id,s.name]),...(ext.length?[["_ext","외부·미배정"]]:[])].map(([id,n])=>`<label class="chip"><input type="checkbox" data-shide="${id}" ${hid.has(id)?"":"checked"}>${esc(n)}</label>`).join("")}</div>
-   <p class="mapt" style="margin:0 0 6px">${off?"빈 칸을 누르면 그 날짜·기사로 작업을 접수하거나 연차 같은 메모를 넣을 수 있습니다. 참조 칸을 누르면 그날 메모(대체공휴일 등)를 적습니다.":"작업을 누르면 내용을 볼 수 있습니다."}</p>
+   <p class="mapt" style="margin:0 0 6px">${off?"빈 칸을 누르면 그 날짜·기사로 작업을 접수하거나 연차 같은 메모를 넣을 수 있습니다. 참조 칸을 누르면 그날 메모(휴일근로·회사 휴무 등)를 적습니다.":"작업을 누르면 내용을 볼 수 있습니다."}</p>
    <div class="wrapx vis"><div class="wtbox"><table class="wt sch"><thead><tr><th rowspan="2">일자</th><th rowspan="2">요일</th><th rowspan="2">참조</th>${groups.map((g,i)=>`<th colspan="7" class="sgh g${i%4}">${esc(g.name)}</th>`).join("")}</tr>
      <tr>${groups.map(()=>sub.map((s,i)=>`<th class="${i===2||i===3?"stm":""} ${i===0?"sgl":""}">${s}</th>`).join("")).join("")}</tr></thead><tbody>${body}</tbody></table></div></div>
    ${groups.length?"":`<p class="mapt">표시할 기사가 없습니다. ‘직원’ 화면에서 기사를 등록하세요.</p>`}`;
@@ -1387,8 +1391,8 @@ function noteDlg(uid,d,n){const isNew=!n;
   openDlg((uid?"일정 메모 · ":"참조 메모 · ")+esc(schLabel(uid,d)),`<div id="nf" style="display:grid;gap:10px">
     <div class="g3">${uid?inp("time_text","시간 (예: 오전, 14:00)",n&&n.time_text,"text"):""}<div style="grid-column:span ${uid?2:3}">${inp("note",uid?"내용 (예: 연차, 차량 배정 후 출발)":"내용 (예: 대체공휴일, 휴일근로)",n&&n.note,"text",false,`list="${uid?"nlist":"rlist"}"`)}</div></div>
     <datalist id="nlist">${["연차","반차(오전)","반차(오후)","휴무","차량 배정 후 출발","교육","사무실 대기"].map(x=>`<option value="${x}">`).join("")}</datalist>
-    <datalist id="rlist">${["대체공휴일","공휴일","휴일근로","회사 휴무"].map(x=>`<option value="${x}">`).join("")}</datalist>
-    ${uid?"":`<p class="mapt" style="margin:0">‘휴일’이 들어간 메모를 넣으면 그날 줄이 회색으로 표시됩니다.</p>`}</div>`,
+    <datalist id="rlist">${["휴일근로","회사 휴무","임시공휴일","대체공휴일"].map(x=>`<option value="${x}">`).join("")}</datalist>
+    ${uid?"":`<p class="mapt" style="margin:0">토·일요일과 공휴일·대체공휴일은 자동으로 회색입니다. 그날 일하면 <b>휴일근로</b>를 넣으면 평일처럼 표시됩니다. 달력에 없는 쉬는 날은 ‘휴무’나 ‘공휴일’을 넣으면 회색이 됩니다.</p>`}</div>`,
     [["취소"],...(isNew?[]:[["삭제","danger",async()=>{const {error}=await sb.from("schedule_notes").delete().eq("id",n.id);if(error)return toast("삭제하지 못했습니다: "+error.message);toast("삭제했습니다");reload(["notes"])}]]),
      ["저장","pri",async()=>{const f=fdata("nf");const note=(f.get("note")||"").trim();if(!note){toast("내용을 입력하세요");return true}
        const row={day:d,user_id:uid||null,time_text:(f.get("time_text")||"").trim(),note};
