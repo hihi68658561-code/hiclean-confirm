@@ -1138,7 +1138,7 @@ const ACOLS=[
  ["basis","접수월",1],["rdate","접수일자",1],["name","업체명(상호)",1],["ceo","대표자",0],["phone","전화번호",1],["addr","주소",1],["symptom","접수내용",1],["result","내용",1],
  ["visit","예정일",1],["wday","요일",1],["time","시간",0],["status","처리현황",1],["done","완료일",0],["idate","설치일",1],["product","제품",1],["size","규격",1],["serial","시리얼",1],["parts","교체부품",1],
  ["tech","담당자",1],["action","조치방법",1],["cost","청구금액(총합계)",1],["trip","출장비",1],["pfee","부품비",1],["dist","거리",1],["sat","만족도",1],["pmeth","청구방법",1],["ptype","유상/무상",1],
- ["pdate","입금일",1],["pname","입금자명",1],["unpaid","미수",1],["card","카드",1],["cash","현금",1],["tax","세금계산서발행일자",1],["closed","마감",1],["pmemo","입금 메모",0]];
+ ["pdate","입금일",1],["pname","입금자명",1],["unpaid","미수",1],["card","카드",1],["cash","현금",1],["tax","세금계산서발행일자",1],["closed","마감",1],["pmemo","입금 메모",0],["reg","등록일시",0]];
 const AMONEY=new Set(["cost","trip","pfee","unpaid","card","cash"]);
 TCFG.as={cols:()=>ACOLS,sel:".wt.am",lead:()=>isAdmin()?2:1};
 function md(d){return d?d.slice(5).replace("-","/"):""}
@@ -1179,6 +1179,7 @@ function asCell(col,j,c,m){const p=asProd(j);const td=today();
     case"tax":return `<td>${esc(ymd2(j.tax_date))}</td>`;
     case"closed":{const v=j.closed?"OK":"";return `<td class="ckc ${v?"ok":""}" data-aclose="${j.id}" title="${isOffice()?"누르면 OK(매출마감) ↔ 빈칸":""}">${esc(v)}</td>`}
     case"pmemo":return `<td class="wrap memo" title="${esc(j.pay_memo||"")}"><div class="clamp">${esc(j.pay_memo||"")}</div></td>`;
+    case"reg":{const d=j.created_at?new Date(j.created_at):null;return `<td>${d&&!isNaN(d)?`${String(d.getMonth()+1).padStart(2,"0")}/${String(d.getDate()).padStart(2,"0")} ${String(d.getHours()).padStart(2,"0")}:${String(d.getMinutes()).padStart(2,"0")}`:""}</td>`}
   }
   return "<td></td>"}
 /* 정렬 (A/S관리 전용, 브라우저별 기억) */
