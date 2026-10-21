@@ -1196,7 +1196,8 @@ function asSortVal(col,x){const j=x.j,m=x.m;
 function asSortList(list){const S=asGetSort();const cache=new Map();const v=(x,col)=>{let o=cache.get(x);if(!o){o={};cache.set(x,o)}if(!(col in o))o[col]=asSortVal(col,x);return o[col]};
   const bo=x=>x.b.includes("미처리")?0:x.b.includes("접수")?1:x.b.includes("처리")||x.b.includes("입금")?2:3;
   list.sort((a,b)=>{if(bo(a)!==bo(b))return bo(a)-bo(b);for(const {c,d} of S){const A=v(a,c),B=v(b,c);const ea=A===""||A==null,eb=B===""||B==null;if(ea&&eb)continue;if(ea)return 1;if(eb)return -1;
-    const r=typeof A==="number"&&typeof B==="number"?A-B:String(A).localeCompare(String(B),"ko",{numeric:true});if(r)return r*d}return 0})}
+    const r=typeof A==="number"&&typeof B==="number"?A-B:String(A).localeCompare(String(B),"ko",{numeric:true});if(r)return r*d}return regCmp(a.j,b.j)})}
+function regCmp(a,b){const x=Date.parse(a.created_at||"")||0,y=Date.parse(b.created_at||"")||0;return x-y||String(a.id).localeCompare(String(b.id))}
 function asSortPicker(onDone){let cur=asGetSort().map(x=>({...x}));
   const opts=v=>`<option value="">(없음)</option><option value="reg" ${v==="reg"?"selected":""}>접수한 순서 (등록순)</option>`+ACOLS.map(c=>`<option value="${c[0]}" ${c[0]===v?"selected":""}>${esc(c[1])}</option>`).join("");
   const draw=()=>{document.getElementById("spList").innerHTML=[0,1,2].map(i=>{const x=cur[i]||{c:"",d:1};return `<div class="g3" style="align-items:end"><label class="f">${i+1}순위<select data-si="${i}">${opts(x.c)}</select></label>
@@ -1486,7 +1487,7 @@ function sortVal(col,x){const k=x.k,c=x.c,s=x.s;
 function sortCtrList(list){const S=getSort();const cache=new Map();const v=(x,col)=>{const key=col;let m=cache.get(x);if(!m){m={};cache.set(x,m)}if(!(key in m))m[key]=sortVal(col,x);return m[key]};
   const grp=true;const bo=x=>!x.b?0:x.b.includes("설치")?0:x.b.includes("결제")?1:2;
   list.sort((a,b)=>{if(grp&&bo(a)!==bo(b))return bo(a)-bo(b);for(const {c,d} of S){const A=v(a,c),B=v(b,c);const ea=A===""||A==null,eb=B===""||B==null;if(ea&&eb)continue;if(ea)return 1;if(eb)return -1;
-    const r=typeof A==="number"&&typeof B==="number"?A-B:String(A).localeCompare(String(B),"ko",{numeric:true});if(r)return r*d}return 0})}
+    const r=typeof A==="number"&&typeof B==="number"?A-B:String(A).localeCompare(String(B),"ko",{numeric:true});if(r)return r*d}return regCmp(a.k,b.k)})}
 function sortPicker(onDone){let cur=getSort().map(x=>({...x}));
   const opts=v=>`<option value="">(없음)</option><option value="reg" ${v==="reg"?"selected":""}>접수한 순서 (등록순)</option>`+CCOLS.map(c=>`<option value="${c[0]}" ${c[0]===v?"selected":""}>${esc(c[1])}</option>`).join("");
   const draw=()=>{document.getElementById("spList").innerHTML=[0,1,2].map(i=>{const x=cur[i]||{c:"",d:1};return `<div class="g3" style="align-items:end"><label class="f">${i+1}순위<select data-si="${i}">${opts(x.c)}</select></label>
@@ -1705,9 +1706,9 @@ function renderWorkView0(){
   const list=rowPool.filter(j=>(!ui.wkind||j.kind===ui.wkind)&&payOk(j)
      &&(!qq||[j.customer_name,j.address,j.tech_names,j.symptom,(j.product||{}).serial,whoOf(j),(custById(j.customer_id)||{}).phone,(custById(j.customer_id)||{}).search_text].join(" ").toLowerCase().includes(qq)));
   const far="9999-12-31";
-  if(["open","carry","new","hold"].includes(ui.wrow)&&!ui.jpay)list.sort((a,b)=>(a.visit_date||far).localeCompare(b.visit_date||far)||rdOf(a).localeCompare(rdOf(b)));
-  else if(ui.wrow==="done")list.sort((a,b)=>doneOf(b).localeCompare(doneOf(a)));
-  else list.sort((a,b)=>rdOf(b).localeCompare(rdOf(a)));
+  if(["open","carry","new","hold"].includes(ui.wrow)&&!ui.jpay)list.sort((a,b)=>(a.visit_date||far).localeCompare(b.visit_date||far)||rdOf(a).localeCompare(rdOf(b))||regCmp(a,b));
+  else if(ui.wrow==="done")list.sort((a,b)=>doneOf(b).localeCompare(doneOf(a))||regCmp(a,b));
+  else list.sort((a,b)=>rdOf(b).localeCompare(rdOf(a))||regCmp(a,b));
   const rowLabel=(WROWS.find(r=>r[0]===ui.wrow)||[0,"전체 기록"])[1];
   const sumT=`<table class="sumt" aria-label="${esc(ui.wm)} 작업 집계"><thead><tr><th></th>${KINDS.map(k=>`<th class="k-${k}">${KLABEL[k]}</th>`).join("")}<th>합계</th></tr></thead><tbody>
     ${WROWS.map(([r,l])=>`<tr class="${r==="open"?"open":""}"><th>${l}</th>${[...KINDS,""].map(k=>`<td class="cl ${ui.wrow===r&&ui.wkind===k&&!ui.jpay?"on":""}" data-r="${r}" data-k="${k}" title="${l}${k?" · "+KLABEL[k]:""} 목록 보기">${cnt(r,k)}</td>`).join("")}</tr>`).join("")}</tbody></table>`;
