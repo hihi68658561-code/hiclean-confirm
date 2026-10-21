@@ -596,7 +596,7 @@ function custJobs(id){return jobIdx[id]||[]}
 function lastStage(id){const k=custContracts(id)[0];return k?k.stage:""}
 function renderCustView(){
   view().innerHTML=`<div class="body"><aside><div class="search">
-    <input id="q" type="search" placeholder="업체명·전화·시리얼·담당자 검색" value="${esc(ui.q)}" aria-label="고객 검색">
+    <input id="q" type="search" placeholder="업체명(상호)·전화·시리얼·담당자 검색" value="${esc(ui.q)}" aria-label="고객 검색">
     ${me.role!=="tech"?`<select id="grf" aria-label="관리등급"><option value="">관리등급 전체</option><option value="레드" ${ui.grade==="레드"?"selected":""}>레드만</option><option value="블랙" ${ui.grade==="블랙"?"selected":""}>블랙만</option><option value="any" ${ui.grade==="any"?"selected":""}>레드·블랙</option></select>`:""}<select id="ctf" aria-label="구분"><option value="">구분 전체</option>${CTYPES.map(x=>`<option ${ui.ctype===x?"selected":""}>${x}</option>`).join("")}</select><select id="stf" aria-label="진행단계"><option value="">진행단계 전체</option>${STAGES.map(x=>`<option ${ui.stage===x?"selected":""}>${x}</option>`).join("")}</select>
     <div class="row"><span id="cnt"></span>${isOffice()||me.role==="sales"?`<button class="btn pri sm" id="bNewC">+ 새 고객</button>`:""}</div></div>
     <div class="clist" id="clist"></div></aside><main id="main"></main></div>`;
@@ -625,7 +625,7 @@ function renderCustList(){
 }
 function renderCustMain(){
   const m=document.getElementById("main");const c=custById(ui.sel);
-  if(!c){m.innerHTML=`<div class="empty"><h2>고객을 고르세요</h2><p>${me.role==="sales"?"본인이 담당하거나 수금을 배정받은 고객만 보입니다.":me.role==="tech"?"배정받은 작업의 고객만 보입니다. 위쪽 ‘작업현황’ 메뉴에서 설치·A/S 목록을 볼 수 있습니다.":"왼쪽에서 업체명, 전화번호, 시리얼, 담당자로 검색하세요."}</p></div>`;return}
+  if(!c){m.innerHTML=`<div class="empty"><h2>고객을 고르세요</h2><p>${me.role==="sales"?"본인이 담당하거나 수금을 배정받은 고객만 보입니다.":me.role==="tech"?"배정받은 작업의 고객만 보입니다. 위쪽 ‘작업현황’ 메뉴에서 설치·A/S 목록을 볼 수 있습니다.":"왼쪽에서 업체명(상호), 전화번호, 시리얼, 담당자로 검색하세요."}</p></div>`;return}
   const ks=custContracts(c.id),js=custJobs(c.id);
   const tabs=[["info","고객정보"]];if(me.role!=="tech")tabs.push(["ctr",`계약 (${ks.length})`]);tabs.push(["install",`설치·철거 (${js.filter(j=>j.kind!=="as").length})`],["as",`A/S (${js.filter(j=>j.kind==="as").length})`],["files",`사진·서류 (${custFiles(c).filter(f=>!(me.role==="tech"&&f.kind==="계약서")).length})`],["conf","확인서"]);
   if(!tabs.some(t=>t[0]===ui.ctab))ui.ctab="info";
@@ -639,7 +639,7 @@ function sel(name,label,opts,v,ro=false){return `<label class="f">${label}<selec
 function staffOpts(roles){return [["","(없음)"],...staff.filter(s=>s.active&&(!roles||roles.includes(s.role))).map(s=>[s.user_id,`${s.name} (${ROLE[s.role]})`])]}
 function custFieldsHtml(c,ro){return `    <div class="g2">${inp("name","업체명(상호)",c.name,"text",ro)}${inp("biz_name","사업장명",c.biz_name,"text",ro)}</div>
     <div class="g2">${inp("ceo","대표자",c.ceo,"text",ro)}${inp("biz_no","사업자등록번호",c.biz_no,"text",ro)}</div>
-    <div class="g2">${inp("phone","휴대번호",c.phone,"text",ro)}${inp("phone2","일반전화",c.phone2,"text",ro)}</div>
+    <div class="g2">${inp("phone","전화번호",c.phone,"text",ro)}${inp("phone2","일반전화",c.phone2,"text",ro)}</div>
     ${inp("address","상점주소",c.address,"text",ro)}
     <div class="g2">${isOffice()?inp("owner","담당자(3차 계약자)",staffName(c.owner)||c.owner_name||"","text",false,'list="ownList" placeholder="이름 입력 또는 목록에서 선택"'):inp("_o","담당자",staffName(c.owner)||c.owner_name,"text",true)}
       ${isOffice()?inp("collector","수금 배정",staffName(c.collector)||c.collector_name||"","text",false,'list="ownList" placeholder="이름 입력 또는 목록에서 선택"'):inp("_c","수금 배정",staffName(c.collector)||c.collector_name,"text",true)}</div>
@@ -657,7 +657,7 @@ async function saveCustomer(c,fd){
     if(isOffice()){const who=v=>{v=String(v||"").trim();const s=v&&staff.find(x=>x.name===v||(x.aliases||[]).includes(v));return{id:s?s.user_id:null,name:s?s.name:v}};
       const o=who(fd.get("owner")),cl=who(fd.get("collector"));p.owner=o.id;p.owner_name=o.name;p.collector=cl.id;
       if("collector_name" in c)p.collector_name=cl.name;else if(cl.name&&!cl.id){{toast("직원 목록에 없는 수금 담당자를 적으려면 Supabase에서 phase1n.sql을 실행해 주세요");return false}}}
-    if(!p.name){toast("업체명을 입력하세요");return false}
+    if(!p.name){toast("업체명(상호)을 입력하세요");return false}
     const {error}=await sb.from("customers").update(p).eq("id",c.id);if(error){toast("저장하지 못했습니다: "+error.message);return false}
     if(isOffice()&&!ui.noGrades&&fd.get("grade")!==null){const g=fd.get("grade")||"",rs=(fd.get("grade_reason")||"").trim(),r=gradeRow(c);
       if(g&&(!r||r.grade!==g||(r.reason||"")!==rs)){const {error:e2}=await sb.from("customer_grades").upsert({customer_id:c.id,grade:g,reason:rs,set_at:new Date().toISOString(),set_by:me.id});if(e2)toast("관리등급은 저장하지 못했습니다: "+e2.message)}
@@ -685,10 +685,10 @@ function renderCustInfo(c){
   const d=document.getElementById("bDelC");if(d)d.onclick=()=>openDlg("고객 삭제",`<p><b>${esc(c.name)}</b>과 그 계약·설치·A/S 기록을 모두 삭제합니다. 되돌릴 수 없습니다.</p>`,[["취소"],["삭제","danger",async()=>{const {error}=await sb.from("customers").delete().eq("id",c.id);if(error)return toast("삭제하지 못했습니다");ui.sel=null;toast("삭제했습니다");reload(["customers","contracts","jobs"])}]]);
 }
 function newCustomer(tpl,afterNew){if(!tpl||!tpl.id)tpl=null;
-  openDlg("새 고객",`${bizUploadBox("nBizUp")}<div class="g2"><label class="f">업체명<input id="nName"></label><label class="f">대표자<input id="nCeo"></label></div>
-   <div class="g2"><label class="f">휴대번호<input id="nPhone"></label><label class="f">사업자등록번호<input id="nBiz"></label></div>
+  openDlg("새 고객",`${bizUploadBox("nBizUp")}<div class="g2"><label class="f">업체명(상호)<input id="nName"></label><label class="f">대표자<input id="nCeo"></label></div>
+   <div class="g2"><label class="f">전화번호<input id="nPhone"></label><label class="f">사업자등록번호<input id="nBiz"></label></div>
    <label class="f">상점주소<input id="nAddr"></label><label class="f">메모<input id="nMemo" placeholder="개업일·업태 등"></label>${ui.noFiles?"":newCustFilesBox()}${me.role==="sales"?`<p class="mapt">담당자는 본인으로 등록됩니다.</p>`:""}`,
-   [["취소"],["등록","pri",async()=>{const name=val("nName").trim();if(!name)return toast("업체명을 입력하세요");
+   [["취소"],["등록","pri",async()=>{const name=val("nName").trim();if(!name)return toast("업체명(상호)을 입력하세요");
      const phone=fmtPhone(val("nPhone")),biz=fmtBiz(val("nBiz"));
      const dup=customers.find(c=>(biz&&c.biz_no&&c.biz_no===biz)||(phone&&c.phone===phone&&nk(c.name)===nk(name)));
      if(dup){toast("이미 등록된 고객입니다: "+dup.name);ui.sel=dup.id;render();return}
@@ -914,7 +914,7 @@ const CROWS=[["done","설치완료",k=>k.stage==="완료"],["open","미완료",k
 function installOf(k){const j=jobs.filter(x=>x.kind==="install"&&(x.contract_id===k.id||(!x.contract_id&&x.customer_id===k.customer_id))&&x.status!=="취소")[0];return j||null}
 /* 목록 열: 넣고 빼기·순서 바꾸기 (브라우저별로 기억) */
 const CCOLS=[
- ["basis","기준",1],["ctype","구분",1],["stage","진행단계",1],["trial","무료체험 종료일",1],["name","업체명",1],["ceo","대표자",1],["phone","휴대번호",1],["addr","상점주소",0],
+ ["basis","기준",1],["ctype","구분",1],["stage","진행단계",1],["trial","무료체험 종료일",1],["name","업체명(상호)",1],["ceo","대표자",1],["phone","전화번호",1],["addr","상점주소",0],
  ["cdate","계약일자",1],["idate","예정일",1],["iwday","요일",1],["itime","시간",1],["channel","영업 경로",0],["referrer","소개",0],["s1","1차",0],["s2","2차",0],["s3","3차(담당)",1],["doc","계약서",0],["tech","설치기사",0],
  ["product","제품",1],["size","사이즈",1],["serial","시리얼",1],["wash","수압식",0],["sink","싱크준비",1],["parts","부자재",0],["amount","합계금액",1],["card","카드",1],["cash","현금+캐피탈",1],["paid","입금합계",0],["unpaid","미수금",1],["last","최종결제일",1],
  ["approval","승인처",1],["tax","계산서 발급",0],["chk_cust","고객등록",1],["chk_slip","전표마감",1],["chk_sales","매출마감",1],["memo","비고",1]];
@@ -934,7 +934,18 @@ function getColW(t="ctr"){try{return JSON.parse(localStorage.getItem(cwKey(t))||
 function setColW(o,t="ctr"){try{localStorage.setItem(cwKey(t),JSON.stringify(o))}catch(e){}}
 function applyColW(cols,live,t="ctr"){const w=Object.assign(getColW(t),live||{});const id="colwStyle_"+t;let st=document.getElementById(id);if(!st){st=document.createElement("style");st.id=id;document.head.appendChild(st)}
   const sel=TCFG[t].sel,lead=TCFG[t].lead();
-  st.textContent=cols.map((c,i)=>w[c]?`${sel} tr>*:nth-child(${i+lead+1}){width:${w[c]}px;min-width:${w[c]}px;max-width:${w[c]}px;overflow:hidden;text-overflow:ellipsis}`:"").join("\n")}
+  st.textContent=cols.map((c,i)=>w[c]?`${sel} tr>*:nth-child(${i+lead+1}){width:${w[c]}px;min-width:${w[c]}px;max-width:${w[c]}px;overflow:hidden;text-overflow:ellipsis}`:"").join("\n");
+  if(t==="ctr"||t==="as")freezeCols(t,cols)}
+/* 틀 고정: 맨 앞(체크·순번)부터 업체명(상호) 열까지는 가로로 밀어도 고정 */
+function freezeCols(t,cols){const sel=TCFG[t].sel;const id="frzStyle_"+t;let st=document.getElementById(id);if(!st){st=document.createElement("style");st.id=id;document.head.appendChild(st)}
+  const tbl=view().querySelector(sel);const ni=cols.indexOf("name");if(!tbl||ni<0){st.textContent="";return}
+  const n=ni+TCFG[t].lead()+1;const hr=tbl.querySelector("thead tr");if(!hr)return;st.textContent="";
+  const ths=[...hr.children].slice(0,n);let x=0;const css=[];
+  ths.forEach((th,i)=>{css.push(`${sel} tr>*:nth-child(${i+1}){position:sticky;left:${x}px;z-index:2;background:var(--panel)}`);x+=th.getBoundingClientRect().width});
+  css.push(`${sel} thead tr>*:nth-child(-n+${n}),${sel} tfoot tr>*:nth-child(-n+${n}){z-index:4;background:var(--line2)}`);
+  css.push(`${sel} tbody tr:hover>*:nth-child(-n+${n}){background:var(--accent-weak)}`);
+  css.push(`${sel} tr>*:nth-child(${n}){box-shadow:inset -2px 0 0 var(--line)}`);
+  st.textContent=css.join("\n")}
 function bindColResize(cols,t="ctr"){
   view().querySelectorAll(TCFG[t].sel+" .rz").forEach(h=>{
     h.onclick=e=>e.stopPropagation();
@@ -1037,7 +1048,7 @@ function renderCtrView0(){
        <div class="kpi bad kc ${ui.ckpi==="unpaid"?"on":""}" data-kpi="unpaid" role="button" tabindex="0"><span>미수금 (미수 ${un.length}건)</span><b>${won0(unSum)}원</b></div></div>
       <p class="mapt" style="margin:0">이달 설치한 건(설치 전이면 계약일 기준), 이달 최종결제된 건, 그리고 해결되지 않은 미수 건이 함께 나옵니다.<br>숫자를 누르면 아래 목록이 그 건들로 바뀝니다.</p></div>
      <div class="sumbox">${sumT}</div></div>
-   <div class="toolbar"><input id="cQ" type="search" placeholder="업체명·대표자·전화·시리얼·담당 검색" value="${esc(ui.cq)}">
+   <div class="toolbar"><input id="cQ" type="search" placeholder="업체명(상호)·대표자·전화·시리얼·담당 검색" value="${esc(ui.cq)}">
      <div class="nav" role="group"><button type="button" id="cAll" class="${ui.crow||ui.cct||ui.ckpi?"":"on"}">전체</button></div>
      <span class="mapt">${ui.ckpi&&KPI[ui.ckpi]?esc(KPI[ui.ckpi][0])+" · ":""}${ui.crow?esc(CROWS.find(y=>y[0]===ui.crow)[1])+" · ":""}${ui.cct?esc(ui.cct)+" · ":""}${list.length}건</span>
      <span style="flex:1"></span>${isAdmin()?`<label class="chip"><input type="checkbox" id="cSelAll">전체 선택</label><button class="btn danger" type="button" id="cDel" disabled>선택 삭제 (0)</button>`:""}<button class="btn" type="button" id="cSort">정렬</button><button class="btn" type="button" id="cCols">입력화면설정</button>${isOffice()||me.role==="sales"?`<button class="btn pri" type="button" id="cNewK">+ 신규계약</button>`:""}</div>
@@ -1124,7 +1135,7 @@ function asInstDate(j){if(!_instMap){_instMap={};jobs.forEach(x=>{if(x.kind!=="i
 function asMoney(j){const c=Number(j.cost||0);const pay=j.pay_status==="완료"||(j.pay_date&&j.pay_status!=="미수");const card=j.pay_method==="카드";
   return{cost:c,card:pay&&card?c:0,cash:pay&&!card?c:0,unpaid:j.pay_status==="미수"?c:0}}
 const ACOLS=[
- ["basis","접수월",1],["rdate","접수일자",1],["name","상호",1],["ceo","대표자",0],["phone","전화번호",1],["addr","주소",1],["symptom","접수내용",1],["result","내용",1],
+ ["basis","접수월",1],["rdate","접수일자",1],["name","업체명(상호)",1],["ceo","대표자",0],["phone","전화번호",1],["addr","주소",1],["symptom","접수내용",1],["result","내용",1],
  ["visit","예정일",1],["wday","요일",1],["time","시간",0],["status","처리현황",1],["done","완료일",0],["idate","설치일",1],["product","제품",1],["size","규격",1],["serial","시리얼",1],["parts","교체부품",1],
  ["tech","담당자",1],["action","조치내용",1],["cost","청구금액(총합계)",1],["trip","출장비",1],["pfee","부품비",1],["dist","거리",1],["sat","만족도",1],["pmeth","청구방법",1],["ptype","유상/무상",1],
  ["pdate","입금일",1],["pname","입금자명",1],["unpaid","미수",1],["card","카드",1],["cash","현금",1],["tax","세금계산서발행일자",1],["closed","마감",1],["pmemo","입금 메모",0]];
@@ -1235,7 +1246,7 @@ function renderAsView0(){
        <div class="kpi kc ${ui.akpi==="open"?"on":""}" data-akpi="open" role="button" tabindex="0"><span>미처리 (전체)</span><b>${op.length}건</b></div></div>
       <p class="mapt" style="margin:0">지난달부터 남은 미처리 건이 맨 위에, 그 아래로 이달 접수한 건, 이달 처리·입금된 건, 미수 건이 나옵니다.<br>숫자를 누르면 아래 목록이 그 건들로 바뀝니다.</p></div>
      <div class="sumbox">${sumT}</div></div>
-   <div class="toolbar"><input id="aQ" type="search" placeholder="상호·전화·시리얼·접수내용·담당자 검색" value="${esc(ui.aq)}">
+   <div class="toolbar"><input id="aQ" type="search" placeholder="업체명(상호)·전화·시리얼·접수내용·담당자 검색" value="${esc(ui.aq)}">
      <div class="nav" role="group"><button type="button" id="aAll" class="${label?"":"on"}">전체</button></div>
      <span class="mapt">${label?esc(label)+" · ":""}${list.length}건</span>
      <span style="flex:1"></span>${isAdmin()?`<label class="chip"><input type="checkbox" id="aSelAll">전체 선택</label><button class="btn danger" type="button" id="aDel" disabled>선택 삭제 (0)</button>`:""}<button class="btn" type="button" id="aSort">정렬</button><button class="btn" type="button" id="aCols">입력화면설정</button>${isOffice()?`<button class="btn" type="button" id="aImp">엑셀 가져오기</button>`:""}${canNewJob(null)?`<button class="btn pri" type="button" id="aNew">+ A/S 접수</button>`:""}</div>
@@ -1307,7 +1318,7 @@ function asImportDlg(fname,rows){const plan=planAsImport(rows);
    <table class="stafft"><tbody><tr><td>새 A/S 접수</td><td>${plan.newJob.length}건</td></tr><tr><td>기존 고객과 연결</td><td>${plan.matched}줄</td></tr><tr><td>새로 등록될 고객</td><td>${plan.newCust.length}곳${plan.newCust.length?` <small class="mapt">(${esc(plan.newCust.slice(0,6).map(c=>c.name).join(", "))}${plan.newCust.length>6?" 외":""})</small>`:""}</td></tr><tr><td>이미 있는 A/S (건너뜀)</td><td>${plan.skipped}건</td></tr></tbody></table>
    ${plan.warn.length?`<p class="warnbox">날짜로 읽을 수 없는 칸이 있어 비워 둡니다. 원래 글자는 입금 메모에 남깁니다.<br>${plan.warn.slice(0,5).map(esc).join("<br>")}${plan.warn.length>5?"<br>…":""}</p>`:""}
    ${plan.asx?"":`<p class="warnbox">조치내용·출장비·부품비·거리·만족도·세금계산서 칸은 phase1q.sql 실행 전이라 옮기지 않습니다.</p>`}
-   <p class="mapt">상호·전화번호가 같은 고객에 연결합니다. 같은 고객·접수일자·접수내용인 A/S는 이미 있는 것으로 보고 건너뜁니다.</p>`,
+   <p class="mapt">업체명(상호)·전화번호가 같은 고객에 연결합니다. 같은 고객·접수일자·접수내용인 A/S는 이미 있는 것으로 보고 건너뜁니다.</p>`,
    [["취소"],["가져오기","pri",async()=>{try{
      const put=async(tb,rs)=>{for(let i=0;i<rs.length;i+=300){toast(`가져오는 중… ${tb==="customers"?"고객":"A/S"} ${Math.min(i+300,rs.length)}/${rs.length}`);const {error}=await sb.from(tb).insert(rs.slice(i,i+300));if(error)throw error}};
      await put("customers",plan.newCust);await put("jobs",plan.newJob);
@@ -1361,7 +1372,7 @@ function renderSchedView0(){
     const per=groups.map(g=>entries(g,d));const n0=Math.max(0,...per.map(a=>a.length));const R=Math.max(1,n0+(off&&(n0>0||!hol)?1:0));const cls=`${hol?"shol":work?"swork":""} ${d===td?"stoday":""}`;
     let h="";for(let r=0;r<R;r++){h+=`<tr class="${cls} ${r===0?"sfirst":""}">${r===0?`<td class="sday" rowspan="${R}">${dt.getDate()}일</td><td class="sday" rowspan="${R}">${WDAY[wd]}${wd===6&&R>1&&!hol?"":""}</td><td class="sref" rowspan="${R}" data-sref="${d}">${[KHOL[d]&&!dn.some(n=>n.note.includes(KHOL[d]))?`<span class="khol">${esc(KHOL[d])}</span>`:"",...dn.map(n=>esc(n.note))].filter(Boolean).join("<br>")}</td>`:""}${groups.map((g,i)=>cell7(g,d,per[i][r])).join("")}</tr>`}
     return h}).join("");
-  const sub=["작업구분","지역","작업시작","작업종료","업체명","영업담당","결과"];
+  const sub=["작업구분","지역","작업시작","작업종료","업체명(상호)","영업담당","결과"];
   view().innerHTML=`${ui.noNotes||!hasEnd()?`<div class="sec" style="max-width:none"><p class="warnbox">일정표의 작업종료 시간과 메모(연차·참조)를 쓰려면 Supabase SQL Editor에서 <b>phase1r.sql</b>을 실행해 주세요.</p></div>`:""}
    <div class="toolbar" style="flex-wrap:wrap"><h2 style="margin:0;font-size:18px">${y}년 ${m}월 설치팀 업무일정표</h2>
      <input id="sM" type="month" value="${esc(ui.sm)}" aria-label="기준 월" style="padding:5px 8px;border:1px solid var(--line);border-radius:6px;background:var(--field)">${ui.sm!==thisMonth()?`<button class="btn sm" type="button" id="sNow">이번 달</button>`:""}
@@ -1439,7 +1450,7 @@ function custSummary(c,k){if(!c)return"";const pr=k?[k.product,k.size,k.serial&&
   const g=gradeOf(c);return `<p class="mapt dsum"><b>${esc(c.name)}</b>${gradeBadge(c)}${c.address?" · "+esc(c.address):""}${c.phone||c.phone2?" · "+esc(c.phone||c.phone2):""}${pr?" · 제품: "+esc(pr):""}</p>${g?`<p class="gwarn ${g.g==="블랙"?"g-black":"g-red"}">⚠ ${g.g} 고객${g.reason?" — "+esc(g.reason):""}</p>`:""}`}
 /* 계약관리에서 신규계약: 고객을 검색해 고른 뒤 계약 창 */
 function newContractPick(){const pool=customers.filter(x=>isOffice()||x.owner===me.id);
-  openDlg("신규계약 · 고객 선택",`<div id="jf" style="display:grid;gap:10px"><label class="f">고객 검색<input id="jcQ" type="search" autocomplete="off" placeholder="업체명·대표자·전화번호·주소·시리얼"></label>
+  openDlg("신규계약 · 고객 선택",`<div id="jf" style="display:grid;gap:10px"><label class="f">고객 검색<input id="jcQ" type="search" autocomplete="off" placeholder="업체명(상호)·대표자·전화번호·주소·시리얼"></label>
     <input type="hidden" id="jcId"><div id="jcSel"></div><div id="jcRes" class="pickres"></div>
     <p class="mapt" id="jcHint">두 글자 이상 입력하면 고객 목록이 나옵니다. 처음 오는 고객은 ‘새 고객 등록’으로 먼저 등록하세요.</p></div>`,
     [["새 고객 등록","gocust",()=>{newCustomer(null,c=>contractDlg(c,null));return true}],["취소"],["다음","pri",()=>{const c=pool.find(x=>x.id===val("jcId"));if(!c){toast("고객을 검색해서 목록에서 골라 주세요");return true}contractDlg(c,null);return true}]]);
@@ -1602,7 +1613,7 @@ function renderJobsView(kind){
     <h2 style="margin:0 8px 0 0;font-size:18px">${KLABEL[kind]}</h2>
     <select id="jScope" aria-label="범위"><option value="mine" ${ui.jscope==="mine"?"selected":""}>내 배정 건</option><option value="all" ${ui.jscope==="all"?"selected":""}>전체</option></select>
     <select id="jSt" aria-label="상태"><option value="open" ${ui.jst==="open"?"selected":""}>진행 중 (접수·배정·보류)</option>${JST.map(s=>`<option ${ui.jst===s?"selected":""}>${s}</option>`).join("")}<option value="all" ${ui.jst==="all"?"selected":""}>전체 상태</option></select>
-    <input id="jQ" type="search" placeholder="업체명·주소·기사 검색" value="${esc(ui.jq)}">
+    <input id="jQ" type="search" placeholder="업체명(상호)·주소·기사 검색" value="${esc(ui.jq)}">
     ${kind==="as"?`<select id="jPay" aria-label="결제"><option value="">결제 전체</option><option value="미수" ${ui.jpay==="미수"?"selected":""}>미수만</option><option value="완료" ${ui.jpay==="완료"?"selected":""}>납부 완료만</option><option value="open" ${ui.jpay==="open"?"selected":""}>매출마감 안 된 내역 (유상·무상 모두)</option><option value="cancel" ${ui.jpay==="cancel"?"selected":""}>취소 건만</option></select>
       <div class="nav"><button type="button" data-jv="card" class="${ui.jview!=="table"?"on":""}">카드</button><button type="button" data-jv="table" class="${ui.jview==="table"?"on":""}">결제 표</button></div>`:""}
     <span class="mapt">${list.length}건</span><span style="flex:1"></span>
@@ -1648,7 +1659,7 @@ function monthBuckets(list,ym){
   return out;
 }
 function whoOf(j){const tn=(j.techs||[]).map(staffName).filter(Boolean);const extra=String(j.tech_names||"").split(/[\s,/]+/).filter(t=>t&&!tn.includes(t)&&!staff.some(x=>tn.includes(x.name)&&(x.aliases||[]).includes(t))).join(" ");return [tn.join(", "),extra].filter(Boolean).join(" · ")}
-const WCOLS=[["rmon","접수월",1],["kind","구분",1],["name","업체명",1],["ceo","대표자",0],["phone","전화번호",1],["region","지역",1],["addr","상세주소",1],["cdate","계약/접수",1],["rdate","접수일",0],["visit","예정일",1],["wday","요일",1],["time","시간",1],
+const WCOLS=[["rmon","접수월",1],["kind","구분",1],["name","업체명(상호)",1],["ceo","대표자",0],["phone","전화번호",1],["region","지역",1],["addr","상세주소",1],["cdate","계약/접수",1],["rdate","접수일",0],["visit","예정일",1],["wday","요일",1],["time","시간",1],
  ["product","제품",1],["size","규격",1],["serial","시리얼",1],["wash","수압식",1],["sink","싱크대",1],["parts","제공 부자재",0],["symptom","접수내용",1],["result","처리내용",0],["sales","영업담당",1],["tech","배정",1],["status","처리현황",1],["done","완료일",0],["photo","사진",0]];
 /* 설치 접수내용 = 계약 비고 (+ 작업에 적은 요청 사항) */
 function jobNote(j,k){if(j.kind!=="install")return j.symptom||"";const kk=(k&&k.id?k:contracts.find(x=>x.id===j.contract_id))||{};return [kk.memo,j.symptom].map(x=>String(x||"").trim()).filter(Boolean).filter((x,i,a)=>a.indexOf(x)===i).join(" / ")}
@@ -1710,7 +1721,7 @@ function renderWorkView0(){
       <input id="wM" type="month" value="${esc(ui.wm)}" aria-label="기준 월" style="padding:5px 8px;border:1px solid var(--line);border-radius:6px;background:var(--field)">${ui.wm!==thisMonth()?`<button class="btn sm" type="button" id="wNow">이번 달</button>`:""}</div>
       <p class="mapt" style="margin:0">숫자를 누르면 아래 목록이 그 건들로 바뀝니다.</p></div><div class="sumbox">${sumT}</div></div>
     <div class="toolbar">
-    <input id="jQ" type="search" placeholder="업체명·전화·주소·기사 검색" value="${esc(ui.jq)}" aria-label="검색">
+    <input id="jQ" type="search" placeholder="업체명(상호)·전화·주소·기사 검색" value="${esc(ui.jq)}" aria-label="검색">
     <div class="nav" role="group" aria-label="구분">${[["","전체"],...KINDS.map(k=>[k,KLABEL[k]])].map(([k,l])=>`<button type="button" data-wk="${k}" class="${ui.wkind===k?"on":""}">${l}</button>`).join("")}</div>
     ${me.role==="tech"?`<select id="jScope" aria-label="범위"><option value="mine" ${ui.jscope==="mine"?"selected":""}>내 배정 건</option><option value="all" ${ui.jscope==="all"?"selected":""}>전체</option></select>
     <div class="nav" role="group" aria-label="보기"><button type="button" data-wv="table" class="${ui.wview==="table"?"on":""}">표</button><button type="button" data-wv="card" class="${ui.wview==="card"?"on":""}">카드</button></div>`:""}
@@ -1740,7 +1751,7 @@ function payTable(list){
   const sumCard=rows.filter(j=>j.pay_method==="카드"&&j.pay_status==="완료").reduce((a,j)=>a+Number(j.cost||0),0);
   const sumCash=rows.filter(j=>j.pay_method!=="카드"&&j.pay_status==="완료").reduce((a,j)=>a+Number(j.cost||0),0);
   const sumUn=rows.filter(j=>j.pay_status==="미수").reduce((a,j)=>a+Number(j.cost||0),0);
-  return `<div class="wrapx" style="padding-top:12px"><table class="stafft paytable"><thead><tr>${isAdmin()?`<th style="width:30px"></th>`:""}<th>결제수단</th><th>유상</th><th>결제일</th><th>카드사·입금자</th><th style="text-align:right">카드</th><th style="text-align:right">현금·입금</th><th>업체명</th><th>메모</th><th>상태</th></tr></thead><tbody>
+  return `<div class="wrapx" style="padding-top:12px"><table class="stafft paytable"><thead><tr>${isAdmin()?`<th style="width:30px"></th>`:""}<th>결제수단</th><th>유상</th><th>결제일</th><th>카드사·입금자</th><th style="text-align:right">카드</th><th style="text-align:right">현금·입금</th><th>업체명(상호)</th><th>메모</th><th>상태</th></tr></thead><tbody>
    ${rows.map(j=>{const amt=won0(j.cost);const card=j.pay_method==="카드";return `<tr data-j="${j.id}" style="cursor:pointer">${isAdmin()?`<td><input type="checkbox" class="jsel" data-js="${j.id}" ${ui.jsel.has(j.id)?"checked":""} aria-label="선택"></td>`:""}<td>${esc(j.pay_method||"-")}</td><td>${esc(j.paid_type||"")}</td><td>${esc(j.pay_date?j.pay_date.slice(5).replace("-","/"):"")}</td><td>${esc(j.pay_name||"")}</td>
      <td class="money" style="text-align:right">${card&&j.cost?amt:""}</td><td class="money" style="text-align:right">${!card&&j.cost?amt:""}</td><td>${esc(j.customer_name)}</td><td>${esc(j.pay_memo||"")}</td>
      <td>${j.pay_status==="미수"?`<span class="badge s-미수">미수</span>`:j.closed?`<span class="badge">마감 OK</span>`:j.pay_status==="완료"?`<span class="badge s-완료">납부</span>`:""}</td></tr>`}).join("")||`<tr><td colspan="10" class="mapt">해당하는 A/S 건이 없습니다.</td></tr>`}</tbody>
@@ -1756,7 +1767,7 @@ function jobDlg(j,c,kind,tpl,preset){
   const can=isNew||canEditJob(j);const off=isOffice();const p=j.kind==="as"?asProd(j):(j.product||{});const asx=hasAsx();const he=hasEnd();
   const techs=staff.filter(s=>s.active&&s.role==="tech");
   const pickable=customers.filter(x=>isOffice()||x.owner===me.id);
-  const pick=isNew&&!c?`<label class="f">고객 검색<input id="jcQ" type="search" autocomplete="off" placeholder="업체명·대표자·전화번호·주소·시리얼"></label>
+  const pick=isNew&&!c?`<label class="f">고객 검색<input id="jcQ" type="search" autocomplete="off" placeholder="업체명(상호)·대표자·전화번호·주소·시리얼"></label>
      <input type="hidden" name="custId" id="jcId"><div id="jcSel"></div><div id="jcRes" class="pickres"></div>
      <p class="mapt" id="jcHint">두 글자 이상 입력하면 고객 목록이 나옵니다. 없는 고객은 ‘고객’ 화면의 ‘+ 새 고객’으로 먼저 등록하세요.</p>`
     :`<p class="mapt dsum"><b>${esc(j.customer_name)}</b> · ${esc(j.address||"")}${c&&c.phone?" · "+esc(c.phone):""} · 제품: ${esc([p.product,p.size,p.options&&"("+p.options+")",p.serial&&"SN "+p.serial].filter(Boolean).join(" ")||"-")}</p>${c?gradeWarn(c):""}`;
@@ -1934,10 +1945,10 @@ function renderDeleteView(){
   const shown=rows.slice(0,500);
   view().innerHTML=`<div class="toolbar"><h2 style="margin:0 8px 0 0;font-size:18px">삭제</h2>
     <div class="nav">${Object.entries(DKIND).map(([k,l])=>`<button type="button" data-dk="${k}" class="${ui.dkind===k?"on":""}">${l}</button>`).join("")}</div>
-    <input id="dQ" type="search" placeholder="업체명·내용 검색" value="${esc(ui.dq)}"><span class="mapt">${rows.length}건 · 선택 ${ui.dsel.size}건</span><span style="flex:1"></span>
+    <input id="dQ" type="search" placeholder="업체명(상호)·내용 검색" value="${esc(ui.dq)}"><span class="mapt">${rows.length}건 · 선택 ${ui.dsel.size}건</span><span style="flex:1"></span>
     <button class="btn danger" type="button" id="bDel" ${ui.dsel.size?"":"disabled"}>선택한 ${ui.dsel.size}건 삭제</button></div>
     <div class="sec" style="padding-bottom:0"><p class="mapt">${ui.dkind==="cust"?"고객을 지우면 그 고객의 계약·설치·A/S 기록도 함께 지워집니다.":ui.dkind==="ctr"?"계약을 지워도 연결된 설치·A/S 기록은 남습니다.":"지운 기록은 되돌릴 수 없습니다."} 삭제는 관리자만 할 수 있습니다.</p></div>
-    <div class="wrapx"><table class="stafft"><thead><tr><th style="width:36px"><input type="checkbox" id="dAll" aria-label="전체 선택" ${shown.length&&shown.every(r=>ui.dsel.has(r.id))?"checked":""}></th><th>날짜</th><th>업체명</th><th>내용</th></tr></thead><tbody>
+    <div class="wrapx"><table class="stafft"><thead><tr><th style="width:36px"><input type="checkbox" id="dAll" aria-label="전체 선택" ${shown.length&&shown.every(r=>ui.dsel.has(r.id))?"checked":""}></th><th>날짜</th><th>업체명(상호)</th><th>내용</th></tr></thead><tbody>
     ${shown.map(r=>`<tr><td><input type="checkbox" data-d="${r.id}" ${ui.dsel.has(r.id)?"checked":""} aria-label="선택"></td><td class="money">${esc(r.date)}</td><td>${esc(r.title)}</td><td>${esc(r.sub)}</td></tr>`).join("")||`<tr><td colspan="4" class="mapt">기록이 없습니다.</td></tr>`}
     </tbody></table>${rows.length>shown.length?`<p class="mapt">${rows.length-shown.length}건 더 있습니다. 검색으로 좁혀 주세요.</p>`:""}</div>`;
   view().querySelectorAll("[data-dk]").forEach(b=>b.onclick=()=>{ui.dkind=b.dataset.dk;ui.dsel=new Set();renderDeleteView()});
@@ -1974,7 +1985,7 @@ document.getElementById("fileIn").onchange=async e=>{
    <table class="stafft"><tbody><tr><td>새 고객</td><td>${plan.newCust.length}곳</td></tr><tr><td>새 계약</td><td>${plan.newCtr.length}건</td></tr><tr><td>새 설치 작업</td><td>${plan.newJob.length}건${plan.missJob.length?` <small class="mapt">(이 중 ${plan.missJob.length}건은 설치 작업이 빠져 있던 기존 계약에 추가)</small>`:""}</td></tr><tr><td>새 입금 내역</td><td>${plan.newPay.length}건</td></tr><tr><td>이미 있는 계약</td><td>${plan.skipped}건</td></tr></tbody></table>
    ${plan.updCtr.length?`<label class="chip"><input type="checkbox" id="updEx" checked>이미 있는 계약 ${plan.updCtr.length}건도 엑셀 기준으로 구분·영업 경로·진행단계·승인처·마감 체크를 갱신 (입금 기록이 없는 계약은 입금 ${plan.updCtr.reduce((a,u)=>a+u.pays.length,0)}건 추가)</label>`:""}
    ${plan.payWarn?`<p class="mapt">입금 칸 합계가 엑셀 ‘합계금액’과 다른 줄이 ${plan.payWarn}건 있습니다. 이관 후 계약관리에서 미수금을 확인해 주세요.</p>`:""}
-   <p class="mapt">엑셀 한 줄이 계약 1건과 설치 작업 1건이 됩니다. 같은 사업자번호 또는 같은 업체명·휴대번호는 한 고객으로 묶습니다. 입금일자 묶음(1차·2차·최종)은 계약별 입금 내역으로 들어갑니다.${ui.noPay?" (입금 내역 칸이 아직 없어 입금은 옮기지 않습니다. phase1h.sql을 먼저 실행하세요.)":""}</p>
+   <p class="mapt">엑셀 한 줄이 계약 1건과 설치 작업 1건이 됩니다. 같은 사업자번호 또는 같은 업체명(상호)·전화번호는 한 고객으로 묶습니다. 입금일자 묶음(1차·2차·최종)은 계약별 입금 내역으로 들어갑니다.${ui.noPay?" (입금 내역 칸이 아직 없어 입금은 옮기지 않습니다. phase1h.sql을 먼저 실행하세요.)":""}</p>
    ${isAdmin()&&customers.length?`<label class="chip"><input type="checkbox" id="rpl">지금 고객·계약·작업을 모두 지우고 이 엑셀로 새로 이관</label>`:""}`,
    [["취소"],["이관","pri",async()=>{const rpl=document.getElementById("rpl")?.checked;const up=document.getElementById("updEx");const pl=rpl?planImport(parsed,true):plan;if(up&&!up.checked)pl.updCtr=[];await runImport(pl,rpl)}]]);
 };
