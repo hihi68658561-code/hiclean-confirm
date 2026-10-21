@@ -2085,7 +2085,7 @@ function sinkCell(j){const s=esc(j.sink_status||""),m=String(j.sink_memo||"").tr
 function hbar(box){
   if(!box||box.nextElementSibling&&box.nextElementSibling.classList.contains("hbar"))return;
   const bar=document.createElement("div");bar.className="hbar";bar.setAttribute("aria-hidden","true");bar.innerHTML="<div></div>";box.after(bar);
-  const sync=()=>{bar.firstChild.style.width=box.scrollWidth+"px";bar.hidden=box.scrollWidth<=box.clientWidth+1;if(Math.abs(bar.scrollLeft-box.scrollLeft)>1)bar.scrollLeft=box.scrollLeft};
+  const sync=()=>{bar.firstChild.style.width=(box.scrollWidth+Math.max(0,box.offsetWidth-box.clientWidth))+"px";bar.hidden=box.scrollWidth<=box.clientWidth+1;if(Math.abs(bar.scrollLeft-box.scrollLeft)>1)bar.scrollLeft=box.scrollLeft};
   box.classList.add("hb");
   bar.addEventListener("scroll",()=>{if(Math.abs(box.scrollLeft-bar.scrollLeft)>1)box.scrollLeft=bar.scrollLeft});
   box.addEventListener("wheel",e=>{const dx=e.shiftKey&&!e.deltaX?e.deltaY:e.deltaX;if(!dx||box.scrollWidth<=box.clientWidth)return;
