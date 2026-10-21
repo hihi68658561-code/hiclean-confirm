@@ -1023,7 +1023,8 @@ function renderCtrView0(){
       <p class="mapt" style="margin:0">이달 설치한 건(설치 전이면 계약일 기준), 이달 최종결제된 건, 그리고 해결되지 않은 미수 건이 함께 나옵니다.<br>숫자를 누르면 아래 목록이 그 건들로 바뀝니다.</p></div>
      <div class="sumbox">${sumT}</div></div>
    <div class="toolbar"><input id="cQ" type="search" placeholder="업체명·대표자·전화·시리얼·담당 검색" value="${esc(ui.cq)}">
-     <span class="mapt">${ui.ckpi&&KPI[ui.ckpi]?esc(KPI[ui.ckpi][0])+" · ":""}${ui.crow?esc(CROWS.find(y=>y[0]===ui.crow)[1])+" · ":""}${ui.cct?esc(ui.cct)+" · ":""}${list.length}건</span>${ui.crow||ui.cct||ui.ckpi?`<button class="btn sm" type="button" id="cAll">전체 보기</button>`:""}
+     <div class="nav" role="group"><button type="button" id="cAll" class="${ui.crow||ui.cct||ui.ckpi?"":"on"}">전체</button></div>
+     <span class="mapt">${ui.ckpi&&KPI[ui.ckpi]?esc(KPI[ui.ckpi][0])+" · ":""}${ui.crow?esc(CROWS.find(y=>y[0]===ui.crow)[1])+" · ":""}${ui.cct?esc(ui.cct)+" · ":""}${list.length}건</span>
      <span style="flex:1"></span><button class="btn" type="button" id="cSort">정렬</button><button class="btn" type="button" id="cCols">입력화면설정</button>${isOffice()||me.role==="sales"?`<button class="btn pri" type="button" id="cNewK">+ 신규계약</button>`:""}</div>
    <div class="wrapx vis" style="padding-top:10px"><div class="wtbox"><table class="wt ct"><thead><tr><th>#</th>${colHead(cols,"ctr",MONEYC)}</tr></thead><tbody>
     ${shown.map((x,i)=>`<tr data-ck="${x.k.id}" class="rs-${esc(x.k.stage)}"><td>${i+1}</td>${cols.map(c=>ctrCell(c,x.k,x.c,x.s,x.b)).join("")}</tr>`).join("")||`<tr><td colspan="${cols.length+1}" class="mapt" style="cursor:default">해당하는 계약이 없습니다.</td></tr>`}</tbody>
@@ -1208,7 +1209,8 @@ function renderAsView0(){
       <p class="mapt" style="margin:0">지난달부터 남은 미처리 건이 맨 위에, 그 아래로 이달 접수한 건, 이달 처리·입금된 건, 미수 건이 나옵니다.<br>숫자를 누르면 아래 목록이 그 건들로 바뀝니다.</p></div>
      <div class="sumbox">${sumT}</div></div>
    <div class="toolbar"><input id="aQ" type="search" placeholder="상호·전화·시리얼·접수내용·담당자 검색" value="${esc(ui.aq)}">
-     <span class="mapt">${label?esc(label)+" · ":""}${list.length}건</span>${label?`<button class="btn sm" type="button" id="aAll">전체 보기</button>`:""}
+     <div class="nav" role="group"><button type="button" id="aAll" class="${label?"":"on"}">전체</button></div>
+     <span class="mapt">${label?esc(label)+" · ":""}${list.length}건</span>
      <span style="flex:1"></span><button class="btn" type="button" id="aSort">정렬</button><button class="btn" type="button" id="aCols">입력화면설정</button>${isOffice()?`<button class="btn" type="button" id="aImp">엑셀 가져오기</button>`:""}${canNewJob(null)?`<button class="btn pri" type="button" id="aNew">+ A/S 접수</button>`:""}</div>
    <div class="wrapx vis" style="padding-top:10px"><div class="wtbox"><table class="wt am"><thead><tr><th>순번</th>${colHead(cols,"as",AMONEY)}</tr></thead><tbody>
     ${shown.map((x,i)=>`<tr data-aj="${x.j.id}" class="rs-${esc(asRowCls(x.j))}"><td>${i+1}</td>${cols.map(c=>asCell(c,x.j,x.c,x.m)).join("")}</tr>`).join("")||`<tr><td colspan="${cols.length+1}" class="mapt" style="cursor:default">해당하는 A/S가 없습니다.</td></tr>`}</tbody>
@@ -1649,7 +1651,7 @@ function wCell(col,j,c,k,td){const p=j.product||{};const rd=rdOf(j);const vd=j.v
 function renderWorkView(){const _sv=snapScroll();renderWorkView0();restoreScroll(_sv)}
 function renderWorkView0(){
   if(!ui.wm)ui.wm=thisMonth();if(!ui.wrow)ui.wrow="open";if(ui.wkind===undefined)ui.wkind="";
-  if(me.role!=="tech"||!ui.wview||ui.wview==="pay")ui.wview=me.role==="tech"&&window.innerWidth<800&&ui.wview!=="table"?"card":"table";ui.jq="";ui.jpay="";if(ui.wrow==="all")ui.wrow="open";
+  if(me.role!=="tech"||!ui.wview||ui.wview==="pay")ui.wview=me.role==="tech"&&window.innerWidth<800&&ui.wview!=="table"?"card":"table";ui.jpay="";if(ui.wrow==="all")ui.wrow="open";
   const scoped=jobs.filter(j=>ui.jscope!=="mine"||(j.techs||[]).includes(me.id));
   const B=monthBuckets(scoped,ui.wm);
   const cnt=(r,k)=>k?B[r].filter(j=>j.kind===k).length:B[r].length;
@@ -1676,6 +1678,7 @@ function renderWorkView0(){
       <input id="wM" type="month" value="${esc(ui.wm)}" aria-label="기준 월" style="padding:5px 8px;border:1px solid var(--line);border-radius:6px;background:var(--field)">${ui.wm!==thisMonth()?`<button class="btn sm" type="button" id="wNow">이번 달</button>`:""}</div>
       <p class="mapt" style="margin:0">숫자를 누르면 아래 목록이 그 건들로 바뀝니다.</p></div><div class="sumbox">${sumT}</div></div>
     <div class="toolbar">
+    <input id="jQ" type="search" placeholder="업체명·전화·주소·기사 검색" value="${esc(ui.jq)}" aria-label="검색">
     <div class="nav" role="group" aria-label="구분">${[["","전체"],...KINDS.map(k=>[k,KLABEL[k]])].map(([k,l])=>`<button type="button" data-wk="${k}" class="${ui.wkind===k?"on":""}">${l}</button>`).join("")}</div>
     ${me.role==="tech"?`<select id="jScope" aria-label="범위"><option value="mine" ${ui.jscope==="mine"?"selected":""}>내 배정 건</option><option value="all" ${ui.jscope==="all"?"selected":""}>전체</option></select>
     <div class="nav" role="group" aria-label="보기"><button type="button" data-wv="table" class="${ui.wview==="table"?"on":""}">표</button><button type="button" data-wv="card" class="${ui.wview==="card"?"on":""}">카드</button></div>`:""}
@@ -1693,6 +1696,7 @@ function renderWorkView0(){
   document.getElementById("wM").onchange=e=>{if(e.target.value){ui.wm=e.target.value;re()}};
   const wn=document.getElementById("wNow");if(wn)wn.onclick=()=>{ui.wm=thisMonth();re()};
   const jsc=document.getElementById("jScope");if(jsc)jsc.onchange=e=>{ui.jscope=e.target.value;re()};
+  const jq=document.getElementById("jQ");jq.oninput=e=>{ui.jq=e.target.value;clearTimeout(jq._t);jq._t=setTimeout(()=>{re();const n=document.getElementById("jQ");n.focus();n.setSelectionRange(n.value.length,n.value.length)},250)};
   bindJobCards(view());
   const nb=document.getElementById("bNewJ");if(nb)nb.onclick=()=>jobDlg(null,null,ui.wkind||"as");
   const ja=document.getElementById("jAll");if(ja)ja.onchange=()=>{document.querySelectorAll(".jsel").forEach(x=>{x.checked=ja.checked;ja.checked?ui.jsel.add(x.dataset.js):ui.jsel.delete(x.dataset.js)});updJSel()};
