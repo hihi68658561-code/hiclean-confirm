@@ -1137,7 +1137,7 @@ function asMoney(j){const c=Number(j.cost||0);const pay=j.pay_status==="완료"|
 const ACOLS=[
  ["basis","접수월",1],["rdate","접수일자",1],["name","업체명(상호)",1],["ceo","대표자",0],["phone","전화번호",1],["addr","주소",1],["symptom","접수내용",1],["result","내용",1],
  ["visit","예정일",1],["wday","요일",1],["time","시간",0],["status","처리현황",1],["done","완료일",0],["idate","설치일",1],["product","제품",1],["size","규격",1],["serial","시리얼",1],["parts","교체부품",1],
- ["tech","담당자",1],["action","조치내용",1],["cost","청구금액(총합계)",1],["trip","출장비",1],["pfee","부품비",1],["dist","거리",1],["sat","만족도",1],["pmeth","청구방법",1],["ptype","유상/무상",1],
+ ["tech","담당자",1],["action","조치방법",1],["cost","청구금액(총합계)",1],["trip","출장비",1],["pfee","부품비",1],["dist","거리",1],["sat","만족도",1],["pmeth","청구방법",1],["ptype","유상/무상",1],
  ["pdate","입금일",1],["pname","입금자명",1],["unpaid","미수",1],["card","카드",1],["cash","현금",1],["tax","세금계산서발행일자",1],["closed","마감",1],["pmemo","입금 메모",0]];
 const AMONEY=new Set(["cost","trip","pfee","unpaid","card","cash"]);
 TCFG.as={cols:()=>ACOLS,sel:".wt.am",lead:()=>isAdmin()?2:1};
@@ -1237,7 +1237,7 @@ function renderAsView0(){
   const cols=getCols("as");const shown=list.slice(0,500);
   const tot={cost:0,trip:0,pfee:0,unpaid:0,card:0,cash:0};shown.forEach(x=>{tot.cost+=x.m.cost;tot.trip+=Number(x.j.trip_fee||0);tot.pfee+=Number(x.j.part_fee||0);tot.unpaid+=x.m.unpaid;tot.card+=x.m.card;tot.cash+=x.m.cash});
   const label=[ui.akpi&&KPI[ui.akpi]?KPI[ui.akpi][0]:"",ui.arow?ASTAT.find(y=>y[0]===ui.arow)[1]:"",ui.apt].filter(Boolean).join(" · ");
-  view().innerHTML=`${hasAsx()||!all.length?"":`<div class="sec" style="max-width:none"><p class="warnbox">A/S 상세 칸(조치내용·출장비·부품비·거리·만족도·세금계산서)이 아직 없습니다. Supabase SQL Editor에서 <b>phase1q.sql</b>을 실행해 주세요.</p></div>`}
+  view().innerHTML=`${hasAsx()||!all.length?"":`<div class="sec" style="max-width:none"><p class="warnbox">A/S 상세 칸(조치방법·출장비·부품비·거리·만족도·세금계산서)이 아직 없습니다. Supabase SQL Editor에서 <b>phase1q.sql</b>을 실행해 주세요.</p></div>`}
    <div class="sumwrap"><div style="display:grid;gap:8px;align-content:start"><div style="display:flex;gap:8px;align-items:center"><h2 style="margin:0;font-size:18px">A/S관리</h2>
       <input id="aM" type="month" value="${esc(ui.am)}" aria-label="기준 월" style="padding:5px 8px;border:1px solid var(--line);border-radius:6px;background:var(--field)">${ui.am!==thisMonth()?`<button class="btn sm" type="button" id="aNow">이번 달</button>`:""}</div>
       <div class="kpis"><div class="kpi kc ${ui.akpi==="rcv"?"on":""}" data-akpi="rcv" role="button" tabindex="0"><span>당월 접수</span><b>${mR.length}건</b><small>유상 ${mR.filter(j=>asPt(j)==="유상").length} · 무상 ${mR.filter(j=>asPt(j)==="무상").length}</small></div>
@@ -1309,7 +1309,7 @@ function planAsImport(rows){
     const row={id:crypto.randomUUID(),kind:"as",customer_id:c.id,contract_id:k?k.id:null,customer_name:c.name,address:c.address||t("주소"),product:prod,status,request_date:rd||today(),visit_date:vd,visit_time:"",
       techs:s&&s.id?[s.id]:[],tech_names:s&&s.id?"":who,symptom:sym,result:t("내용"),cost:pt==="무상"?0:cost,parts:t("교체부품"),done_date:status==="완료"?(vd||pd||rd):null,
       paid_type:pt,pay_status,pay_method:pt==="무상"?"":pm,pay_date:pd,pay_name:t("입금자명"),pay_memo:bad.length?"엑셀 확인 필요: "+bad.join(", "):"",closed:!!t("마감"),sink_status:"",sink_memo:""};
-    if(asx)Object.assign(row,{action:t("조치내용"),trip_fee:money(g("출장비")),part_fee:money(g("부품비")),distance:money(g("거리"))||null,satisfaction:t("만족도"),tax_date:toDate(g("세금계산서발행일자"))||null});
+    if(asx)Object.assign(row,{action:t("조치방법")||t("조치내용"),trip_fee:money(g("출장비")),part_fee:money(g("부품비")),distance:money(g("거리"))||null,satisfaction:t("만족도"),tax_date:toDate(g("세금계산서발행일자"))||null});
     newJob.push(row)});
   newCust.forEach(c=>delete c.__new);
   return{newCust,newJob,skipped,matched,warn,asx}}
@@ -1317,7 +1317,7 @@ function asImportDlg(fname,rows){const plan=planAsImport(rows);
   openDlg("A/S 엑셀 가져오기",`<p><b>${esc(fname)}</b> · ${rows.length}줄</p>
    <table class="stafft"><tbody><tr><td>새 A/S 접수</td><td>${plan.newJob.length}건</td></tr><tr><td>기존 고객과 연결</td><td>${plan.matched}줄</td></tr><tr><td>새로 등록될 고객</td><td>${plan.newCust.length}곳${plan.newCust.length?` <small class="mapt">(${esc(plan.newCust.slice(0,6).map(c=>c.name).join(", "))}${plan.newCust.length>6?" 외":""})</small>`:""}</td></tr><tr><td>이미 있는 A/S (건너뜀)</td><td>${plan.skipped}건</td></tr></tbody></table>
    ${plan.warn.length?`<p class="warnbox">날짜로 읽을 수 없는 칸이 있어 비워 둡니다. 원래 글자는 입금 메모에 남깁니다.<br>${plan.warn.slice(0,5).map(esc).join("<br>")}${plan.warn.length>5?"<br>…":""}</p>`:""}
-   ${plan.asx?"":`<p class="warnbox">조치내용·출장비·부품비·거리·만족도·세금계산서 칸은 phase1q.sql 실행 전이라 옮기지 않습니다.</p>`}
+   ${plan.asx?"":`<p class="warnbox">조치방법·출장비·부품비·거리·만족도·세금계산서 칸은 phase1q.sql 실행 전이라 옮기지 않습니다.</p>`}
    <p class="mapt">업체명(상호)·전화번호가 같은 고객에 연결합니다. 같은 고객·접수일자·접수내용인 A/S는 이미 있는 것으로 보고 건너뜁니다.</p>`,
    [["취소"],["가져오기","pri",async()=>{try{
      const put=async(tb,rs)=>{for(let i=0;i<rs.length;i+=300){toast(`가져오는 중… ${tb==="customers"?"고객":"A/S"} ${Math.min(i+300,rs.length)}/${rs.length}`);const {error}=await sb.from(tb).insert(rs.slice(i,i+300));if(error)throw error}};
@@ -1782,8 +1782,8 @@ function jobDlg(j,c,kind,tpl,preset){
    <label class="f">처리 내용<textarea name="result" ${can?"":"readonly"}>${esc(j.result)}</textarea></label>
    <fieldset id="asBox" style="padding:10px 12px" ${j.kind==="as"?"":"hidden"}><legend>A/S 제품·조치</legend>
      <div class="g3">${inp("as_product","제품",p.product,"text",!(off||isNew),'list="pdList2"')}${inp("as_size","규격",p.size,"text",!(off||isNew))}${inp("as_serial","시리얼",p.serial,"text",!(off||isNew))}</div>
-     <div class="g3">${(()=>{_instMap=null;const d=asInstDate(j);const ro=!(off||isNew);const used=!d&&/중고/.test(p.install_note||"");return `<div class="f"><span>설치일</span><input name="as_idate" type="date" value="${esc(d)}" ${ro||used?"readonly":""} aria-label="설치일"></div><div class="f"><span>중고구매 여부</span><span class="chk" style="padding:0"><label style="padding:6px 10px"><input type="checkbox" name="as_used" ${used?"checked":""} ${ro?"disabled":""}>중고구매 (설치일 없음)</label></span></div>`})()}${inp("action","조치내용",j.action||"","text",!can||!asx,'list="actList"')}</div>
-     ${asx?`<div class="g3">${inp("as_parts","교체부품",j.parts||"","text",!can,'placeholder="예: LCD, 파워"')}${inp("distance","거리(km)",j.distance??"","number",!can)}${sel("satisfaction","만족도",[["","(선택)"],["상","상"],["중","중"],["하","하"]],j.satisfaction||"",!can)}</div>`:`<div class="g3">${inp("as_parts","교체부품",j.parts||"","text",!can,'placeholder="예: LCD, 파워"')}<span></span><span></span></div><p class="mapt" style="margin:0">조치내용·출장비·부품비·거리·만족도·세금계산서 칸은 Supabase에서 phase1q.sql을 실행하면 쓸 수 있습니다.</p>`}
+     <div class="g3">${(()=>{_instMap=null;const d=asInstDate(j);const ro=!(off||isNew);const used=!d&&/중고/.test(p.install_note||"");return `<div class="f"><span>설치일</span><input name="as_idate" type="date" value="${esc(d)}" ${ro||used?"readonly":""} aria-label="설치일"></div><div class="f"><span>중고구매 여부</span><span class="chk" style="padding:0"><label style="padding:6px 10px"><input type="checkbox" name="as_used" ${used?"checked":""} ${ro?"disabled":""}>중고구매 (설치일 없음)</label></span></div>`})()}${inp("action","조치방법",j.action||"","text",!can||!asx,'list="actList"')}</div>
+     ${asx?`<div class="g3">${inp("as_parts","교체부품",j.parts||"","text",!can,'placeholder="예: LCD, 파워"')}${inp("distance","거리(km)",j.distance??"","number",!can)}${sel("satisfaction","만족도",[["","(선택)"],["상","상"],["중","중"],["하","하"]],j.satisfaction||"",!can)}</div>`:`<div class="g3">${inp("as_parts","교체부품",j.parts||"","text",!can,'placeholder="예: LCD, 파워"')}<span></span><span></span></div><p class="mapt" style="margin:0">조치방법·출장비·부품비·거리·만족도·세금계산서 칸은 Supabase에서 phase1q.sql을 실행하면 쓸 수 있습니다.</p>`}
      ${p.install_note&&!/중고/.test(p.install_note)?`<p class="mapt" style="margin:0">엑셀 설치일 칸: ${esc(p.install_note)}</p>`:""}
      <datalist id="actList">${AS_ACTS.map(x=>`<option value="${esc(x)}">`).join("")}</datalist><datalist id="pdList2">${[...new Set(contracts.map(x=>x.product).filter(Boolean))].map(x=>`<option value="${esc(x)}">`).join("")}</datalist></fieldset>
    <fieldset id="payBox" style="padding:10px 12px" ${j.kind==="as"?"":"hidden"}><legend>A/S 비용·결제</legend>
