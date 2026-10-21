@@ -595,7 +595,7 @@ function renderCustView(){
   document.getElementById("clist").onclick=e=>{const it=e.target.closest(".citem");if(it){ui.sel=it.dataset.id;ui.ctab="info";ui.draft=null;renderCustList();renderCustMain()}};
   renderCustList();renderCustMain();
 }
-function custSearchText(c){const ks=custContracts(c.id);return [c.name,c.biz_name,c.ceo,c.phone,c.phone2,c.address,c.biz_no,c.owner_name,staffName(c.owner),...ks.map(k=>k.serial+" "+k.product)].join(" ").toLowerCase().replace(/-/g,"")}
+function custSearchText(c){const ks=custContracts(c.id);return [c.name,c.biz_name,c.search_text,c.ceo,c.phone,c.phone2,c.address,c.biz_no,c.owner_name,staffName(c.owner),...ks.map(k=>k.serial+" "+k.product)].join(" ").toLowerCase().replace(/-/g,"")}
 function renderCustList(){
   const q=ui.q.trim().toLowerCase().replace(/-/g,"");
   const gOk=c=>{if(!ui.grade)return true;const g=gradeOf(c);return g&&(ui.grade==="any"||g.g===ui.grade)};
@@ -604,7 +604,7 @@ function renderCustList(){
   document.getElementById("cnt").textContent=`고객 ${customers.length}곳${q||ui.stage||ui.ctype||ui.grade?` · 표시 ${list.length}`:""}`;
   const shown=list.slice(0,300);
   document.getElementById("clist").innerHTML=shown.map(({c,k})=>`<div class="citem${ui.sel===c.id?" sel":""}" data-id="${c.id}" tabindex="0">
-    <span class="n">${esc(c.name)}${gradeBadge(c)}</span>
+    <span class="n">${esc(c.name)}${gradeBadge(c)}${q&&c.search_text&&String(c.search_text).toLowerCase().replace(/-/g,"").includes(q)?` <small class="mapt">(${esc(c.search_text)})</small>`:""}</span>
     <span class="s"><span>${esc(c.phone||c.phone2)}</span>${k?`<span>${esc([k.product,k.size].filter(Boolean).join(" "))}${k.serial?" · "+esc(k.serial):""}</span>`:""}<span>담당 ${esc(staffName(c.owner)||c.owner_name||"-")}</span></span>
     <span class="s">${k?`${k.contract_type&&k.contract_type!=="구매"?`<span class="tag ct-${esc(k.contract_type)}">${esc(k.contract_type)}</span>`:""}<span class="tag st-${esc(k.stage)}">${esc(k.stage)}</span>`:""}${c.collector||c.collector_name?`<span class="tag">수금 ${esc(staffName(c.collector)||c.collector_name||"")}</span>`:""}</span></div>`).join("")
     +(list.length>shown.length?`<div class="empty" style="padding:14px">${list.length-shown.length}곳 더 있습니다. 검색으로 좁혀 주세요.</div>`:"")
@@ -632,14 +632,15 @@ function custFieldsHtml(c,ro){return `    <div class="g2">${inp("name","업체�
       ${isOffice()?inp("collector","수금 배정",staffName(c.collector)||c.collector_name||"","text",false,'list="ownList" placeholder="이름 입력 또는 목록에서 선택"'):inp("_c","수금 배정",staffName(c.collector)||c.collector_name,"text",true)}</div>
     <datalist id="ownList">${staff.filter(s=>s.active).map(s=>`<option value="${esc(s.name)}">${esc(ROLE[s.role])}</option>`).join("")}</datalist>
     ${c.owner_name&&!c.owner?`<p class="mapt">엑셀에 적힌 담당자: ${esc(c.owner_name)} (직원 계정과 아직 연결되지 않음)</p>`:""}
-    <label class="f">메모<textarea name="memo" ${ro?"readonly":""}>${esc(c.memo)}</textarea></label>${gradeFieldsHtml(c)}`}
+    <label class="f">메모<textarea name="memo" ${ro?"readonly":""}>${esc(c.memo)}</textarea></label>
+    ${"search_text" in c?inp("search_text","검색창내용 (예전 상호·양도 전 업체명 등, 고객 검색에 함께 걸림)",c.search_text,"text",ro,'placeholder="예: 맛돈산, 구 상호"'):isOffice()?`<p class="mapt">‘검색창내용’ 칸을 쓰려면 Supabase에서 phase1s.sql을 실행해 주세요.</p>`:""}${gradeFieldsHtml(c)}`}
 function gradeFieldsHtml(c){if(!me||me.role==="tech"||ui.noGrades&&!isOffice())return"";const r=gradeRow(c)||{};const g=gradeOf(c);const a=autoRed(c);
   if(ui.noGrades)return `<p class="warnbox">관리등급을 쓰려면 Supabase에서 phase1o.sql을 실행해 주세요.</p>`;
   if(!isOffice())return g?`<p class="gwarn ${g.g==="블랙"?"g-black":"g-red"}">관리등급: ${g.g}${g.reason?" — "+esc(g.reason):""}</p>`:"";
   return `<fieldset class="nfiles"><legend>관리등급</legend><div class="g2">${sel("grade","등급",[["","자동 (미수 60일 이상이면 레드)"],["레드","레드 (주의)"],["블랙","블랙 (거래 중지)"],["정상","정상 (자동 레드 안 붙임)"]],r.grade||"")}${inp("grade_reason","사유 (사실 위주로)",r.reason||"","text",false,'placeholder="예: 미수 120만원, 3회 독촉 / 분쟁 중"')}</div>
     <p class="mapt" style="margin:4px 0 0">지금 표시: <b>${g?g.g:"없음"}</b>${g&&g.reason?" — "+esc(g.reason):""}${a&&r.grade!=="정상"?"":a?` · 자동 기준 해당(미수 ${won0(a.amt)}원, ${a.days}일)`:""}${r.set_at?` · ${esc(r.set_at.slice(0,10))} 지정`:""}</p></fieldset>`}
 async function saveCustomer(c,fd){
-    const p={name:fd.get("name").trim(),biz_name:fd.get("biz_name").trim(),ceo:fd.get("ceo").trim(),phone:fmtPhone(fd.get("phone")),phone2:fmtPhone(fd.get("phone2")),biz_no:fmtBiz(fd.get("biz_no")),address:fd.get("address").trim(),memo:fd.get("memo")};
+    const p={name:fd.get("name").trim(),biz_name:fd.get("biz_name").trim(),ceo:fd.get("ceo").trim(),phone:fmtPhone(fd.get("phone")),phone2:fmtPhone(fd.get("phone2")),biz_no:fmtBiz(fd.get("biz_no")),address:fd.get("address").trim(),memo:fd.get("memo")};if(fd.get("search_text")!==null&&"search_text" in c)p.search_text=fd.get("search_text").trim();
     if(isOffice()){const who=v=>{v=String(v||"").trim();const s=v&&staff.find(x=>x.name===v||(x.aliases||[]).includes(v));return{id:s?s.user_id:null,name:s?s.name:v}};
       const o=who(fd.get("owner")),cl=who(fd.get("collector"));p.owner=o.id;p.owner_name=o.name;p.collector=cl.id;
       if("collector_name" in c)p.collector_name=cl.name;else if(cl.name&&!cl.id){{toast("직원 목록에 없는 수금 담당자를 적으려면 Supabase에서 phase1n.sql을 실행해 주세요");return false}}}
@@ -1006,7 +1007,7 @@ function renderCtrView0(){
   const cnt=(r,t)=>src.filter(x=>(!r||CROWS.find(y=>y[0]===r)[2](x.k))&&(!t||(x.k.contract_type||"구매")===t)).length;
   const qq=ui.cq.trim().toLowerCase();
   const list=src.filter(x=>(!ui.crow||CROWS.find(y=>y[0]===ui.crow)[2](x.k))&&(!ui.cct||(x.k.contract_type||"구매")===ui.cct)
-    &&(!qq||[x.c.name,x.c.ceo,x.c.phone,x.c.phone2,x.k.serial,x.k.memo,x.k.approval,staffName(x.k.sales3),x.k.sales3_name].join(" ").toLowerCase().includes(qq)));
+    &&(!qq||[x.c.name,x.c.search_text,x.c.ceo,x.c.phone,x.c.phone2,x.k.serial,x.k.memo,x.k.approval,staffName(x.k.sales3),x.k.sales3_name].join(" ").toLowerCase().includes(qq)));
   sortCtrList(list);
   const sumT=`<table class="sumt" aria-label="${esc(ui.cm)} 계약 집계"><thead><tr><th></th>${CTYPES.map(t=>`<th>${t}</th>`).join("")}<th>합계</th></tr></thead><tbody>
     ${CROWS.map(([r,l])=>`<tr class="${r==="unpaid"?"open":""}"><th>${l}</th>${[...CTYPES,""].map(t=>`<td class="cl ${ui.crow===r&&ui.cct===t?"on":""}" data-r="${r}" data-t="${t}">${cnt(r,t)}</td>`).join("")}</tr>`).join("")}
@@ -1191,7 +1192,7 @@ function renderAsView0(){
   const cnt=(r,t)=>src.filter(x=>rf(r)(x.j)&&(t===null||asPt(x.j)===t)).length;
   const qq=ui.aq.trim().toLowerCase();
   const list=src.filter(x=>rf(ui.arow)(x.j)&&(ui.apt===""||asPt(x.j)===(ui.apt==="미정"?"":ui.apt))
-    &&(!qq||[x.c.name,x.j.customer_name,x.c.ceo,x.c.phone,x.c.phone2,x.j.address,(x.j.product||{}).serial,x.j.symptom,x.j.result,x.j.parts,x.j.pay_name,whoOf(x.j)].join(" ").toLowerCase().includes(qq)));
+    &&(!qq||[x.c.name,x.c.search_text,x.j.customer_name,x.c.ceo,x.c.phone,x.c.phone2,x.j.address,(x.j.product||{}).serial,x.j.symptom,x.j.result,x.j.parts,x.j.pay_name,whoOf(x.j)].join(" ").toLowerCase().includes(qq)));
   asSortList(list);
   const ptKey=t=>t===""?"미정":t;
   const sumT=`<table class="sumt" aria-label="${esc(ui.am)} A/S 집계"><thead><tr><th></th>${APT.map(t=>`<th>${aptLab(t)}</th>`).join("")}<th>합계</th></tr></thead><tbody>
@@ -1660,7 +1661,7 @@ function renderWorkView0(){
   const rowPool=(ui.jpay==="open"||ui.jpay==="cancel"||ui.wrow==="all")?scoped:B[ui.wrow]||[];
   const qq=ui.jq.toLowerCase();
   const list=rowPool.filter(j=>(!ui.wkind||j.kind===ui.wkind)&&payOk(j)
-     &&(!qq||[j.customer_name,j.address,j.tech_names,j.symptom,(j.product||{}).serial,whoOf(j),(custById(j.customer_id)||{}).phone].join(" ").toLowerCase().includes(qq)));
+     &&(!qq||[j.customer_name,j.address,j.tech_names,j.symptom,(j.product||{}).serial,whoOf(j),(custById(j.customer_id)||{}).phone,(custById(j.customer_id)||{}).search_text].join(" ").toLowerCase().includes(qq)));
   const far="9999-12-31";
   if(["open","carry","new","hold"].includes(ui.wrow)&&!ui.jpay)list.sort((a,b)=>(a.visit_date||far).localeCompare(b.visit_date||far)||rdOf(a).localeCompare(rdOf(b)));
   else if(ui.wrow==="done")list.sort((a,b)=>doneOf(b).localeCompare(doneOf(a)));
