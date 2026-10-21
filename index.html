@@ -72,9 +72,9 @@ main{min-width:0}
 fieldset{border:1px solid var(--line);background:var(--panel);border-radius:8px;padding:12px 14px 14px;margin:0;display:grid;gap:8px;min-width:0}
 legend{font-weight:700;padding:0 4px;font-size:13.5px}
 .g2{display:grid;grid-template-columns:1fr 1fr;gap:8px}
-label.f{display:grid;gap:3px;font-size:12.5px;color:var(--mute);min-width:0}
-label.f input,label.f select,label.f textarea{padding:6px 8px;border:1px solid var(--line);border-radius:5px;background:var(--field);color:var(--fg);width:100%;min-width:0}
-label.f input[readonly]{background:transparent;border-style:dashed}
+label.f,div.f{display:grid;gap:3px;font-size:12.5px;color:var(--mute);min-width:0}
+label.f input,label.f select,label.f textarea,div.f>input{padding:6px 8px;border:1px solid var(--line);border-radius:5px;background:var(--field);color:var(--fg);width:100%;min-width:0}
+label.f input[readonly],div.f>input[readonly]{background:transparent;border-style:dashed}
 textarea{resize:vertical;min-height:52px}
 .mapt{font-size:12.5px;color:var(--mute);margin:0}
 .actions{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
@@ -179,6 +179,7 @@ body.resizing,body.resizing *{cursor:col-resize!important;user-select:none}
 .wt.sch td.sres.ok{background:#5B9BD5;color:#fff;font-weight:700}.wt.sch td.sres.no{background:#FF0000;color:#fff;font-weight:700}.wt.sch td.sres.hold{background:#D9D9D9;color:#1b1b1b}
 .wt.sch td.sday{font-weight:700;cursor:default}.wt.sch td.sref{color:#c00000;text-align:left;min-width:90px;font-size:12px}.wt.sch tr.ssat td.sday{background:#F4CCCC;color:#1b1b1b}.wt.sch tr.shol td:not(.sk):not(.sres):not(.stm):not(.lv){background:#D9D9D9;color:#1b1b1b}
 .wt.sch tr.sfirst td{border-top:2px solid var(--mute)}.wt.sch tr.stoday td.sday{background:var(--accent);color:#fff}.wt.sch td.se{height:24px}.wt.sch td.se:hover{background:var(--accent-weak)}.wt.sch tr:hover td{filter:none}
+.wt.am .badge.s-완료{background:#fff;color:#2e7d32;border:1px solid #2e7d32}.wt.am .badge.s-취소{background:#e53935;color:#fff;text-decoration:none}.wt.am .badge.s-보류{color:#1b1b1b}
 .wt.am tfoot th,.wt.ct tfoot th{position:sticky;bottom:0;background:var(--line2);border-top:1px solid var(--line);padding:6px 7px}
 .wt td.memo{max-width:320px;min-width:200px;font-size:12px;color:var(--mute)}.clamp{display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
 .wt td.ckc{text-align:center;font-size:12px}.wt td.ckc.ok{color:var(--ok-fg);font-weight:700}.wt td.ckc.note{color:var(--warn-fg)}
@@ -1096,7 +1097,7 @@ function asInstDate(j){if(!_instMap){_instMap={};jobs.forEach(x=>{if(x.kind!=="i
 function asMoney(j){const c=Number(j.cost||0);const pay=j.pay_status==="완료"||(j.pay_date&&j.pay_status!=="미수");const card=j.pay_method==="카드";
   return{cost:c,card:pay&&card?c:0,cash:pay&&!card?c:0,unpaid:j.pay_status==="미수"?c:0}}
 const ACOLS=[
- ["basis","기준",1],["rdate","접수일자",1],["name","상호",1],["ceo","대표자",0],["phone","전화번호",1],["addr","주소",1],["symptom","접수내용",1],["result","내용",1],
+ ["basis","접수월",1],["rdate","접수일자",1],["name","상호",1],["ceo","대표자",0],["phone","전화번호",1],["addr","주소",1],["symptom","접수내용",1],["result","내용",1],
  ["visit","예정일",1],["wday","요일",1],["time","시간",0],["status","처리현황",1],["done","완료일",0],["idate","설치일",1],["product","제품",1],["size","규격",1],["serial","시리얼",1],["parts","교체부품",1],
  ["tech","담당자",1],["action","조치내용",1],["cost","청구금액(총합계)",1],["trip","출장비",1],["pfee","부품비",1],["dist","거리",1],["sat","만족도",1],["pmeth","청구방법",1],["ptype","유상/무상",1],
  ["pdate","입금일",1],["pname","입금자명",1],["unpaid","미수",1],["card","카드",1],["cash","현금",1],["tax","세금계산서발행일자",1],["closed","마감",1],["pmemo","입금 메모",0]];
@@ -1116,9 +1117,9 @@ function asCell(col,j,c,m){const p=j.product||{};const td=today();
     case"visit":{const d=j.visit_date||"";const open=!["완료","취소"].includes(j.status);return `<td class="${open&&d?(d===td?"due":d<td?"late":""):""}">${esc(md(d))}</td>`}
     case"wday":return `<td>${wday(j.visit_date)}</td>`;
     case"time":return `<td>${esc(j.visit_time||"")}</td>`;
-    case"status":return `<td>${j.status==="접수"||j.status==="배정"?`<span class="badge s-${j.status}">${esc(j.status)}</span>`:esc(j.status)}</td>`;
+    case"status":return `<td><span class="badge s-${esc(j.status)}">${esc(j.status)}</span></td>`;
     case"done":return `<td>${esc(ymd2(j.done_date))}</td>`;
-    case"idate":return `<td>${esc(ymd2(asInstDate(j)))}</td>`;
+    case"idate":{const d=asInstDate(j);return `<td>${d?esc(ymd2(d)):esc(p.install_note||"")}</td>`}
     case"product":return `<td>${esc(p.product||"")}</td>`;
     case"size":return `<td>${esc(p.size||"")}</td>`;
     case"serial":return `<td>${esc(p.serial||"")}</td>`;
@@ -1138,7 +1139,7 @@ function asCell(col,j,c,m){const p=j.product||{};const td=today();
     case"card":return `<td class="num">${m.card?won0(m.card):""}</td>`;
     case"cash":return `<td class="num">${m.cash?won0(m.cash):""}</td>`;
     case"tax":return `<td>${esc(ymd2(j.tax_date))}</td>`;
-    case"closed":{const v=j.closed?(j.paid_type==="무상"?"무상":"매출마감"):"";return `<td class="ckc ${v?"ok":""}" data-aclose="${j.id}" title="${isOffice()?"누르면 마감 ↔ 빈칸":""}">${esc(v)}</td>`}
+    case"closed":{const v=j.closed?(j.paid_type==="무상"?"무상":"OK"):"";return `<td class="ckc ${v?"ok":""}" data-aclose="${j.id}" title="${isOffice()?"누르면 OK(매출마감) ↔ 빈칸":""}">${esc(v)}</td>`}
     case"pmemo":return `<td class="wrap memo" title="${esc(j.pay_memo||"")}"><div class="clamp">${esc(j.pay_memo||"")}</div></td>`;
   }
   return "<td></td>"}
@@ -1734,9 +1735,9 @@ function jobDlg(j,c,kind,tpl,preset){
    <label class="f">처리 내용<textarea name="result" ${can?"":"readonly"}>${esc(j.result)}</textarea></label>
    <fieldset id="asBox" style="padding:10px 12px" ${j.kind==="as"?"":"hidden"}><legend>A/S 제품·조치</legend>
      <div class="g3">${inp("as_product","제품",p.product,"text",!(off||isNew),'list="pdList2"')}${inp("as_size","규격",p.size,"text",!(off||isNew))}${inp("as_serial","시리얼",p.serial,"text",!(off||isNew))}</div>
-     <div class="g3">${inp("as_idate","설치일",(()=>{_instMap=null;return asInstDate(j)})(),"date",!(off||isNew))}${inp("action","조치내용",j.action||"","text",!can||!asx,'list="actList"')}${inp("as_parts","교체부품",j.parts||"","text",!can,'placeholder="예: LCD, 파워"')}</div>
+     <div class="g3">${(()=>{_instMap=null;const d=asInstDate(j);const ro=!(off||isNew);const used=!d&&/중고/.test(p.install_note||"");return `<div class="f"><span>설치일</span><input name="as_idate" type="date" value="${esc(d)}" ${ro||used?"readonly":""} aria-label="설치일"><span class="chk" style="padding:2px 0 0"><label style="padding:2px 8px"><input type="checkbox" name="as_used" ${used?"checked":""} ${ro?"disabled":""}>중고구매 (설치일 없음)</label></span></div>`})()}${inp("action","조치내용",j.action||"","text",!can||!asx,'list="actList"')}${inp("as_parts","교체부품",j.parts||"","text",!can,'placeholder="예: LCD, 파워"')}</div>
      ${asx?`<div class="g3">${inp("distance","거리(km)",j.distance??"","number",!can)}${sel("satisfaction","만족도",[["","(선택)"],["상","상"],["중","중"],["하","하"]],j.satisfaction||"",!can)}<span></span></div>`:`<p class="mapt" style="margin:0">조치내용·출장비·부품비·거리·만족도·세금계산서 칸은 Supabase에서 phase1q.sql을 실행하면 쓸 수 있습니다.</p>`}
-     ${(p.install_note)?`<p class="mapt" style="margin:0">엑셀 설치일 칸: ${esc(p.install_note)}</p>`:""}
+     ${p.install_note&&!/중고/.test(p.install_note)?`<p class="mapt" style="margin:0">엑셀 설치일 칸: ${esc(p.install_note)}</p>`:""}
      <datalist id="actList">${AS_ACTS.map(x=>`<option value="${esc(x)}">`).join("")}</datalist><datalist id="pdList2">${[...new Set(contracts.map(x=>x.product).filter(Boolean))].map(x=>`<option value="${esc(x)}">`).join("")}</datalist></fieldset>
    <fieldset id="payBox" style="padding:10px 12px" ${j.kind==="as"?"":"hidden"}><legend>A/S 비용·결제</legend>
      <div class="g3">${sel("paid_type","유상/무상",[["","(선택)"],["유상","유상"],["무상","무상"]],j.paid_type||"",!can)}${asx?inp("trip_fee","출장비",j.trip_fee||"","number",!can)+inp("part_fee","부품비",j.part_fee||"","number",!can):"<span></span><span></span>"}</div>
@@ -1767,7 +1768,7 @@ function jobDlg(j,c,kind,tpl,preset){
        if(off)pt.closed=!!f.get("closed");
        pt.parts=(f.get("as_parts")||"").trim();
        if(off||isNew){_instMap=null;const base=asInstDate(Object.assign({},j,{product:{}}));const iv=f.get("as_idate")||"";const pr=Object.assign({},j.product||{},{product:(f.get("as_product")||"").trim(),size:(f.get("as_size")||"").trim(),serial:(f.get("as_serial")||"").trim()});
-         if(iv&&iv!==base){pr.install_date=iv;delete pr.install_note}else if(!iv||iv===base)delete pr.install_date;pt.product=pr}
+         if(f.get("as_used")){delete pr.install_date;pr.install_note="중고구매"}else{if(/중고/.test(pr.install_note||""))delete pr.install_note;if(iv&&iv!==base){pr.install_date=iv;delete pr.install_note}else delete pr.install_date}pt.product=pr}
        if(asx){const nn=x=>Number(f.get(x)||0)||0;Object.assign(pt,{action:(f.get("action")||"").trim(),trip_fee:nn("trip_fee"),part_fee:nn("part_fee"),distance:f.get("distance")===""||f.get("distance")==null?null:nn("distance"),satisfaction:f.get("satisfaction")||""});
          if(off)pt.tax_date=f.get("tax_date")||null;if(!pt.cost&&pt.paid_type!=="무상"){pt.cost=pt.trip_fee+pt.part_fee;if(pt.cost&&!pt.paid_type)pt.paid_type="유상"}}
      }else{pt.sink_status=f.get("sink_status")||"";pt.sink_memo=f.get("sink_memo")||"";pt.parts=f.get("parts")||""}
@@ -1782,6 +1783,9 @@ function jobDlg(j,c,kind,tpl,preset){
        pmsg=up.fail.length?` · 사진 ${up.ok}개 올림, ${up.fail.length}개 실패${fileErrHint(up.fail)}`:` · 사진 ${up.ok}개`;jpSel.forEach(x=>x.url&&URL.revokeObjectURL(x.url))}
      toast((isNew?`${KLABEL[j.kind]} 접수했습니다`:"저장했습니다")+pmsg);reload(["jobs","customers","files"])}]]:[])]);
   const jpSel=isNew?bindNewCustFiles("jp"):[];if(!isNew)renderJobFiles(j,c);
+  /* 중고구매 체크하면 설치일 비움 */
+  (()=>{const jf=document.getElementById("jf");const u=jf&&jf.querySelector('[name="as_used"]'),d=jf&&jf.querySelector('[name="as_idate"]');if(!u||!d||u.disabled)return;
+    u.addEventListener("change",()=>{if(u.checked){d.dataset.prev=d.value;d.value="";d.readOnly=true}else{d.readOnly=false;if(d.dataset.prev)d.value=d.dataset.prev}})})();
   /* 출장비+부품비 → 청구금액 자동 합계 */
   (()=>{const jf=document.getElementById("jf");if(!jf)return;const q=n=>jf.querySelector(`[name="${n}"]`);const a=q("trip_fee"),b=q("part_fee"),tot=q("cost");if(!a||!b||!tot||tot.readOnly)return;
     const go=()=>{const s=(Number(a.value||0)||0)+(Number(b.value||0)||0);tot.value=s||"";tot.classList.add("autocalc");setTimeout(()=>tot.classList.remove("autocalc"),600)};a.addEventListener("input",go);b.addEventListener("input",go);tot.title="출장비+부품비 자동 합계 (직접 고칠 수도 있음)"})();
