@@ -175,7 +175,7 @@ body.resizing,body.resizing *{cursor:col-resize!important;user-select:none}
 .wt.sch{border-collapse:collapse}.wt.sch td,.wt.sch th{border:1px solid var(--line);padding:4px 6px;text-align:center;font-size:12.5px;cursor:pointer}.wt.sch thead th{position:sticky;top:0}.wt.sch thead tr:nth-child(2) th{top:29px}
 .wt.sch th.sgh{font-size:15px;letter-spacing:4px;color:#1b1b1b}.wt.sch th.sgh.g0{background:#E6B8B7}.wt.sch th.sgh.g1{background:#DAEEF3}.wt.sch th.sgh.g2{background:#E4DFEC}.wt.sch th.sgh.g3{background:#EBF1DE}
 .wt.sch th.stm,.wt.sch td.stm{background:#FFF2CC;color:#1b1b1b}.wt.sch td.snm{text-align:left;min-width:150px;font-weight:600}.wt.sch td.snm.lv{background:#FFFF00;color:#c00000;font-weight:700}
-.wt.sch td.sk{font-weight:700;color:#1b1b1b}.wt.sch td.k-install{background:#00CC66}.wt.sch td.k-as{background:#9933FF;color:#fff}.wt.sch td.k-addon{background:#FFC000}.wt.sch td.k-remove{background:#BFBFBF}.wt.sch td.sup{background:#FFFF00;color:#c00000}
+.wt.sch td.sk{font-weight:700;color:#1b1b1b}.wt.sch td.k-install{background:#00CC66}.wt.sch td.k-as{background:#9933FF;color:#fff}.wt.sch td.k-addon{background:#FFC000}.wt.sch td.k-remove{background:#FF0000;color:#1b1b1b}.wt.sch td.k-move{background:#FFFF00;color:#c00000}.wt.sch td.sup{background:#FFFF00;color:#c00000}
 .wt.sch td.sres.ok{background:#5B9BD5;color:#fff;font-weight:700}.wt.sch td.sres.no{background:#FF0000;color:#fff;font-weight:700}.wt.sch td.sres.hold{background:#D9D9D9;color:#1b1b1b}
 .wt.sch td.sday{font-weight:700;cursor:default}.wt.sch td.sref{color:#c00000;text-align:left;min-width:90px;font-size:12px}.wt.sch td.sref .khol{color:#c00000}.wt.sch tr.swork td.sref{font-weight:700}.wt.sch tr.shol td:not(.sk):not(.sres):not(.stm):not(.lv){background:#D9D9D9;color:#1b1b1b}
 .wt.sch tr.sfirst td{border-top:2px solid var(--mute)}.wt.sch tr.stoday td.sday{background:var(--accent);color:#fff}.wt.sch td.se{height:24px}.wt.sch td.se:hover{background:var(--accent-weak)}.wt.sch tr:hover td{filter:none}
@@ -291,8 +291,8 @@ dialog{max-width:720px}
 .tag.st-철거{background:#868e96;color:#fff;border-color:#868e96}
 .tag.ct-구매{background:#fff;color:#343a40;border-color:#adb5bd}
 .tag.ct-무료체험,.tag.ct-무상임대,.tag.ct-경품,.tag.ct-무상증정{background:#fff;color:#7e22ce;border-color:#9933FF}
-.badge.install{background:#00CC66;color:#1b1b1b;border-color:#00CC66}.badge.as{background:#9933FF;color:#fff;border-color:#9933FF}.badge.addon{background:#FFC000;color:#1b1b1b;border-color:#FFC000}.badge.remove{background:#BFBFBF;color:#1b1b1b;border-color:#BFBFBF}
-.wt td.k-install,.sumt .k-install{background:#00CC66;color:#1b1b1b}.wt td.k-as,.sumt .k-as{background:#9933FF;color:#fff}.wt td.k-addon,.sumt .k-addon{background:#FFC000;color:#1b1b1b}.wt td.k-remove,.sumt .k-remove{background:#BFBFBF;color:#1b1b1b}
+.badge.install{background:#00CC66;color:#1b1b1b;border-color:#00CC66}.badge.as{background:#9933FF;color:#fff;border-color:#9933FF}.badge.addon{background:#FFC000;color:#1b1b1b;border-color:#FFC000}.badge.remove{background:#FF0000;color:#1b1b1b;border-color:#FF0000}.badge.move{background:#FFFF00;color:#c00000;border-color:#e6d800}
+.wt td.k-install,.sumt .k-install{background:#00CC66;color:#1b1b1b}.wt td.k-as,.sumt .k-as{background:#9933FF;color:#fff}.wt td.k-addon,.sumt .k-addon{background:#FFC000;color:#1b1b1b}.wt td.k-remove,.sumt .k-remove{background:#FF0000;color:#1b1b1b}.wt td.k-move,.sumt .k-move{background:#FFFF00;color:#c00000}
 </style>
 </head>
 <body>
@@ -484,7 +484,7 @@ const PAYM=["현금","카드","카드+현금","CMS","분납","캐피탈"];
 const DOCS=["미수령","사진","원본","전자서명"];
 const SINKS=["해당없음","발주대기","발주완료","중고사용","재고사용","기타"];
 const JST=["접수","배정","보류","완료","취소"];
-const KINDS=["as","install","remove","addon"];
+const KINDS=["as","install","remove","addon","move"];
 let sb=null, me=null, staff=[], customers=[], contracts=[], jobs=[], payments=[], files=[], grades=[];
 let ui={view:"cust", sel:null, ctab:"info", q:"", stage:"", ctype:"", jscope:"mine", jkind:"", jpay:"", jview:"card", dkind:"as", dq:"", dsel:new Set(), jsel:new Set(), jst:"open", jq:"", draft:null, conf:null};
 const isAdmin=()=>me&&me.role==="admin", isOffice=()=>me&&(me.role==="admin"||me.role==="office");
@@ -816,7 +816,7 @@ function bindBizUpload(id,onRead){
 
 /* ================= 고객 사진·서류 ================= */
 const FKINDS=[["계약서","ctr"],["설치사진","inst"],["철거사진","rm"],["A/S사진","as"],["사업자등록증","biz"],["기타","etc"]];
-const JOBPHOTO={install:"설치사진",addon:"설치사진",remove:"철거사진",as:"A/S사진"};
+const JOBPHOTO={install:"설치사진",addon:"설치사진",move:"설치사진",remove:"철거사진",as:"A/S사진"};
 function jobFiles(j){return files.filter(f=>f.job_id===j.id).sort((a,b)=>(b.created_at||"").localeCompare(a.created_at||""))}
 function jobLabel(id){const j=jobs.find(x=>x.id===id);return j?`${KLABEL[j.kind]||""} ${(j.visit_date||j.request_date||"").slice(5).replace("-","/")}`:""}
 const FCODE=Object.fromEntries(FKINDS);
@@ -1317,7 +1317,7 @@ function asImportDlg(fname,rows){const plan=planAsImport(rows);
 let notes=[];
 async function fetchNotes(){try{const r=await fetchAll("schedule_notes");ui.noNotes=false;return r}catch(e){ui.noNotes=true;return[]}}
 function hasEnd(){return jobs.some(j=>"end_time" in j)}
-const SKL={install:"설치",as:"AS",remove:"철거",addon:"추가설치"};
+const SKL={install:"설치",as:"AS",remove:"철거",addon:"추가설치",move:"이전설치"};
 const METRO=["서울","부산","대구","인천","광주","대전","울산","세종"];
 function schRegion(a){const w=String(a||"").trim().split(/\s+/);if(!w[0])return"";const f=w[0].replace(/(특별시|광역시|특별자치시|특별자치도|시|도)$/,"").slice(0,2);
   if(f==="서울")return /구$/.test(w[1]||"")?w[1]:"서울";
@@ -1356,7 +1356,7 @@ function renderSchedView0(){
     const j=e.j;const sup=g.id!=="_ext"&&(j.techs||[])[0]!==g.id;const c=custById(j.customer_id)||{};
     const res=j.status==="완료"?`<td class="sres ok" data-sj="${j.id}">완료</td>`:j.status==="취소"?`<td class="sres no" data-sj="${j.id}">취소</td>`:j.status==="보류"?`<td class="sres hold" data-sj="${j.id}">보류</td>`:`<td data-sj="${j.id}"></td>`;
     return `<td class="sk ${sup?"sup":"k-"+j.kind}" data-sj="${j.id}">${sup?"지원":SKL[j.kind]||""}</td><td data-sj="${j.id}">${esc(schRegion(c.address||j.address))}</td><td class="stm" data-sj="${j.id}">${esc(j.visit_time||"")}</td><td class="stm" data-sj="${j.id}">${esc(j.end_time||"")}</td>
-      <td class="snm" data-sj="${j.id}" title="${esc([c.name||j.customer_name,j.symptom].filter(Boolean).join(" · "))}">${esc(c.name||j.customer_name||"")}${g.id==="_ext"&&j.tech_names?` <small class="mapt">(${esc(j.tech_names)})</small>`:""}</td><td data-sj="${j.id}">${j.kind==="install"||j.kind==="addon"?esc(schSales(j)):""}</td>${res}`};
+      <td class="snm" data-sj="${j.id}" title="${esc([c.name||j.customer_name,j.symptom].filter(Boolean).join(" · "))}">${esc(c.name||j.customer_name||"")}${g.id==="_ext"&&j.tech_names?` <small class="mapt">(${esc(j.tech_names)})</small>`:""}</td><td data-sj="${j.id}">${["install","addon","remove"].includes(j.kind)?esc(schSales(j)):""}</td>${res}`};
   const body=days.map(d=>{const dt=new Date(d+"T00:00:00");const wd=dt.getDay();const dn=mn.filter(n=>n.day===d&&!n.user_id);const work=dn.some(n=>/휴일근로|휴일 근로|근무/.test(n.note));const hol=!work&&(wd===0||wd===6||!!KHOL[d]||dn.some(n=>/휴일|공휴|휴무/.test(n.note)));
     const per=groups.map(g=>entries(g,d));const n0=Math.max(0,...per.map(a=>a.length));const R=Math.max(1,n0+(off&&(n0>0||!hol)?1:0));const cls=`${hol?"shol":work?"swork":""} ${d===td?"stoday":""}`;
     let h="";for(let r=0;r<R;r++){h+=`<tr class="${cls} ${r===0?"sfirst":""}">${r===0?`<td class="sday" rowspan="${R}">${dt.getDate()}일</td><td class="sday" rowspan="${R}">${WDAY[wd]}${wd===6&&R>1&&!hol?"":""}</td><td class="sref" rowspan="${R}" data-sref="${d}">${[KHOL[d]&&!dn.some(n=>n.note.includes(KHOL[d]))?`<span class="khol">${esc(KHOL[d])}</span>`:"",...dn.map(n=>esc(n.note))].filter(Boolean).join("<br>")}</td>`:""}${groups.map((g,i)=>cell7(g,d,per[i][r])).join("")}</tr>`}
@@ -1577,7 +1577,7 @@ function delJobs(ids,after){const n=ids.length;const names=[...new Set(ids.map(i
   openDlg(`${n}건 삭제`,`<p>${esc(names)}${n>5?" 등":""} ${n}건을 삭제합니다.</p><p><b>되돌릴 수 없습니다.</b></p>`,
    [["취소"],["삭제","danger",async()=>{for(let i=0;i<ids.length;i+=200){const {error}=await sb.from("jobs").delete().in("id",ids.slice(i,i+200));if(error)return toast("삭제하지 못했습니다: "+error.message)}
      ids.forEach(id=>ui.jsel.delete(id));toast(`${n}건 삭제했습니다`);if(after)after();reload(["jobs"])}]])}
-const KLABEL={install:"설치",as:"A/S",remove:"철거",addon:"추가설치"};
+const KLABEL={install:"설치",as:"A/S",remove:"철거",addon:"추가설치",move:"이전설치"};
 function canNewJob(c){return isOffice()||(me.role==="sales"&&(!c||c.owner===me.id))}
 function renderCustJobs(c,kind){
   const js=custJobs(c.id).filter(j=>kind==="as"?j.kind==="as":j.kind!=="as");const tb=document.getElementById("tabBody");
@@ -1813,7 +1813,7 @@ function jobDlg(j,c,kind,tpl,preset){
      if(he&&can)pt.end_time=(f.get("end_time")||"").trim();
      if(off){pt.techs=f.getAll("tech");pt.tech_names=f.get("tech_names")||"";if(pt.status==="접수"&&(pt.techs.length||pt.tech_names))pt.status="배정"}
      let r;if(isNew){const row=Object.assign({},j,pt);delete row.id;r=await sb.from("jobs").insert(row).select().single()}else r=await sb.from("jobs").update(pt).eq("id",j.id);
-     if(r.error&&/jobs_kind_check/.test(r.error.message))return toast("철거·추가설치 구분이 아직 없습니다. Supabase에서 phase1e.sql을 실행해 주세요.");
+     if(r.error&&/jobs_kind_check/.test(r.error.message))return toast(j.kind==="move"?"이전설치 구분이 아직 없습니다. Supabase에서 phase1t.sql을 실행해 주세요.":"철거·추가설치 구분이 아직 없습니다. Supabase에서 phase1e.sql을 실행해 주세요.");
      if(r.error)return toast(/pay_status|pay_method/.test(r.error.message)?"납부 칸이 아직 없습니다. Supabase에서 phase1b.sql을 실행해 주세요.":/paid_type|pay_date|pay_name|pay_memo|closed/.test(r.error.message)?"결제 상세 칸이 아직 없습니다. Supabase에서 phase1c.sql을 실행해 주세요.":"저장하지 못했습니다: "+r.error.message);
      let pmsg="";if(isNew&&jpSel.length&&r.data){const up={ok:0,fail:[]};const gr={};jpSel.forEach(x=>(gr[x.kind]=gr[x.kind]||[]).push(x.file));
        for(const k of Object.keys(gr)){const u=await uploadCustFiles(r.data.customer_id,gr[k],k,m=>toast(m),r.data.id);up.ok+=u.ok;up.fail=up.fail.concat(u.fail)}
