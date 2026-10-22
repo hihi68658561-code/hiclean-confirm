@@ -537,12 +537,12 @@ document.getElementById("bPw").onclick=()=>openDlg("비밀번호 변경",`<label
     const {error}=await sb.auth.updateUser({password:a});toast(error?"변경하지 못했습니다":"비밀번호를 바꿨습니다")}]]);
 
 async function fetchAll(table,select="*"){
-  /* 1000줄씩 나눠 동시에 받기 (id 순서로 고정해 빠짐·중복 없게) */
+  /* id 순서로 1000줄씩 이어 받기 (앞 페이지를 건너뛰는 계산이 없어 서버 부담이 적음) */
   const step=1000;const key=table==="staff"?"user_id":table==="customer_grades"?"customer_id":"id";
-  const first=await sb.from(table).select(select,{count:"exact"}).order(key).range(0,step-1);if(first.error)throw first.error;
-  const out=[...first.data];const n=first.count==null?out.length:first.count;
-  const reqs=[];for(let from=step;from<n;from+=step)reqs.push(sb.from(table).select(select).order(key).range(from,from+step-1));
-  for(const r of await Promise.all(reqs)){if(r.error)throw r.error;out.push(...r.data)}
+  if(select!=="*"&&!select.split(",").includes(key))select+=","+key;
+  const out=[];let last=null;
+  for(;;){let q=sb.from(table).select(select).order(key).limit(step);if(last!==null)q=q.gt(key,last);
+    const {data,error}=await q;if(error)throw error;out.push(...data);if(data.length<step)break;last=data[data.length-1][key]}
   return out;
 }
 /* 무거운 칸(엑셀 원본 import_raw)은 내려받지 않음 */
