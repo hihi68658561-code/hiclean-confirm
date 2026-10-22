@@ -290,7 +290,7 @@ dialog{max-width:720px}
 .badge.s-미수,.tag.st-미수{background:#fff;color:#c62828;border-color:#c62828}
 .badge.s-보류,.tag.st-보류{background:#e9ecef;color:#495057;border-color:#adb5bd;border-style:dashed}
 .tag.st-철거{background:#868e96;color:#fff;border-color:#868e96}
-.tag.ct-구매{background:#fff;color:#343a40;border-color:#adb5bd}.tag.ct-추가설치{background:#FFC000;color:#1b1b1b;border-color:#FFC000}
+.tag.ct-구매{background:#fff;color:#343a40;border-color:#adb5bd}.tag.ct-양도{background:#fff;color:#0f766e;border-color:#14b8a6}.tag.ct-추가설치{background:#FFC000;color:#1b1b1b;border-color:#FFC000}
 .tag.st-접수{background:#FFF3C4;color:#8a5a00;border-color:#FFF3C4}.tag.st-배정{background:#DCEBFF;color:#1d4ed8;border-color:#DCEBFF}
 .tag.ct-무료체험,.tag.ct-무상임대,.tag.ct-경품,.tag.ct-무상증정{background:#fff;color:#7e22ce;border-color:#9933FF}
 .badge.install{background:#00CC66;color:#1b1b1b;border-color:#00CC66}.badge.as{background:#9933FF;color:#fff;border-color:#9933FF}.badge.addon{background:#FFC000;color:#1b1b1b;border-color:#FFC000}.badge.remove{background:#FF0000;color:#1b1b1b;border-color:#FF0000}.badge.move{background:#FFFF00;color:#c00000;border-color:#e6d800}
@@ -341,7 +341,7 @@ const CFIELDS=[
   ["담당자","담당자(3차 계약자)"],["설치기사","설치기사(설치1)"],["메모","비고"]
 ];
 const STAGES=["미정","보류","확정","철거","취소","완료","미수"];
-const CTYPES=["구매","무료체험","무상증정","무상임대","경품"];
+const CTYPES=["구매","무료체험","무상증정","무상임대","경품","양도"];
 function modelText(c){c=c||{};return [c.모델명,c.사이즈,c.옵션?"("+c.옵션+")":""].filter(Boolean).join(" ")}
 const SYN={
   진행단계:["진행단계","진행상태","상태"],
@@ -1028,7 +1028,7 @@ function renderCtrView0(){
     if(b.length)rows.push({k,c:custById(k.customer_id)||{},s,b})});
   jobs.forEach(j=>{if(j.kind!=="addon")return;const k=addonRow(j);if(inM(baseDate(k)))rows.push({k,c:custById(j.customer_id)||{},s:payStat(k),b:["설치"],a:j})});
   // 금액 요약
-  const mC=contracts.filter(k=>inM(k.contract_date)&&k.stage!=="취소");
+  const mC=contracts.filter(k=>inM(k.contract_date)&&k.stage!=="취소"&&k.contract_type!=="양도");
   const mP=payments.filter(p=>inM(p.pay_date));const mCard=mP.filter(p=>p.method==="카드").reduce((a,p)=>a+Number(p.amount||0),0),mOther=mP.filter(p=>p.method!=="카드").reduce((a,p)=>a+Number(p.amount||0),0);
   const un=contracts.filter(k=>k.stage==="미수");const unSum=un.reduce((a,k)=>a+Math.max(0,payStat(k).unpaid),0);
   /* 위쪽 요약 칸을 누르면 그 건들만 */
@@ -1145,7 +1145,7 @@ function asRowCls(j){return j.status==="취소"?"취소":j.pay_status==="미수"
 let _instMap=null;
 function asProd(j){const p=j.product||{};if(p.product||p.size||p.serial)return p;const k=contracts.find(x=>x.id===j.contract_id)||custContracts(j.customer_id)[0];return k?Object.assign({},p,{product:k.product||"",size:k.size||"",serial:k.serial||""}):p}
 function asInstDate(j){if(!_instMap){_instMap={};jobs.forEach(x=>{if(x.kind!=="install"||x.status==="취소")return;const d=x.done_date||x.visit_date||"";if(d&&(!_instMap[x.customer_id]||d>_instMap[x.customer_id]))_instMap[x.customer_id]=d})}
-  return (j.product||{}).install_date||_instMap[j.customer_id]||""}
+  return (j.product||{}).install_date||_instMap[j.customer_id]||transInst(j.customer_id)||""}
 function asMoney(j){const c=Number(j.cost||0);const pay=j.pay_status==="완료"||(j.pay_date&&j.pay_status!=="미수");const card=j.pay_method==="카드";
   return{cost:c,card:pay&&card?c:0,cash:pay&&!card?c:0,unpaid:j.pay_status==="미수"?c:0}}
 const ACOLS=[
@@ -1440,6 +1440,39 @@ function noteDlg(uid,d,n){const isNew=!n;
        if(error)return toast("저장하지 못했습니다: "+error.message);toast("저장했습니다");reload(["notes"])}]]);
   setTimeout(()=>{const x=document.querySelector('#nf [name="note"]');if(x)x.focus()},30)}
 
+/* ================= 제품 양도 (기존 고객 → 다른 사업자) ================= */
+function hasTransfer(){return contracts.some(k=>"transfer_from" in k)}
+function transferOf(k){return contracts.find(x=>x.transfer_from===k.id)||null}
+/* 양도받은 고객의 설치일: 원래 계약의 설치일을 따라감 */
+function transInst(cid,depth=0){if(depth>5)return"";const k=custContracts(cid).find(x=>x.transfer_from);if(!k)return"";const src=contracts.find(x=>x.id===k.transfer_from);if(!src)return"";
+  const ij=installOf(src);return (ij&&(ij.done_date||ij.visit_date))||transInst(src.customer_id,depth+1)}
+function transferNote(k){const to=transferOf(k);const from=k.transfer_from&&contracts.find(x=>x.id===k.transfer_from);
+  return (to?`<p class="warnbox" style="margin:0">이 제품은 <b>${esc((custById(to.customer_id)||{}).name||"")}</b>에 양도되었습니다 (${esc(to.contract_date||"")}).</p>`:"")+
+    (from?`<p class="mapt" style="margin:0">↳ <b>${esc((custById(from.customer_id)||{}).name||"")}</b>에서 양도받은 제품입니다. 설치일·A/S 기록은 원래 고객 쪽에 있습니다.</p>`:"")}
+function transferDlg(c,k,c2){const pool=customers.filter(x=>x.id!==c.id);
+  const prod=[k.product,k.size,k.serial&&"SN "+k.serial].filter(Boolean).join(" ")||"제품";
+  openDlg("제품 양도 · "+esc(c.name),`<div id="tf" style="display:grid;gap:10px">
+    <p style="margin:0"><b>${esc(c.name)}</b>의 <b>${esc(prod)}</b>을(를) 다른 사업자에게 넘깁니다.</p>
+    <p class="mapt" style="margin:0">양도받는 고객에게 구분 ‘양도’인 계약(0원)이 생기고 제품·시리얼이 그대로 넘어갑니다. 원래 계약의 금액·입금·미수는 ${esc(c.name)} 쪽에 그대로 남습니다.</p>
+    ${hasTransfer()?"":`<p class="warnbox" style="margin:0">양도 기능을 쓰려면 Supabase에서 phase1u.sql을 먼저 실행해 주세요.</p>`}
+    ${c2?`<input type="hidden" id="jcId" value="${esc(c2.id)}"><div class="picked"><span>양도받는 고객: <b>${esc(c2.name)}</b> · ${esc(c2.phone||c2.phone2||"")} · ${esc(c2.address||"")}</span></div>`
+      :`<label class="f">양도받는 고객 검색<input id="jcQ" type="search" autocomplete="off" placeholder="업체명(상호)·대표자·전화번호·주소"></label><input type="hidden" id="jcId"><div id="jcSel"></div><div id="jcRes" class="pickres"></div>
+      <p class="mapt" id="jcHint" style="margin:0">아직 등록되지 않은 사업자면 아래 ‘새 고객 등록’으로 먼저 등록하세요.</p>`}
+    <div class="g3">${inp("tdate","양도일",today(),"date")}<div style="grid-column:span 2">${inp("tmemo","메모 (선택)","","text",false,'placeholder="예: 가게 인수, 기존 미수 정리 완료"')}</div></div></div>`,
+    [["새 고객 등록","gocust",()=>{newCustomer(null,nc=>transferDlg(c,k,nc));return true}],["취소"],["양도","pri",async()=>{
+      const to=customers.find(x=>x.id===val("jcId"))||c2;if(!to){toast("양도받는 고객을 검색해서 골라 주세요");return true}
+      const f=fdata("tf");const d=f.get("tdate")||today();const memo=(f.get("tmemo")||"").trim();
+      if(!(await askConfirm(`${c.name} → ${to.name} 으로 양도할까요?`)))return true;
+      const row={customer_id:to.id,contract_type:"양도",stage:"완료",contract_date:d,product:k.product||"",size:k.size||"",options:k.options||"",serial:k.serial||"",wash_added:!!k.wash_added,amount:0,
+        channel:"양도",sales3:k.sales3||null,sales3_name:k.sales3_name||"",transfer_from:k.id,memo:`${c.name}${c.ceo?"("+c.ceo+")":""}에서 양도 (${d})${memo?" / "+memo:""}`};
+      const r=await sb.from("contracts").insert(row).select().single();
+      if(r.error)return toast(/transfer_from|contract_type/.test(r.error.message)?"양도 칸이 아직 없습니다. Supabase에서 phase1u.sql을 실행해 주세요.":"양도하지 못했습니다: "+r.error.message);
+      await sb.from("contracts").update({memo:[k.memo,`→ ${to.name}에 양도 (${d})`].filter(Boolean).join("\n")}).eq("id",k.id);
+      if("search_text" in c){const add=(x,n)=>{const s=String(x.search_text||"");return s.includes(n)?s:[s,n].filter(Boolean).join(" ")};
+        await sb.from("customers").update({search_text:add(to,c.name)}).eq("id",to.id);await sb.from("customers").update({search_text:add(c,to.name)}).eq("id",c.id)}
+      toast(`${to.name}에 양도했습니다`);await reload(["customers","contracts"],true);const nk2=contracts.find(x=>x.id===r.data.id);const tc=custById(to.id);if(nk2&&tc)contractDlg(tc,nk2);return true}]]);
+  if(!c2)bindCustPicker(pool)}
+
 /* ================= 계약 ================= */
 function renderContracts(c){
   const ks=custContracts(c.id);const can=canEditCust(c);const tb=document.getElementById("tabBody");
@@ -1534,7 +1567,7 @@ function contractDlg(c,k,tpl){ui.payEdit=null;
   const refreshK=c2=>{const el=document.querySelector("#kf .dsum");if(el)el.outerHTML=custSummary(c2,isNew?null:k);document.getElementById("dlgH").textContent=(isNew?(tpl?"신규계약 (복사)":"신규계약"):"계약")+" · "+c2.name;
     const s3=document.querySelector('#kf [name="sales3"]');if(s3&&!isNew&&(custContracts(c2.id)[0]||{}).id===k.id){const v=custS3(c2);if(v)s3.value=v}};
   const ij=isNew?null:installOf(k);const sinkRo=ro||!isOffice()||(!isNew&&!ij);const srcJ=ij||(tpl?installOf(tpl):null);
-  openDlg((isNew?(tpl?"신규계약 (복사)":"신규계약"):"계약")+" · "+esc(c.name),`<div id="kf" style="display:grid;gap:10px">${custSummary(c,isNew?null:k)}${tpl?`<p class="warnbox" style="margin:0">복사한 계약입니다. 시리얼·계약일·진행단계·계약서·마감·입금은 새로 입력하세요.</p>`:""}
+  openDlg((isNew?(tpl?"신규계약 (복사)":"신규계약"):"계약")+" · "+esc(c.name),`<div id="kf" style="display:grid;gap:10px">${custSummary(c,isNew?null:k)}${isNew?"":transferNote(k)}${tpl?`<p class="warnbox" style="margin:0">복사한 계약입니다. 시리얼·계약일·진행단계·계약서·마감·입금은 새로 입력하세요.</p>`:""}
    <h3 class="ksec">계약 정보</h3>
    <div class="g3">${inp("contract_date","계약일자",k.contract_date,"date",ro)}${sel("contract_type","구분",CTYPES,k.contract_type||"구매",ro)}${sel("stage","진행단계",STAGES,STAGES.includes(k.stage)?k.stage:"확정",ro)}</div>
    <div class="g3">${sel("contract_doc","계약서",DOCS.map(d=>[d,d==="사진"?"사진 수령(○)":d==="원본"?"원본 수령(●)":d]),k.contract_doc,ro)}${inp("trial_end","무료체험 종료일",k.trial_end,"date",ro)}${inp("free_trial","무료체험 메모",k.free_trial,"text",ro)}</div>
@@ -1564,7 +1597,7 @@ function contractDlg(c,k,tpl){ui.payEdit=null;
    <datalist id="s3List">${staff.filter(s=>s.active&&["admin","office","sales"].includes(s.role)).map(s=>`<option value="${esc(s.name)}">${esc(ROLE[s.role])}</option>`).join("")}</datalist>
    <datalist id="stList">${staff.filter(s=>s.active).map(s=>`<option value="${esc(s.name)}">`).join("")}<option value="무료체험"></datalist>
    <datalist id="pdList">${[...new Set(contracts.map(x=>x.product).filter(Boolean))].map(x=>`<option value="${esc(x)}">`).join("")}</datalist></div>`,
-   ro?[["고객정보","gocust",()=>{openCustPopup(c,refreshK);return true}],["닫기"]]:[["고객정보","gocust",()=>{openCustPopup(c,refreshK);return true}],["취소"],...(!isNew?[["복사","",()=>{contractDlg(c,null,k);return true}]]:[]),...(!isNew&&isAdmin()?[["삭제","danger",async()=>{const {error}=await sb.from("contracts").delete().eq("id",k.id);toast(error?"삭제하지 못했습니다":"삭제했습니다");reload(["contracts"])}]]:[]),["저장","pri",async()=>{
+   ro?[["고객정보","gocust",()=>{openCustPopup(c,refreshK);return true}],["닫기"]]:[["고객정보","gocust",()=>{openCustPopup(c,refreshK);return true}],["취소"],...(!isNew?[["복사","",()=>{contractDlg(c,null,k);return true}]]:[]),...(!isNew&&isOffice()?[["양도","",()=>{transferDlg(c,k);return true}]]:[]),...(!isNew&&isAdmin()?[["삭제","danger",async()=>{const {error}=await sb.from("contracts").delete().eq("id",k.id);toast(error?"삭제하지 못했습니다":"삭제했습니다");reload(["contracts"])}]]:[]),["저장","pri",async()=>{
      if(isNew){const gg=gradeOf(c);if(gg&&gg.g==="블랙"&&!(await askConfirm(`블랙(거래 중지) 고객입니다.${gg.reason?" ("+gg.reason+")":""} 계속 등록할까요?`)))return true}
      const f=fdata("kf");const n=x=>Number(f.get(x)||0)||0;
      const p={contract_date:f.get("contract_date")||null,stage:f.get("stage"),contract_type:f.get("contract_type")||"구매",contract_doc:f.get("contract_doc"),channel:f.get("channel").trim(),referrer:f.get("referrer").trim(),free_trial:f.get("free_trial").trim(),...(hasTrialCol()||f.get("trial_end")?{trial_end:f.get("trial_end")||null}:{}),
@@ -1899,7 +1932,7 @@ function printJob(j,c){
 }
 function instTxt(c){const i=jobs.filter(x=>x.customer_id===c.id&&x.kind==="install"&&x.status!=="취소").sort((a,b)=>((b.done_date||b.visit_date||"")).localeCompare(a.done_date||a.visit_date||""))[0];
   if(!i)return"";if(i.status==="완료")return "설치 "+(i.done_date||i.visit_date||"");return i.visit_date?"설치예정 "+i.visit_date:"설치 미정"}
-function installDate(cid){const i=jobs.filter(x=>x.customer_id===cid&&x.kind==="install"&&x.status!=="취소").sort((a,b)=>(b.done_date||"").localeCompare(a.done_date||""))[0];return i?(i.done_date||i.visit_date||""):""}
+function installDate(cid){const i=jobs.filter(x=>x.customer_id===cid&&x.kind==="install"&&x.status!=="취소").sort((a,b)=>(b.done_date||"").localeCompare(a.done_date||""))[0];return i?(i.done_date||i.visit_date||""):transInst(cid)}
 async function doPrint(html){const pr=document.getElementById("printRoot");pr.innerHTML=html;const imgs=[...pr.querySelectorAll("img")];await Promise.all(imgs.map(i=>i.complete?1:new Promise(z=>{i.onload=i.onerror=z})));window.print()}
 window.addEventListener("afterprint",()=>{document.getElementById("printRoot").innerHTML=""});
 document.getElementById("bBlank").onclick=()=>openDlg("빈 확인서 인쇄",`<p>손으로 적을 빈 양식을 인쇄합니다.</p>`,[["닫기"],["설치확인서","",()=>doPrint(sheetIS({},{}))],["A/S 확인서","pri",()=>doPrint(sheetAS({},{}))]]);
