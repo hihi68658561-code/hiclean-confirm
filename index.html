@@ -1144,12 +1144,11 @@ function renderAllView(){const _sv=snapScroll();renderAllView0();restoreScroll(_
 function renderAllView0(){
   if(ui.aq2===undefined)ui.aq2="";if(!ui.allN)ui.allN=300;
   const rows=contracts.filter(monthClosed).map(k=>({k,c:custById(k.customer_id)||{},s:payStat(k),b:[]}));
-  jobs.forEach(j=>{if(j.kind==="addon"){const k=addonRow(j);if(monthClosed(k))rows.push({k,c:custById(j.customer_id)||{},s:payStat(k),b:[],a:j})}});
   const qq=ui.aq2.trim().toLowerCase();
   const list=rows.filter(x=>!qq||[x.c.name,x.c.search_text,x.c.ceo,x.c.phone,x.c.phone2,x.c.address,x.k.serial,x.k.memo,x.k.approval,staffName(x.k.sales3),x.k.sales3_name].join(" ").toLowerCase().includes(qq));
   sortCtrList(list);
   const cols=getCols("all");const shown=list.slice(0,ui.allN);
-  view().innerHTML=`<div class="toolbar"><h2 style="margin:0;font-size:18px">전체리스트</h2><span class="mapt">월마감(OK)된 계약 (추가설치 포함)</span>${hasMonthCol()?"":`<span class="warnbox" style="margin:0">월마감을 쓰려면 Supabase에서 phase1x.sql을 실행해 주세요.</span>`}</div>
+  view().innerHTML=`<div class="toolbar"><h2 style="margin:0;font-size:18px">전체리스트</h2><span class="mapt">월마감(OK)된 계약</span>${hasMonthCol()?"":`<span class="warnbox" style="margin:0">월마감을 쓰려면 Supabase에서 phase1x.sql을 실행해 주세요.</span>`}</div>
    <div class="toolbar"><input id="caQ" type="search" placeholder="업체명(상호)·대표자·전화·주소·시리얼·담당 검색" value="${esc(ui.aq2)}">
      <span class="mapt" id="caCnt">${list.length}건${list.length>shown.length?` 중 ${shown.length}건 표시`:""}</span>
      <span style="flex:1"></span><button class="btn" type="button" id="caSort">정렬</button><button class="btn" type="button" id="caCols">입력화면설정</button>${isOffice()||me.role==="sales"?`<button class="btn pri" type="button" id="caNewK">+ 신규계약</button>`:""}</div>
