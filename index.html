@@ -582,7 +582,7 @@ function restoreScroll(s){if(!s||s.v!==ui.view)return;const els=[...document.que
 function render(){if(ui._fresh){ui._fresh=false;render0();window.scrollTo(0,0);return}const _sv=snapScroll();try{render0()}finally{restoreScroll(_sv)}}
 function render0(){
   ui.dirty=false;
-  const tabs=[["cust","고객"],["work","월별현황"]];if(me.role!=="tech")tabs.push(["ctrm","계약관리"],["asm","A/S관리"]);tabs.push(["sched","일정표"]);if(isAdmin())tabs.push(["staff","직원"],["settings","설정"]);
+  const tabs=[["cust","고객"],["work","당월 설치·A/S 전체리스트"]];if(me.role!=="tech")tabs.push(["ctrm","계약관리-당월리스트"],["asm","A/S관리"]);tabs.push(["sched","담당자별 일정표"]);if(isAdmin())tabs.push(["staff","직원"],["settings","설정"]);
   document.getElementById("nav").innerHTML=tabs.map(([k,l])=>`<button type="button" class="${ui.view===k?"on":""}" data-v="${k}">${l}</button>`).join("");
   document.querySelectorAll("#nav button").forEach(b=>b.onclick=()=>{ui.view=b.dataset.v;ui.jsel=new Set();ui._fresh=true;render()});
   if(ui.view==="install"||ui.view==="as")ui.view="work";
@@ -1050,7 +1050,7 @@ function renderCtrView0(){
   const shown=list.slice(0,500);
   const tot={amount:0,card:0,cash:0,paid:0,unpaid:0};shown.forEach(x=>{tot.amount+=Number(x.k.amount||0);tot.card+=x.s.card;tot.cash+=x.s.other;tot.paid+=x.s.paid;if(x.s.n||x.k.stage==="미수")tot.unpaid+=x.s.unpaid});
   view().innerHTML=`${ui.noPay?`<div class="sec" style="max-width:none"><p class="warnbox">입금 내역 칸이 아직 없습니다. Supabase SQL Editor에서 <b>phase1h.sql</b>을 실행하면 입금·미수금·마감 체크를 쓸 수 있습니다.</p></div>`:""}
-   <div class="sumwrap"><div style="display:grid;gap:8px;align-content:start"><div style="display:flex;gap:8px;align-items:center"><h2 style="margin:0;font-size:18px">계약관리</h2>
+   <div class="sumwrap"><div style="display:grid;gap:8px;align-content:start"><div style="display:flex;gap:8px;align-items:center"><h2 style="margin:0;font-size:18px">계약관리-당월리스트</h2>
       <input id="cM" type="month" value="${esc(ui.cm)}" aria-label="기준 월" style="padding:5px 8px;border:1px solid var(--line);border-radius:6px;background:var(--field)">${ui.cm!==thisMonth()?`<button class="btn sm" type="button" id="cNow">이번 달</button>`:""}</div>
       <div class="kpis"><div class="kpi kc ${ui.ckpi==="ctr"?"on":""}" data-kpi="ctr" role="button" tabindex="0"><span>당월 계약</span><b>${mC.length}건 · ${won0(mC.reduce((a,k)=>a+Number(k.amount||0),0))}원</b></div>
        <div class="kpi kc ${ui.ckpi==="pay"?"on":""}" data-kpi="pay" role="button" tabindex="0"><span>당월 입금</span><b>${won0(mCard+mOther)}원</b><small>카드 ${won0(mCard)} · 현금+캐피탈 ${won0(mOther)}</small></div>
@@ -1779,7 +1779,7 @@ function renderWorkView0(){
      ${rows.map((j,i)=>{const c=custById(j.customer_id)||{};const k=contracts.find(x=>x.id===j.contract_id)||custContracts(j.customer_id)[0]||{};
        return `<tr data-j="${j.id}">${admin?`<td><input type="checkbox" class="jsel" data-js="${j.id}" ${ui.jsel.has(j.id)?"checked":""} aria-label="선택"></td>`:""}<td>${i+1}</td>${wcols.map(col=>wCell(col,j,c,k,td)).join("")}</tr>`}).join("")||`<tr><td colspan="${wcols.length+2}" class="mapt" style="cursor:default">해당하는 작업이 없습니다.</td></tr>`}</tbody></table></div>
      ${list.length>500?`<p class="mapt">앞의 500건만 보입니다. 검색이나 구분으로 좁혀 주세요.</p>`:""}</div>`};
-  view().innerHTML=`<div class="sumwrap"><div style="display:grid;gap:6px"><div style="display:flex;gap:8px;align-items:center"><h2 style="margin:0;font-size:18px">월별현황</h2>
+  view().innerHTML=`<div class="sumwrap"><div style="display:grid;gap:6px"><div style="display:flex;gap:8px;align-items:center"><h2 style="margin:0;font-size:18px">당월 설치·A/S 전체리스트</h2>
       <input id="wM" type="month" value="${esc(ui.wm)}" aria-label="기준 월" style="padding:5px 8px;border:1px solid var(--line);border-radius:6px;background:var(--field)">${ui.wm!==thisMonth()?`<button class="btn sm" type="button" id="wNow">이번 달</button>`:""}</div>
       <p class="mapt" style="margin:0">숫자를 누르면 아래 목록이 그 건들로 바뀝니다.</p></div><div class="sumbox">${sumT}</div></div>
     <div class="toolbar">
