@@ -556,13 +556,14 @@ async function colsOf(tb){if(COLS[tb])return COLS[tb];const {data,error}=await s
 async function fetchCtr(){return fetchAll("contracts",await colsOf("contracts"))}
 /* 바뀐 것만 받아오기: updated_at 이후 행 + 개수 확인(지워진 행 있으면 전체 다시) */
 function maxUpd(arr){let m="";for(const r of arr)if(r.updated_at&&r.updated_at>m)m=r.updated_at;return m}
-async function incFetch(tb,cur,full){const since=maxUpd(cur);if(!cur.length||!since)return{rows:await full(),changed:true};
+async function incFetch(tb,cur,full,withCount){const since=maxUpd(cur);if(!cur.length||!since)return{rows:await full(),changed:true};
   const sel=tb==="contracts"?await colsOf(tb):"*";
-  const [h,d]=await Promise.all([sb.from(tb).select("id",{count:"exact",head:true}),sb.from(tb).select(sel).gte("updated_at",since)]);
+  /* 개수 확인(지운 행 찾기)은 직접 저장·삭제한 뒤에만. 자동 새로고침은 바뀐 행만 받고, 5분마다 전체 확인 */
+  const [h,d]=await Promise.all([withCount?sb.from(tb).select("id",{count:"exact",head:true}):Promise.resolve({count:null}),sb.from(tb).select(sel).gt("updated_at",since)]);
   if(h.error)throw h.error;if(d.error)throw d.error;
   const m=new Map(cur.map(r=>[r.id,r]));let changed=false;
   for(const r of d.data){const o=m.get(r.id);if(!o||o.updated_at!==r.updated_at){m.set(r.id,r);changed=true}}
-  if(m.size!==h.count)return{rows:await full(),changed:true};
+  if(h.count!=null&&m.size!==h.count)return{rows:await full(),changed:true};
   return{rows:changed?[...m.values()]:cur,changed}}
 async function loadAll(){
   view().innerHTML=`<div class="empty"><h2>불러오는 중…</h2></div>`;
@@ -582,7 +583,7 @@ async function reload(tables,quiet){
   const seq=++reloadSeq;let res;
   const INC={customers:()=>customers,contracts:()=>contracts,jobs:()=>jobs,payments:()=>(me.role==="tech"||ui.noPay)?null:payments};
   const chg=[];ui.rtick=(ui.rtick||0)+1;const forceFull=quiet&&ui.rtick%10===0;
-  try{res=await Promise.all(tables.map(async(t,i)=>{const cur=!forceFull&&INC[t]&&INC[t]();if(cur){const r=await incFetch(t,cur,TBL[t]);chg[i]=r.changed;return r.rows}
+  try{res=await Promise.all(tables.map(async(t,i)=>{const cur=!forceFull&&INC[t]&&INC[t]();if(cur){const r=await incFetch(t,cur,TBL[t],!quiet);chg[i]=r.changed;return r.rows}
     const d=await TBL[t]();const old={customers,contracts,jobs,staff,payments,files,grades,notes}[t];chg[i]=JSON.stringify(old)!==JSON.stringify(d);return d}))}
   catch(e){if(!quiet)toast("최신 내용을 불러오지 못했습니다. 인터넷 연결을 확인해 주세요.");return false}
   if(seq!==reloadSeq&&quiet)return false;
@@ -639,7 +640,7 @@ function renderCustView(){
   const grf=document.getElementById("grf");if(grf)grf.onchange=e=>{ui.grade=e.target.value;renderCustList()};
   document.getElementById("ctf").onchange=e=>{ui.ctype=e.target.value;renderCustList()};
   const nb=document.getElementById("bNewC");if(nb)nb.onclick=()=>newCustomer();
-  document.getElementById("clist").onclick=e=>{const it=e.target.closest(".citem");if(it){ui.sel=it.dataset.id;ui.ctab="info";ui.draft=null;renderCustList();renderCustMain()}};
+  document.getElementById("clist").onclick=e=>{const it=e.target.closest(".citem");if(it){ui.sel=it.dataset.id;ui.ctab="info";ui.draft=null;document.querySelectorAll("#clist .citem.sel").forEach(x=>x.classList.remove("sel"));it.classList.add("sel");renderCustMain()}};
   renderCustList();renderCustMain();
 }
 function custSearchText(c){const ks=custContracts(c.id);return [c.name,c.biz_name,c.search_text,c.ceo,c.phone,c.phone2,c.address,c.biz_no,c.owner_name,staffName(c.owner),...ks.map(k=>k.serial+" "+k.product)].join(" ").toLowerCase().replace(/-/g,"")}
