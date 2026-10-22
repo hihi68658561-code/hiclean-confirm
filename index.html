@@ -2207,6 +2207,7 @@ function planImport(rows,fresh){
       cms:pay==="CMS"?{day:((stRaw.match(/(\d+)\s*일/)||[])[1]||"")}:{},tax,settle_month:sm?`${sm[1].length===2?"20"+sm[1]:sm[1]}-${sm[2].padStart(2,"0")}`:"",memo,import_raw:raw};
     if(!k.amount)k.amount=k.amt_ultra+k.amt_wash+k.amt_parts;
     const extra={approval:ap,chk_cust:t("고객등록"),chk_slip:t("전표마감"),chk_sales:t("매출마감")};
+    if(has("월마감")&&hasMonthCol())extra.chk_month=t("월마감");
     if(withPay)Object.assign(k,extra);
     // 입금 (엑셀의 입금일자 묶음 3개 → 입금 내역)
     const pays=[];
