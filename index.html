@@ -1009,6 +1009,14 @@ function colPicker(onDone,t="ctr"){
   draw();
 }
 /* 추가설치 건을 계약관리 목록에 한 줄로 (금액·입금은 원래 계약에서 관리) */
+/* 당월리스트에 나오는 계약(설치·결제가 그달이거나 해결 안 된 미수) */
+function ctrInMonth(k,ym){const [st0,en0]=monthRange(ym);const inM=d=>d&&d>=st0&&d<en0;const s=payStat(k);const bd=baseDate(k);
+  return inM(bd)||inM(s.last)||(k.stage==="미수"&&(!bd||bd<en0))}
+function bulkMonthClose(){const ym=thisMonth();const ids=contracts.filter(k=>k.chk_month!=="OK"&&!ctrInMonth(k,ym)).map(k=>k.id);
+  if(!ids.length)return toast("월마감할 계약이 없습니다");
+  openDlg("나머지 계약 일괄 월마감",`<p>이번 달(${esc(ym)}) 당월리스트에 나오는 계약을 <b>제외한</b> 나머지 계약 <b>${ids.length}건</b>을 월마감 OK로 바꿉니다.</p><p class="mapt">이번 달 설치·결제된 건과 해결되지 않은 미수 건은 당월리스트에 그대로 남습니다. 바꾼 건은 전체리스트에서 보이고, 각 계약의 월마감 칸을 지우면 되돌릴 수 있습니다.</p>`,
+    [["취소"],["월마감 처리","pri",async()=>{for(let i=0;i<ids.length;i+=200){toast(`월마감 처리 중… ${Math.min(i+200,ids.length)}/${ids.length}`);const {error}=await sb.from("contracts").update({chk_month:"OK"}).in("id",ids.slice(i,i+200));if(error)return toast("처리하지 못했습니다: "+error.message)}
+      toast(`${ids.length}건을 월마감했습니다`);reload(["contracts"])}]])}
 function hasMonthCol(){return contracts.some(k=>"chk_month" in k)}
 function monthClosed(k){if(k.__job){const p=contracts.find(x=>x.id===k.__job.contract_id);return !!p&&p.chk_month==="OK"}return k.chk_month==="OK"}
 function addonRow(j){const k0=contracts.find(x=>x.id===j.contract_id)||custContracts(j.customer_id)[0]||{};const a=addonItem(j);
@@ -1151,7 +1159,7 @@ function renderAllView0(){
   view().innerHTML=`<div class="toolbar"><h2 style="margin:0;font-size:18px">전체리스트</h2><span class="mapt">월마감(OK)된 계약</span>${hasMonthCol()?"":`<span class="warnbox" style="margin:0">월마감을 쓰려면 Supabase에서 phase1x.sql을 실행해 주세요.</span>`}</div>
    <div class="toolbar"><input id="caQ" type="search" placeholder="업체명(상호)·대표자·전화·주소·시리얼·담당 검색" value="${esc(ui.aq2)}">
      <span class="mapt" id="caCnt">${list.length}건${list.length>shown.length?` 중 ${shown.length}건 표시`:""}</span>
-     <span style="flex:1"></span><button class="btn" type="button" id="caSort">정렬</button><button class="btn" type="button" id="caCols">입력화면설정</button>${isOffice()||me.role==="sales"?`<button class="btn pri" type="button" id="caNewK">+ 신규계약</button>`:""}</div>
+     <span style="flex:1"></span>${isAdmin()&&hasMonthCol()?`<button class="btn" type="button" id="caBulk">나머지 계약 일괄 월마감</button>`:""}<button class="btn" type="button" id="caSort">정렬</button><button class="btn" type="button" id="caCols">입력화면설정</button>${isOffice()||me.role==="sales"?`<button class="btn pri" type="button" id="caNewK">+ 신규계약</button>`:""}</div>
    <div class="wrapx vis" style="padding-top:10px"><div class="wtbox"><table class="wt ca"><thead><tr><th>순번</th>${colHead(cols,"all",MONEYC)}</tr></thead><tbody>
     ${shown.map((x,i)=>`<tr data-ck="${x.k.id}" class="rs-${esc(x.k.stage)}"><td>${i+1}</td>${cols.map(c=>ctrCell(c,x.k,x.c,x.s,x.b)).join("")}</tr>`).join("")||`<tr><td colspan="${cols.length+1}" class="mapt" style="cursor:default">월마감된 계약이 없습니다. 당월리스트에서 월마감 칸을 OK로 바꾸면 여기로 옮겨집니다.</td></tr>`}</tbody></table></div>
     ${list.length>shown.length?`<p style="text-align:center"><button class="btn" type="button" id="caMore">다음 300건 더 보기</button> <span class="mapt">찾는 건이 있으면 검색이 가장 빠릅니다.</span></p>`:""}</div>`;
@@ -1160,6 +1168,7 @@ function renderAllView0(){
   const re=()=>renderAllView();
   document.getElementById("caCols").onclick=()=>colPicker(re,"all");
   document.getElementById("caSort").onclick=()=>sortPicker(re);
+  const bk=document.getElementById("caBulk");if(bk)bk.onclick=bulkMonthClose;
   /* 더 보기: 표를 다시 그리지 않고 아래에 이어 붙임 */
   const mo=document.getElementById("caMore");if(mo)mo.onclick=()=>{const tb=view().querySelector(".wt.ca tbody");const from=ui.allN,to=Math.min(list.length,from+300);
     tb.insertAdjacentHTML("beforeend",list.slice(from,to).map((x,i)=>`<tr data-ck="${x.k.id}" class="rs-${esc(x.k.stage)}"><td>${from+i+1}</td>${cols.map(c=>ctrCell(c,x.k,x.c,x.s,x.b)).join("")}</tr>`).join(""));
