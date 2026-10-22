@@ -531,15 +531,33 @@ document.getElementById("bPw").onclick=()=>openDlg("비밀번호 변경",`<label
     const {error}=await sb.auth.updateUser({password:a});toast(error?"변경하지 못했습니다":"비밀번호를 바꿨습니다")}]]);
 
 async function fetchAll(table,select="*"){
-  const out=[];const step=1000;
-  for(let from=0;;from+=step){const {data,error}=await sb.from(table).select(select).range(from,from+step-1);if(error)throw error;out.push(...data);if(data.length<step)break}
+  /* 1000줄씩 나눠 동시에 받기 (id 순서로 고정해 빠짐·중복 없게) */
+  const step=1000;const key=table==="staff"?"user_id":table==="customer_grades"?"customer_id":"id";
+  const first=await sb.from(table).select(select,{count:"exact"}).order(key).range(0,step-1);if(first.error)throw first.error;
+  const out=[...first.data];const n=first.count==null?out.length:first.count;
+  const reqs=[];for(let from=step;from<n;from+=step)reqs.push(sb.from(table).select(select).order(key).range(from,from+step-1));
+  for(const r of await Promise.all(reqs)){if(r.error)throw r.error;out.push(...r.data)}
   return out;
 }
+/* 무거운 칸(엑셀 원본 import_raw)은 내려받지 않음 */
+const COLS={};
+async function colsOf(tb){if(COLS[tb])return COLS[tb];const {data,error}=await sb.from(tb).select("*").limit(1);if(error)throw error;
+  COLS[tb]=data&&data[0]?Object.keys(data[0]).filter(k=>k!=="import_raw").join(","):"*";return COLS[tb]}
+async function fetchCtr(){return fetchAll("contracts",await colsOf("contracts"))}
+/* 바뀐 것만 받아오기: updated_at 이후 행 + 개수 확인(지워진 행 있으면 전체 다시) */
+function maxUpd(arr){let m="";for(const r of arr)if(r.updated_at&&r.updated_at>m)m=r.updated_at;return m}
+async function incFetch(tb,cur,full){const since=maxUpd(cur);if(!cur.length||!since)return{rows:await full(),changed:true};
+  const sel=tb==="contracts"?await colsOf(tb):"*";
+  const [h,d]=await Promise.all([sb.from(tb).select("id",{count:"exact",head:true}),sb.from(tb).select(sel).gte("updated_at",since)]);
+  if(h.error)throw h.error;if(d.error)throw d.error;
+  const m=new Map(cur.map(r=>[r.id,r]));let changed=false;
+  for(const r of d.data){const o=m.get(r.id);if(!o||o.updated_at!==r.updated_at){m.set(r.id,r);changed=true}}
+  if(m.size!==h.count)return{rows:await full(),changed:true};
+  return{rows:changed?[...m.values()]:cur,changed}}
 async function loadAll(){
   view().innerHTML=`<div class="empty"><h2>불러오는 중…</h2></div>`;
   try{
-    [staff,customers,contracts,jobs]=await Promise.all([fetchAll("staff","user_id,name,role,aliases,active"),fetchAll("customers"),fetchAll("contracts"),fetchAll("jobs")]);
-    payments=await fetchPays();files=await fetchFiles();grades=await fetchGrades();notes=await fetchNotes();
+    [staff,customers,contracts,jobs,payments,files,grades,notes]=await Promise.all([fetchAll("staff","user_id,name,role,aliases,active"),fetchAll("customers"),fetchCtr(),fetchAll("jobs"),fetchPays(),fetchFiles(),fetchGrades(),fetchNotes()]);
     const st=await sb.from("settings").select("bank").eq("id",1).maybeSingle();if(st.data&&st.data.bank)S.bank=st.data.bank;
   }catch(e){view().innerHTML=`<div class="empty"><h2>데이터를 불러오지 못했습니다</h2><p>${esc(e.message||"")}</p><p>1단계 데이터베이스 설정(phase1.sql)을 실행했는지 확인해 주세요.</p></div>`;return}
   if(ui.sel&&!custById(ui.sel))ui.sel=null;
@@ -548,14 +566,18 @@ async function loadAll(){
 async function fetchPays(){if(me&&me.role==="tech")return[];try{const r=await fetchAll("payments");ui.noPay=false;return r}catch(e){ui.noPay=true;return[]}}
 async function fetchFiles(){try{const r=await fetchAll("customer_files");ui.noFiles=false;return r}catch(e){ui.noFiles=true;return[]}}
 async function fetchGrades(){if(me&&me.role==="tech")return[];try{const r=await fetchAll("customer_grades");ui.noGrades=false;return r}catch(e){ui.noGrades=true;return[]}}
-const TBL={notes:fetchNotes,grades:fetchGrades,files:fetchFiles,payments:fetchPays,customers:()=>fetchAll("customers"),contracts:()=>fetchAll("contracts"),jobs:()=>fetchAll("jobs"),staff:()=>fetchAll("staff","user_id,name,role,aliases,active")};
+const TBL={notes:fetchNotes,grades:fetchGrades,files:fetchFiles,payments:fetchPays,customers:()=>fetchAll("customers"),contracts:fetchCtr,jobs:()=>fetchAll("jobs"),staff:()=>fetchAll("staff","user_id,name,role,aliases,active")};
 let reloadSeq=0;
 async function reload(tables,quiet){
   const seq=++reloadSeq;let res;
-  try{res=await Promise.all(tables.map(t=>TBL[t]()))}catch(e){if(!quiet)toast("최신 내용을 불러오지 못했습니다. 인터넷 연결을 확인해 주세요.");return false}
+  const INC={customers:()=>customers,contracts:()=>contracts,jobs:()=>jobs,payments:()=>(me.role==="tech"||ui.noPay)?null:payments};
+  const chg=[];ui.rtick=(ui.rtick||0)+1;const forceFull=quiet&&ui.rtick%10===0;
+  try{res=await Promise.all(tables.map(async(t,i)=>{const cur=!forceFull&&INC[t]&&INC[t]();if(cur){const r=await incFetch(t,cur,TBL[t]);chg[i]=r.changed;return r.rows}
+    const d=await TBL[t]();const old={customers,contracts,jobs,staff,payments,files,grades,notes}[t];chg[i]=JSON.stringify(old)!==JSON.stringify(d);return d}))}
+  catch(e){if(!quiet)toast("최신 내용을 불러오지 못했습니다. 인터넷 연결을 확인해 주세요.");return false}
   if(seq!==reloadSeq&&quiet)return false;
-  let changed=false;
-  tables.forEach((t,i)=>{const d=res[i];const old={customers,contracts,jobs,staff,payments,files,grades,notes}[t];if(JSON.stringify(old)!==JSON.stringify(d))changed=true;
+  let changed=chg.some(Boolean);
+  tables.forEach((t,i)=>{const d=res[i];
     if(t==="customers")customers=d;if(t==="contracts")contracts=d;if(t==="jobs")jobs=d;if(t==="staff")staff=d;if(t==="payments")payments=d;if(t==="files")files=d;if(t==="grades")grades=d;if(t==="notes")notes=d});
   if(tables.includes("staff")&&me){const s=staff.find(x=>x.user_id===me.id);if(s){me.name=s.name;me.role=s.role;document.getElementById("modeLabel").textContent=`${me.name||me.email} · ${ROLE[me.role]}`}}
   if(ui.sel&&!custById(ui.sel))ui.sel=null;
