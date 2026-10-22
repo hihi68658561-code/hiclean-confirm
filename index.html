@@ -531,7 +531,11 @@ async function afterLogin(user){
   document.getElementById("bImport").hidden=!isOffice();
   await loadAll();
 }
-document.getElementById("bLogout").onclick=async()=>{await sb.auth.signOut();location.reload()};
+/* 로그아웃: 서버 응답이 늦거나 실패해도 이 브라우저에서는 확실히 로그아웃 */
+document.getElementById("bLogout").onclick=async()=>{const b=document.getElementById("bLogout");b.disabled=true;b.textContent="로그아웃 중…";
+  try{await Promise.race([sb.auth.signOut({scope:"local"}),new Promise(r=>setTimeout(r,3000))])}catch(e){}
+  try{Object.keys(localStorage).filter(k=>/^sb-.*-auth-token/.test(k)||k.startsWith("supabase.auth")).forEach(k=>localStorage.removeItem(k))}catch(e){}
+  location.reload()};
 document.getElementById("bPw").onclick=()=>openDlg("비밀번호 변경",`<label class="f">새 비밀번호 (8자 이상)<input id="npw" type="password" autocomplete="new-password"></label><label class="f">한 번 더 입력<input id="npw2" type="password" autocomplete="new-password"></label>`,
   [["취소"],["변경","pri",async()=>{const a=val("npw"),b=val("npw2");if(a.length<8)return toast("8자 이상으로 입력해 주세요");if(a!==b)return toast("두 비밀번호가 다릅니다");
     const {error}=await sb.auth.updateUser({password:a});toast(error?"변경하지 못했습니다":"비밀번호를 바꿨습니다")}]]);
