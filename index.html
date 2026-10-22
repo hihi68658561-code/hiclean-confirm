@@ -166,8 +166,11 @@ body.resizing,body.resizing *{cursor:col-resize!important;user-select:none}
 .bizrow{display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-top:6px}.bizrow .bizup{flex:1 1 100%}
 @media (hover:hover) and (pointer:fine){.wtbox.hb{overflow-x:hidden}}
 .wt.am tr.rs-완료 td,.wt.ct tr.rs-완료 td{background:#E2EFDA;color:#1b1b1b}.wt.am tr.rs-미수 td,.wt.ct tr.rs-미수 td{background:#FFE699;color:#1b1b1b}.wt.am tr.rs-보류 td,.wt.am tr.rs-취소 td,.wt.ct tr.rs-철거 td,.wt.ct tr.rs-보류 td,.wt.ct tr.rs-취소 td{background:#D9D9D9;color:#1b1b1b}
+.wt.am tr.rs-완료 td,.wt.ca tr.rs-완료 td{background:#E2EFDA;color:#1b1b1b}.wt.am tr.rs-미수 td,.wt.ca tr.rs-미수 td{background:#FFE699;color:#1b1b1b}.wt.am tr.rs-보류 td,.wt.am tr.rs-취소 td,.wt.ca tr.rs-철거 td,.wt.ca tr.rs-보류 td,.wt.ca tr.rs-취소 td{background:#D9D9D9;color:#1b1b1b}
 .wt.am tr.rs-완료:hover td,.wt.ct tr.rs-완료:hover td{background:#cfe4c2}.wt.am tr.rs-미수:hover td,.wt.ct tr.rs-미수:hover td{background:#ffdb70}.wt.am tr.rs-보류:hover td,.wt.am tr.rs-취소:hover td,.wt.ct tr.rs-철거:hover td,.wt.ct tr.rs-보류:hover td,.wt.ct tr.rs-취소:hover td{background:#c8c8c8}
+.wt.am tr.rs-완료:hover td,.wt.ca tr.rs-완료:hover td{background:#cfe4c2}.wt.am tr.rs-미수:hover td,.wt.ca tr.rs-미수:hover td{background:#ffdb70}.wt.am tr.rs-보류:hover td,.wt.am tr.rs-취소:hover td,.wt.ca tr.rs-철거:hover td,.wt.ca tr.rs-보류:hover td,.wt.ca tr.rs-취소:hover td{background:#c8c8c8}
 .wt.ct tr[class^="rs-"] td.memo,.wt.am tr[class^="rs-"]:not(.rs-) td.memo{color:#444}
+.wt.ca tr[class^="rs-"] td.memo,.wt.am tr[class^="rs-"]:not(.rs-) td.memo{color:#444}
 .hbar{position:sticky;bottom:0;z-index:5;overflow-x:scroll;scrollbar-color:var(--mute) var(--line2);overflow-y:hidden;height:18px;background:var(--panel);border:1px solid var(--line);border-top:0;border-radius:0 0 6px 6px}
 .hbar>div{height:1px}
 .hbar::-webkit-scrollbar{height:14px}.hbar::-webkit-scrollbar-thumb{background:var(--mute);border-radius:7px;border:3px solid var(--panel)}.hbar::-webkit-scrollbar-track{background:var(--line2)}
@@ -181,6 +184,7 @@ body.resizing,body.resizing *{cursor:col-resize!important;user-select:none}
 .wt.sch .gs{border-left:3px solid #555}.wt.sch td.sref .khol{color:#c00000}.wt.sch tr.swork td.sref{font-weight:700}.wt.sch tr.shol td:not(.sk):not(.sres):not(.stm):not(.lv){background:#D9D9D9;color:#1b1b1b}
 .wt.sch tr.sfirst td{border-top:2px solid var(--mute)}.wt.sch tr.stoday td.sday{background:var(--accent);color:#fff}.wt.sch td.se{height:24px}.wt.sch td.se:hover{background:var(--accent-weak)}.wt.sch tr:hover td{filter:none}
 .wt.am tfoot th,.wt.ct tfoot th{position:sticky;bottom:0;background:var(--line2);border-top:1px solid var(--line);padding:6px 7px}
+.wt.am tfoot th,.wt.ca tfoot th{position:sticky;bottom:0;background:var(--line2);border-top:1px solid var(--line);padding:6px 7px}
 .wt td.memo{max-width:320px;min-width:200px;font-size:12px;color:var(--mute)}.clamp{display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
 .wt td.ckc{text-align:center;font-size:12px}.wt td.ckc.ok{color:var(--ok-fg);font-weight:700}.wt td.ckc.note{color:var(--warn-fg)}
 .tag.b-계약{background:var(--accent-weak);color:var(--accent)}.tag.b-결제{background:var(--ok-bg);color:var(--ok-fg)}.tag.b-미수{background:var(--bad-bg);color:var(--bad-fg)}
@@ -604,11 +608,11 @@ function restoreScroll(s){if(!s||s.v!==ui.view)return;const els=[...document.que
 function render(){if(ui._fresh){ui._fresh=false;render0();window.scrollTo(0,0);return}const _sv=snapScroll();try{render0()}finally{restoreScroll(_sv)}}
 function render0(){
   ui.dirty=false;
-  const tabs=[["cust","고객"],["work","당월 설치·A/S 전체리스트"]];if(me.role!=="tech")tabs.push(["ctrm","당월리스트"],["asm","A/S관리"]);tabs.push(["sched","담당자별 일정표"]);if(isAdmin())tabs.push(["staff","직원"],["settings","설정"]);
+  const tabs=[["cust","고객"],["work","당월 설치·A/S 전체리스트"]];if(me.role!=="tech")tabs.push(["ctrm","당월리스트"],["allm","전체리스트"],["asm","A/S관리"]);tabs.push(["sched","담당자별 일정표"]);if(isAdmin())tabs.push(["staff","직원"],["settings","설정"]);
   document.getElementById("nav").innerHTML=tabs.map(([k,l])=>`<button type="button" class="${ui.view===k?"on":""}" data-v="${k}">${l}</button>`).join("");
   document.querySelectorAll("#nav button").forEach(b=>b.onclick=()=>{ui.view=b.dataset.v;ui.jsel=new Set();ui._fresh=true;render()});
   if(ui.view==="install"||ui.view==="as")ui.view="work";
-  if(ui.view==="cust")renderCustView();else if(ui.view==="work")renderWorkView();else if(ui.view==="ctrm")renderCtrView();else if(ui.view==="asm")renderAsView();else if(ui.view==="sched")renderSchedView();else if(ui.view==="staff")renderStaffView();else if(ui.view==="delete")renderDeleteView();else renderSettings();
+  if(ui.view==="cust")renderCustView();else if(ui.view==="work")renderWorkView();else if(ui.view==="ctrm")renderCtrView();else if(ui.view==="asm")renderAsView();else if(ui.view==="allm")renderAllView();else if(ui.view==="sched")renderSchedView();else if(ui.view==="staff")renderStaffView();else if(ui.view==="delete")renderDeleteView();else renderSettings();
 }
 
 /* ================= 고객 ================= */
@@ -947,6 +951,7 @@ const MONEYC=new Set(["amount","card","cash","paid","unpaid"]);
 const TCFG={ctr:{cols:()=>CCOLS,sel:".wt.ct",lead:()=>isAdmin()?2:1},work:{cols:()=>WCOLS,sel:".wt.wk",lead:()=>isAdmin()?2:1}};
 function colKey(t="ctr"){return "hc.cols."+t+"."+(me&&me.id||"")}
 function getCols(t="ctr"){const C=TCFG[t].cols();let v=null;try{v=JSON.parse(localStorage.getItem(colKey(t))||"null")}catch(e){}
+  if(!v&&t==="all")return getCols("ctr");
   const all=C.map(c=>c[0]);if(Array.isArray(v))v={cols:v,seen:all.filter(x=>!["sink","parts"].includes(x))};
   if(!v||!Array.isArray(v.cols))return C.filter(c=>c[2]).map(c=>c[0]);
   const cols=v.cols.filter(x=>all.includes(x));const seen=v.seen||all;
@@ -959,7 +964,7 @@ function setColW(o,t="ctr"){try{localStorage.setItem(cwKey(t),JSON.stringify(o))
 function applyColW(cols,live,t="ctr"){const w=Object.assign(getColW(t),live||{});const id="colwStyle_"+t;let st=document.getElementById(id);if(!st){st=document.createElement("style");st.id=id;document.head.appendChild(st)}
   const sel=TCFG[t].sel,lead=TCFG[t].lead();
   st.textContent=cols.map((c,i)=>w[c]?`${sel} tr>*:nth-child(${i+lead+1}){width:${w[c]}px;min-width:${w[c]}px;max-width:${w[c]}px;overflow:hidden;text-overflow:ellipsis}`:"").join("\n");
-  if(t==="ctr"||t==="as")freezeCols(t,cols)}
+  if(t==="ctr"||t==="as"||t==="all")freezeCols(t,cols)}
 /* 틀 고정: 맨 앞(체크·순번)부터 업체명(상호) 열까지는 가로로 밀어도 고정 */
 function freezeCols(t,cols){const sel=TCFG[t].sel;const id="frzStyle_"+t;let st=document.getElementById(id);if(!st){st=document.createElement("style");st.id=id;document.head.appendChild(st)}
   const tbl=view().querySelector(sel);const ni=cols.indexOf("name");if(!tbl||ni<0){st.textContent="";return}
@@ -1121,6 +1126,45 @@ function delContracts(all){const ids=all.filter(id=>!id.startsWith("a:")),jids=a
     [["취소"],["삭제","danger",async()=>{for(let i=0;i<ids.length;i+=200){const {error}=await sb.from("contracts").delete().in("id",ids.slice(i,i+200));if(error)return toast("삭제하지 못했습니다: "+error.message)}
       if(jids.length){const {error}=await sb.from("jobs").delete().in("id",jids);if(error)return toast("추가설치는 삭제하지 못했습니다: "+error.message)}
       all.forEach(id=>ui.csel.delete(id));toast(`계약 ${n}건${jids.length?` · 추가설치 ${jids.length}건`:""} 삭제했습니다`);reload(["contracts","payments","jobs"])}]])}
+/* ================= 전체리스트 (모든 계약, 당월리스트와 같은 표) ================= */
+TCFG.all={cols:()=>CCOLS,sel:".wt.ca",lead:()=>1};
+function renderAllView(){const _sv=snapScroll();renderAllView0();restoreScroll(_sv)}
+function renderAllView0(){
+  if(ui.aq2===undefined)ui.aq2="";if(!ui.allN)ui.allN=300;
+  const rows=contracts.map(k=>({k,c:custById(k.customer_id)||{},s:payStat(k),b:[]}));
+  jobs.forEach(j=>{if(j.kind==="addon"){const k=addonRow(j);rows.push({k,c:custById(j.customer_id)||{},s:payStat(k),b:[],a:j})}});
+  const qq=ui.aq2.trim().toLowerCase();
+  const list=rows.filter(x=>!qq||[x.c.name,x.c.search_text,x.c.ceo,x.c.phone,x.c.phone2,x.c.address,x.k.serial,x.k.memo,x.k.approval,staffName(x.k.sales3),x.k.sales3_name].join(" ").toLowerCase().includes(qq));
+  sortCtrList(list);
+  const cols=getCols("all");const shown=list.slice(0,ui.allN);
+  view().innerHTML=`<div class="toolbar"><h2 style="margin:0;font-size:18px">전체리스트</h2><span class="mapt">모든 계약 (추가설치 포함)</span></div>
+   <div class="toolbar"><input id="caQ" type="search" placeholder="업체명(상호)·대표자·전화·주소·시리얼·담당 검색" value="${esc(ui.aq2)}">
+     <span class="mapt">${list.length}건${list.length>shown.length?` 중 ${shown.length}건 표시`:""}</span>
+     <span style="flex:1"></span><button class="btn" type="button" id="caSort">정렬</button><button class="btn" type="button" id="caCols">입력화면설정</button>${isOffice()||me.role==="sales"?`<button class="btn pri" type="button" id="caNewK">+ 신규계약</button>`:""}</div>
+   <div class="wrapx vis" style="padding-top:10px"><div class="wtbox"><table class="wt ca"><thead><tr><th>순번</th>${colHead(cols,"all",MONEYC)}</tr></thead><tbody>
+    ${shown.map((x,i)=>`<tr data-ck="${x.k.id}" class="rs-${esc(x.k.stage)}"><td>${i+1}</td>${cols.map(c=>ctrCell(c,x.k,x.c,x.s,x.b)).join("")}</tr>`).join("")||`<tr><td colspan="${cols.length+1}" class="mapt" style="cursor:default">해당하는 계약이 없습니다.</td></tr>`}</tbody></table></div>
+    ${list.length>shown.length?`<p style="text-align:center"><button class="btn" type="button" id="caMore">다음 ${Math.min(300,list.length-shown.length)}건 더 보기</button> <button class="btn" type="button" id="caAll">모두 보기 (${list.length}건)</button></p>`:""}</div>`;
+  applyColW(cols,null,"all");bindColResize(cols,"all");
+  view().querySelectorAll(".wtbox").forEach(hbar);
+  const re=()=>renderAllView();
+  document.getElementById("caCols").onclick=()=>colPicker(re,"all");
+  document.getElementById("caSort").onclick=()=>sortPicker(re);
+  const mo=document.getElementById("caMore");if(mo)mo.onclick=()=>{ui.allN+=300;re()};
+  const ma=document.getElementById("caAll");if(ma)ma.onclick=()=>{ui.allN=1e9;re()};
+  /* 표 아래 끝까지 내리면 자동으로 더 불러오기 */
+  const box=view().querySelector(".wt.ca").closest(".wtbox");box.addEventListener("scroll",()=>{if(list.length>ui.allN&&box.scrollTop+box.clientHeight>box.scrollHeight-200){ui.allN+=300;re()}});
+  view().querySelectorAll(".wt.ca thead th[data-ck]").forEach(th=>{th.classList.add("sortable");const S=getSort();if(S[0]&&S[0].c===th.dataset.ck)th.dataset.sort=S[0].d===1?"asc":"desc";
+    th.onclick=e=>{if(e.target.closest(".rz"))return;const c=th.dataset.ck;const S=getSort();const d=S[0]&&S[0].c===c?-S[0].d:1;setSort([{c,d},...S.filter(x=>x.c!==c).slice(0,2)]);re()}});
+  const nk_=document.getElementById("caNewK");if(nk_)nk_.onclick=()=>newContractPick();
+  const q=document.getElementById("caQ");q.oninput=e=>{ui.aq2=e.target.value;ui.allN=300;clearTimeout(q._t);q._t=setTimeout(()=>{re();const n=document.getElementById("caQ");n.focus();n.setSelectionRange(n.value.length,n.value.length)},250)};
+  view().querySelectorAll("tr[data-ck]").forEach(tr=>tr.onclick=e=>{
+    if(tr.dataset.ck.startsWith("a:")){const j=jobs.find(x=>x.id===tr.dataset.ck.slice(2));if(j)jobDlg(j,custById(j.customer_id),j.kind);return}
+    const cell=e.target.closest("td[data-chk]");const k=contracts.find(x=>x.id===tr.dataset.ck);if(!k)return;
+    if(cell&&isOffice()&&!ui.noPay&&(!k[cell.dataset.chk]||k[cell.dataset.chk]==="OK")){const f=cell.dataset.chk,v=k[f]==="OK"?"":"OK";
+      sb.from("contracts").update({[f]:v}).eq("id",k.id).then(({error})=>{if(error)return toast("저장하지 못했습니다: "+error.message);k[f]=v;re()});return}
+    const c=custById(k.customer_id);if(c)contractDlg(c,k)});
+}
+
 /* 계약 창 안의 입금 내역 */
 function renderPaySec(k){
   const box=document.getElementById("paySec");if(!box)return;
