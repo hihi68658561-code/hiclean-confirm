@@ -1129,9 +1129,9 @@ function delContracts(all){const ids=all.filter(id=>!id.startsWith("a:")),jids=a
   if(!ids.length&&jids.length)return delJobs(jids,()=>all.forEach(id=>ui.csel.delete(id)));
   const n=ids.length;const names=[...new Set(ids.map(id=>{const k=contracts.find(x=>x.id===id);return k&&(custById(k.customer_id)||{}).name}).filter(Boolean))];
   openDlg(`계약 ${n}건 삭제`,`<p>${esc(names.slice(0,5).join(", "))}${names.length>5?" 등":""} 계약 ${n}건${jids.length?`과 추가설치 ${jids.length}건`:""}을 삭제합니다.</p><p><b>되돌릴 수 없습니다.</b> 그 계약의 입금 기록도 함께 지워지고, 연결된 설치·A/S 기록은 남습니다.</p>`,
-    [["취소"],["삭제","danger",async()=>{for(let i=0;i<ids.length;i+=200){const {error}=await sb.from("contracts").delete().in("id",ids.slice(i,i+200));if(error)return toast("삭제하지 못했습니다: "+error.message)}
+    [["취소"],["삭제","danger",async()=>{await undoTransfers(ids);for(let i=0;i<ids.length;i+=200){const {error}=await sb.from("contracts").delete().in("id",ids.slice(i,i+200));if(error)return toast("삭제하지 못했습니다: "+error.message)}
       if(jids.length){const {error}=await sb.from("jobs").delete().in("id",jids);if(error)return toast("추가설치는 삭제하지 못했습니다: "+error.message)}
-      all.forEach(id=>ui.csel.delete(id));toast(`계약 ${n}건${jids.length?` · 추가설치 ${jids.length}건`:""} 삭제했습니다`);reload(["contracts","payments","jobs"])}]])}
+      all.forEach(id=>ui.csel.delete(id));toast(`계약 ${n}건${jids.length?` · 추가설치 ${jids.length}건`:""} 삭제했습니다`);reload(["contracts","payments","jobs","customers"])}]])}
 /* ================= 전체리스트 (모든 계약, 당월리스트와 같은 표) ================= */
 TCFG.all={cols:()=>CCOLS,sel:".wt.ca",lead:()=>1};
 function renderAllView(){const _sv=snapScroll();renderAllView0();restoreScroll(_sv)}
@@ -1515,6 +1515,12 @@ function noteDlg(uid,d,n){const isNew=!n;
 
 /* ================= 제품 양도 (기존 고객 → 다른 사업자) ================= */
 function hasTransfer(){return contracts.some(k=>"transfer_from" in k)}
+/* 양도 계약을 지우면 양도 흔적(서로의 검색창내용·원래 계약 비고 줄)도 정리 */
+async function undoTransfers(ids){for(const id of ids){const k=contracts.find(x=>x.id===id);if(!k||!k.transfer_from)continue;
+  const src=contracts.find(x=>x.id===k.transfer_from);const to=custById(k.customer_id),from=src&&custById(src.customer_id);
+  const strip=(s,n)=>String(s||"").split(n).join(" ").replace(/\s+/g," ").trim();
+  if(src&&to){const memo=String(src.memo||"").split("\n").filter(l=>!(l.startsWith("→ "+to.name+"에 양도"))).join("\n");if(memo!==(src.memo||""))await sb.from("contracts").update({memo}).eq("id",src.id)}
+  if(to&&from&&"search_text" in to){await sb.from("customers").update({search_text:strip(to.search_text,from.name)}).eq("id",to.id);await sb.from("customers").update({search_text:strip(from.search_text,to.name)}).eq("id",from.id)}}}
 function transferOf(k){return contracts.find(x=>x.transfer_from===k.id)||null}
 /* 양도받은 고객의 설치일: 원래 계약의 설치일을 따라감 */
 function transInst(cid,depth=0){if(depth>5)return"";const k=custContracts(cid).find(x=>x.transfer_from);if(!k)return"";const src=contracts.find(x=>x.id===k.transfer_from);if(!src)return"";
@@ -1561,7 +1567,7 @@ function renderContracts(c){
   const ka=document.getElementById("kAll");if(ka)ka.onchange=()=>{tb.querySelectorAll(".ksel").forEach(x=>{x.checked=ka.checked;ka.checked?ui.ksel.add(x.dataset.ks):ui.ksel.delete(x.dataset.ks)});upd()};
   const kd=document.getElementById("bKDel");if(kd)kd.onclick=()=>{const ids=[...ui.ksel];if(!ids.length)return;const sel_=ks.filter(k=>ids.includes(k.id));
     openDlg(`계약 ${ids.length}건 삭제`,`<p>${sel_.map(k=>esc([k.product,k.size,k.serial&&"SN "+k.serial].filter(Boolean).join(" ")||k.contract_date||"계약")).join(", ")}</p><p><b>되돌릴 수 없습니다.</b> 그 계약의 입금 기록도 함께 지워지고, 연결된 설치·A/S 기록은 남습니다.</p>`,
-      [["취소"],["삭제","danger",async()=>{const {error}=await sb.from("contracts").delete().in("id",ids);if(error)return toast("삭제하지 못했습니다: "+error.message);ids.forEach(id=>ui.ksel.delete(id));toast(`계약 ${ids.length}건 삭제했습니다`);reload(["contracts","payments","jobs"])}]])};
+      [["취소"],["삭제","danger",async()=>{await undoTransfers(ids);const {error}=await sb.from("contracts").delete().in("id",ids);if(error)return toast("삭제하지 못했습니다: "+error.message);ids.forEach(id=>ui.ksel.delete(id));toast(`계약 ${ids.length}건 삭제했습니다`);reload(["contracts","payments","jobs","customers"])}]])};
   upd();
 }
 /* 3차 계약자 "담당/수금" ↔ 고객 담당자·수금 배정 */
@@ -1670,7 +1676,7 @@ function contractDlg(c,k,tpl){ui.payEdit=null;
    <datalist id="s3List">${staff.filter(s=>s.active&&["admin","office","sales"].includes(s.role)).map(s=>`<option value="${esc(s.name)}">${esc(ROLE[s.role])}</option>`).join("")}</datalist>
    <datalist id="stList">${staff.filter(s=>s.active).map(s=>`<option value="${esc(s.name)}">`).join("")}<option value="무료체험"></datalist>
    <datalist id="pdList">${[...new Set(contracts.map(x=>x.product).filter(Boolean))].map(x=>`<option value="${esc(x)}">`).join("")}</datalist></div>`,
-   ro?[["고객정보","gocust",()=>{openCustPopup(c,refreshK);return true}],["닫기"]]:[["고객정보","gocust",()=>{openCustPopup(c,refreshK);return true}],["취소"],...(!isNew?[["복사","",()=>{contractDlg(c,null,k);return true}]]:[]),...(!isNew&&isOffice()?[["양도","",()=>{transferDlg(c,k);return true}]]:[]),...(!isNew&&isAdmin()?[["삭제","danger",async()=>{const {error}=await sb.from("contracts").delete().eq("id",k.id);toast(error?"삭제하지 못했습니다":"삭제했습니다");reload(["contracts"])}]]:[]),["저장","pri",async()=>{
+   ro?[["고객정보","gocust",()=>{openCustPopup(c,refreshK);return true}],["닫기"]]:[["고객정보","gocust",()=>{openCustPopup(c,refreshK);return true}],["취소"],...(!isNew?[["복사","",()=>{contractDlg(c,null,k);return true}]]:[]),...(!isNew&&isOffice()?[["양도","",()=>{transferDlg(c,k);return true}]]:[]),...(!isNew&&isAdmin()?[["삭제","danger",async()=>{await undoTransfers([k.id]);const {error}=await sb.from("contracts").delete().eq("id",k.id);toast(error?"삭제하지 못했습니다":"삭제했습니다");reload(["contracts","customers"])}]]:[]),["저장","pri",async()=>{
      if(isNew){const gg=gradeOf(c);if(gg&&gg.g==="블랙"&&!(await askConfirm(`블랙(거래 중지) 고객입니다.${gg.reason?" ("+gg.reason+")":""} 계속 등록할까요?`)))return true}
      const f=fdata("kf");const n=x=>Number(f.get(x)||0)||0;
      const p={contract_date:f.get("contract_date")||null,stage:f.get("stage"),contract_type:f.get("contract_type")||"구매",contract_doc:f.get("contract_doc"),channel:f.get("channel").trim(),referrer:f.get("referrer").trim(),free_trial:f.get("free_trial").trim(),...(hasTrialCol()||f.get("trial_end")?{trial_end:f.get("trial_end")||null}:{}),
