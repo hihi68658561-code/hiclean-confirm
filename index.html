@@ -1588,6 +1588,11 @@ async function undoTransfers(ids){for(const id of ids){const k=ctrById(id);if(!k
   const strip=(s,n)=>String(s||"").split(n).join(" ").replace(/\s+/g," ").trim();
   if(src&&to){const memo=String(src.memo||"").split("\n").filter(l=>!(l.startsWith("→ "+to.name+"에 양도"))).join("\n");if(memo!==(src.memo||""))await sb.from("contracts").update({memo}).eq("id",src.id)}
   if(to&&from&&"search_text" in to){await sb.from("customers").update({search_text:strip(to.search_text,from.name)}).eq("id",to.id);await sb.from("customers").update({search_text:strip(from.search_text,to.name)}).eq("id",from.id)}}}
+/* 계약 창에서 바로 A/S·추가설치 접수 (이 계약의 제품으로) */
+function ctrIntake(c,k){const prod=[k.product,k.size,k.serial&&"SN "+k.serial].filter(Boolean).join(" ")||"제품";
+  const go=kind=>{jobDlg(null,c,kind,null,{contract_id:k.id,product:productOf(k)});return true};
+  openDlg("접수 · "+esc(c.name),`<p style="margin:0"><b>${esc(c.name)}</b> · ${esc(prod)}</p><p class="mapt">이 계약의 제품으로 접수합니다. 무엇을 접수할까요?</p>`,
+    [["돌아가기","",()=>{contractDlg(c,k);return true}],["추가설치 접수","",()=>go("addon")],["A/S 접수","pri",()=>go("as")]])}
 function transferOf(k){return contracts.find(x=>x.transfer_from===k.id)||null}
 /* 양도받은 고객의 설치일: 원래 계약의 설치일을 따라감 */
 function transInst(cid,depth=0){if(depth>5)return"";const k=custContracts(cid).find(x=>x.transfer_from);if(!k)return"";const src=ctrById(k.transfer_from);if(!src)return"";
@@ -1744,7 +1749,7 @@ function contractDlg(c,k,tpl){ui.payEdit=null;
    <datalist id="s3List">${staff.filter(s=>s.active&&["admin","office","sales"].includes(s.role)).map(s=>`<option value="${esc(s.name)}">${esc(ROLE[s.role])}</option>`).join("")}</datalist>
    <datalist id="stList">${staff.filter(s=>s.active).map(s=>`<option value="${esc(s.name)}">`).join("")}<option value="무료체험"></datalist>
    <datalist id="pdList">${[...new Set(contracts.map(x=>x.product).filter(Boolean))].map(x=>`<option value="${esc(x)}">`).join("")}</datalist></div>`,
-   ro?[["고객정보","gocust",()=>{openCustPopup(c,refreshK);return true}],["닫기"]]:[["고객정보","gocust",()=>{openCustPopup(c,refreshK);return true}],["취소"],...(!isNew?[["복사","",()=>{contractDlg(c,null,k);return true}]]:[]),...(!isNew&&isOffice()?[["양도","",()=>{transferDlg(c,k);return true}]]:[]),...(!isNew&&isAdmin()?[["삭제","danger",async()=>{await undoTransfers([k.id]);const {error}=await sb.from("contracts").delete().eq("id",k.id);toast(error?"삭제하지 못했습니다":"삭제했습니다");reload(["contracts","customers"])}]]:[]),["저장","pri",async()=>{
+   ro?[["고객정보","gocust",()=>{openCustPopup(c,refreshK);return true}],["닫기"]]:[["고객정보","gocust",()=>{openCustPopup(c,refreshK);return true}],...(!isNew&&canNewJob(c)?[["접수","",()=>{ctrIntake(c,k);return true}]]:[]),["취소"],...(!isNew?[["복사","",()=>{contractDlg(c,null,k);return true}]]:[]),...(!isNew&&isOffice()?[["양도","",()=>{transferDlg(c,k);return true}]]:[]),...(!isNew&&isAdmin()?[["삭제","danger",async()=>{await undoTransfers([k.id]);const {error}=await sb.from("contracts").delete().eq("id",k.id);toast(error?"삭제하지 못했습니다":"삭제했습니다");reload(["contracts","customers"])}]]:[]),["저장","pri",async()=>{
      if(isNew){const gg=gradeOf(c);if(gg&&gg.g==="블랙"&&!(await askConfirm(`블랙(거래 중지) 고객입니다.${gg.reason?" ("+gg.reason+")":""} 계속 등록할까요?`)))return true}
      const f=fdata("kf");const n=x=>Number(f.get(x)||0)||0;
      const p={contract_date:f.get("contract_date")||null,stage:f.get("stage"),contract_type:f.get("contract_type")||"구매",contract_doc:f.get("contract_doc"),channel:f.get("channel").trim(),referrer:f.get("referrer").trim(),free_trial:f.get("free_trial").trim(),...(hasTrialCol()||f.get("trial_end")?{trial_end:f.get("trial_end")||null}:{}),
