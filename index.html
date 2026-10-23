@@ -1802,21 +1802,23 @@ function leadDate(v){if(v instanceof Date)return toDate(v);const s=String(v??"")
   const mk=yy=>`${yy}-${String(+m[1]).padStart(2,"0")}-${String(+m[2]).padStart(2,"0")}`;if(+m[1]<1||+m[1]>12||+m[2]<1||+m[2]>31)return null;
   if(new Date(mk(y))-td>60*864e5)y--;return mk(y)}
 function parseLeadSheet(rows,hr){const H=rows[hr].map(h=>nk(h));const at=(pre,k=0)=>{let c=-1;const p=nk(pre);for(let i=0;i<H.length;i++)if(H[i].startsWith(p)&&++c===k)return i;return -1};
-  const I={st:at("순번"),rd:at("접수일자"),item:at("품목"),src:at("유입"),rcv:at("접수자"),org:at("소속"),br:at("지부"),cn:at("담당자"),cp:at("연락처",0),open:at("운영"),ceo:at("대표자"),bn:at("업장명"),addr:at("주소"),ph:at("연락처",1),note:at("참고"),sales:at("영업담당"),prog:at("최종"),fb:at("피드백")};
+  const I={st:at("상태")>=0?at("상태"):at("순번"),st2:at("순번"),rd:at("접수일자"),item:at("품목"),src:at("유입"),rcv:at("접수자"),org:at("소속"),br:at("지부"),cn:at("담당자"),cp:at("연락처",0),open:at("운영"),ceo:at("대표자"),bn:at("업장명"),addr:at("주소"),ph:at("연락처",1),note:at("참고"),sales:at("영업담당"),prog:at("최종"),fb:at("피드백")};
   const cpairs=[];H.forEach((h,i)=>{if(h.startsWith("상담일자"))cpairs.push(i)});
   const out=[];rows.slice(hr+1).forEach(row=>{const g=i=>i<0?"":row[i];const t=i=>{const v=g(i);return v instanceof Date?toDate(v):String(v??"").trim()};
     if(!t(I.bn)&&!t(I.ph)&&!t(I.cp))return;
-    const st=t(I.st);const cons=[];cpairs.forEach(i=>{const d=leadDate(row[i]);const tx=String(row[i+1]??"").trim();if(d||tx)cons.push({d:d||"",t:tx||String(row[i]??"").trim()})});
-    out.push({status:LSTAT.includes(st)?st:"",recv_date:leadDate(g(I.rd)),item:t(I.item),source:t(I.src),receiver:t(I.rcv),org:t(I.org),branch:t(I.br),contact_name:t(I.cn),contact_phone:fmtPhone(t(I.cp)),
+    const stOf=s=>{s=String(s||"").replace(/\s/g,"");return LSTAT.find(x=>s===x||s.startsWith(x))||""};const st=stOf(t(I.st))||(I.st2!==I.st?stOf(t(I.st2)):"");const cons=[];cpairs.forEach(i=>{const d=leadDate(row[i]);const tx=String(row[i+1]??"").trim();if(d||tx)cons.push({d:d||"",t:tx||String(row[i]??"").trim()})});
+    out.push({status:st,recv_date:leadDate(g(I.rd)),item:t(I.item),source:t(I.src),receiver:t(I.rcv),org:t(I.org),branch:t(I.br),contact_name:t(I.cn),contact_phone:fmtPhone(t(I.cp)),
       open_info:t(I.open),ceo:t(I.ceo),biz_name:t(I.bn),address:t(I.addr),phone:fmtPhone(t(I.ph)),note:t(I.note),sales_name:t(I.sales),progress:t(I.prog),feedback_date:leadDate(g(I.fb)),consults:cons})});
   return out}
 function leadImportDlg(fname,rows){
   const key=l=>(l.recv_date||"")+"|"+nk(l.biz_name)+"|"+dg(l.phone||l.contact_phone);const ex=new Set(leads.map(key));
-  const add=[];let skip=0;rows.forEach(r=>{const k=key(r);if(ex.has(k)){skip++;return}ex.add(k);const w=whoIs(r.sales_name);r.sales=w.id;r.sales_name=w.name;add.push(r)});
-  openDlg("DB관리 엑셀 가져오기",`<p><b>${esc(fname)}</b> · ${rows.length}줄</p><table class="stafft"><tbody><tr><td>새 상담</td><td>${add.length}건</td></tr><tr><td>이미 있는 상담 (건너뜀)</td><td>${skip}건</td></tr><tr><td>상담 이력</td><td>${add.reduce((a,r)=>a+r.consults.length,0)}개</td></tr></tbody></table>
+  const byKey=new Map(leads.map(l=>[key(l),l]));const add=[],upd=[];let skip=0;
+  rows.forEach(r=>{const k=key(r);if(ex.has(k)){skip++;const o=byKey.get(k);if(o&&r.status&&o.status!==r.status&&!upd.some(u=>u.id===o.id))upd.push({id:o.id,status:r.status});return}ex.add(k);const w=whoIs(r.sales_name);r.sales=w.id;r.sales_name=w.name;add.push(r)});
+  openDlg("DB관리 엑셀 가져오기",`<p><b>${esc(fname)}</b> · ${rows.length}줄</p><table class="stafft"><tbody><tr><td>새 상담</td><td>${add.length}건</td></tr><tr><td>이미 있는 상담</td><td>${skip}건${upd.length?` <small class="mapt">(이 중 ${upd.length}건은 엑셀 기준으로 상태 갱신)</small>`:""}</td></tr><tr><td>상담 이력</td><td>${add.reduce((a,r)=>a+r.consults.length,0)}개</td></tr></tbody></table>
     <p class="mapt">접수일자·업장명·연락처가 같은 줄은 이미 있는 것으로 보고 건너뜁니다. ‘3. 1’처럼 연도 없는 날짜는 올해(앞으로 두 달 넘게 남은 날짜면 작년)로 넣습니다.</p>`,
     [["취소"],["가져오기","pri",async()=>{try{for(let i=0;i<add.length;i+=300){toast(`가져오는 중… ${Math.min(i+300,add.length)}/${add.length}`);const {error}=await sb.from("leads").insert(add.slice(i,i+300));if(error)throw error}
-      toast(`가져오기 완료: 상담 ${add.length}건`);await reload(["leads"])}catch(e){toast("가져오는 중 멈췄습니다: "+(e.message||""))}}]])}
+      for(let i=0;i<upd.length;i++){if(i%20===0)toast(`상태 갱신 중… ${i+1}/${upd.length}`);const {error}=await sb.from("leads").update({status:upd[i].status}).eq("id",upd[i].id);if(error)throw error}
+      toast(`가져오기 완료: 새 상담 ${add.length}건${upd.length?` · 상태 갱신 ${upd.length}건`:""}`);await reload(["leads"])}catch(e){toast("가져오는 중 멈췄습니다: "+(e.message||""))}}]])}
 
 /* ================= 계약 ================= */
 function renderContracts(c){
