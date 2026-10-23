@@ -2296,13 +2296,14 @@ function planImport(rows,fresh){
     // 설치 작업
     newJob.push(mkJob(cust,k));
   });
+  newCust.forEach(c=>{delete c.__new});
   return{newCust,newCtr,newJob:newJob.concat(missJob),missJob,newPay,updCtr,skipped,payWarn};
 }
 async function runImport(plan,replace){
   try{
     if(replace){for(const tb of ["jobs","contracts","customers"]){const {error}=await sb.from(tb).delete().not("id","is",null);if(error)throw error}}
     const put=async(tb,rows)=>{for(let i=0;i<rows.length;i+=300){toast(`이관 중… ${{customers:"고객",contracts:"계약",jobs:"작업",payments:"입금"}[tb]} ${Math.min(i+300,rows.length)}/${rows.length}`);const {error}=await sb.from(tb).insert(rows.slice(i,i+300));if(error)throw error}};
-    await put("customers",plan.newCust);await put("contracts",plan.newCtr);await put("jobs",plan.newJob);
+    await put("customers",plan.newCust.map(({__new,...r})=>r));await put("contracts",plan.newCtr);await put("jobs",plan.newJob);
     const ups=plan.updCtr||[];for(let i=0;i<ups.length;i++){if(i%10===0)toast(`기존 계약 갱신 중… ${i+1}/${ups.length}`);const {error}=await sb.from("contracts").update(ups[i].patch).eq("id",ups[i].id);if(error)throw error}
     await put("payments",[...(plan.newPay||[]),...ups.flatMap(u=>u.pays)]);
     if(!ui.noPay){const touched=new Set(ups.map(u=>u.id));const bad=contracts.filter(k=>!touched.has(k.id)&&CTYPES.includes(k.channel||""));
