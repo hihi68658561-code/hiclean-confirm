@@ -434,8 +434,8 @@ function sheetAS(r,c){
   <div class="ttl">A/S 확 인 서</div>
   <div class="intro">하이클린 초음파식기세척기를 이용해 주신 고객님께 감사드리며, 고객님께서 요청하신 AS에 대해<br>아래와 같이 점검 및 수리가 완료되어 수리항목 및 비용정산에 대해 확인 부탁드립니다.</div>
   <table class="ft"><colgroup><col style="width:15%"><col style="width:13%"><col style="width:15%"><col style="width:14%"><col style="width:14%"><col style="width:14.5%"><col style="width:14.5%"></colgroup>
-   <tr><td class="sec" rowspan="6">1. 고객정보\n및\n접수내용</td><td class="lb">상&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;호</td><td class="v" colspan="2">${v(c.상호)}</td><td class="lb">전화번호</td><td class="v" colspan="2">${v(c.전화)}</td></tr>
-   <tr><td class="lb">사업장명</td><td class="v" colspan="2">${v(c.사업장명)}</td><td class="lb">사업자번호</td><td class="v" colspan="2">${v(c.사업자번호)}</td></tr>
+   <tr><td class="sec" rowspan="6">1. 고객정보\n및\n접수내용</td><td class="lb" style="font-size:88%;letter-spacing:-.5px">업체명(상호)</td><td class="v" colspan="2">${v(c.상호)}</td><td class="lb">전화번호</td><td class="v" colspan="2">${v(c.전화)}</td></tr>
+   <tr><td class="lb">사업자번호</td><td class="v" colspan="5">${v(c.사업자번호)}</td></tr>
    <tr><td class="lb">설치장소</td><td class="v" colspan="5">${v(c.설치장소)}</td></tr>
    <tr><td class="lb">접수일자</td><td class="v" colspan="2">${v(kdate(r.접수일자))}</td><td class="lb">제품 SN.</td><td class="v" colspan="2">${v(c.SN)}</td></tr>
    <tr><td class="lb">구매일자</td><td class="v" colspan="2">${v(kdate(c.구매일자))}</td><td class="lb">설치일자</td><td class="v" colspan="2">${v(kdate(c.설치일자))}</td></tr>
@@ -467,8 +467,8 @@ function sheetIS(r,c){
   <div class="ttl">설 치 확 인 서</div>
   <div class="intro">하이클린 초음파식기세척기를 이용해 주신 고객님께 감사드리며, 제품 설치 완료에 따른<br>설치 상태 및 작동 점검 결과를 아래와 같이 확인하여 주시기 바랍니다.</div>
   <table class="ft">${col}
-   <tr><td class="sec" rowspan="5">1. 고객정보\n및\n접수내용</td><td class="lb">상&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;호</td><td class="v" colspan="3">${v(c.상호)}</td><td class="lb" colspan="2">전화번호</td><td class="v" colspan="3">${v(c.전화)}</td></tr>
-   <tr><td class="lb">사업장명</td><td class="v" colspan="3">${v(c.사업장명)}</td><td class="lb" colspan="2">사업자번호</td><td class="v" colspan="3">${v(c.사업자번호)}</td></tr>
+   <tr><td class="sec" rowspan="5">1. 고객정보\n및\n접수내용</td><td class="lb" style="font-size:88%;letter-spacing:-.5px">업체명(상호)</td><td class="v" colspan="3">${v(c.상호)}</td><td class="lb" colspan="2">전화번호</td><td class="v" colspan="3">${v(c.전화)}</td></tr>
+   <tr><td class="lb">사업자번호</td><td class="v" colspan="8">${v(c.사업자번호)}</td></tr>
    <tr><td class="lb">설치장소</td><td class="v" colspan="8">${v(c.설치장소)}</td></tr>
    <tr><td class="lb">모 델 명</td><td class="v" colspan="3">${v(modelText(c))}</td><td class="lb" colspan="2">제품 SN.</td><td class="v" colspan="3">${v(c.SN)}</td></tr>
    <tr><td class="lb">신청일자</td><td class="v" colspan="3">${v(kdate(r.신청일자))}</td><td class="lb" colspan="2">설치일자</td><td class="v" colspan="3">${v(kdate(r.설치일자))}</td></tr>
@@ -2296,8 +2296,8 @@ function renderConf(c){
   tb.innerHTML=`<div class="toolbar"><div class="nav"><button type="button" class="${ui.conf.type==="as"?"on":""}" data-ct="as">A/S 확인서</button><button type="button" class="${ui.conf.type==="is"?"on":""}" data-ct="is">설치확인서</button></div>
     ${ks.length>1?`<select id="cfK">${ks.map(x=>`<option value="${x.id}" ${x.id===ui.conf.kid?"selected":""}>${esc([x.contract_date,x.product,x.size,x.serial].filter(Boolean).join(" · "))}</option>`).join("")}</select>`:""}</div>
    <div class="work"><div class="formcol" id="fcol"><fieldset><legend>1. 고객정보 및 접수내용</legend><p class="mapt">여기서 고친 내용은 이번 확인서에만 들어갑니다.</p>
-    <div class="g2">${fl("c.상호","상호",d.cust.상호)}${fl("c.전화","전화번호",d.cust.전화)}</div>
-    <div class="g2">${fl("c.사업장명","사업장명",d.cust.사업장명)}${fl("c.사업자번호","사업자번호",d.cust.사업자번호)}</div>${fl("c.설치장소","설치장소",d.cust.설치장소)}
+    <div class="g2">${fl("c.상호","업체명(상호)",d.cust.상호)}${fl("c.전화","전화번호",d.cust.전화)}</div>
+    <div class="g2">${fl("c.사업자번호","사업자번호",d.cust.사업자번호)}<span></span></div>${fl("c.설치장소","설치장소",d.cust.설치장소)}
     ${d.type==="as"?`<div class="g2">${fl("접수일자","접수일자",d.접수일자,"date")}${fl("c.SN","제품 SN",d.cust.SN)}</div><div class="g2">${fl("c.구매일자","구매일자",d.cust.구매일자,"date")}${fl("c.설치일자","설치일자",d.cust.설치일자,"date")}</div><label class="f">불편사항<textarea data-k="불편사항" rows="2">${esc(d.불편사항)}</textarea></label>`
      :`<div class="g2">${fl("c.모델명","제품",d.cust.모델명)}${fl("c.SN","제품 SN",d.cust.SN)}</div><div class="g2">${fl("c.사이즈","사이즈",d.cust.사이즈)}${fl("c.옵션","옵션",d.cust.옵션)}</div><div class="g2">${fl("신청일자","신청일자",d.신청일자,"date")}${fl("설치일자","설치일자",d.설치일자,"date")}</div>`}
     </fieldset><fieldset><legend>서명란</legend>${fl("업장명","업장명",d.업장명)}</fieldset>
