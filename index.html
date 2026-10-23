@@ -2667,6 +2667,7 @@ document.getElementById("fileIn").onchange=async e=>{
   openDlg("엑셀 이관",`<p><b>${esc(f.name)}</b> · ${parsed.length}줄</p>
    <table class="stafft"><tbody><tr><td>새 고객</td><td>${plan.newCust.length}곳</td></tr><tr><td>새 계약</td><td>${plan.newCtr.length}건</td></tr><tr><td>새 설치 작업</td><td>${plan.newJob.length}건${plan.missJob.length?` <small class="mapt">(이 중 ${plan.missJob.length}건은 설치 작업이 빠져 있던 기존 계약에 추가)</small>`:""}</td></tr><tr><td>새 입금 내역</td><td>${plan.newPay.length}건</td></tr><tr><td>이미 있는 계약</td><td>${plan.skipped}건</td></tr></tbody></table>
    ${plan.updCtr.length?`<label class="chip"><input type="checkbox" id="updEx" checked>이미 있는 계약 ${plan.updCtr.length}건도 엑셀 기준으로 구분·영업 경로·진행단계·승인처·마감 체크를 갱신 (입금 기록이 없는 계약은 입금 ${plan.updCtr.reduce((a,u)=>a+u.pays.length,0)}건 추가)</label>`:""}
+   ${plan.payFix?`<p class="mapt">입금 칸이 비어 있어 엑셀 ‘미수금’과 맞지 않는 계약 ${plan.payFix}건은, 엑셀 미수금에 맞도록 입금 1줄(메모: ‘엑셀 미수금에 맞춤’)을 자동으로 넣습니다.</p>`:""}
    ${plan.payWarn?`<p class="mapt">입금 칸 합계가 엑셀 ‘합계금액’과 다른 줄이 ${plan.payWarn}건 있습니다. 이관 후 계약관리에서 미수금을 확인해 주세요.</p>`:""}
    <p class="mapt">엑셀 한 줄이 계약 1건과 설치 작업 1건이 됩니다. 같은 사업자번호 또는 같은 업체명(상호)·전화번호는 한 고객으로 묶습니다. 입금일자 묶음(1차·2차·최종)은 계약별 입금 내역으로 들어갑니다.${ui.noPay?" (입금 내역 칸이 아직 없어 입금은 옮기지 않습니다. phase1h.sql을 먼저 실행하세요.)":""}</p>
    ${isAdmin()&&customers.length?`<label class="chip"><input type="checkbox" id="rpl">지금 고객·계약·작업을 모두 지우고 이 엑셀로 새로 이관</label>`:""}`,
@@ -2697,7 +2698,7 @@ function planImport(rows,fresh){
   const serials=new Set(exCtr.map(k=>nk(k.serial)).filter(Boolean));
   const sig=new Set(exCtr.map(k=>k.customer_id+"|"+nk(k.product)+"|"+(k.contract_date||"")+"|"+k.amount));
   const bySerial={},bySig={};exCtr.forEach(k=>{if(k.serial)bySerial[nk(k.serial)]=k;bySig[k.customer_id+"|"+nk(k.product)+"|"+(k.contract_date||"")+"|"+k.amount]=k});
-  const newCust=[],newCtr=[],newJob=[],newPay=[],updCtr=[],missJob=[];let skipped=0,payWarn=0;const td=today();const withPay=!ui.noPay;
+  const newCust=[],newCtr=[],newJob=[],newPay=[],updCtr=[],missJob=[];let skipped=0,payWarn=0,payFix=0;const td=today();const withPay=!ui.noPay;
   rows.forEach(({t,g,raw,has})=>{
     let name=t("업체명");const notes=[];
     const ft=name.match(/\s*\(([^)]*체험[^)]*)\)\s*$/);let trial="";if(ft){trial=ft[1].replace(/무료체험\s*/,"").trim()||"예";name=name.replace(ft[0],"").trim()}
@@ -2748,6 +2749,15 @@ function planImport(rows,fresh){
         pays.push({id:crypto.randomUUID(),contract_id:null,customer_id:null,pay_date:dd.d,method:m==="승인취소"?"승인취소":m,payer:m==="카드"?(b.co||(/카드|페이|네이버/.test(ap)?ap.replace(/\+?\s*현금/,""):"")):"",amount:m==="승인취소"&&a>0?-a:a,memo:["엑셀 이관",dd.m].filter(Boolean).join(" · ")})})});
       const tot=money(g("합계금액",1));if(tot&&pays.reduce((a,p)=>a+p.amount,0)!==tot)payWarn++;
     }
+    /* 엑셀 '미수금' 칸에 맞춤: 입금 칸이 비어 있어도 엑셀에 적힌 미수금과 같아지도록 부족한 입금을 채움 */
+    let fixNew=false;const unCell=has("미수금")?g("미수금"):"";const unSet=withPay&&String(unCell??"").trim()!=="";
+    const fillPays=(amount,have,card0,date)=>{if(!unSet)return[];const want=Math.max(0,amount-money(unCell));let diff=want-have;if(diff<=0)return[];
+      const out=[];const cardSum=money(g("카드")),cashSum=money(g("현금+캐피탈"));const cd=Math.min(diff,Math.max(0,cardSum-card0));
+      const memo="엑셀 이관 · 엑셀 미수금("+won0(money(unCell))+"원)에 맞춤";
+      if(cd>0){out.push({id:crypto.randomUUID(),pay_date:date,method:"카드",payer:"",amount:cd,memo});diff-=cd}
+      if(diff>0)out.push({id:crypto.randomUUID(),pay_date:date,method:cashSum&&pay==="캐피탈"?"캐피탈":pay==="CMS"?"CMS":"현금",payer:"",amount:diff,memo});return out};
+    const fdate=toDate(g("설치일자"))||toDate(g("계약일자"))||null;
+    if(unSet){const add=fillPays(k.amount,pays.reduce((a,p)=>a+p.amount,0),pays.filter(p=>p.method==="카드").reduce((a,p)=>a+p.amount,0),fdate);if(add.length){pays.push(...add);fixNew=true}}
     const sg=k.customer_id+"|"+nk(k.product)+"|"+(k.contract_date||"")+"|"+k.amount;
     const ex=(k.serial&&bySerial[nk(k.serial)])||bySig[sg];
     /* 설치 작업 (엑셀 한 줄 = 설치 1건) */
@@ -2759,16 +2769,17 @@ function planImport(rows,fresh){
     if((k.serial&&serials.has(nk(k.serial)))||sig.has(sg)){skipped++;
       if(ex&&!jobs.some(j=>j.contract_id===ex.id&&j.kind!=="as")&&!installOf(ex)&&!missJob.some(j=>j.contract_id===ex.id)){const cu=custById(ex.customer_id);if(cu)missJob.push(mkJob(cu,ex))}
       if(cust.__new&&!newCust.includes(cust)){delete byKey[key];const bn=byName[nk(name)];if(bn){const i=bn.indexOf(cust);if(i>=0)bn.splice(i,1)}}
-      if(ex&&withPay){updCtr.push({id:ex.id,patch:Object.assign({contract_type:ctype,channel,stage},extra,k.tax&&Object.keys(k.tax).length?{tax:k.tax}:{}),pays:paysOf(ex).length?[]:pays.map(p=>Object.assign(p,{contract_id:ex.id,customer_id:ex.customer_id}))})}
+      if(ex&&withPay){updCtr.push({id:ex.id,patch:Object.assign({contract_type:ctype,channel,stage},extra,k.tax&&Object.keys(k.tax).length?{tax:k.tax}:{}),pays:(()=>{const xp=paysOf(ex);if(!xp.length)return pays.map(p=>Object.assign(p,{contract_id:ex.id,customer_id:ex.customer_id}));
+        const s=payStat(ex);const add=fillPays(Number(ex.amount||0),s.paid,s.card,fdate);if(add.length)payFix++;return add.map(p=>Object.assign(p,{contract_id:ex.id,customer_id:ex.customer_id}))})()})}
       return}
     if(cust.__new&&!newCust.includes(cust))newCust.push(cust);
-    if(k.serial)serials.add(nk(k.serial));sig.add(sg);newCtr.push(k);
+    if(k.serial)serials.add(nk(k.serial));sig.add(sg);newCtr.push(k);if(fixNew)payFix++;
     pays.forEach(p=>{p.contract_id=k.id;p.customer_id=k.customer_id;newPay.push(p)});
     // 설치 작업
     newJob.push(mkJob(cust,k));
   });
   newCust.forEach(c=>{delete c.__new});
-  return{newCust,newCtr,newJob:newJob.concat(missJob),missJob,newPay,updCtr,skipped,payWarn};
+  return{newCust,newCtr,newJob:newJob.concat(missJob),missJob,newPay,updCtr,skipped,payWarn,payFix};
 }
 async function runImport(plan,replace){
   try{
