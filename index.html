@@ -1793,13 +1793,27 @@ async function leadSave(l,isNew,cons){const f=fdata("lf");const s=k=>(f.get(k)||
   const r=isNew?await sb.from("leads").insert(p).select().single():await sb.from("leads").update(p).eq("id",l.id).select().single();
   if(r.error){toast(/leads/.test(r.error.message)&&/exist|find/.test(r.error.message)?"DB관리 칸이 아직 없습니다. Supabase에서 phase1y.sql을 실행해 주세요.":"저장하지 못했습니다: "+r.error.message);return false}
   toast(isNew?"상담을 등록했습니다":"저장했습니다");await reload(["leads"]);return r.data}
-/* 계약 전환: 등록된 고객이면 그 고객에, 아니면 새 고객 등록 후 신규계약 */
+/* 계약 전환: 기존 고객이면 그 고객의 기존 계약에 연결하거나 새 계약 등록. 없는 고객이면 새 고객 등록 후 신규계약 */
 async function leadConvert(l){
-  const link=async c=>{const {error}=await sb.from("leads").update({customer_id:c.id,status:"오더",progress:l.progress||"오더"}).eq("id",l.id);if(error)toast("상담과 고객을 연결하지 못했습니다: "+error.message);
-    await reload(["leads"],true);contractDlg(c,null)};
-  const m=leadMatches(l);const ex=m.cs[0];
-  if(ex&&await askConfirm(`이미 등록된 고객 ‘${ex.name}’이(가) 있습니다. 이 고객에 계약을 등록할까요? (아니오를 누르면 새 고객으로 등록)`))return link(ex);
-  newCustomer(null,c=>link(c),{name:l.biz_name,ceo:l.ceo,phone:l.phone||l.contact_phone,address:l.address,memo:[l.source&&("유입: "+l.source),l.org,l.open_info].filter(Boolean).join(" · ")})}
+  const linkC=async c=>{const {error}=await sb.from("leads").update({customer_id:c.id,status:"오더",progress:l.progress||"오더"}).eq("id",l.id);if(error){toast("상담과 고객을 연결하지 못했습니다: "+error.message);return false}await reload(["leads"],true);return true};
+  const newCust=()=>newCustomer(null,async c=>{if(await linkC(c))contractDlg(c,null)},{name:l.biz_name,ceo:l.ceo,phone:l.phone||l.contact_phone,address:l.address,memo:[l.source&&("유입: "+l.source),l.org,l.open_info].filter(Boolean).join(" · ")});
+  const pool=customers.filter(x=>isOffice()||x.owner===me.id);const ex=leadMatches(l).cs.find(c=>pool.includes(c));
+  openDlg("계약 전환 · "+esc(l.biz_name||""),`<div id="lcf" style="display:grid;gap:10px">
+    <p class="mapt" style="margin:0">이미 등록된 고객이면 고객을 고른 뒤 <b>기존 계약에 연결</b>하거나 <b>새 계약</b>을 등록하세요. 처음 오는 고객이면 ‘새 고객 등록’을 누르세요.</p>
+    <label class="f">고객 검색<input id="jcQ" type="search" autocomplete="off" placeholder="업체명(상호)·대표자·전화번호·주소·시리얼"></label>
+    <input type="hidden" id="jcId"><div id="jcSel"></div><div id="jcRes" class="pickres"></div><p class="mapt" id="jcHint" style="margin:0">두 글자 이상 입력하면 고객 목록이 나옵니다.</p>
+    <div id="lcK"></div></div>`,
+   [["새 고객 등록","gocust",()=>{newCust();return true}],["취소"],["연결","pri",async()=>{const c=pool.find(x=>x.id===val("jcId"));if(!c)return toast("고객을 검색해서 목록에서 골라 주세요");
+      const v=(document.querySelector('#lcK input[name=lck]:checked')||{}).value;if(!v)return toast("연결할 계약을 고르거나 ‘새 계약 등록’을 고르세요");
+      if(!(await linkC(c)))return true;
+      if(v==="new"){contractDlg(c,null);return true}
+      const k=ctrById(v);toast(`‘${c.name}’의 기존 계약(${[k&&k.contract_date,k&&k.product].filter(Boolean).join(" ")||"계약"})에 연결했습니다`);reload(["leads"])}]]);
+  const h=document.getElementById("jcId");bindCustPicker(pool);
+  h.addEventListener("change",()=>{const c=pool.find(x=>x.id===h.value);const box=document.getElementById("lcK");if(!c){box.innerHTML="";return}
+    const ks=custContracts(c.id).filter(k=>k.stage!=="취소");
+    box.innerHTML=`<fieldset class="nfiles"><legend>연결할 계약</legend><div style="display:grid;gap:6px">${ks.map((k,i)=>`<label class="chip" style="justify-content:flex-start"><input type="radio" name="lck" value="${k.id}" ${i===0?"checked":""}><b>기존 계약</b>&nbsp;${esc([k.contract_date||"날짜 없음",k.contract_type,k.product,k.size,k.serial&&"SN "+k.serial,won0(k.amount)+"원",k.stage].filter(Boolean).join(" · "))}</label>`).join("")}
+      <label class="chip" style="justify-content:flex-start"><input type="radio" name="lck" value="new" ${ks.length?"":"checked"}><b>새 계약 등록</b>&nbsp;(이 고객에 계약을 하나 더 만듭니다)</label></div></fieldset>`});
+  if(ex){const q=document.getElementById("jcQ");q.value=ex.name;q.dispatchEvent(new Event("input"));const b=document.querySelector(`#jcRes [data-id="${ex.id}"]`);if(b)b.click()}}
 /* 고객 화면의 'DB 상담' 탭 */
 function custLeads(c){const ps=[dg(c.phone),dg(c.phone2)].filter(p=>p.length>=9);return leads.filter(l=>l.customer_id===c.id||ps.some(p=>dg(l.phone)===p||dg(l.contact_phone)===p))}
 function renderCustLeads(c){const tb=document.getElementById("tabBody");const ls=custLeads(c).slice().sort((a,b)=>String(b.recv_date||"").localeCompare(String(a.recv_date||"")));
