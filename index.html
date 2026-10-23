@@ -1589,10 +1589,7 @@ async function undoTransfers(ids){for(const id of ids){const k=ctrById(id);if(!k
   if(src&&to){const memo=String(src.memo||"").split("\n").filter(l=>!(l.startsWith("→ "+to.name+"에 양도"))).join("\n");if(memo!==(src.memo||""))await sb.from("contracts").update({memo}).eq("id",src.id)}
   if(to&&from&&"search_text" in to){await sb.from("customers").update({search_text:strip(to.search_text,from.name)}).eq("id",to.id);await sb.from("customers").update({search_text:strip(from.search_text,to.name)}).eq("id",from.id)}}}
 /* 계약 창에서 바로 A/S·추가설치 접수 (이 계약의 제품으로) */
-function ctrIntake(c,k){const prod=[k.product,k.size,k.serial&&"SN "+k.serial].filter(Boolean).join(" ")||"제품";
-  const go=kind=>{jobDlg(null,c,kind,null,{contract_id:k.id,product:productOf(k)});return true};
-  openDlg("접수 · "+esc(c.name),`<p style="margin:0"><b>${esc(c.name)}</b> · ${esc(prod)}</p><p class="mapt">이 계약의 제품으로 접수합니다. 무엇을 접수할까요?</p>`,
-    [["돌아가기","",()=>{contractDlg(c,k);return true}],["추가설치 접수","",()=>go("addon")],["A/S 접수","pri",()=>go("as")]])}
+function ctrIntake(c,k){jobDlg(null,c,"as",null,{contract_id:k.id,product:productOf(k)})}
 function transferOf(k){return contracts.find(x=>x.transfer_from===k.id)||null}
 /* 양도받은 고객의 설치일: 원래 계약의 설치일을 따라감 */
 function transInst(cid,depth=0){if(depth>5)return"";const k=custContracts(cid).find(x=>x.transfer_from);if(!k)return"";const src=ctrById(k.transfer_from);if(!src)return"";
@@ -1985,7 +1982,7 @@ function jobDlg(j,c,kind,tpl,preset){
   const pick=isNew&&!c?`<label class="f">고객 검색<input id="jcQ" type="search" autocomplete="off" placeholder="업체명(상호)·대표자·전화번호·주소·시리얼"></label>
      <input type="hidden" name="custId" id="jcId"><div id="jcSel"></div><div id="jcRes" class="pickres"></div>
      <p class="mapt" id="jcHint">두 글자 이상 입력하면 고객 목록이 나옵니다. 없는 고객은 ‘고객’ 화면의 ‘+ 새 고객’으로 먼저 등록하세요.</p>`
-    :`<p class="mapt dsum"><b>${esc(j.customer_name)}</b> · ${esc(j.address||"")}${c&&c.phone?" · "+esc(c.phone):""} · 제품: ${esc([p.product,p.size,p.options&&"("+p.options+")",p.serial&&"SN "+p.serial].filter(Boolean).join(" ")||"-")}</p>${c?gradeWarn(c):""}`;
+    :`<p class="mapt dsum"><b>${esc(j.customer_name)}</b> · ${esc(j.address||"")}${c&&c.phone?" · "+esc(c.phone):""} · 제품: ${esc([p.product,p.size,p.options&&"("+p.options+")",p.serial&&"SN "+p.serial].filter(Boolean).join(" ")||"-")}${(()=>{const kk=ctrById(j.contract_id);return kk?` · <b>연결 계약</b> ${esc([kk.contract_date,kk.contract_type&&kk.contract_type!=="구매"?kk.contract_type:"",kk.stage].filter(Boolean).join(" · "))}`:""})()}</p>${c?gradeWarn(c):""}`;
   openDlg(`${KLABEL[j.kind]} ${isNew?(tpl?"접수 (복사)":"접수"):"작업"}${j.customer_name?" · "+esc(j.customer_name):""}`,`<div id="jf" style="display:grid;gap:10px">${tpl?`<p class="warnbox" style="margin:0">복사한 접수입니다. 방문일·상태·처리 내용은 새로 입력하세요. 사진은 복사되지 않습니다.</p>`:""}
    ${pick}
    ${isNew||off?`<div class="kpick chk" role="radiogroup" aria-label="구분">${KINDS.map(k=>`<label><input type="radio" name="kind" value="${k}" ${j.kind===k?"checked":""}>${KLABEL[k]}</label>`).join("")}</div>`:""}
