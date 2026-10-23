@@ -186,7 +186,10 @@ body.resizing,body.resizing *{cursor:col-resize!important;user-select:none}
 .wt.am td.kc{color:#1b1b1b!important;font-weight:700}
 .wt.rv tr.ra-a90 td{background:#FFF4E5;color:#1b1b1b}.wt.rv tr.ra-a180 td{background:#FFE3C2;color:#1b1b1b}.wt.rv tr.ra-a999 td{background:#FBD5D5;color:#1b1b1b}.wt.rv tr.ra-done td{background:#EEEEEE;color:#888}.wt.rv tfoot th{position:sticky;bottom:0;background:var(--line2)}
 .tag.rg-정상{background:#fff;color:#2e7d32;border-color:#2e7d32}.tag.rg-관리{background:#FFF3C4;color:#8a5a00;border-color:#FFF3C4}.tag.rg-불량{background:#fff;color:#c2410c;border-color:#c2410c}.tag.rg-악성{background:#c62828;color:#fff;border-color:#c62828}
-.tag.rs-정상관리{background:#fff;color:#495057;border-color:#adb5bd}.tag.rs-독촉중{background:#FFF3C4;color:#8a5a00;border-color:#FFF3C4}.tag.rs-분할약정{background:#DCEBFF;color:#1d4ed8;border-color:#DCEBFF}.tag.rs-내용증명{background:#fff;color:#c2410c;border-color:#c2410c}.tag.rs-법적조치{background:#c62828;color:#fff;border-color:#c62828}.tag.rs-추심이관{background:#6b21a8;color:#fff;border-color:#6b21a8}.tag.rs-회수완료{background:#fff;color:#2e7d32;border-color:#2e7d32}.tag.rs-대손처리{background:#495057;color:#fff;border-color:#495057}
+.wt.rv td.rc-정상{background:#BFE4FF!important;color:#1b1b1b}.wt.rv td.rc-관리{background:#FFD6AD!important;color:#1b1b1b}.wt.rv td.rc-불량{background:#FF7A55!important;color:#1b1b1b}.wt.rv td.rc-법적조치{background:#FF0000!important;color:#fff}.wt.rv td.rc-추심이관{background:#9933FF!important;color:#fff}.wt.rv td.rc-대손처리{background:#6c757d!important;color:#fff}
+.wt.rv td.rc-법적조치 .mapt,.wt.rv td.rc-추심이관 .mapt,.wt.rv td.rc-대손처리 .mapt{color:#fff}
+.tag.rs-당월매출{background:#fff;color:#1b1b1b;border-color:#adb5bd}.tag.rs-정상{background:#BFE4FF;color:#1b1b1b;border-color:#BFE4FF}.tag.rs-관리{background:#FFD6AD;color:#1b1b1b;border-color:#FFD6AD}.tag.rs-불량{background:#FF7A55;color:#1b1b1b;border-color:#FF7A55}
+.tag.rs-정상관리{background:#fff;color:#495057;border-color:#adb5bd}.tag.rs-독촉중{background:#FFF3C4;color:#8a5a00;border-color:#FFF3C4}.tag.rs-분할약정{background:#DCEBFF;color:#1d4ed8;border-color:#DCEBFF}.tag.rs-내용증명{background:#fff;color:#c2410c;border-color:#c2410c}.tag.rs-법적조치{background:#FF0000;color:#fff;border-color:#FF0000}.tag.rs-추심이관{background:#9933FF;color:#fff;border-color:#9933FF}.tag.rs-회수완료{background:#fff;color:#2e7d32;border-color:#2e7d32}.tag.rs-대손처리{background:#495057;color:#fff;border-color:#495057}
 .rstages{display:flex;gap:6px;flex-wrap:wrap}.rstages .chip.on{outline:2px solid var(--accent)}
 .ageb{display:grid;gap:4px;max-width:560px}.agerow{display:grid;grid-template-columns:80px 1fr 110px 44px;gap:8px;align-items:center;border:0;background:none;padding:4px 6px;border-radius:6px;cursor:pointer;font:inherit;color:inherit;text-align:left}.agerow:hover,.agerow.on{background:var(--accent-weak)}
 .agebar{height:14px;background:var(--line2);border-radius:7px;overflow:hidden}.agebar i{display:block;height:100%;background:#f0ad4e}.agebar i.a30{background:#9ccc65}.agebar i.a60{background:#ffd54f}.agebar i.a90{background:#ffb74d}.agebar i.a180{background:#ff8a65}.agebar i.a999{background:#e53935}
@@ -698,11 +701,11 @@ function custFieldsHtml(c,ro){return `    <div class="g2">${inp("name","업체�
     ${c.owner_name&&!c.owner?`<p class="mapt">엑셀에 적힌 담당자: ${esc(c.owner_name)} (직원 계정과 아직 연결되지 않음)</p>`:""}
     <label class="f">메모<textarea name="memo" ${ro?"readonly":""}>${esc(c.memo)}</textarea></label>
     ${"search_text" in c?inp("search_text","검색창내용 (예전 상호·양도 전 업체명 등, 고객 검색에 함께 걸림)",c.search_text,"text",ro,'placeholder="예: 맛돈산, 구 상호"'):isOffice()?`<p class="mapt">‘검색창내용’ 칸을 쓰려면 Supabase에서 phase1s.sql을 실행해 주세요.</p>`:""}${gradeFieldsHtml(c)}`}
-function gradeFieldsHtml(c){if(!me||me.role==="tech"||ui.noGrades&&!isOffice())return"";const r=gradeRow(c)||{};const g=gradeOf(c);const a=autoRed(c);
+function gradeFieldsHtml(c){if(!me||me.role==="tech"||ui.noGrades&&!isOffice())return"";const r=gradeRow(c)||{};const g=gradeOf(c);
   if(ui.noGrades)return `<p class="warnbox">관리등급을 쓰려면 Supabase에서 phase1o.sql을 실행해 주세요.</p>`;
   if(!isOffice())return g?`<p class="gwarn ${g.g==="블랙"?"g-black":"g-red"}">관리등급: ${g.g}${g.reason?" — "+esc(g.reason):""}</p>`:"";
-  return `<fieldset class="nfiles"><legend>관리등급</legend><div class="g2">${sel("grade","등급",[["","자동 (미수 60일 이상이면 레드)"],["레드","레드 (주의)"],["블랙","블랙 (거래 중지)"],["정상","정상 (자동 레드 안 붙임)"]],r.grade||"")}${inp("grade_reason","사유 (사실 위주로)",r.reason||"","text",false,'placeholder="예: 미수 120만원, 3회 독촉 / 분쟁 중"')}</div>
-    <p class="mapt" style="margin:4px 0 0">지금 표시: <b>${g?g.g:"없음"}</b>${g&&g.reason?" — "+esc(g.reason):""}${a&&r.grade!=="정상"?"":a?` · 자동 기준 해당(미수 ${won0(a.amt)}원, ${a.days}일)`:""}${r.set_at?` · ${esc(r.set_at.slice(0,10))} 지정`:""}</p></fieldset>`}
+  return `<fieldset class="nfiles"><legend>관리등급</legend><div class="g2">${sel("grade","등급",[["","없음"],["레드","레드 (주의)"],["블랙","블랙 (거래 중지)"]],r.grade||"")}${inp("grade_reason","사유 (사실 위주로)",r.reason||"","text",false,'placeholder="예: 미수 120만원, 3회 독촉 / 분쟁 중"')}</div>
+    <p class="mapt" style="margin:4px 0 0">지금 표시: <b>${g?g.g:"없음"}</b>${g&&g.reason?" — "+esc(g.reason):""}${r.set_at?` · ${esc(r.set_at.slice(0,10))} 지정`:""}</p></fieldset>`}
 async function saveCustomer(c,fd){
     const p={name:fd.get("name").trim(),biz_name:fd.get("biz_name").trim(),ceo:fd.get("ceo").trim(),phone:fmtPhone(fd.get("phone")),phone2:fmtPhone(fd.get("phone2")),biz_no:fmtBiz(fd.get("biz_no")),address:fd.get("address").trim(),memo:fd.get("memo")};if(fd.get("search_text")!==null&&"search_text" in c)p.search_text=fd.get("search_text").trim();
     if(isOffice()){const who=v=>{v=String(v||"").trim();const s=v&&staff.find(x=>x.name===v||(x.aliases||[]).includes(v));return{id:s?s.user_id:null,name:s?s.name:v}};
@@ -1832,7 +1835,12 @@ let rcases=[],rlogs=[];
 async function fetchRCases(){if(me&&me.role==="tech")return[];try{const r=await fetchAll("recv_cases");ui.noRecv=false;return r}catch(e){ui.noRecv=true;return[]}}
 async function fetchRLogs(){if(me&&me.role==="tech")return[];try{return await fetchAll("recv_logs")}catch(e){return[]}}
 function hasRecvX(){return rcases.length===0||rcases.some(c=>"kind" in c)}
-const RSTAGES=["정상관리","독촉중","분할약정","내용증명","법적조치","추심이관","회수완료","대손처리"];
+/* 채권관리단계: 0 당월매출(자동) · 1 정상 · 2 관리(약속일 1일 경과 자동) · 3 불량(설치 3개월 이상 자동) · 4 법적조치 · 5 추심이관 */
+const RSTAGES=["정상","관리","불량","법적조치","추심이관","대손처리"];
+const RSHOW=["당월매출","정상","관리","불량","법적조치","추심이관"];
+const RSTAGE_OLD={"정상관리":"정상","독촉중":"정상","분할약정":"정상","내용증명":"법적조치"};
+function normStage(cs){if(!cs)return"정상";let s=RSTAGE_OLD[cs.stage]||cs.stage||"정상";if(s==="정상"&&(cs.grade==="관리"||cs.grade==="불량"))s=cs.grade;if(s==="정상"&&cs.grade==="악성")s="불량";return s}
+function addMonths(d,n){const x=new Date(d);if(isNaN(x))return"";x.setMonth(x.getMonth()+n);return x.toISOString().slice(0,10)}
 const RHARD=["법적조치","추심이관","대손처리"];
 const RMETH=["전화","문자","방문","내용증명","법적조치","이관","기타"];
 const RKINDS=["매출채권","가불금","대여금"];
@@ -1855,15 +1863,21 @@ function recvItems(){const out=[];const byRef=new Map(rcases.filter(c=>c.ref_id)
     const last=L.filter(x=>Number(x.pay||0)>0).map(x=>x.d).filter(Boolean).sort().pop()||"";const c=(cs.customer_id&&custById(cs.customer_id))||{name:cs.title};
     out.push({t:"etc",id:cs.id,c,amount:add,card:0,cash:paid,paid,unpaid:Math.max(0,add-paid),last,idate:cs.issue_date||"",cs,open:add-paid>0})});
   const tot={};out.forEach(x=>{const key=x.c.id||("t:"+x.c.name);tot[key]=(tot[key]||0)+x.unpaid});
-  out.forEach(x=>{x.days=daysSince(x.idate);x.pdays=daysSince(x.last);x.stage=x.cs?x.cs.stage:"정상관리";if(!x.open&&x.stage!=="대손처리")x.stage="회수완료";
+  out.forEach(x=>{x.days=daysSince(x.idate);x.pdays=daysSince(x.last);const ms=normStage(x.cs);x.mstage=ms;x.auto="";const td0=today();
+    if(!x.open)x.stage=ms==="대손처리"?"대손처리":"회수완료";
+    else if(RHARD.includes(ms))x.stage=ms;
+    else if(ms==="정상"&&x.idate&&x.idate.slice(0,7)===td0.slice(0,7)){x.stage="당월매출";x.auto="당월 설치"}
+    else{let s=ms;const L3=["정상","관리","불량"];const up=(v,why)=>{if(L3.indexOf(v)>L3.indexOf(s)){s=v;x.auto=why}};
+      if(x.cs&&x.cs.promise_date&&x.cs.promise_date<td0)up("관리","약속일 경과");
+      if(x.idate&&addMonths(x.idate,3)<=td0)up("불량","설치 3개월 이상");x.stage=s}
     x.csum=tot[x.c.id||("t:"+x.c.name)]||0;x.kind=(x.cs&&x.cs.kind)||"매출채권";x.owner=(x.cs&&(staffName(x.cs.owner)||x.cs.owner_name))||staffName(x.c.collector)||x.c.collector_name||(x.k?s3Text(x.k):"")||"";
     x.logs=x.cs?rlogs.filter(l=>l.case_id===x.cs.id).sort((a,b)=>String(b.created_at).localeCompare(String(a.created_at))):[];x.age=(AGES.find(a=>x.days!=null&&x.days>=a[2]&&x.days<=a[3])||[""])[0]});
   return out}
 /* 목록 열: 엑셀 '채권리스트' 순서 + 채권관리 열 */
-const RCOLS=[["owner","담당자",1],["ym","설치연월",1],["progress","진행단계",1],["grade","채권분류",1],["cust","업체명(상호)",1],["ceo","대표자",1],["phone","전화번호",1],["addr","상점주소",0],
+const RCOLS=[["owner","담당자",1],["ym","설치연월",1],["progress","진행단계",1],["stage","채권관리단계",1],["cust","업체명(상호)",1],["ceo","대표자",1],["phone","전화번호",1],["addr","상점주소",0],
  ["ultra","제품판매가",1],["wash","워시판매가",1],["parts","부자재비용",1],["amount","합계금액",1],["card","카드",1],["cash","캐피탈+현금",1],["paid","입금합계",1],["unpaid","미수금",1],["days","채권연령",1],["llog","최종관리이력",1],
  ["cdate","계약일자",0],["idate","설치일자",1],["channel","영업경로",0],["referrer","소개",0],["s1","1차",0],["s2","2차",0],["s3","3차",0],["doc","계약서",0],["tech","설치담당",0],["product","제품",0],["size","사이즈",0],["serial","시리얼",0],["washx","수압식",0],
- ["kind","채권종류",1],["stage","채권단계",1],["csum","고객 미수 합계",0],["last","최종입금일",0],["pdays","입금 후 경과일",0],["ldate","최근 조치일",0],["lby","작성자",0],["next","다음 조치일",1],["promise","약속일·금액",0],["transfer","이관처",0],["cgrade","관리등급",0]];
+ ["kind","채권종류",1],["csum","고객 미수 합계",0],["last","최종입금일",0],["pdays","입금 후 경과일",0],["ldate","최근 조치일",0],["lby","작성자",0],["next","다음 조치일",1],["promise","약속일·금액",0],["transfer","이관처",0],["cgrade","관리등급",0]];
 const RMONEY=new Set(["ultra","wash","parts","amount","card","cash","paid","unpaid","csum"]);
 TCFG.recv={cols:()=>RCOLS,sel:".wt.rv",lead:()=>1,freezeKey:"cust"};
 function recvCell(col,x){const c=x.c,cs=x.cs||{},L=x.logs[0],td=today(),k=x.k||{};const C=["cdate","channel","referrer","s1","s2","s3","doc","tech","product","size","serial"];
@@ -1873,7 +1887,7 @@ function recvCell(col,x){const c=x.c,cs=x.cs||{},L=x.logs[0],td=today(),k=x.k||{
     case"ym":{const d=x.idate;return `<td>${d?esc(d.slice(2,4)+d.slice(5,7)):""}</td>`}
     case"progress":return `<td>${esc(cs.progress||(x.t==="ctr"&&k.stage==="미수"?"미수":""))}</td>`;
     case"grade":return `<td>${cs.grade?`<span class="tag rg-${esc(cs.grade)}">${esc(cs.grade)}</span>`:""}</td>`;
-    case"cust":return `<td title="${esc(c.name||"")}"><b>${esc(c.name||"")}</b>${c.id?gradeBadge(c):""}${x.t==="etc"?` <small class="mapt">(직접 등록)</small>`:""}</td>`;
+    case"cust":return `<td class="rc-${esc(x.stage)}" title="${esc(c.name||"")}"><b>${esc(c.name||"")}</b>${c.id?gradeBadge(c):""}${x.t==="etc"?` <small class="mapt">(직접 등록)</small>`:""}</td>`;
     case"ceo":return `<td>${esc(c.ceo||"")}</td>`;case"phone":return `<td>${esc(c.phone||c.phone2||"")}</td>`;
     case"addr":return `<td class="wrap memo"><div class="clamp">${esc(c.address||"")}</div></td>`;
     case"ultra":return `<td class="num">${x.t==="ctr"&&k.amt_ultra?won0(k.amt_ultra):""}</td>`;case"wash":return `<td class="num">${x.t==="ctr"&&k.amt_wash?won0(k.amt_wash):""}</td>`;
@@ -1885,7 +1899,7 @@ function recvCell(col,x){const c=x.c,cs=x.cs||{},L=x.logs[0],td=today(),k=x.k||{
     case"idate":return `<td>${esc(ymd2(x.idate))}</td>`;
     case"washx":return `<td>${x.t==="ctr"&&k.wash_added?"수압식":""}</td>`;
     case"kind":return `<td>${esc(x.kind)}</td>`;
-    case"stage":return `<td><span class="tag rs-${esc(x.stage)}">${esc(x.stage)}</span></td>`;
+    case"stage":return `<td title="${esc(x.auto?"자동: "+x.auto:"")}"><span class="tag rs-${esc(x.stage)}">${esc(x.stage)}</span></td>`;
     case"last":return `<td>${esc(ymd2(x.last))}</td>`;
     case"ldate":return `<td>${esc(L?ymd2(fmtD(L.created_at)):"")}</td>`;case"lby":return `<td>${esc(L?L.by_name:"")}</td>`;
     case"next":{const d=cs.next_date||"";return `<td class="${x.open&&d?(d===td?"due":d<td?"late":""):""}">${esc(ymd2(d))}</td>`}
@@ -1909,13 +1923,13 @@ function renderRecvView0(){
   let list=src.filter(x=>(!ui.rage||x.age===ui.rage)&&(!ui.rstage||x.stage===ui.rstage)&&(!ui.rown||(x.owner||"(없음)")===ui.rown)&&(!ui.rkind||x.kind===ui.rkind)
     &&(!qq||[x.c.name,x.c.search_text,x.c.ceo,x.c.phone,x.c.phone2,x.owner,x.cs&&x.cs.progress,x.t==="ctr"?x.k.serial:"",...x.logs.map(l=>l.content),(x.cs&&x.cs.transfer||{}).to].join(" ").toLowerCase().replace(/-/g,"").includes(qq)));
   const S=(()=>{try{return JSON.parse(localStorage.getItem("hc.sort.recv."+(me&&me.id||""))||"null")||{c:"owner",d:1}}catch(e){return{c:"owner",d:1}}})();
-  const sv=x=>{switch(S.c){case"days":return x.days??-1;case"pdays":return x.pdays??-1;case"unpaid":return x.unpaid;case"csum":return x.csum;case"amount":return x.amount;case"paid":return x.paid;case"stage":return RSTAGES.indexOf(x.stage);
-    case"grade":return RGRADES.indexOf((x.cs||{}).grade);case"next":return (x.cs&&x.cs.next_date)||"";case"idate":case"ym":return x.idate||"";case"last":return x.last||"";case"ldate":return x.logs[0]?fmtDT(x.logs[0].created_at):"";case"owner":return x.owner||"￿"}return cfText(recvCell(S.c,x))};
+  const sv=x=>{switch(S.c){case"days":return x.days??-1;case"pdays":return x.pdays??-1;case"unpaid":return x.unpaid;case"csum":return x.csum;case"amount":return x.amount;case"paid":return x.paid;case"stage":return RSHOW.indexOf(x.stage);
+case"next":return (x.cs&&x.cs.next_date)||"";case"idate":case"ym":return x.idate||"";case"last":return x.last||"";case"ldate":return x.logs[0]?fmtDT(x.logs[0].created_at):"";case"owner":return x.owner||"￿"}return cfText(recvCell(S.c,x))};
   list.sort((a,b)=>{const A=sv(a),B=sv(b);const r=typeof A==="number"&&typeof B==="number"?A-B:KO.compare(String(A),String(B));return r*S.d||KO.compare(a.idate||"",b.idate||"")||KO.compare(a.c.name||"",b.c.name||"")});
   list=cfApply("recv",list,(c,x)=>cfText(recvCell(c,x)));
   const sum=a=>a.reduce((s,x)=>s+x.unpaid,0);
   const ages=AGES.map(([k,l])=>{const xs=open.filter(x=>x.age===k);return{k,l,n:xs.length,amt:sum(xs)}});const maxA=Math.max(1,...ages.map(a=>a.amt));
-  const stages=RSTAGES.filter(s=>s!=="회수완료").map(s=>({s,n:all.filter(x=>x.stage===s&&(x.open||s==="대손처리")).length,amt:sum(all.filter(x=>x.stage===s))}));
+  const stages=[...RSHOW,...(all.some(x=>x.stage==="대손처리")?["대손처리"]:[])].map(s=>({s,n:all.filter(x=>x.stage===s&&(x.open||s==="대손처리")).length,amt:sum(all.filter(x=>x.stage===s))}));
   /* 담당자별 현황 (엑셀 Sheet1) */
   const owners=[...new Set(open.map(x=>x.owner||"(없음)"))].sort((a,b)=>a==="(없음)"?1:b==="(없음)"?-1:KO.compare(a,b));
   const oRow=n=>{const xs=open.filter(x=>(x.owner||"(없음)")===n);const amt=xs.reduce((a,x)=>a+x.amount,0),paid=xs.reduce((a,x)=>a+x.paid,0);return{n,k:RKINDS.map(k=>xs.filter(x=>x.kind===k).length),cnt:xs.length,amt,paid,un:sum(xs),rate:amt?Math.round(paid*1000/amt)/10:0}};
@@ -1934,14 +1948,14 @@ function renderRecvView0(){
        <div class="kpi bad kc ${ui.rkpi==="broke"?"on":""}" data-rkpi="broke" role="button" tabindex="0"><span>약속일 지난 건</span><b>${broke.length}건</b></div></div>
       <div class="rstages">${stages.map(s=>`<button type="button" class="chip ${ui.rstage===s.s?"on":""}" data-rst="${esc(s.s)}"><span class="tag rs-${esc(s.s)}">${esc(s.s)}</span> ${s.n}건</button>`).join("")}</div>
       <div class="ageb">${ages.map(a=>`<button type="button" class="agerow ${ui.rage===a.k?"on":""}" data-age="${a.k}"><span>${a.l}</span><span class="agebar"><i style="width:${Math.round(a.amt*100/maxA)}%" class="${a.k}"></i></span><span class="num">${won0(a.amt)}</span><small class="mapt">${a.n}건</small></button>`).join("")}</div>
-      <p class="mapt" style="margin:0">채권연령은 설치일 기준입니다(설치 전이면 계약일). 입금을 넣어 미수금이 0원이 되면 자동으로 회수완료가 됩니다.</p></div>
+      <p class="mapt" style="margin:0">채권연령은 설치일 기준입니다(설치 전이면 계약일). 당월 설치는 ‘당월매출’, 약속일이 1일 지나면 ‘관리’, 설치 3개월이 지나면 ‘불량’으로 자동 표시됩니다. 미수금이 0원이 되면 회수완료가 됩니다.</p></div>
      <div class="sumbox">${ownT}</div></div>
    <div class="toolbar"><input id="rQ" type="search" placeholder="업체명(상호)·담당자·진행단계·전화·관리이력 검색" value="${esc(ui.rq)}">
      <div class="nav" role="group"><button type="button" id="rAll" class="${label?"":"on"}">전체</button></div><span class="mapt">${label?esc(label)+" · ":""}${list.length}건</span>
      <label class="chip"><input type="checkbox" id="rDone" ${ui.rdone?"checked":""}>회수완료·대손 포함</label>
      <span style="flex:1"></span>${cfClearBtn("recv")}<button class="btn" type="button" id="rCols">입력화면설정</button>${isOffice()&&hasRecvX()?`<button class="btn" type="button" id="rImp">엑셀 가져오기</button><button class="btn pri" type="button" id="rNew">+ 채권 직접 등록</button>`:""}</div>
    <div class="wrapx vis" style="padding-top:10px"><div class="wtbox"><table class="wt rv"><thead><tr><th>순번</th>${colHead(cols,"recv",RMONEY)}</tr></thead><tbody>
-    ${shown.map((x,i)=>`<tr data-rt="${x.t}" data-rid="${x.id}" class="ra-${x.open?x.age:"done"}"><td>${i+1}</td>${cols.map(c=>recvCell(c,x)).join("")}</tr>`).join("")||`<tr><td colspan="${cols.length+1}" class="mapt" style="cursor:default">해당하는 미수 건이 없습니다.</td></tr>`}</tbody>
+    ${shown.map((x,i)=>`<tr data-rt="${x.t}" data-rid="${x.id}" class="${x.open?"":"ra-done"}"><td>${i+1}</td>${cols.map(c=>recvCell(c,x)).join("")}</tr>`).join("")||`<tr><td colspan="${cols.length+1}" class="mapt" style="cursor:default">해당하는 미수 건이 없습니다.</td></tr>`}</tbody>
     ${shown.length?`<tfoot><tr><th></th>${cols.map(c=>`<th class="${RMONEY.has(c)?"num":""}">${RMONEY.has(c)&&c!=="csum"?won0(tot[c]):c===cols[0]?"합계":""}</th>`).join("")}</tr></tfoot>`:""}</table></div></div>`;
   applyColW(cols,null,"recv");bindColResize(cols,"recv");view().querySelectorAll(".wtbox").forEach(hbar);
   const re=()=>renderRecvView();
@@ -1977,8 +1991,7 @@ function recvDlg(x){const cs=x.cs||{stage:"정상관리",transfer:{}};const off=
    <p class="mapt dsum" style="margin:0"><b>${esc(x.c.name||"")}</b>${x.c.id?gradeBadge(x.c):""}${x.c.phone?" · "+esc(x.c.phone):""}${x.c.address?" · "+esc(x.c.address):""}</p>
    <h3 class="ksec">1. 채권금액</h3>
    <table class="stafft"><thead><tr><th class="num">매출액</th><th class="num">입금액</th><th class="num">미수금</th><th>채권연령</th><th class="num">고객 미수 합계</th></tr></thead><tbody><tr><td class="num">${won0(x.amount)}</td><td class="num">${won0(x.paid)}</td><td class="num neg"><b>${won0(x.unpaid)}</b></td><td>${x.days==null?"-":x.days+"일"} <small class="mapt">(설치 ${esc(x.idate||"-")})</small></td><td class="num">${won0(x.csum)}</td></tr></tbody></table>
-   ${ext?`<div class="g3">${off?inp("owner_name","담당자",(cs.owner&&staffName(cs.owner))||cs.owner_name||x.owner,"text",false,'list="rOwn"'):inp("_o","담당자",x.owner,"text",true)}${inp("progress","진행단계",cs.progress||"","text",!off,'list="rProg" placeholder="미수·추심·CMS-15일"')}${sel("grade","채권분류",[["","(선택)"],...RGRADES.map(g=>[g,g])],cs.grade||"",!off)}</div>
-   <div class="g3">${sel("kind","채권종류",RKINDS,x.kind,!off||x.t!=="etc")}<span></span><span></span></div>
+   ${ext?`<div class="g3">${off?inp("owner_name","담당자",(cs.owner&&staffName(cs.owner))||cs.owner_name||x.owner,"text",false,'list="rOwn"'):inp("_o","담당자",x.owner,"text",true)}${inp("progress","진행단계",cs.progress||"","text",!off,'list="rProg" placeholder="미수·추심·CMS-15일"')}${sel("kind","채권종류",RKINDS,x.kind,!off||x.t!=="etc")}</div>
    <datalist id="rOwn">${staff.filter(s=>s.active&&s.role!=="tech").map(s=>`<option value="${esc(s.name)}">`).join("")}<option value="SCI"></datalist><datalist id="rProg">${RPROG.map(v=>`<option value="${v}">`).join("")}</datalist>`:""}
    <h3 class="ksec">2. 입금내역</h3>
    <table class="stafft"><thead><tr><th>날짜</th><th>내역</th><th class="num">채권발생</th><th class="num">입금액</th><th class="num">미수금</th>${x.t==="etc"&&off?"<th></th>":""}</tr></thead><tbody>
@@ -1990,29 +2003,29 @@ function recvDlg(x){const cs=x.cs||{stage:"정상관리",transfer:{}};const off=
      <input type="date" id="rlN" aria-label="다음 조치일" title="다음 조치일"><button type="button" class="btn pri" id="rlAdd">기록 추가</button></div>
    <p class="mapt" style="margin:0">기록은 바로 저장되고 날짜·담당자(작성자)가 자동으로 남습니다. 날짜 칸은 ‘다음 조치일’입니다.</p>
    <div id="rLogs"></div>
-   <h3 class="ksec">채권 단계</h3>
-   <div class="g3"><label class="f">채권단계<select name="stage" ${off?"":"disabled"}>${RSTAGES.filter(s=>s!=="회수완료"||!x.open).map(s=>`<option ${s===x.stage?"selected":""} ${canStage(s)||s===x.stage?"":"disabled"}>${s}</option>`).join("")}</select></label>
+   <h3 class="ksec">채권관리단계 <span class="tag rs-${esc(x.stage)}">${esc(x.stage)}</span>${x.auto?` <small class="mapt">(자동: ${esc(x.auto)})</small>`:""}</h3>
+   <div class="g3"><label class="f">채권관리단계 (직접 지정)<select name="stage" ${off?"":"disabled"}>${RSTAGES.map(s=>`<option ${s===x.mstage?"selected":""} ${canStage(s)||s===x.mstage?"":"disabled"}>${s}</option>`).join("")}</select></label>
      ${inp("next_date","다음 조치일",cs.next_date,"date")}<label class="f">입금 약속 (날짜 · 금액)<span style="display:flex;gap:6px"><input type="date" name="promise_date" value="${esc(cs.promise_date||"")}" aria-label="약속일"><input type="number" name="promise_amount" value="${cs.promise_amount||""}" placeholder="금액" aria-label="약속 금액"></span></label></div>
-   ${adm?"":`<p class="mapt" style="margin:0">법적조치·추심이관·대손처리 지정은 관리자만 할 수 있습니다.</p>`}
+   ${adm?"":`<p class="mapt" style="margin:0">법적조치·추심이관 지정은 관리자만 할 수 있습니다.</p>`}
    <fieldset class="nfiles" id="rTr" ${RHARD.includes(x.stage)||tr.to?"":"hidden"}><legend>법적조치·이관 정보</legend>
      <div class="g3">${inp("t_date","이관일",tr.date,"date",!off)}${inp("t_to","이관처 (법무사·추심업체)",tr.to,"text",!off,'list="tTo"')}${inp("t_contact","이관처 담당자·연락처",tr.contact,"text",!off)}</div>
      <div class="g3">${inp("t_amount","이관금액",tr.amount||"","number",!off)}${inp("t_status","진행상황",tr.status,"text",!off,'list="tStat" placeholder="지급명령 신청 / 소송 진행 중"')}${inp("t_result","결과",tr.result,"text",!off)}</div>
-     <datalist id="tStat">${["내용증명 발송","지급명령 신청","지급명령 확정","소송 진행","강제집행","추심 진행","합의"].map(v=>`<option value="${v}">`).join("")}</datalist><datalist id="tTo"><option value="SCI"></datalist></fieldset>
+     <datalist id="tStat">${["내용증명 발송","전자소송","지급명령 신청","지급명령 확정","소송 진행","강제집행","추심 진행","합의"].map(v=>`<option value="${v}">`).join("")}</datalist><datalist id="tTo"><option value="SCI"></datalist></fieldset>
    ${ui.noFiles||!x.c.id?"":`<fieldset class="nfiles"><legend>채권 서류 (내용증명·지급명령 등)</legend><div class="toolbar" style="padding:0"><label class="btn"><input type="file" id="rfIn" accept="image/*,application/pdf" multiple hidden>서류 올리기</label><span class="mapt" id="rfSt"></span></div><div class="fgrid sm" id="rfGrid"></div></fieldset>`}
    </div>`,
    [...(x.c.id?[["고객정보","gocust",()=>{openCustPopup(x.c,()=>{});return true}]]:[]),["닫기"],...(x.t==="etc"&&adm?[["삭제","danger",async()=>{if(!(await askConfirm("이 직접 등록 채권과 관리이력을 삭제할까요?")))return true;const {error}=await sb.from("recv_cases").delete().eq("id",x.cs.id);if(error)return toast("삭제하지 못했습니다: "+error.message);toast("삭제했습니다");reload(["recv","rlogs"])}]]:[]),
     ...(off||me.role==="sales"?[["저장","pri",async()=>{
-      const f=fdata("rf");const st=f.get("stage")||x.stage;
+      const f=fdata("rf");const st=f.get("stage")||x.mstage;
       const p={next_date:f.get("next_date")||null,promise_date:f.get("promise_date")||null,promise_amount:Number(f.get("promise_amount")||0)||0};
-      if(off&&canStage(st))p.stage=st;
+      if(off&&canStage(st)&&st!==x.mstage)p.stage=st;
       if(off)p.transfer={date:f.get("t_date")||"",to:(f.get("t_to")||"").trim(),contact:(f.get("t_contact")||"").trim(),amount:Number(f.get("t_amount")||0)||0,status:(f.get("t_status")||"").trim(),result:(f.get("t_result")||"").trim()};
-      if(off&&ext){const w=whoIs((f.get("owner_name")||"").trim());p.owner=w.id;p.owner_name=w.name;p.progress=(f.get("progress")||"").trim();p.grade=f.get("grade")||"";if(x.t==="etc")p.kind=f.get("kind")||x.kind}
+      if(off&&ext){const w=whoIs((f.get("owner_name")||"").trim());p.owner=w.id;p.owner_name=w.name;p.progress=(f.get("progress")||"").trim();if(x.t==="etc")p.kind=f.get("kind")||x.kind}
       try{const c0=await recvEnsureCase(x);const {error}=await sb.from("recv_cases").update(p).eq("id",c0.id);if(error)throw error;
-        if(p.stage&&p.stage!==x.stage){await sb.from("recv_logs").insert({case_id:c0.id,customer_id:x.c.id||null,method:"기타",content:`채권단계 변경: ${x.stage} → ${p.stage}`,by_name:me.name||""});await recvAutoBlack(x,p.stage)}
-        toast("저장했습니다");reload(["recv","rlogs","grades"])}catch(e){toast(/recv_/.test(e.message||"")?"미수·채권관리 칸이 아직 없습니다. Supabase에서 phase1z.sql·phase1za.sql을 실행해 주세요.":"저장하지 못했습니다: "+(e.message||""))}}]]:[])]);
+        if(p.stage){await sb.from("recv_logs").insert({case_id:c0.id,customer_id:x.c.id||null,method:"기타",content:`채권관리단계 변경: ${x.mstage} → ${p.stage}`,by_name:me.name||""});await recvAutoBlack(x,p.stage)}
+        toast("저장했습니다");reload(["recv","rlogs","grades"])}catch(e){toast(/stage_check/.test(e.message||"")?"새 채권관리단계를 쓰려면 Supabase에서 phase1zb.sql을 실행해 주세요.":/recv_/.test(e.message||"")?"미수·채권관리 칸이 아직 없습니다. Supabase에서 phase1z.sql·phase1za.sql을 실행해 주세요.":"저장하지 못했습니다: "+(e.message||""))}}]]:[])]);
   if(x.t==="ctr")renderPaySec(x.k);
   const oj=document.getElementById("rOpenJob");if(oj)oj.onclick=()=>jobDlg(x.j,x.c,x.j.kind);
-  const ss=document.querySelector('#rf [name="stage"]');if(ss)ss.onchange=()=>{document.getElementById("rTr").hidden=!(RHARD.includes(ss.value)||document.querySelector('#rf [name="t_to"]').value)};
+  const ss=document.querySelector('#rf [name="stage"]');void 0;if(ss)ss.onchange=()=>{document.getElementById("rTr").hidden=!(RHARD.includes(ss.value)||document.querySelector('#rf [name="t_to"]').value)};
   /* 직접 등록 채권의 입금내역 */
   const saveLedger=async nl=>{const {error}=await sb.from("recv_cases").update({ledger:nl}).eq("id",x.cs.id);if(error)return toast("저장하지 못했습니다: "+error.message);x.cs.ledger=nl;await reload(["recv"],true);const nx=recvItems().find(y=>y.t==="etc"&&y.id===x.id);if(nx)recvDlg(nx)};
   const la=document.getElementById("lgAdd");if(la)la.onclick=()=>{const a=Number(val("lgA")||0),p=Number(val("lgP")||0);if(!a&&!p)return toast("채권발생 또는 입금액을 넣으세요");saveLedger([...ledgerOf(x.cs),{d:val("lgD")||today(),t:val("lgT").trim()||(p?"입금":"채권발생"),add:a,pay:p}])};
@@ -2026,7 +2039,7 @@ function recvDlg(x){const cs=x.cs||{stage:"정상관리",transfer:{}};const off=
   drawLogs();
   document.getElementById("rlAdd").onclick=async()=>{const content=val("rlC").trim();if(!content)return toast("내용을 입력하세요");const m=val("rlM"),nd=val("rlN")||null;
     try{const c0=await recvEnsureCase(x);const r=await sb.from("recv_logs").insert({case_id:c0.id,customer_id:x.c.id||null,method:m,content,next_date:nd,by_name:me.name||""}).select().single();if(r.error)throw r.error;rlogs.push(r.data);
-      const up={};if(nd)up.next_date=nd;if(off&&x.stage==="정상관리")up.stage="독촉중";if(Object.keys(up).length){await sb.from("recv_cases").update(up).eq("id",c0.id);Object.assign(c0,up);if(up.next_date){const ne=document.querySelector('#rf [name="next_date"]');if(ne)ne.value=nd}if(up.stage){x.stage=up.stage;const s=document.querySelector('#rf [name="stage"]');if(s)s.value=up.stage}}
+      const up={};if(nd)up.next_date=nd;if(Object.keys(up).length){await sb.from("recv_cases").update(up).eq("id",c0.id);Object.assign(c0,up);if(up.next_date){const ne=document.querySelector('#rf [name="next_date"]');if(ne)ne.value=nd}if(up.stage){x.stage=up.stage;const s=document.querySelector('#rf [name="stage"]');if(s)s.value=up.stage}}
       document.getElementById("rlC").value="";document.getElementById("rlN").value="";drawLogs();toast("기록했습니다");reload(["recv","rlogs"],true)}
     catch(e){toast(/recv_/.test(e.message||"")?"미수·채권관리 칸이 아직 없습니다. Supabase에서 phase1z.sql을 실행해 주세요.":"기록하지 못했습니다: "+(e.message||""))}};
   document.getElementById("rlC").addEventListener("keydown",e=>{if(e.key==="Enter"&&!e.isComposing){e.preventDefault();e.stopPropagation();document.getElementById("rlAdd").click()}});
@@ -2063,7 +2076,8 @@ function recvImportDlg(fname,rows){
     if(!k){const cs=customers.filter(c=>clean(c.name)===clean(r.name)||(dg2(r.phone).length>=9&&(dg2(c.phone)===dg2(r.phone)||dg2(c.phone2)===dg2(r.phone))));
       const ks=contracts.filter(x=>cs.some(c=>c.id===x.customer_id)&&x.stage!=="취소");k=ks.find(x=>r.serial&&nk(x.serial)===nk(r.serial))||ks.find(x=>r.cdate&&x.contract_date===r.cdate)||(ks.length===1?ks[0]:null)}
     const kind=/가불/.test(r.prog)?"가불금":/개인|대여/.test(r.prog)?"대여금":"매출채권";const grade=RGRADES.includes(r.grade)?r.grade:"";
-    const w=whoIs(r.own);const base={kind,grade,owner:w.id,owner_name:w.name,progress:r.prog};if(/추심/.test(r.prog)){base.stage="추심이관";base.transfer={to:/^SCI$/i.test(r.own)?"SCI":r.own,date:"",contact:"",amount:r.amount-r.paid,status:"추심 진행",result:""}}
+    const w=whoIs(r.own);const base={kind,grade,owner:w.id,owner_name:w.name,progress:r.prog};if(grade==="관리"||grade==="불량")base.stage=grade;else if(r.grade==="악성")base.stage="불량";
+    if(/추심/.test(r.prog)){base.stage="추심이관";base.transfer={to:/^SCI$/i.test(r.own)?"SCI":r.own,date:"",contact:"",amount:r.amount-r.paid,status:"추심 진행",result:""}}
     if(k)plan.push({r,ref:{ref_type:"ctr",ref_id:k.id,customer_id:k.customer_id},patch:base,k});
     else{miss++;const cu=customers.find(c=>clean(c.name)===clean(r.name));plan.push({r,ref:null,patch:Object.assign({ref_type:"etc",ref_id:null,customer_id:cu?cu.id:null,title:r.name,amount:r.amount,issue_date:r.idate||r.cdate||null,
       ledger:[{d:r.idate||r.cdate||"",t:"채권발생",add:r.amount,pay:0},...(r.paid?[{d:"",t:"입금 (엑셀 이관)",add:0,pay:r.paid}]:[])]},base)})}});
@@ -2132,16 +2146,11 @@ function newContractPick(){const pool=customers.filter(x=>isOffice()||x.owner===
     <p class="mapt" id="jcHint">두 글자 이상 입력하면 고객 목록이 나옵니다. 처음 오는 고객은 ‘새 고객 등록’으로 먼저 등록하세요.</p></div>`,
     [["새 고객 등록","gocust",()=>{newCustomer(null,c=>contractDlg(c,null));return true}],["취소"],["다음","pri",()=>{const c=pool.find(x=>x.id===val("jcId"));if(!c){toast("고객을 검색해서 목록에서 골라 주세요");return true}contractDlg(c,null);return true}]]);
   bindCustPicker(pool)}
-/* 관리등급: 레드(주의)·블랙(거래 중지). 수동 지정이 우선, 없으면 미수 60일 이상 자동 레드. 기사에게는 표시 안 함 */
-const RED_DAYS=60;
+/* 관리등급: 레드(주의)·블랙(거래 중지). 직접 지정한 것만 표시 (자동 레드 없음). 기사에게는 표시 안 함 */
 function gradeRow(c){return grades.find(g=>g.customer_id===c.id)||null}
-function autoRed(c){let amt=0,days=0;const td=new Date(today());
-  custContracts(c.id).forEach(k=>{if(["취소","완료"].includes(k.stage))return;const st=payStat(k);const un=k.stage==="미수"||(st.n&&st.unpaid>0)?Math.max(0,st.unpaid):0;if(!un)return;
-    const ij=installOf(k);const ref=(ij&&ij.done_date)||k.contract_date;if(!ref)return;const d=Math.floor((td-new Date(ref))/864e5);if(d>=RED_DAYS){amt+=un;days=Math.max(days,d)}});
-  return amt?{amt,days}:null}
 function gradeOf(c){if(!c||!me||me.role==="tech")return null;const r=gradeRow(c);
   if(r&&r.grade!=="정상")return{g:r.grade,reason:r.reason||"",auto:false};if(r)return null;
-  const a=autoRed(c);return a?{g:"레드",reason:`미수 ${won0(a.amt)}원 · ${a.days}일 경과 (자동)`,auto:true}:null}
+  return null}
 function gradeWarn(c){const g=gradeOf(c);return g?`<p class="gwarn ${g.g==="블랙"?"g-black":"g-red"}">⚠ ${g.g} 고객${g.reason?" — "+esc(g.reason):""}</p>`:""}
 function gradeBadge(c){const g=gradeOf(c);return g?` <span class="gbadge ${g.g==="블랙"?"g-black":"g-red"}" title="${esc(g.reason)}">${g.g}</span>`:""}
 /* 계약관리 기준일: 설치일자(완료일, 없으면 방문 예정일), 설치 전이면 계약일자 */
