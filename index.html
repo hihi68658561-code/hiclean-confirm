@@ -965,7 +965,7 @@ const CCOLS=[
  ["approval","승인처",1],["tax","계산서 발급",0],["chk_cust","고객등록",1],["chk_slip","전표마감",1],["chk_sales","매출마감",1],["chk_month","월마감",1],["memo","비고",1]];
 const MONEYC=new Set(["amount","card","cash","paid","unpaid"]);
 /* 표 열 설정(넣고 빼기·순서·너비) — 계약관리(ctr)·작업현황(work) 공용, 브라우저별로 기억 */
-const TCFG={ctr:{cols:()=>CCOLS,sel:".wt.ct",lead:()=>isAdmin()?2:1},work:{cols:()=>WCOLS,sel:".wt.wk",lead:()=>isAdmin()?2:1}};
+const TCFG={ctr:{cols:()=>CCOLS,sel:".wt.ct",lead:()=>isOffice()?2:1},work:{cols:()=>WCOLS,sel:".wt.wk",lead:()=>isAdmin()?2:1}};
 function colKey(t="ctr"){return "hc.cols."+t+"."+(me&&me.id||"")}
 function getCols(t="ctr"){const C=TCFG[t].cols();let v=null;try{v=JSON.parse(localStorage.getItem(colKey(t))||"null")}catch(e){}
   if(!v&&t==="all")return getCols("ctr");
@@ -1154,10 +1154,10 @@ function renderCtrView0(){
    <div class="toolbar"><input id="cQ" type="search" placeholder="업체명(상호)·대표자·전화·시리얼·담당 검색" value="${esc(ui.cq)}">
      <div class="nav" role="group"><button type="button" id="cAll" class="${ui.crow||ui.cct||ui.ckpi?"":"on"}">전체</button></div>
      <span class="mapt">${ui.ckpi&&KPI[ui.ckpi]?esc(KPI[ui.ckpi][0])+" · ":""}${ui.crow?esc(CROWS.find(y=>y[0]===ui.crow)[1])+" · ":""}${ui.cct?esc(ui.cct)+" · ":""}${list.length}건</span>
-     <span style="flex:1"></span>${isAdmin()?`<label class="chip"><input type="checkbox" id="cSelAll">전체 선택</label><button class="btn danger" type="button" id="cDel" disabled>선택 삭제 (0)</button>`:""}${cfClearBtn("ctr")}<button class="btn" type="button" id="cSort">정렬</button><button class="btn" type="button" id="cCols">입력화면설정</button>${isOffice()||me.role==="sales"?`<button class="btn pri" type="button" id="cNewK">+ 신규계약</button>`:""}</div>
-   <div class="wrapx vis" style="padding-top:10px"><div class="wtbox"><table class="wt ct"><thead><tr>${isAdmin()?"<th></th>":""}<th>순번</th>${colHead(cols,"ctr",MONEYC)}</tr></thead><tbody>
-    ${shown.map((x,i)=>`<tr data-ck="${x.k.id}" class="rs-${esc(x.k.stage)}">${isAdmin()?`<td><input type="checkbox" class="csel" data-id="${x.k.id}" ${ui.csel.has(x.k.id)?"checked":""} aria-label="선택"></td>`:""}<td>${i+1}</td>${cols.map(c=>ctrCell(c,x.k,x.c,x.s,x.b)).join("")}</tr>`).join("")||`<tr><td colspan="${cols.length+2}" class="mapt" style="cursor:default">해당하는 계약이 없습니다.</td></tr>`}</tbody>
-    ${shown.length?`<tfoot><tr>${isAdmin()?"<th></th>":""}<th></th>${cols.map(c=>`<th class="${MONEYC.has(c)?"num":""}">${MONEYC.has(c)?won0(tot[c]):c===cols[0]?"합계":""}</th>`).join("")}</tr></tfoot>`:""}</table></div>
+     <span style="flex:1"></span>${isOffice()&&hasMonthCol()?`<button class="btn" type="button" id="cMonth" disabled>월마감 (0)</button>`:""}${isOffice()?`<label class="chip"><input type="checkbox" id="cSelAll">전체 선택</label>`:""}${isAdmin()?`<button class="btn danger" type="button" id="cDel" disabled>선택 삭제 (0)</button>`:""}${cfClearBtn("ctr")}<button class="btn" type="button" id="cSort">정렬</button><button class="btn" type="button" id="cCols">입력화면설정</button>${isOffice()||me.role==="sales"?`<button class="btn pri" type="button" id="cNewK">+ 신규계약</button>`:""}</div>
+   <div class="wrapx vis" style="padding-top:10px"><div class="wtbox"><table class="wt ct"><thead><tr>${isOffice()?"<th></th>":""}<th>순번</th>${colHead(cols,"ctr",MONEYC)}</tr></thead><tbody>
+    ${shown.map((x,i)=>`<tr data-ck="${x.k.id}" class="rs-${esc(x.k.stage)}">${isOffice()?`<td><input type="checkbox" class="csel" data-id="${x.k.id}" ${ui.csel.has(x.k.id)?"checked":""} aria-label="선택"></td>`:""}<td>${i+1}</td>${cols.map(c=>ctrCell(c,x.k,x.c,x.s,x.b)).join("")}</tr>`).join("")||`<tr><td colspan="${cols.length+2}" class="mapt" style="cursor:default">해당하는 계약이 없습니다.</td></tr>`}</tbody>
+    ${shown.length?`<tfoot><tr>${isOffice()?"<th></th>":""}<th></th>${cols.map(c=>`<th class="${MONEYC.has(c)?"num":""}">${MONEYC.has(c)?won0(tot[c]):c===cols[0]?"합계":""}</th>`).join("")}</tr></tfoot>`:""}</table></div>
     ${list.length>500?`<p class="mapt">앞의 500건만 보입니다. 검색으로 좁혀 주세요.</p>`:""}</div>`;
   applyColW(cols);bindColResize(cols);
   view().querySelectorAll(".wtbox").forEach(hbar);
@@ -1172,7 +1172,11 @@ function renderCtrView0(){
   view().querySelectorAll(".wt.ct thead th[data-ck]").forEach(th=>{th.classList.add("sortable");const S=getSort();if(S[0]&&S[0].c===th.dataset.ck)th.dataset.sort=S[0].d===1?"asc":"desc";
     th.onclick=e=>{if(e.target.closest(".rz")||e.target.closest(".fbtn"))return;const c=th.dataset.ck;const S=getSort();const d=S[0]&&S[0].c===c?-S[0].d:1;setSort([{c,d},...S.filter(x=>x.c!==c).slice(0,2)]);re()}});
   const nk_=document.getElementById("cNewK");if(nk_)nk_.onclick=()=>newContractPick();
-  if(isAdmin())bindRowSel(ui.csel,"csel","cSelAll","cDel",delContracts);
+  if(isOffice()){bindRowSel(ui.csel,"csel","cSelAll","cDel",delContracts,set=>{const b=document.getElementById("cMonth");if(b){const n=[...set].filter(id=>!id.startsWith("a:")).length;b.disabled=!n;b.textContent=`월마감 (${n})`}});
+    const mb=document.getElementById("cMonth");if(mb)mb.onclick=async()=>{const ids=[...ui.csel].filter(id=>!id.startsWith("a:"));if(!ids.length)return;
+      if(!(await askConfirm(`선택한 ${ids.length}건을 월마감하시겠습니까?`)))return;
+      for(let i=0;i<ids.length;i+=200){const {error}=await sb.from("contracts").update({chk_month:"OK"}).in("id",ids.slice(i,i+200));if(error)return toast("월마감하지 못했습니다: "+error.message)}
+      ui.csel.clear();toast(`${ids.length}건을 월마감했습니다 · 전체리스트로 옮겼습니다`);reload(["contracts"])}}
   const cq=document.getElementById("cQ");cq.oninput=e=>{ui.cq=e.target.value;clearTimeout(cq._t);cq._t=setTimeout(()=>{re();const n=document.getElementById("cQ");n.focus();n.setSelectionRange(n.value.length,n.value.length)},250)};
   view().querySelectorAll("tr[data-ck]").forEach(tr=>tr.onclick=e=>{const tdc=e.target.closest("td");if(tdc&&tdc.querySelector(".csel")){const x=tdc.querySelector(".csel");if(e.target!==x)x.click();return}
     if(tr.dataset.ck.startsWith("a:")){const j=jobs.find(x=>x.id===tr.dataset.ck.slice(2));if(j)jobDlg(j,custById(j.customer_id),j.kind);return}
@@ -1182,7 +1186,7 @@ function renderCtrView0(){
     const c=custById(k.customer_id);if(c)contractDlg(c,k)});
 }
 /* 목록 표 체크박스·선택 삭제 (관리자) */
-function bindRowSel(set,cbCls,allId,delId,onDel){const upd=()=>{const b=document.getElementById(delId);if(b){b.disabled=!set.size;b.textContent=`선택 삭제 (${set.size})`}const a=document.getElementById(allId);if(a){const all=[...view().querySelectorAll("."+cbCls)];a.checked=all.length>0&&all.every(x=>x.checked)}};
+function bindRowSel(set,cbCls,allId,delId,onDel,onChange){const upd=()=>{const b=document.getElementById(delId);if(b){b.disabled=!set.size;b.textContent=`선택 삭제 (${set.size})`}if(onChange)onChange(set);const a=document.getElementById(allId);if(a){const all=[...view().querySelectorAll("."+cbCls)];a.checked=all.length>0&&all.every(x=>x.checked)}};
   view().querySelectorAll("."+cbCls).forEach(x=>{x.onclick=e=>e.stopPropagation();x.onchange=()=>{x.checked?set.add(x.dataset.id):set.delete(x.dataset.id);upd()}});
   const a=document.getElementById(allId);if(a)a.onchange=()=>{view().querySelectorAll("."+cbCls).forEach(x=>{x.checked=a.checked;a.checked?set.add(x.dataset.id):set.delete(x.dataset.id)});upd()};
   const d=document.getElementById(delId);if(d)d.onclick=()=>{if(set.size)onDel([...set])};upd()}
