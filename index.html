@@ -1872,7 +1872,9 @@ function recvItems(){const out=[];const byRef=new Map(rcases.filter(c=>c.ref_id)
     else{let s=ms;const L3=["정상","관리","불량"];const up=(v,why)=>{if(L3.indexOf(v)>L3.indexOf(s)){s=v;x.auto=why}};
       if(x.cs&&x.cs.promise_date&&x.cs.promise_date<td0)up("관리","약속일 경과");
       if(x.idate&&addMonths(x.idate,3)<=td0)up("불량","설치 3개월 이상");x.stage=s}
-    x.csum=tot[x.c.id||("t:"+x.c.name)]||0;x.kind=(x.cs&&x.cs.kind)||"매출채권";x.owner=(x.cs&&(staffName(x.cs.owner)||x.cs.owner_name))||staffName(x.c.collector)||x.c.collector_name||(x.k?s3Text(x.k):"")||"";
+    x.csum=tot[x.c.id||("t:"+x.c.name)]||0;x.kind=(x.cs&&x.cs.kind)||"매출채권";{/* 담당자 = 3차 담당자만 (‘3차/수금담당’에서 수금담당은 뺌). 직접 등록 채권은 입력한 담당자 */
+      const first=v=>String(v||"").split("/")[0].trim();const kk=x.t==="ctr"?x.k:x.t==="as"?(ctrById(x.j.contract_id)||custContracts(x.j.customer_id)[0]):null;
+      x.owner=x.t==="etc"?first((x.cs&&(staffName(x.cs.owner)||x.cs.owner_name))||""):(first(kk?s3Text(kk):"")||first(staffName(x.c.owner)||x.c.owner_name)||first(x.cs&&(staffName(x.cs.owner)||x.cs.owner_name)))}
     x.logs=x.cs?rlogs.filter(l=>l.case_id===x.cs.id).sort((a,b)=>String(b.created_at).localeCompare(String(a.created_at))):[];x.age=(AGES.find(a=>x.days!=null&&x.days>=a[2]&&x.days<=a[3])||[""])[0]});
   return out}
 /* 목록 열: 엑셀 '채권리스트' 순서 + 채권관리 열 */
@@ -1924,7 +1926,7 @@ function renderRecvView0(){
   const qq=ui.rq.trim().toLowerCase().replace(/-/g,"");
   let list=src.filter(x=>(!ui.rage||x.age===ui.rage)&&(!ui.rstage||x.stage===ui.rstage)&&(!ui.rown||(x.owner||"(없음)")===ui.rown)&&(!ui.rkind||x.kind===ui.rkind)
     &&(!qq||[x.c.name,x.c.search_text,x.c.ceo,x.c.phone,x.c.phone2,x.owner,x.cs&&x.cs.progress,x.t==="ctr"?x.k.serial:"",...x.logs.map(l=>l.content),(x.cs&&x.cs.transfer||{}).to].join(" ").toLowerCase().replace(/-/g,"").includes(qq)));
-  const S=(()=>{try{return JSON.parse(localStorage.getItem("hc.sort.recv."+(me&&me.id||""))||"null")||{c:"owner",d:1}}catch(e){return{c:"owner",d:1}}})();
+  const S=(()=>{try{return JSON.parse(localStorage.getItem("hc.sort.recv2."+(me&&me.id||""))||"null")||{c:"days",d:-1}}catch(e){return{c:"days",d:-1}}})();
   const sv=x=>{switch(S.c){case"days":return x.days??-1;case"pdays":return x.pdays??-1;case"unpaid":return x.unpaid;case"csum":return x.csum;case"amount":return x.amount;case"paid":return x.paid;case"stage":return RSHOW.indexOf(x.stage);
 case"next":return (x.cs&&x.cs.next_date)||"";case"idate":case"ym":return x.idate||"";case"last":return x.last||"";case"ldate":return x.logs[0]?fmtDT(x.logs[0].created_at):"";case"owner":return x.owner||"￿"}return cfText(recvCell(S.c,x))};
   list.sort((a,b)=>{const A=sv(a),B=sv(b);const r=typeof A==="number"&&typeof B==="number"?A-B:KO.compare(String(A),String(B));return r*S.d||KO.compare(a.idate||"",b.idate||"")||KO.compare(a.c.name||"",b.c.name||"")});
@@ -1971,7 +1973,7 @@ case"next":return (x.cs&&x.cs.next_date)||"";case"idate":case"ym":return x.idate
   const ri=document.getElementById("rImp");if(ri)ri.onclick=()=>document.getElementById("fileIn").click();
   const rn=document.getElementById("rNew");if(rn)rn.onclick=()=>recvNewDlg();
   view().querySelectorAll(".wt.rv thead th[data-ck]").forEach(th=>{th.classList.add("sortable");if(S.c===th.dataset.ck)th.dataset.sort=S.d===1?"asc":"desc";
-    th.onclick=e=>{if(e.target.closest(".rz")||e.target.closest(".fbtn"))return;const c=th.dataset.ck;try{localStorage.setItem("hc.sort.recv."+(me&&me.id||""),JSON.stringify({c,d:S.c===c?-S.d:(["days","pdays","unpaid","csum","amount"].includes(c)?-1:1)}))}catch(e){}re()}});
+    th.onclick=e=>{if(e.target.closest(".rz")||e.target.closest(".fbtn"))return;const c=th.dataset.ck;try{localStorage.setItem("hc.sort.recv2."+(me&&me.id||""),JSON.stringify({c,d:S.c===c?-S.d:(["days","pdays","unpaid","csum","amount"].includes(c)?-1:1)}))}catch(e){}re()}});
   const q=document.getElementById("rQ");q.oninput=e=>{ui.rq=e.target.value;clearTimeout(q._t);q._t=setTimeout(()=>{re();const n=document.getElementById("rQ");n.focus();n.setSelectionRange(n.value.length,n.value.length)},250)};
   view().querySelectorAll("tr[data-rid]").forEach(tr=>tr.onclick=()=>{const x=recvItems().find(y=>y.t===tr.dataset.rt&&y.id===tr.dataset.rid);if(x)recvDlg(x)});
 }
@@ -1993,7 +1995,7 @@ function recvDlg(x){const cs=x.cs||{stage:"정상관리",transfer:{}};const off=
    <p class="mapt dsum" style="margin:0"><b>${esc(x.c.name||"")}</b>${x.c.id?gradeBadge(x.c):""}${x.c.phone?" · "+esc(x.c.phone):""}${x.c.address?" · "+esc(x.c.address):""}</p>
    <h3 class="ksec">1. 채권금액</h3>
    <table class="stafft"><thead><tr><th class="num">매출액</th><th class="num">입금액</th><th class="num">미수금</th><th>채권연령</th><th class="num">고객 미수 합계</th></tr></thead><tbody><tr><td class="num">${won0(x.amount)}</td><td class="num">${won0(x.paid)}</td><td class="num neg"><b>${won0(x.unpaid)}</b></td><td>${x.days==null?"-":x.days+"일"} <small class="mapt">(설치 ${esc(x.idate||"-")})</small></td><td class="num">${won0(x.csum)}</td></tr></tbody></table>
-   ${ext?`<div class="g3">${off?inp("owner_name","담당자",(cs.owner&&staffName(cs.owner))||cs.owner_name||x.owner,"text",false,'list="rOwn"'):inp("_o","담당자",x.owner,"text",true)}${inp("progress","진행단계",cs.progress||"","text",!off,'list="rProg" placeholder="미수·추심·CMS-15일"')}${sel("kind","채권종류",RKINDS,x.kind,!off||x.t!=="etc")}</div>
+   ${ext?`<div class="g3">${off&&x.t==="etc"?inp("owner_name","담당자",x.owner,"text",false,'list="rOwn"'):inp("_o","담당자 (3차)",x.owner,"text",true)}${inp("progress","진행단계",cs.progress||"","text",!off,'list="rProg" placeholder="미수·추심·CMS-15일"')}${sel("kind","채권종류",RKINDS,x.kind,!off||x.t!=="etc")}</div>
    <datalist id="rOwn">${staff.filter(s=>s.active&&s.role!=="tech").map(s=>`<option value="${esc(s.name)}">`).join("")}<option value="SCI"></datalist><datalist id="rProg">${RPROG.map(v=>`<option value="${v}">`).join("")}</datalist>`:""}
    <h3 class="ksec">2. 입금내역</h3>
    <table class="stafft"><thead><tr><th>날짜</th><th>내역</th><th class="num">채권발생</th><th class="num">입금액</th><th class="num">미수금</th>${x.t==="etc"&&off?"<th></th>":""}</tr></thead><tbody>
@@ -2021,7 +2023,7 @@ function recvDlg(x){const cs=x.cs||{stage:"정상관리",transfer:{}};const off=
       const p={next_date:f.get("next_date")||null,promise_date:f.get("promise_date")||null,promise_amount:Number(f.get("promise_amount")||0)||0};
       if(off&&canStage(st)&&st!==x.mstage)p.stage=st;
       if(off)p.transfer={date:f.get("t_date")||"",to:(f.get("t_to")||"").trim(),contact:(f.get("t_contact")||"").trim(),amount:Number(f.get("t_amount")||0)||0,status:(f.get("t_status")||"").trim(),result:(f.get("t_result")||"").trim()};
-      if(off&&ext){const w=whoIs((f.get("owner_name")||"").trim());p.owner=w.id;p.owner_name=w.name;p.progress=(f.get("progress")||"").trim();if(x.t==="etc")p.kind=f.get("kind")||x.kind}
+      if(off&&ext){if(x.t==="etc"){const w=whoIs((f.get("owner_name")||"").trim());p.owner=w.id;p.owner_name=w.name}p.progress=(f.get("progress")||"").trim();if(x.t==="etc")p.kind=f.get("kind")||x.kind}
       try{const c0=await recvEnsureCase(x);const {error}=await sb.from("recv_cases").update(p).eq("id",c0.id);if(error)throw error;
         if(p.stage){await sb.from("recv_logs").insert({case_id:c0.id,customer_id:x.c.id||null,method:"기타",content:`채권관리단계 변경: ${x.mstage} → ${p.stage}`,by_name:me.name||""});await recvAutoBlack(x,p.stage)}
         toast("저장했습니다");reload(["recv","rlogs","grades"])}catch(e){toast(/stage_check/.test(e.message||"")?"새 채권관리단계를 쓰려면 Supabase에서 phase1zb.sql을 실행해 주세요.":/recv_/.test(e.message||"")?"미수·채권관리 칸이 아직 없습니다. Supabase에서 phase1z.sql·phase1za.sql을 실행해 주세요.":"저장하지 못했습니다: "+(e.message||""))}}]]:[])]);
