@@ -185,9 +185,10 @@ body.resizing,body.resizing *{cursor:col-resize!important;user-select:none}
 .wt.sch tr.sfirst td{border-top:2px solid var(--mute)}.wt.sch tr.stoday td.sday{background:var(--accent);color:#fff}.wt.sch td.se{height:24px}.wt.sch td.se:hover{background:var(--accent-weak)}.wt.sch tr:hover td{filter:none}
 .wt.am td.kc{color:#1b1b1b!important;font-weight:700}
 .wt.rv tr.ra-a90 td{background:#FFF4E5;color:#1b1b1b}.wt.rv tr.ra-a180 td{background:#FFE3C2;color:#1b1b1b}.wt.rv tr.ra-a999 td{background:#FBD5D5;color:#1b1b1b}.wt.rv tr.ra-done td{background:#EEEEEE;color:#888}.wt.rv tfoot th{position:sticky;bottom:0;background:var(--line2)}
+.tag.rg-정상{background:#fff;color:#2e7d32;border-color:#2e7d32}.tag.rg-관리{background:#FFF3C4;color:#8a5a00;border-color:#FFF3C4}.tag.rg-불량{background:#fff;color:#c2410c;border-color:#c2410c}.tag.rg-악성{background:#c62828;color:#fff;border-color:#c62828}
 .tag.rs-정상관리{background:#fff;color:#495057;border-color:#adb5bd}.tag.rs-독촉중{background:#FFF3C4;color:#8a5a00;border-color:#FFF3C4}.tag.rs-분할약정{background:#DCEBFF;color:#1d4ed8;border-color:#DCEBFF}.tag.rs-내용증명{background:#fff;color:#c2410c;border-color:#c2410c}.tag.rs-법적조치{background:#c62828;color:#fff;border-color:#c62828}.tag.rs-추심이관{background:#6b21a8;color:#fff;border-color:#6b21a8}.tag.rs-회수완료{background:#fff;color:#2e7d32;border-color:#2e7d32}.tag.rs-대손처리{background:#495057;color:#fff;border-color:#495057}
 .rstages{display:flex;gap:6px;flex-wrap:wrap}.rstages .chip.on{outline:2px solid var(--accent)}
-.ageb{display:grid;gap:6px;min-width:380px}.agerow{display:grid;grid-template-columns:80px 1fr 110px 44px;gap:8px;align-items:center;border:0;background:none;padding:4px 6px;border-radius:6px;cursor:pointer;font:inherit;color:inherit;text-align:left}.agerow:hover,.agerow.on{background:var(--accent-weak)}
+.ageb{display:grid;gap:4px;max-width:560px}.agerow{display:grid;grid-template-columns:80px 1fr 110px 44px;gap:8px;align-items:center;border:0;background:none;padding:4px 6px;border-radius:6px;cursor:pointer;font:inherit;color:inherit;text-align:left}.agerow:hover,.agerow.on{background:var(--accent-weak)}
 .agebar{height:14px;background:var(--line2);border-radius:7px;overflow:hidden}.agebar i{display:block;height:100%;background:#f0ad4e}.agebar i.a30{background:#9ccc65}.agebar i.a60{background:#ffd54f}.agebar i.a90{background:#ffb74d}.agebar i.a180{background:#ff8a65}.agebar i.a999{background:#e53935}
 .wt.ld tr.rl-오더 td{background:#E2EFDA;color:#1b1b1b}.wt.ld tr.rl-미수 td{background:#F4D7DD;color:#1b1b1b}.wt.ld tr.rl-관리 td{background:#D3EDE6;color:#1b1b1b}.wt.ld tr.rl-방문 td{background:#FFF2CC;color:#1b1b1b}.wt.ld tr.rl-종결 td{background:#EEEEEE;color:#888}
 .wt.ld tfoot th{position:sticky;bottom:0}.tag.ls-오더{background:#fff;color:#2e7d32;border-color:#2e7d32}.tag.ls-미수{background:#fff;color:#c2185b;border-color:#c2185b}.tag.ls-관리{background:#fff;color:#00796b;border-color:#00796b}.tag.ls-방문{background:#FFF3C4;color:#8a5a00;border-color:#FFF3C4}.tag.ls-종결{background:#e9ecef;color:#6c757d;border-color:#e9ecef}.tag.lp{background:#fff;color:#1d4ed8;border-color:#93b4f5}
@@ -1826,92 +1827,119 @@ function leadImportDlg(fname,rows){
       for(let i=0;i<upd.length;i++){if(i%20===0)toast(`상태 갱신 중… ${i+1}/${upd.length}`);const {error}=await sb.from("leads").update({status:upd[i].status}).eq("id",upd[i].id);if(error)throw error}
       toast(`가져오기 완료: 새 상담 ${add.length}건${upd.length?` · 상태 갱신 ${upd.length}건`:""}`);await reload(["leads"])}catch(e){toast("가져오는 중 멈췄습니다: "+(e.message||""))}}]])}
 
-/* ================= 미수·채권관리 ================= */
+/* ================= 미수·채권관리 (미수채권현황 엑셀 양식) ================= */
 let rcases=[],rlogs=[];
 async function fetchRCases(){if(me&&me.role==="tech")return[];try{const r=await fetchAll("recv_cases");ui.noRecv=false;return r}catch(e){ui.noRecv=true;return[]}}
 async function fetchRLogs(){if(me&&me.role==="tech")return[];try{return await fetchAll("recv_logs")}catch(e){return[]}}
+function hasRecvX(){return rcases.length===0||rcases.some(c=>"kind" in c)}
 const RSTAGES=["정상관리","독촉중","분할약정","내용증명","법적조치","추심이관","회수완료","대손처리"];
-const RHARD=["법적조치","추심이관","대손처리"];   // 관리자만 지정
+const RHARD=["법적조치","추심이관","대손처리"];
 const RMETH=["전화","문자","방문","내용증명","법적조치","이관","기타"];
+const RKINDS=["매출채권","가불금","대여금"];
+const RGRADES=["정상","관리","불량","악성"];
+const RPROG=["미수","장기미수","무료체험","추심","개인채권","가불금","CMS-05일","CMS-10일","CMS-15일","CMS-20일","CMS-25일","CMS-30일","카드-05일","입금-05일"];
 const AGES=[["a30","30일 이하",0,30],["a60","31~60일",31,60],["a90","61~90일",61,90],["a180","91~180일",91,180],["a999","181일 이상",181,1e9]];
 function fmtDT(ts){const d=ts?new Date(ts):null;if(!d||isNaN(d))return"";const p=n=>String(n).padStart(2,"0");return `${d.getFullYear()}-${p(d.getMonth()+1)}-${p(d.getDate())} ${p(d.getHours())}:${p(d.getMinutes())}`}
 function fmtD(ts){return fmtDT(ts).slice(0,10)}
 function daysSince(d){if(!d)return null;const x=Math.floor((new Date(today())-new Date(d))/864e5);return isNaN(x)?null:x}
-/* 채권 목록: 미수가 남은 계약·A/S (+ 이미 기록이 있는 건은 회수완료·대손도) */
-function recvItems(){const out=[];const caseOf=(t,id)=>rcases.find(c=>c.ref_type===t&&c.ref_id===id)||null;
-  contracts.forEach(k=>{if(k.stage==="취소"||k.contract_type==="양도")return;const s=payStat(k);const un=s.unpaid;const cs=caseOf("ctr",k.id);
-    const open=un>0&&(k.stage==="미수"||s.n>0);if(!open&&!cs)return;
+function ledgerOf(cs){return (Array.isArray(cs.ledger)?cs.ledger:[]).slice().sort((a,b)=>String(a.d||"").localeCompare(String(b.d||"")))}
+/* 채권 목록: 미수가 남은 계약·A/S + 이미 기록이 있는 건 + 직접 등록 채권(가불금·대여금 등) */
+function recvItems(){const out=[];const byRef=new Map(rcases.filter(c=>c.ref_id).map(c=>[c.ref_type+"|"+c.ref_id,c]));
+  contracts.forEach(k=>{if(k.stage==="취소"||k.contract_type==="양도")return;const s=payStat(k);const cs=byRef.get("ctr|"+k.id)||null;
+    const open=s.unpaid>0&&(k.stage==="미수"||s.n>0);if(!open&&!cs)return;
     const ij=installOf(k);const idate=(ij&&(ij.done_date||ij.visit_date))||k.contract_date||"";
-    out.push({t:"ctr",id:k.id,k,c:custById(k.customer_id)||{},amount:Number(k.amount||0),paid:s.paid,unpaid:Math.max(0,un),last:s.last,idate,cs,open})});
-  jobs.forEach(j=>{if(j.kind!=="as"&&j.kind!=="move")return;const cs=caseOf("as",j.id);const open=j.pay_status==="미수"&&j.status!=="취소"&&Number(j.cost||0)>0;if(!open&&!cs)return;
-    out.push({t:"as",id:j.id,j,c:custById(j.customer_id)||{},amount:Number(j.cost||0),paid:open?0:Number(j.cost||0),unpaid:open?Number(j.cost||0):0,last:j.pay_date||"",idate:j.done_date||j.visit_date||j.request_date||"",cs,open})});
-  const tot={};out.forEach(x=>{tot[x.c.id]=(tot[x.c.id]||0)+x.unpaid});
-  out.forEach(x=>{x.days=daysSince(x.idate);x.pdays=daysSince(x.last);x.stage=x.cs?x.cs.stage:"정상관리";if(!x.open&&x.stage!=="대손처리")x.stage="회수완료";x.csum=tot[x.c.id]||0;
+    out.push({t:"ctr",id:k.id,k,ij,c:custById(k.customer_id)||{},amount:Number(k.amount||0),card:s.card,cash:s.other,paid:s.paid,unpaid:Math.max(0,s.unpaid),last:s.last,idate,cs,open})});
+  jobs.forEach(j=>{if(j.kind!=="as"&&j.kind!=="move")return;const cs=byRef.get("as|"+j.id)||null;const open=j.pay_status==="미수"&&j.status!=="취소"&&Number(j.cost||0)>0;if(!open&&!cs)return;
+    const p=open?0:Number(j.cost||0);out.push({t:"as",id:j.id,j,c:custById(j.customer_id)||{},amount:Number(j.cost||0),card:j.pay_method==="카드"?p:0,cash:j.pay_method==="카드"?0:p,paid:p,unpaid:open?Number(j.cost||0):0,last:j.pay_date||"",idate:j.done_date||j.visit_date||j.request_date||"",cs,open})});
+  rcases.filter(c=>c.ref_type==="etc").forEach(cs=>{const L=ledgerOf(cs);const add=L.reduce((a,x)=>a+Number(x.add||0),0)||Number(cs.amount||0);const paid=L.reduce((a,x)=>a+Number(x.pay||0),0);
+    const last=L.filter(x=>Number(x.pay||0)>0).map(x=>x.d).filter(Boolean).sort().pop()||"";const c=(cs.customer_id&&custById(cs.customer_id))||{name:cs.title};
+    out.push({t:"etc",id:cs.id,c,amount:add,card:0,cash:paid,paid,unpaid:Math.max(0,add-paid),last,idate:cs.issue_date||"",cs,open:add-paid>0})});
+  const tot={};out.forEach(x=>{const key=x.c.id||("t:"+x.c.name);tot[key]=(tot[key]||0)+x.unpaid});
+  out.forEach(x=>{x.days=daysSince(x.idate);x.pdays=daysSince(x.last);x.stage=x.cs?x.cs.stage:"정상관리";if(!x.open&&x.stage!=="대손처리")x.stage="회수완료";
+    x.csum=tot[x.c.id||("t:"+x.c.name)]||0;x.kind=(x.cs&&x.cs.kind)||"매출채권";x.owner=(x.cs&&(staffName(x.cs.owner)||x.cs.owner_name))||staffName(x.c.collector)||x.c.collector_name||(x.k?s3Text(x.k):"")||"";
     x.logs=x.cs?rlogs.filter(l=>l.case_id===x.cs.id).sort((a,b)=>String(b.created_at).localeCompare(String(a.created_at))):[];x.age=(AGES.find(a=>x.days!=null&&x.days>=a[2]&&x.days<=a[3])||[""])[0]});
   return out}
-const RCOLS=[["cust","업체명(상호)",1],["ceo","대표자",0],["phone","전화번호",1],["kind","구분",1],["item","제품·내용",0],["idate","설치일",1],["amount","청구액",1],["paid","입금액",1],["unpaid","미수금",1],["csum","고객 미수 합계",1],
- ["last","최종입금일",1],["days","경과일",1],["pdays","입금 후 경과일",0],["stage","채권단계",1],["coll","수금담당",1],["sales","영업담당",0],["ldate","최근 조치일",1],["llog","최근 조치 내용",1],["lby","작성자",1],
- ["next","다음 조치일",1],["promise","약속일·금액",1],["transfer","이관처",1],["grade","관리등급",1]];
-const RMONEY=new Set(["amount","paid","unpaid","csum"]);
+/* 목록 열: 엑셀 '채권리스트' 순서 + 채권관리 열 */
+const RCOLS=[["owner","담당자",1],["ym","설치연월",1],["progress","진행단계",1],["grade","채권분류",1],["cust","업체명(상호)",1],["ceo","대표자",1],["phone","전화번호",1],["addr","상점주소",0],
+ ["ultra","제품판매가",1],["wash","워시판매가",1],["parts","부자재비용",1],["amount","합계금액",1],["card","카드",1],["cash","캐피탈+현금",1],["paid","입금합계",1],["unpaid","미수금",1],["days","채권연령",1],["llog","최종관리이력",1],
+ ["cdate","계약일자",0],["idate","설치일자",1],["channel","영업경로",0],["referrer","소개",0],["s1","1차",0],["s2","2차",0],["s3","3차",0],["doc","계약서",0],["tech","설치담당",0],["product","제품",0],["size","사이즈",0],["serial","시리얼",0],["washx","수압식",0],
+ ["kind","채권종류",1],["stage","채권단계",1],["csum","고객 미수 합계",0],["last","최종입금일",0],["pdays","입금 후 경과일",0],["ldate","최근 조치일",0],["lby","작성자",0],["next","다음 조치일",1],["promise","약속일·금액",0],["transfer","이관처",0],["cgrade","관리등급",0]];
+const RMONEY=new Set(["ultra","wash","parts","amount","card","cash","paid","unpaid","csum"]);
 TCFG.recv={cols:()=>RCOLS,sel:".wt.rv",lead:()=>1,freezeKey:"cust"};
-function recvCell(col,x){const c=x.c,cs=x.cs||{},L=x.logs[0],td=today();
+function recvCell(col,x){const c=x.c,cs=x.cs||{},L=x.logs[0],td=today(),k=x.k||{};const C=["cdate","channel","referrer","s1","s2","s3","doc","tech","product","size","serial"];
+  if(C.includes(col))return x.t==="ctr"?ctrCell(col,k,c,payStat(k),[]):"<td></td>";
   switch(col){
-    case"cust":return `<td title="${esc(c.name||"")}"><b>${esc(c.name||"")}</b>${c.id?gradeBadge(c):""}</td>`;
+    case"owner":return `<td>${esc(x.owner)}</td>`;
+    case"ym":{const d=x.idate;return `<td>${d?esc(d.slice(2,4)+d.slice(5,7)):""}</td>`}
+    case"progress":return `<td>${esc(cs.progress||(x.t==="ctr"&&k.stage==="미수"?"미수":""))}</td>`;
+    case"grade":return `<td>${cs.grade?`<span class="tag rg-${esc(cs.grade)}">${esc(cs.grade)}</span>`:""}</td>`;
+    case"cust":return `<td title="${esc(c.name||"")}"><b>${esc(c.name||"")}</b>${c.id?gradeBadge(c):""}${x.t==="etc"?` <small class="mapt">(직접 등록)</small>`:""}</td>`;
     case"ceo":return `<td>${esc(c.ceo||"")}</td>`;case"phone":return `<td>${esc(c.phone||c.phone2||"")}</td>`;
-    case"kind":return `<td>${x.t==="ctr"?"계약":esc(KLABEL[x.j.kind]||"A/S")}</td>`;
-    case"item":return `<td>${esc(x.t==="ctr"?[x.k.product,x.k.size,x.k.serial&&"SN "+x.k.serial].filter(Boolean).join(" "):(x.j.symptom||"").slice(0,40))}</td>`;
-    case"idate":return `<td>${esc(ymd2(x.idate))}</td>`;
-    case"amount":return `<td class="num">${won0(x.amount)}</td>`;case"paid":return `<td class="num">${x.paid?won0(x.paid):""}</td>`;
-    case"unpaid":return `<td class="num ${x.unpaid>0?"neg":""}"><b>${won0(x.unpaid)}</b></td>`;case"csum":return `<td class="num">${won0(x.csum)}</td>`;
-    case"last":return `<td>${esc(ymd2(x.last))}</td>`;
+    case"addr":return `<td class="wrap memo"><div class="clamp">${esc(c.address||"")}</div></td>`;
+    case"ultra":return `<td class="num">${x.t==="ctr"&&k.amt_ultra?won0(k.amt_ultra):""}</td>`;case"wash":return `<td class="num">${x.t==="ctr"&&k.amt_wash?won0(k.amt_wash):""}</td>`;
+    case"parts":return `<td class="num">${x.t==="ctr"&&k.amt_parts?won0(k.amt_parts):""}</td>`;
+    case"amount":return `<td class="num">${won0(x.amount)}</td>`;case"card":return `<td class="num">${x.card?won0(x.card):""}</td>`;case"cash":return `<td class="num">${x.cash?won0(x.cash):""}</td>`;
+    case"paid":return `<td class="num">${x.paid?won0(x.paid):""}</td>`;case"unpaid":return `<td class="num ${x.unpaid>0?"neg":""}"><b>${won0(x.unpaid)}</b></td>`;case"csum":return `<td class="num">${won0(x.csum)}</td>`;
     case"days":return `<td class="num">${x.days==null?"":x.days+"일"}</td>`;case"pdays":return `<td class="num">${x.pdays==null?"":x.pdays+"일"}</td>`;
+    case"llog":return `<td class="wrap memo" title="${esc(L?L.content:"")}"><div class="clamp">${L?`${esc(fmtD(L.created_at).slice(5).replace("-","/"))} ${esc(L.content)}`:""}</div></td>`;
+    case"idate":return `<td>${esc(ymd2(x.idate))}</td>`;
+    case"washx":return `<td>${x.t==="ctr"&&k.wash_added?"수압식":""}</td>`;
+    case"kind":return `<td>${esc(x.kind)}</td>`;
     case"stage":return `<td><span class="tag rs-${esc(x.stage)}">${esc(x.stage)}</span></td>`;
-    case"coll":return `<td>${esc(staffName(c.collector)||c.collector_name||"")}</td>`;case"sales":return `<td>${esc(staffName(c.owner)||c.owner_name||"")}</td>`;
-    case"ldate":return `<td>${esc(L?ymd2(fmtD(L.created_at)):"")}</td>`;
-    case"llog":return `<td class="wrap memo" title="${esc(L?L.content:"")}"><div class="clamp">${L?`<b>${esc(L.method)}</b> ${esc(L.content)}`:""}</div></td>`;
-    case"lby":return `<td>${esc(L?L.by_name:"")}</td>`;
-    case"next":{const d=cs.next_date||"";const open=x.open;return `<td class="${open&&d?(d===td?"due":d<td?"late":""):""}">${esc(ymd2(d))}</td>`}
+    case"last":return `<td>${esc(ymd2(x.last))}</td>`;
+    case"ldate":return `<td>${esc(L?ymd2(fmtD(L.created_at)):"")}</td>`;case"lby":return `<td>${esc(L?L.by_name:"")}</td>`;
+    case"next":{const d=cs.next_date||"";return `<td class="${x.open&&d?(d===td?"due":d<td?"late":""):""}">${esc(ymd2(d))}</td>`}
     case"promise":{const d=cs.promise_date;return `<td class="${x.open&&d&&d<td?"late":""}">${d?esc(ymd2(d))+(cs.promise_amount?" · "+won0(cs.promise_amount):""):""}</td>`}
-    case"transfer":{const tr=cs.transfer||{};return `<td>${esc(tr.to||"")}</td>`}
-    case"grade":{const g=c.id&&gradeOf(c);return `<td>${g?`<span class="gbadge ${g.g==="블랙"?"g-black":"g-red"}">${g.g}</span>`:""}</td>`}
+    case"transfer":return `<td>${esc((cs.transfer||{}).to||"")}</td>`;
+    case"cgrade":{const g=c.id&&gradeOf(c);return `<td>${g?`<span class="gbadge ${g.g==="블랙"?"g-black":"g-red"}">${g.g}</span>`:""}</td>`}
   }
   return "<td></td>"}
 function renderRecvView(){const _sv=snapScroll();renderRecvView0();restoreScroll(_sv)}
 function renderRecvView0(){
-  if(ui.noRecv){view().innerHTML=`<div class="sec"><h2>미수·채권관리</h2><p class="warnbox">미수·채권관리를 쓰려면 Supabase SQL Editor에서 <b>phase1z.sql</b>을 실행해 주세요.</p></div>`;return}
-  ["rq","rage","rstage","rkpi"].forEach(k=>{if(ui[k]===undefined)ui[k]=""});if(ui.rdone===undefined)ui.rdone=false;
+  if(ui.noRecv){view().innerHTML=`<div class="sec"><h2>미수·채권관리</h2><p class="warnbox">미수·채권관리를 쓰려면 Supabase SQL Editor에서 <b>phase1z.sql</b>과 <b>phase1za.sql</b>을 차례로 실행해 주세요.</p></div>`;return}
+  ["rq","rage","rstage","rkpi","rown","rkind"].forEach(k=>{if(ui[k]===undefined)ui[k]=""});if(ui.rdone===undefined)ui.rdone=false;
   const all=recvItems();const open=all.filter(x=>x.open&&x.stage!=="대손처리");
   const td=today(),[m0,m1]=monthRange(thisMonth());
-  const recovered=payments.filter(p=>p.pay_date&&p.pay_date>=m0&&p.pay_date<m1&&all.some(x=>x.t==="ctr"&&x.id===p.contract_id)).reduce((a,p)=>a+Number(p.amount||0),0);
+  const recovered=payments.filter(p=>p.pay_date&&p.pay_date>=m0&&p.pay_date<m1&&all.some(x=>x.t==="ctr"&&x.id===p.contract_id)).reduce((a,p)=>a+Number(p.amount||0),0)
+    +rcases.filter(c=>c.ref_type==="etc").reduce((a,c)=>a+ledgerOf(c).filter(l=>l.d>=m0&&l.d<m1).reduce((s,l)=>s+Number(l.pay||0),0),0);
   const due=open.filter(x=>x.cs&&x.cs.next_date&&x.cs.next_date<=td),broke=open.filter(x=>x.cs&&x.cs.promise_date&&x.cs.promise_date<td);
   const KPI={open:["미수 전체",open],due:["오늘 조치할 건",due],broke:["약속일 지난 건",broke]};
-  let src=ui.rkpi&&KPI[ui.rkpi]?KPI[ui.rkpi][1]:(ui.rdone?all:open);
+  const src=ui.rkpi&&KPI[ui.rkpi]?KPI[ui.rkpi][1]:(ui.rdone?all:open);
   const qq=ui.rq.trim().toLowerCase().replace(/-/g,"");
-  let list=src.filter(x=>(!ui.rage||x.age===ui.rage)&&(!ui.rstage||x.stage===ui.rstage)
-    &&(!qq||[x.c.name,x.c.search_text,x.c.ceo,x.c.phone,x.c.phone2,x.t==="ctr"?x.k.serial:"",...x.logs.map(l=>l.content),(x.cs&&x.cs.transfer||{}).to].join(" ").toLowerCase().replace(/-/g,"").includes(qq)));
-  const S=(()=>{try{return JSON.parse(localStorage.getItem("hc.sort.recv."+(me&&me.id||""))||"null")||{c:"days",d:-1}}catch(e){return{c:"days",d:-1}}})();
+  let list=src.filter(x=>(!ui.rage||x.age===ui.rage)&&(!ui.rstage||x.stage===ui.rstage)&&(!ui.rown||(x.owner||"(없음)")===ui.rown)&&(!ui.rkind||x.kind===ui.rkind)
+    &&(!qq||[x.c.name,x.c.search_text,x.c.ceo,x.c.phone,x.c.phone2,x.owner,x.cs&&x.cs.progress,x.t==="ctr"?x.k.serial:"",...x.logs.map(l=>l.content),(x.cs&&x.cs.transfer||{}).to].join(" ").toLowerCase().replace(/-/g,"").includes(qq)));
+  const S=(()=>{try{return JSON.parse(localStorage.getItem("hc.sort.recv."+(me&&me.id||""))||"null")||{c:"owner",d:1}}catch(e){return{c:"owner",d:1}}})();
   const sv=x=>{switch(S.c){case"days":return x.days??-1;case"pdays":return x.pdays??-1;case"unpaid":return x.unpaid;case"csum":return x.csum;case"amount":return x.amount;case"paid":return x.paid;case"stage":return RSTAGES.indexOf(x.stage);
-    case"next":return (x.cs&&x.cs.next_date)||"";case"idate":return x.idate||"";case"last":return x.last||"";case"ldate":return x.logs[0]?fmtDT(x.logs[0].created_at):""}return cfText(recvCell(S.c,x))};
-  list.sort((a,b)=>{const A=sv(a),B=sv(b);const r=typeof A==="number"&&typeof B==="number"?A-B:KO.compare(String(A),String(B));return r*S.d||KO.compare(a.c.name||"",b.c.name||"")});
+    case"grade":return RGRADES.indexOf((x.cs||{}).grade);case"next":return (x.cs&&x.cs.next_date)||"";case"idate":case"ym":return x.idate||"";case"last":return x.last||"";case"ldate":return x.logs[0]?fmtDT(x.logs[0].created_at):"";case"owner":return x.owner||"￿"}return cfText(recvCell(S.c,x))};
+  list.sort((a,b)=>{const A=sv(a),B=sv(b);const r=typeof A==="number"&&typeof B==="number"?A-B:KO.compare(String(A),String(B));return r*S.d||KO.compare(a.idate||"",b.idate||"")||KO.compare(a.c.name||"",b.c.name||"")});
   list=cfApply("recv",list,(c,x)=>cfText(recvCell(c,x)));
   const sum=a=>a.reduce((s,x)=>s+x.unpaid,0);
   const ages=AGES.map(([k,l])=>{const xs=open.filter(x=>x.age===k);return{k,l,n:xs.length,amt:sum(xs)}});const maxA=Math.max(1,...ages.map(a=>a.amt));
   const stages=RSTAGES.filter(s=>s!=="회수완료").map(s=>({s,n:all.filter(x=>x.stage===s&&(x.open||s==="대손처리")).length,amt:sum(all.filter(x=>x.stage===s))}));
+  /* 담당자별 현황 (엑셀 Sheet1) */
+  const owners=[...new Set(open.map(x=>x.owner||"(없음)"))].sort((a,b)=>a==="(없음)"?1:b==="(없음)"?-1:KO.compare(a,b));
+  const oRow=n=>{const xs=open.filter(x=>(x.owner||"(없음)")===n);const amt=xs.reduce((a,x)=>a+x.amount,0),paid=xs.reduce((a,x)=>a+x.paid,0);return{n,k:RKINDS.map(k=>xs.filter(x=>x.kind===k).length),cnt:xs.length,amt,paid,un:sum(xs),rate:amt?Math.round(paid*1000/amt)/10:0}};
+  const oRows=owners.map(oRow);const oT={k:RKINDS.map((_,i)=>oRows.reduce((a,r)=>a+r.k[i],0)),cnt:open.length,amt:oRows.reduce((a,r)=>a+r.amt,0),paid:oRows.reduce((a,r)=>a+r.paid,0),un:sum(open)};oT.rate=oT.amt?Math.round(oT.paid*1000/oT.amt)/10:0;
+  const ownT=`<table class="sumt" aria-label="담당자별 채권 현황"><thead><tr><th rowspan="2">담당자</th><th colspan="3">채권분류 (건수)</th><th rowspan="2">합계</th><th rowspan="2">매출액</th><th rowspan="2">입금액</th><th rowspan="2">미수금</th><th rowspan="2">회수율</th></tr><tr>${RKINDS.map(k=>`<th>${k}</th>`).join("")}</tr></thead><tbody>
+    ${oRows.map(r=>`<tr><th>${esc(r.n)}</th>${r.k.map((v,i)=>`<td class="cl ${ui.rown===r.n&&ui.rkind===RKINDS[i]?"on":""}" data-own="${esc(r.n)}" data-kind="${RKINDS[i]}">${v||""}</td>`).join("")}<td class="cl ${ui.rown===r.n&&!ui.rkind?"on":""}" data-own="${esc(r.n)}" data-kind=""><b>${r.cnt}</b></td><td class="num">${won0(r.amt)}</td><td class="num">${won0(r.paid)}</td><td class="num neg">${won0(r.un)}</td><td class="num">${r.rate}%</td></tr>`).join("")}
+    <tr><th>합계</th>${oT.k.map((v,i)=>`<td class="cl ${!ui.rown&&ui.rkind===RKINDS[i]?"on":""}" data-own="" data-kind="${RKINDS[i]}"><b>${v||""}</b></td>`).join("")}<td><b>${oT.cnt}</b></td><td class="num"><b>${won0(oT.amt)}</b></td><td class="num"><b>${won0(oT.paid)}</b></td><td class="num neg"><b>${won0(oT.un)}</b></td><td class="num"><b>${oT.rate}%</b></td></tr></tbody></table>`;
   const cols=getCols("recv");const shown=list.slice(0,500);
-  const tot={amount:0,paid:0,unpaid:0,csum:0};shown.forEach(x=>{tot.amount+=x.amount;tot.paid+=x.paid;tot.unpaid+=x.unpaid});
-  const label=[ui.rkpi&&KPI[ui.rkpi]?KPI[ui.rkpi][0]:"",ui.rage?AGES.find(a=>a[0]===ui.rage)[1]:"",ui.rstage].filter(Boolean).join(" · ");
-  view().innerHTML=`<div class="sumwrap"><div style="display:grid;gap:8px;align-content:start"><h2 style="margin:0;font-size:18px">미수·채권관리</h2>
-      <div class="kpis"><div class="kpi bad kc ${ui.rkpi==="open"?"on":""}" data-rkpi="open" role="button" tabindex="0"><span>총 미수금 (${open.length}건)</span><b>${won0(sum(open))}원</b><small>고객 ${new Set(open.map(x=>x.c.id)).size}곳</small></div>
+  const tot={};RMONEY.forEach(c=>tot[c]=0);shown.forEach(x=>{tot.amount+=x.amount;tot.card+=x.card;tot.cash+=x.cash;tot.paid+=x.paid;tot.unpaid+=x.unpaid;if(x.t==="ctr"){tot.ultra+=Number(x.k.amt_ultra||0);tot.wash+=Number(x.k.amt_wash||0);tot.parts+=Number(x.k.amt_parts||0)}});
+  const label=[ui.rkpi&&KPI[ui.rkpi]?KPI[ui.rkpi][0]:"",ui.rown,ui.rkind,ui.rage?AGES.find(a=>a[0]===ui.rage)[1]:"",ui.rstage].filter(Boolean).join(" · ");
+  view().innerHTML=`${hasRecvX()?"":`<div class="sec" style="max-width:none"><p class="warnbox">담당자·진행단계·채권분류와 가불금·대여금 등록을 쓰려면 Supabase에서 <b>phase1za.sql</b>을 실행해 주세요.</p></div>`}
+   <div class="sumwrap"><div style="display:grid;gap:8px;align-content:start"><h2 style="margin:0;font-size:18px">미수채권현황</h2>
+      <div class="kpis"><div class="kpi bad kc ${ui.rkpi==="open"?"on":""}" data-rkpi="open" role="button" tabindex="0"><span>총 미수금 (${open.length}건)</span><b>${won0(sum(open))}원</b><small>회수율 ${oT.rate}%</small></div>
        <div class="kpi kc"><span>이번 달 회수 (입금)</span><b>${won0(recovered)}원</b></div>
        <div class="kpi kc ${ui.rkpi==="due"?"on":""}" data-rkpi="due" role="button" tabindex="0"><span>오늘 조치할 건</span><b>${due.length}건</b></div>
        <div class="kpi bad kc ${ui.rkpi==="broke"?"on":""}" data-rkpi="broke" role="button" tabindex="0"><span>약속일 지난 건</span><b>${broke.length}건</b></div></div>
-      <div class="rstages">${stages.map(s=>`<button type="button" class="chip ${ui.rstage===s.s?"on":""}" data-rst="${esc(s.s)}"><span class="tag rs-${esc(s.s)}">${esc(s.s)}</span> ${s.n}건${s.amt?` · ${won0(s.amt)}`:""}</button>`).join("")}</div>
-      <p class="mapt" style="margin:0">경과일은 설치일 기준입니다(설치 전이면 계약일). 입금을 넣어 미수금이 0원이 되면 자동으로 회수완료가 됩니다.</p></div>
-     <div class="sumbox"><div class="ageb"><b style="font-size:13px">경과기간별 미수금</b>${ages.map(a=>`<button type="button" class="agerow ${ui.rage===a.k?"on":""}" data-age="${a.k}"><span>${a.l}</span><span class="agebar"><i style="width:${Math.round(a.amt*100/maxA)}%" class="${a.k}"></i></span><span class="num">${won0(a.amt)}</span><small class="mapt">${a.n}건</small></button>`).join("")}</div></div></div>
-   <div class="toolbar"><input id="rQ" type="search" placeholder="업체명(상호)·대표자·전화·조치내용·이관처 검색" value="${esc(ui.rq)}">
+      <div class="rstages">${stages.map(s=>`<button type="button" class="chip ${ui.rstage===s.s?"on":""}" data-rst="${esc(s.s)}"><span class="tag rs-${esc(s.s)}">${esc(s.s)}</span> ${s.n}건</button>`).join("")}</div>
+      <div class="ageb">${ages.map(a=>`<button type="button" class="agerow ${ui.rage===a.k?"on":""}" data-age="${a.k}"><span>${a.l}</span><span class="agebar"><i style="width:${Math.round(a.amt*100/maxA)}%" class="${a.k}"></i></span><span class="num">${won0(a.amt)}</span><small class="mapt">${a.n}건</small></button>`).join("")}</div>
+      <p class="mapt" style="margin:0">채권연령은 설치일 기준입니다(설치 전이면 계약일). 입금을 넣어 미수금이 0원이 되면 자동으로 회수완료가 됩니다.</p></div>
+     <div class="sumbox">${ownT}</div></div>
+   <div class="toolbar"><input id="rQ" type="search" placeholder="업체명(상호)·담당자·진행단계·전화·관리이력 검색" value="${esc(ui.rq)}">
      <div class="nav" role="group"><button type="button" id="rAll" class="${label?"":"on"}">전체</button></div><span class="mapt">${label?esc(label)+" · ":""}${list.length}건</span>
      <label class="chip"><input type="checkbox" id="rDone" ${ui.rdone?"checked":""}>회수완료·대손 포함</label>
-     <span style="flex:1"></span>${cfClearBtn("recv")}<button class="btn" type="button" id="rCols">입력화면설정</button></div>
+     <span style="flex:1"></span>${cfClearBtn("recv")}<button class="btn" type="button" id="rCols">입력화면설정</button>${isOffice()&&hasRecvX()?`<button class="btn" type="button" id="rImp">엑셀 가져오기</button><button class="btn pri" type="button" id="rNew">+ 채권 직접 등록</button>`:""}</div>
    <div class="wrapx vis" style="padding-top:10px"><div class="wtbox"><table class="wt rv"><thead><tr><th>순번</th>${colHead(cols,"recv",RMONEY)}</tr></thead><tbody>
     ${shown.map((x,i)=>`<tr data-rt="${x.t}" data-rid="${x.id}" class="ra-${x.open?x.age:"done"}"><td>${i+1}</td>${cols.map(c=>recvCell(c,x)).join("")}</tr>`).join("")||`<tr><td colspan="${cols.length+1}" class="mapt" style="cursor:default">해당하는 미수 건이 없습니다.</td></tr>`}</tbody>
     ${shown.length?`<tfoot><tr><th></th>${cols.map(c=>`<th class="${RMONEY.has(c)?"num":""}">${RMONEY.has(c)&&c!=="csum"?won0(tot[c]):c===cols[0]?"합계":""}</th>`).join("")}</tr></tfoot>`:""}</table></div></div>`;
@@ -1919,67 +1947,89 @@ function renderRecvView0(){
   const re=()=>renderRecvView();
   view().querySelectorAll("[data-rkpi]").forEach(el=>{const go=()=>{ui.rkpi=ui.rkpi===el.dataset.rkpi?"":el.dataset.rkpi;ui.rage="";ui.rstage="";re()};el.onclick=go;el.onkeydown=e=>{if(e.key==="Enter"||e.key===" "){e.preventDefault();go()}}});
   view().querySelectorAll("[data-age]").forEach(b=>b.onclick=()=>{ui.rage=ui.rage===b.dataset.age?"":b.dataset.age;re()});
-  view().querySelectorAll("[data-rst]").forEach(b=>b.onclick=()=>{ui.rstage=ui.rstage===b.dataset.rst?"":b.dataset.rst;if(RHARD.includes(ui.rstage)&&ui.rstage==="대손처리")ui.rdone=true;re()});
-  document.getElementById("rAll").onclick=()=>{ui.rkpi="";ui.rage="";ui.rstage="";re()};
+  view().querySelectorAll("[data-rst]").forEach(b=>b.onclick=()=>{ui.rstage=ui.rstage===b.dataset.rst?"":b.dataset.rst;if(ui.rstage==="대손처리")ui.rdone=true;re()});
+  view().querySelectorAll("[data-own]").forEach(b=>b.onclick=()=>{ui.rown=b.dataset.own;ui.rkind=b.dataset.kind;re()});
+  document.getElementById("rAll").onclick=()=>{ui.rkpi="";ui.rage="";ui.rstage="";ui.rown="";ui.rkind="";re()};
   document.getElementById("rDone").onchange=e=>{ui.rdone=e.target.checked;re()};
   document.getElementById("rCols").onclick=()=>colPicker(re,"recv");cfBind("recv",re);
+  const ri=document.getElementById("rImp");if(ri)ri.onclick=()=>document.getElementById("fileIn").click();
+  const rn=document.getElementById("rNew");if(rn)rn.onclick=()=>recvNewDlg();
   view().querySelectorAll(".wt.rv thead th[data-ck]").forEach(th=>{th.classList.add("sortable");if(S.c===th.dataset.ck)th.dataset.sort=S.d===1?"asc":"desc";
     th.onclick=e=>{if(e.target.closest(".rz")||e.target.closest(".fbtn"))return;const c=th.dataset.ck;try{localStorage.setItem("hc.sort.recv."+(me&&me.id||""),JSON.stringify({c,d:S.c===c?-S.d:(["days","pdays","unpaid","csum","amount"].includes(c)?-1:1)}))}catch(e){}re()}});
   const q=document.getElementById("rQ");q.oninput=e=>{ui.rq=e.target.value;clearTimeout(q._t);q._t=setTimeout(()=>{re();const n=document.getElementById("rQ");n.focus();n.setSelectionRange(n.value.length,n.value.length)},250)};
   view().querySelectorAll("tr[data-rid]").forEach(tr=>tr.onclick=()=>{const x=recvItems().find(y=>y.t===tr.dataset.rt&&y.id===tr.dataset.rid);if(x)recvDlg(x)});
 }
-async function recvEnsureCase(x){if(x.cs)return x.cs;const row={ref_type:x.t,ref_id:x.id,customer_id:x.c.id};
+async function recvEnsureCase(x){if(x.cs)return x.cs;const row={ref_type:x.t,ref_id:x.id,customer_id:x.c.id||null};
   const r=await sb.from("recv_cases").upsert(row,{onConflict:"ref_type,ref_id"}).select().single();if(r.error)throw r.error;rcases.push(r.data);x.cs=r.data;return r.data}
-/* 법적조치 이상이면 관리등급 블랙 */
-async function recvAutoBlack(x,stage){if(!RHARD.includes(stage)||ui.noGrades)return;const r=gradeRow(x.c);if(r&&r.grade==="블랙")return;
+async function recvAutoBlack(x,stage){if(!RHARD.includes(stage)||ui.noGrades||!x.c.id)return;const r=gradeRow(x.c);if(r&&r.grade==="블랙")return;
   await sb.from("customer_grades").upsert({customer_id:x.c.id,grade:"블랙",reason:`채권 ${stage} (${today()})`,set_at:new Date().toISOString(),set_by:me.id})}
-function recvDlg(x){const cs=x.cs||{stage:"정상관리",transfer:{}};const off=isOffice(),adm=isAdmin();const tr=cs.transfer||{};
+/* 입금내역 (채권발생·입금·남은 미수금) */
+function recvLedgerRows(x){const rows=[];
+  if(x.t==="ctr"){rows.push({d:x.idate,t:x.ij&&x.ij.done_date?"설치완료":"계약",add:x.amount,pay:0});paysOf(x.k).forEach(p=>rows.push({d:p.pay_date||"",t:[p.method,p.payer,p.memo].filter(Boolean).join(" · "),add:0,pay:Number(p.amount||0)}))}
+  else if(x.t==="as"){rows.push({d:x.idate,t:"A/S 청구",add:x.amount,pay:0});if(x.paid)rows.push({d:x.last,t:x.j.pay_method||"입금",add:0,pay:x.paid})}
+  else ledgerOf(x.cs).forEach(l=>rows.push({d:l.d||"",t:l.t||"",add:Number(l.add||0),pay:Number(l.pay||0)}));
+  rows.sort((a,b)=>(a.add&&!b.add?-1:0)||String(a.d||"").localeCompare(String(b.d||"")));let bal=0;rows.forEach(r=>{bal+=r.add-r.pay;r.bal=bal});return rows}
+function recvDlg(x){const cs=x.cs||{stage:"정상관리",transfer:{}};const off=isOffice(),adm=isAdmin();const tr=cs.transfer||{};const ext=hasRecvX();
   const canStage=s=>off&&(!RHARD.includes(s)||adm);
-  const title=(x.t==="ctr"?"계약 채권":"A/S 채권")+" · "+(x.c.name||"");
+  const title=(x.t==="ctr"?"계약":x.t==="etc"?x.kind:"A/S")+" 채권 · "+(x.c.name||"");
+  const L=recvLedgerRows(x);
   openDlg(esc(title),`<div id="rf" style="display:grid;gap:10px">
-   <p class="mapt dsum" style="margin:0"><b>${esc(x.c.name||"")}</b>${gradeBadge(x.c)} · ${esc(x.c.phone||x.c.phone2||"")} · 수금 ${esc(staffName(x.c.collector)||x.c.collector_name||"-")} · 영업 ${esc(staffName(x.c.owner)||x.c.owner_name||"-")}</p>
-   <div class="paysum"><span>${x.t==="ctr"?"계약금액":"A/S 청구액"} <b>${won0(x.amount)}</b></span><span>입금 <b>${won0(x.paid)}</b></span><span>미수금 <b class="neg">${won0(x.unpaid)}</b></span><span>설치일 <b>${esc(x.idate||"-")}</b> (${x.days??"-"}일 경과)</span><span>고객 미수 합계 <b>${won0(x.csum)}</b></span></div>
-   ${x.t==="ctr"?`<h3 class="ksec">입금 내역</h3><div id="paySec"></div>`:`<p class="mapt" style="margin:0">A/S 입금은 A/S 창에서 납부 여부를 ‘완료’로 바꾸면 회수완료가 됩니다. <button type="button" class="btn sm" id="rOpenJob">A/S 창 열기</button></p>`}
+   <p class="mapt dsum" style="margin:0"><b>${esc(x.c.name||"")}</b>${x.c.id?gradeBadge(x.c):""}${x.c.phone?" · "+esc(x.c.phone):""}${x.c.address?" · "+esc(x.c.address):""}</p>
+   <h3 class="ksec">1. 채권금액</h3>
+   <table class="stafft"><thead><tr><th class="num">매출액</th><th class="num">입금액</th><th class="num">미수금</th><th>채권연령</th><th class="num">고객 미수 합계</th></tr></thead><tbody><tr><td class="num">${won0(x.amount)}</td><td class="num">${won0(x.paid)}</td><td class="num neg"><b>${won0(x.unpaid)}</b></td><td>${x.days==null?"-":x.days+"일"} <small class="mapt">(설치 ${esc(x.idate||"-")})</small></td><td class="num">${won0(x.csum)}</td></tr></tbody></table>
+   ${ext?`<div class="g3">${off?inp("owner_name","담당자",(cs.owner&&staffName(cs.owner))||cs.owner_name||x.owner,"text",false,'list="rOwn"'):inp("_o","담당자",x.owner,"text",true)}${inp("progress","진행단계",cs.progress||"","text",!off,'list="rProg" placeholder="미수·추심·CMS-15일"')}${sel("grade","채권분류",[["","(선택)"],...RGRADES.map(g=>[g,g])],cs.grade||"",!off)}</div>
+   <div class="g3">${sel("kind","채권종류",RKINDS,x.kind,!off||x.t!=="etc")}<span></span><span></span></div>
+   <datalist id="rOwn">${staff.filter(s=>s.active&&s.role!=="tech").map(s=>`<option value="${esc(s.name)}">`).join("")}<option value="SCI"></datalist><datalist id="rProg">${RPROG.map(v=>`<option value="${v}">`).join("")}</datalist>`:""}
+   <h3 class="ksec">2. 입금내역</h3>
+   <table class="stafft"><thead><tr><th>날짜</th><th>내역</th><th class="num">채권발생</th><th class="num">입금액</th><th class="num">미수금</th>${x.t==="etc"&&off?"<th></th>":""}</tr></thead><tbody>
+    ${L.map((r,i)=>`<tr><td>${esc(r.d||"")}</td><td>${esc(r.t)}</td><td class="num">${r.add?won0(r.add):""}</td><td class="num">${r.pay?won0(r.pay):""}</td><td class="num">${won0(r.bal)}</td>${x.t==="etc"&&off?`<td><button type="button" class="btn sm danger" data-lgx="${i}">삭제</button></td>`:""}</tr>`).join("")||`<tr><td colspan="5" class="mapt">내역이 없습니다.</td></tr>`}</tbody></table>
+   ${x.t==="ctr"?`<details><summary class="mapt" style="cursor:pointer">입금 추가·수정</summary><div id="paySec"></div></details>`:x.t==="as"?`<p class="mapt" style="margin:0">A/S 입금은 A/S 창에서 납부 여부를 ‘완료’로 바꾸면 회수완료가 됩니다. <button type="button" class="btn sm" id="rOpenJob">A/S 창 열기</button></p>`
+     :off?`<div class="payadd"><input type="date" id="lgD" value="${today()}" aria-label="날짜"><input id="lgT" placeholder="내역 (예: 현금 입금)" aria-label="내역"><input type="number" id="lgA" placeholder="채권발생" aria-label="채권발생"><input type="number" id="lgP" placeholder="입금액" aria-label="입금액"><button type="button" class="btn" id="lgAdd">내역 추가</button></div>`:""}
+   <h3 class="ksec">3. 채권관리이력</h3>
+   <div class="payadd"><select id="rlM" aria-label="방법">${RMETH.map(m=>`<option>${m}</option>`).join("")}</select><input id="rlC" placeholder="내용 (예: 7/20까지 카드결제 예정)" aria-label="관리 내용" style="flex:1;min-width:260px">
+     <input type="date" id="rlN" aria-label="다음 조치일" title="다음 조치일"><button type="button" class="btn pri" id="rlAdd">기록 추가</button></div>
+   <p class="mapt" style="margin:0">기록은 바로 저장되고 날짜·담당자(작성자)가 자동으로 남습니다. 날짜 칸은 ‘다음 조치일’입니다.</p>
+   <div id="rLogs"></div>
    <h3 class="ksec">채권 단계</h3>
    <div class="g3"><label class="f">채권단계<select name="stage" ${off?"":"disabled"}>${RSTAGES.filter(s=>s!=="회수완료"||!x.open).map(s=>`<option ${s===x.stage?"selected":""} ${canStage(s)||s===x.stage?"":"disabled"}>${s}</option>`).join("")}</select></label>
      ${inp("next_date","다음 조치일",cs.next_date,"date")}<label class="f">입금 약속 (날짜 · 금액)<span style="display:flex;gap:6px"><input type="date" name="promise_date" value="${esc(cs.promise_date||"")}" aria-label="약속일"><input type="number" name="promise_amount" value="${cs.promise_amount||""}" placeholder="금액" aria-label="약속 금액"></span></label></div>
    ${adm?"":`<p class="mapt" style="margin:0">법적조치·추심이관·대손처리 지정은 관리자만 할 수 있습니다.</p>`}
    <fieldset class="nfiles" id="rTr" ${RHARD.includes(x.stage)||tr.to?"":"hidden"}><legend>법적조치·이관 정보</legend>
-     <div class="g3">${inp("t_date","이관일",tr.date,"date",!off)}${inp("t_to","이관처 (법무사·추심업체)",tr.to,"text",!off)}${inp("t_contact","이관처 담당자·연락처",tr.contact,"text",!off)}</div>
+     <div class="g3">${inp("t_date","이관일",tr.date,"date",!off)}${inp("t_to","이관처 (법무사·추심업체)",tr.to,"text",!off,'list="tTo"')}${inp("t_contact","이관처 담당자·연락처",tr.contact,"text",!off)}</div>
      <div class="g3">${inp("t_amount","이관금액",tr.amount||"","number",!off)}${inp("t_status","진행상황",tr.status,"text",!off,'list="tStat" placeholder="지급명령 신청 / 소송 진행 중"')}${inp("t_result","결과",tr.result,"text",!off)}</div>
-     <datalist id="tStat">${["내용증명 발송","지급명령 신청","지급명령 확정","소송 진행","강제집행","추심 진행","합의"].map(v=>`<option value="${v}">`).join("")}</datalist></fieldset>
-   <h3 class="ksec">조치 이력</h3>
-   <div class="payadd"><select id="rlM" aria-label="방법">${RMETH.map(m=>`<option>${m}</option>`).join("")}</select><input id="rlC" placeholder="내용 (예: 대표님 통화, 11/5 200만원 입금 약속)" aria-label="조치 내용" style="flex:1;min-width:260px">
-     <input type="date" id="rlN" aria-label="다음 조치일" title="다음 조치일"><button type="button" class="btn pri" id="rlAdd">기록 추가</button></div>
-   <p class="mapt" style="margin:0">기록은 바로 저장되고 작성자·시각이 자동으로 남습니다. 다음 조치일을 넣으면 위 ‘다음 조치일’도 함께 바뀝니다.</p>
-   <div id="rLogs"></div>
-   ${ui.noFiles?"":`<fieldset class="nfiles"><legend>채권 서류 (내용증명·지급명령 등)</legend><div class="toolbar" style="padding:0"><label class="btn"><input type="file" id="rfIn" accept="image/*,application/pdf" multiple hidden>서류 올리기</label><span class="mapt" id="rfSt"></span></div><div class="fgrid sm" id="rfGrid"></div></fieldset>`}
+     <datalist id="tStat">${["내용증명 발송","지급명령 신청","지급명령 확정","소송 진행","강제집행","추심 진행","합의"].map(v=>`<option value="${v}">`).join("")}</datalist><datalist id="tTo"><option value="SCI"></datalist></fieldset>
+   ${ui.noFiles||!x.c.id?"":`<fieldset class="nfiles"><legend>채권 서류 (내용증명·지급명령 등)</legend><div class="toolbar" style="padding:0"><label class="btn"><input type="file" id="rfIn" accept="image/*,application/pdf" multiple hidden>서류 올리기</label><span class="mapt" id="rfSt"></span></div><div class="fgrid sm" id="rfGrid"></div></fieldset>`}
    </div>`,
-   [["고객정보","gocust",()=>{openCustPopup(x.c,()=>{});return true}],["닫기"],...(off||me.role==="sales"?[["저장","pri",async()=>{
+   [...(x.c.id?[["고객정보","gocust",()=>{openCustPopup(x.c,()=>{});return true}]]:[]),["닫기"],...(x.t==="etc"&&adm?[["삭제","danger",async()=>{if(!(await askConfirm("이 직접 등록 채권과 관리이력을 삭제할까요?")))return true;const {error}=await sb.from("recv_cases").delete().eq("id",x.cs.id);if(error)return toast("삭제하지 못했습니다: "+error.message);toast("삭제했습니다");reload(["recv","rlogs"])}]]:[]),
+    ...(off||me.role==="sales"?[["저장","pri",async()=>{
       const f=fdata("rf");const st=f.get("stage")||x.stage;
       const p={next_date:f.get("next_date")||null,promise_date:f.get("promise_date")||null,promise_amount:Number(f.get("promise_amount")||0)||0};
       if(off&&canStage(st))p.stage=st;
       if(off)p.transfer={date:f.get("t_date")||"",to:(f.get("t_to")||"").trim(),contact:(f.get("t_contact")||"").trim(),amount:Number(f.get("t_amount")||0)||0,status:(f.get("t_status")||"").trim(),result:(f.get("t_result")||"").trim()};
+      if(off&&ext){const w=whoIs((f.get("owner_name")||"").trim());p.owner=w.id;p.owner_name=w.name;p.progress=(f.get("progress")||"").trim();p.grade=f.get("grade")||"";if(x.t==="etc")p.kind=f.get("kind")||x.kind}
       try{const c0=await recvEnsureCase(x);const {error}=await sb.from("recv_cases").update(p).eq("id",c0.id);if(error)throw error;
-        if(p.stage&&p.stage!==x.stage){await sb.from("recv_logs").insert({case_id:c0.id,customer_id:x.c.id,method:"기타",content:`채권단계 변경: ${x.stage} → ${p.stage}`,by_name:me.name||""});await recvAutoBlack(x,p.stage)}
-        toast("저장했습니다");reload(["recv","rlogs","grades"])}catch(e){toast(/recv_/.test(e.message||"")?"미수·채권관리 칸이 아직 없습니다. Supabase에서 phase1z.sql을 실행해 주세요.":"저장하지 못했습니다: "+(e.message||""))}}]]:[])]);
+        if(p.stage&&p.stage!==x.stage){await sb.from("recv_logs").insert({case_id:c0.id,customer_id:x.c.id||null,method:"기타",content:`채권단계 변경: ${x.stage} → ${p.stage}`,by_name:me.name||""});await recvAutoBlack(x,p.stage)}
+        toast("저장했습니다");reload(["recv","rlogs","grades"])}catch(e){toast(/recv_/.test(e.message||"")?"미수·채권관리 칸이 아직 없습니다. Supabase에서 phase1z.sql·phase1za.sql을 실행해 주세요.":"저장하지 못했습니다: "+(e.message||""))}}]]:[])]);
   if(x.t==="ctr")renderPaySec(x.k);
   const oj=document.getElementById("rOpenJob");if(oj)oj.onclick=()=>jobDlg(x.j,x.c,x.j.kind);
   const ss=document.querySelector('#rf [name="stage"]');if(ss)ss.onchange=()=>{document.getElementById("rTr").hidden=!(RHARD.includes(ss.value)||document.querySelector('#rf [name="t_to"]').value)};
+  /* 직접 등록 채권의 입금내역 */
+  const saveLedger=async nl=>{const {error}=await sb.from("recv_cases").update({ledger:nl}).eq("id",x.cs.id);if(error)return toast("저장하지 못했습니다: "+error.message);x.cs.ledger=nl;await reload(["recv"],true);const nx=recvItems().find(y=>y.t==="etc"&&y.id===x.id);if(nx)recvDlg(nx)};
+  const la=document.getElementById("lgAdd");if(la)la.onclick=()=>{const a=Number(val("lgA")||0),p=Number(val("lgP")||0);if(!a&&!p)return toast("채권발생 또는 입금액을 넣으세요");saveLedger([...ledgerOf(x.cs),{d:val("lgD")||today(),t:val("lgT").trim()||(p?"입금":"채권발생"),add:a,pay:p}])};
+  document.querySelectorAll("[data-lgx]").forEach(b=>b.onclick=async()=>{if(!(await askConfirm("이 내역을 삭제할까요?")))return;const lg=ledgerOf(x.cs);const r=L[+b.dataset.lgx];const i=lg.findIndex(l=>l.d===r.d&&(l.t||"")===r.t&&Number(l.add||0)===r.add&&Number(l.pay||0)===r.pay);if(i>=0){lg.splice(i,1);saveLedger(lg)}});
   const drawLogs=()=>{const box=document.getElementById("rLogs");const ls=x.cs?rlogs.filter(l=>l.case_id===x.cs.id).sort((a,b)=>String(b.created_at).localeCompare(String(a.created_at))):[];
-    box.innerHTML=ls.length?`<table class="stafft"><thead><tr><th style="width:120px">일시</th><th style="width:70px">작성자</th><th style="width:70px">방법</th><th>내용</th><th style="width:90px">다음 조치일</th>${off?"<th style='width:50px'></th>":""}</tr></thead><tbody>
-      ${ls.map(l=>`<tr><td>${esc(fmtDT(l.created_at))}</td><td>${esc(l.by_name)}</td><td><b>${esc(l.method)}</b></td><td style="white-space:pre-wrap">${esc(l.content)}${l.promise_date?` <small class="mapt">(약속 ${esc(l.promise_date)}${l.promise_amount?" · "+won0(l.promise_amount):""})</small>`:""}${l.edited_at?` <small class="mapt">· ${esc(l.edited_by_name)} 수정 ${esc(fmtDT(l.edited_at))}</small>`:""}</td><td>${esc(l.next_date||"")}</td>${off?`<td><button type="button" class="btn sm" data-rle="${l.id}">수정</button></td>`:""}</tr>`).join("")}</tbody></table>`:`<p class="mapt" style="margin:0">아직 조치 기록이 없습니다.</p>`;
-    box.querySelectorAll("[data-rle]").forEach(b=>b.onclick=async()=>{const l=rlogs.find(y=>y.id===b.dataset.rle);const v=prompt("조치 내용 수정 (수정한 사람·시각이 함께 남습니다)",l.content);if(v==null||v===l.content)return;
+    box.innerHTML=ls.length?`<table class="stafft"><thead><tr><th style="width:120px">날짜</th><th style="width:70px">담당자</th><th style="width:70px">방법</th><th>내용</th><th style="width:90px">다음 조치일</th>${off?"<th style='width:50px'></th>":""}</tr></thead><tbody>
+      ${ls.map(l=>`<tr><td>${esc(fmtDT(l.created_at))}</td><td>${esc(l.by_name)}</td><td><b>${esc(l.method)}</b></td><td style="white-space:pre-wrap">${esc(l.content)}${l.edited_at?` <small class="mapt">· ${esc(l.edited_by_name)} 수정 ${esc(fmtDT(l.edited_at))}</small>`:""}</td><td>${esc(l.next_date||"")}</td>${off?`<td><button type="button" class="btn sm" data-rle="${l.id}">수정</button></td>`:""}</tr>`).join("")}</tbody></table>`:`<p class="mapt" style="margin:0">아직 관리이력이 없습니다.</p>`;
+    box.querySelectorAll("[data-rle]").forEach(b=>b.onclick=async()=>{const l=rlogs.find(y=>y.id===b.dataset.rle);const v=prompt("관리 내용 수정 (수정한 사람·시각이 함께 남습니다)",l.content);if(v==null||v===l.content)return;
       const {error}=await sb.from("recv_logs").update({content:v,edited_by_name:me.name||"",edited_at:new Date().toISOString()}).eq("id",l.id);if(error)return toast("수정하지 못했습니다: "+error.message);
       Object.assign(l,{content:v,edited_by_name:me.name||"",edited_at:new Date().toISOString()});drawLogs()})};
   drawLogs();
   document.getElementById("rlAdd").onclick=async()=>{const content=val("rlC").trim();if(!content)return toast("내용을 입력하세요");const m=val("rlM"),nd=val("rlN")||null;
-    try{const c0=await recvEnsureCase(x);const r=await sb.from("recv_logs").insert({case_id:c0.id,customer_id:x.c.id,method:m,content,next_date:nd,by_name:me.name||""}).select().single();if(r.error)throw r.error;rlogs.push(r.data);
+    try{const c0=await recvEnsureCase(x);const r=await sb.from("recv_logs").insert({case_id:c0.id,customer_id:x.c.id||null,method:m,content,next_date:nd,by_name:me.name||""}).select().single();if(r.error)throw r.error;rlogs.push(r.data);
       const up={};if(nd)up.next_date=nd;if(off&&x.stage==="정상관리")up.stage="독촉중";if(Object.keys(up).length){await sb.from("recv_cases").update(up).eq("id",c0.id);Object.assign(c0,up);if(up.next_date){const ne=document.querySelector('#rf [name="next_date"]');if(ne)ne.value=nd}if(up.stage){x.stage=up.stage;const s=document.querySelector('#rf [name="stage"]');if(s)s.value=up.stage}}
       document.getElementById("rlC").value="";document.getElementById("rlN").value="";drawLogs();toast("기록했습니다");reload(["recv","rlogs"],true)}
     catch(e){toast(/recv_/.test(e.message||"")?"미수·채권관리 칸이 아직 없습니다. Supabase에서 phase1z.sql을 실행해 주세요.":"기록하지 못했습니다: "+(e.message||""))}};
   document.getElementById("rlC").addEventListener("keydown",e=>{if(e.key==="Enter"&&!e.isComposing){e.preventDefault();e.stopPropagation();document.getElementById("rlAdd").click()}});
-  /* 채권 서류 */
   const drawFiles=()=>{const g=document.getElementById("rfGrid");if(!g)return;const list=custFiles(x.c).filter(f=>f.kind==="채권");
     g.innerHTML=list.map((f,i)=>`<button type="button" class="fth" data-rfi="${i}">${isPdf(f)?`<span class="fpdf">PDF</span>`:`<img alt="" data-p="${esc(f.path)}">`}<span class="fcap"><b>채권</b>${esc((f.created_at||"").slice(5,10).replace("-","/"))}</span></button>`).join("")||`<span class="mapt">올린 서류가 없습니다.</span>`;
     const ps=list.filter(f=>!isPdf(f)).map(f=>f.path);if(ps.length)signUrls(ps).then(m=>g.querySelectorAll("img[data-p]").forEach(im=>{if(m[im.dataset.p])im.src=m[im.dataset.p]}));
@@ -1988,11 +2038,54 @@ function recvDlg(x){const cs=x.cs||{stage:"정상관리",transfer:{}};const off=
   const fi=document.getElementById("rfIn");if(fi)fi.onchange=async()=>{const fl=[...fi.files];fi.value="";if(!fl.length)return;const st=document.getElementById("rfSt");
     const r=await uploadCustFiles(x.c.id,fl,"채권",m=>st.textContent=m);st.textContent="";toast(r.fail.length?`${r.ok}개 올림, ${r.fail.length}개 실패${fileErrHint(r.fail)}`:`서류 ${r.ok}개를 올렸습니다`);await reload(["files"],true);drawFiles()};
 }
+/* 가불금·대여금 등 계약 없는 채권 직접 등록 */
+function recvNewDlg(){openDlg("채권 직접 등록",`<div id="rnf" style="display:grid;gap:10px"><p class="mapt" style="margin:0">가불금·대여금처럼 계약이 없는 채권을 등록합니다. 계약·A/S 미수는 자동으로 목록에 나오므로 여기서 등록하지 않아도 됩니다.</p>
+   <div class="g3">${sel("kind","채권종류",RKINDS,"가불금")}${inp("title","대상 (업체명·사람)","","text",false,'list="rCustL"')}${inp("issue_date","발생일",today(),"date")}</div>
+   <div class="g3">${inp("amount","채권금액","","number")}${inp("owner_name","담당자",me.name||"","text",false,'list="rOwn2"')}${inp("progress","진행단계","","text",false,'list="rProg2"')}</div>
+   <datalist id="rOwn2">${staff.filter(s=>s.active&&s.role!=="tech").map(s=>`<option value="${esc(s.name)}">`).join("")}</datalist><datalist id="rProg2">${RPROG.map(v=>`<option value="${v}">`).join("")}</datalist>
+   <datalist id="rCustL">${staff.filter(s=>s.active).map(s=>`<option value="${esc(s.name)}">`).join("")}</datalist></div>`,
+  [["취소"],["등록","pri",async()=>{const f=fdata("rnf");const title=(f.get("title")||"").trim(),amount=Number(f.get("amount")||0)||0,d=f.get("issue_date")||today();if(!title||!amount){toast("대상과 채권금액을 입력하세요");return true}
+    const w=whoIs((f.get("owner_name")||"").trim());const cu=customers.find(c=>nk(c.name)===nk(title));
+    const row={ref_type:"etc",ref_id:null,customer_id:cu?cu.id:null,kind:f.get("kind"),title,amount,issue_date:d,owner:w.id,owner_name:w.name,progress:(f.get("progress")||"").trim(),ledger:[{d,t:"채권발생",add:amount,pay:0}]};
+    const {error}=await sb.from("recv_cases").insert(row);if(error)return toast(/kind|ledger|ref_type/.test(error.message)?"Supabase에서 phase1za.sql을 먼저 실행해 주세요.":"등록하지 못했습니다: "+error.message);toast("채권을 등록했습니다");reload(["recv"])}]])}
+/* '미수채권현황' 엑셀 가져오기 (채권리스트 시트) */
+function parseRecvSheet(rows,hr){const H=rows[hr].map(h=>nk(h));const at=(pre,k=0)=>{let c=-1;const p=nk(pre);for(let i=0;i<H.length;i++)if(H[i].startsWith(p)&&++c===k)return i;return -1};
+  const I={own:at("담당자"),ym:at("설치연월"),prog:at("진행단계"),grade:at("채권분류"),name:at("업체명"),ceo:at("대표자"),phone:at("휴대번호")>=0?at("휴대번호"):at("전화번호"),addr:at("상점주소"),
+    amount:at("합계금액",0),card:at("카드"),cash:at("캐피탈"),paid:at("합계금액",1),unpaid:at("미수금"),hist:at("최종관리이력"),cdate:at("계약일자"),idate:at("설치일자"),serial:at("시리얼")};
+  const out=[];rows.slice(hr+1).forEach(row=>{const g=i=>i<0?"":row[i];const t=i=>{const v=g(i);return v instanceof Date?toDate(v):String(v??"").trim()};
+    const nm=t(I.name),ym=t(I.ym);if(!nm||/채권추심$|진행없음/.test(nm)||(/^1\d{3}$/.test(ym)&&!t(I.phone)))return;
+    out.push({own:/^\d+월$/.test(t(I.own))?"":t(I.own),prog:t(I.prog),grade:t(I.grade),name:t(I.name),ceo:t(I.ceo),phone:t(I.phone),addr:t(I.addr),amount:money(g(I.amount)),paid:money(g(I.paid)),
+      hist:t(I.hist),cdate:toDate(g(I.cdate))||null,idate:toDate(g(I.idate))||null,serial:t(I.serial)})});return out}
+function recvImportDlg(fname,rows){
+  const dg2=s=>String(s||"").replace(/\D/g,"");const clean=s=>nk(String(s||"").replace(/\(.*?\)/g,""));
+  const plan=[];let miss=0;
+  rows.forEach(r=>{let k=null;if(r.serial)k=contracts.find(x=>x.serial&&nk(x.serial)===nk(r.serial)&&(!r.name||clean((custById(x.customer_id)||{}).name)===clean(r.name)))||null;
+    if(!k){const cs=customers.filter(c=>clean(c.name)===clean(r.name)||(dg2(r.phone).length>=9&&(dg2(c.phone)===dg2(r.phone)||dg2(c.phone2)===dg2(r.phone))));
+      const ks=contracts.filter(x=>cs.some(c=>c.id===x.customer_id)&&x.stage!=="취소");k=ks.find(x=>r.serial&&nk(x.serial)===nk(r.serial))||ks.find(x=>r.cdate&&x.contract_date===r.cdate)||(ks.length===1?ks[0]:null)}
+    const kind=/가불/.test(r.prog)?"가불금":/개인|대여/.test(r.prog)?"대여금":"매출채권";const grade=RGRADES.includes(r.grade)?r.grade:"";
+    const w=whoIs(r.own);const base={kind,grade,owner:w.id,owner_name:w.name,progress:r.prog};if(/추심/.test(r.prog)){base.stage="추심이관";base.transfer={to:/^SCI$/i.test(r.own)?"SCI":r.own,date:"",contact:"",amount:r.amount-r.paid,status:"추심 진행",result:""}}
+    if(k)plan.push({r,ref:{ref_type:"ctr",ref_id:k.id,customer_id:k.customer_id},patch:base,k});
+    else{miss++;const cu=customers.find(c=>clean(c.name)===clean(r.name));plan.push({r,ref:null,patch:Object.assign({ref_type:"etc",ref_id:null,customer_id:cu?cu.id:null,title:r.name,amount:r.amount,issue_date:r.idate||r.cdate||null,
+      ledger:[{d:r.idate||r.cdate||"",t:"채권발생",add:r.amount,pay:0},...(r.paid?[{d:"",t:"입금 (엑셀 이관)",add:0,pay:r.paid}]:[])]},base)})}});
+  const exEtc=new Set(rcases.filter(c=>c.ref_type==="etc").map(c=>nk(c.title)+"|"+c.amount));
+  const etc=plan.filter(p=>!p.ref&&!exEtc.has(nk(p.patch.title)+"|"+p.patch.amount)),ctrs=plan.filter(p=>p.ref);
+  openDlg("미수채권현황 엑셀 가져오기",`<p><b>${esc(fname)}</b> · ${rows.length}줄</p><table class="stafft"><tbody>
+    <tr><td>계약과 연결 (담당자·진행단계·채권분류 반영)</td><td>${ctrs.length}건</td></tr><tr><td>계약을 못 찾아 직접 등록 채권으로</td><td>${etc.length}건${plan.length-ctrs.length-etc.length?` <small class="mapt">(이미 등록된 ${plan.length-ctrs.length-etc.length}건 건너뜀)</small>`:""}</td></tr>
+    <tr><td>최종관리이력 → 관리이력으로</td><td>${plan.filter(p=>p.r.hist).length}건</td></tr></tbody></table>
+    ${etc.length?`<p class="mapt">직접 등록 대상: ${esc(etc.slice(0,8).map(p=>p.r.name).join(", "))}${etc.length>8?" 외":""}</p>`:""}
+    <p class="mapt">미수금은 프로그램의 계약금액·입금 내역으로 계산합니다. 엑셀의 카드·현금 금액은 직접 등록 채권에만 입금으로 넣습니다.</p>`,
+   [["취소"],["가져오기","pri",async()=>{try{let n=0;
+     for(const p of ctrs){if(n++%10===0)toast(`가져오는 중… ${n}/${ctrs.length+etc.length}`);const ex=rcases.find(c=>c.ref_type==="ctr"&&c.ref_id===p.ref.ref_id);let id=ex&&ex.id;
+       if(!id){const r=await sb.from("recv_cases").insert(Object.assign({},p.ref,p.patch)).select().single();if(r.error)throw r.error;id=r.data.id}else{const {error}=await sb.from("recv_cases").update(p.patch).eq("id",id);if(error)throw error}
+       if(p.r.hist&&!rlogs.some(l=>l.case_id===id&&l.content===p.r.hist)){const {error}=await sb.from("recv_logs").insert({case_id:id,customer_id:p.ref.customer_id,method:"기타",content:p.r.hist,by_name:p.r.own||me.name||""});if(error)throw error}}
+     for(const p of etc){if(n++%10===0)toast(`가져오는 중… ${n}/${ctrs.length+etc.length}`);const r=await sb.from("recv_cases").insert(p.patch).select().single();if(r.error)throw r.error;
+       if(p.r.hist){const {error}=await sb.from("recv_logs").insert({case_id:r.data.id,customer_id:p.patch.customer_id,method:"기타",content:p.r.hist,by_name:p.r.own||me.name||""});if(error)throw error}}
+     toast(`가져오기 완료: 계약 연결 ${ctrs.length}건 · 직접 등록 ${etc.length}건`);await reload(["recv","rlogs"])}catch(e){toast("가져오는 중 멈췄습니다: "+(e.message||""))}}]])}
 /* 고객 화면 '채권' 탭 */
 function renderCustRecv(c){const tb=document.getElementById("tabBody");const xs=recvItems().filter(x=>x.c.id===c.id);
   tb.innerHTML=`<div class="paysum" style="margin:12px 20px"><span>고객 미수 합계 <b class="neg">${won0(xs.reduce((a,x)=>a+x.unpaid,0))}</b></span><span>채권 ${xs.length}건</span></div>
-   <div class="cards">${xs.map(x=>{const L=x.logs[0];return `<div class="card click" data-rt="${x.t}" data-rid="${x.id}"><div class="t"><span class="tag rs-${esc(x.stage)}">${esc(x.stage)}</span> ${x.t==="ctr"?"계약":"A/S"} · 미수 <b class="neg">${won0(x.unpaid)}</b> · 설치 ${esc(x.idate||"-")} (${x.days??"-"}일)</div>
-     <div class="d">${L?`<span>${esc(fmtD(L.created_at))} ${esc(L.by_name)} · ${esc(L.method)} ${esc(L.content.slice(0,60))}</span>`:"<span>조치 기록 없음</span>"}${x.cs&&x.cs.next_date?`<span>다음 조치 ${esc(x.cs.next_date)}</span>`:""}</div></div>`}).join("")||`<div class="empty" style="padding:8px 0">미수 채권이 없습니다.</div>`}</div>`;
+   <div class="cards">${xs.map(x=>{const L=x.logs[0];return `<div class="card click" data-rt="${x.t}" data-rid="${x.id}"><div class="t"><span class="tag rs-${esc(x.stage)}">${esc(x.stage)}</span> ${esc(x.t==="ctr"?"계약":x.t==="etc"?x.kind:"A/S")} · 미수 <b class="neg">${won0(x.unpaid)}</b> · 설치 ${esc(x.idate||"-")} (${x.days??"-"}일)${x.cs&&x.cs.progress?" · "+esc(x.cs.progress):""}</div>
+     <div class="d">${L?`<span>${esc(fmtD(L.created_at))} ${esc(L.by_name)} · ${esc(L.content.slice(0,60))}</span>`:"<span>관리이력 없음</span>"}${x.cs&&x.cs.next_date?`<span>다음 조치 ${esc(x.cs.next_date)}</span>`:""}</div></div>`}).join("")||`<div class="empty" style="padding:8px 0">미수 채권이 없습니다.</div>`}</div>`;
   tb.querySelectorAll("[data-rid]").forEach(el=>el.onclick=()=>{const x=recvItems().find(y=>y.t===el.dataset.rt&&y.id===el.dataset.rid);if(x)recvDlg(x)})}
 
 /* ================= 계약 ================= */
@@ -2560,6 +2653,8 @@ document.getElementById("fileIn").onchange=async e=>{
   const f=e.target.files[0];e.target.value="";if(!f)return;
   if(!window.XLSX)return toast("엑셀 도구를 불러오지 못했습니다");
   let wb;try{wb=XLSX.read(await f.arrayBuffer(),{type:"array",cellDates:true})}catch(err){return toast("파일을 읽지 못했습니다")}
+  for(const sn of wb.SheetNames){const rows=XLSX.utils.sheet_to_json(wb.Sheets[sn],{header:1,raw:true,defval:""});
+    for(let r=0;r<Math.min(20,rows.length);r++){const h=rows[r].map(nk);if(h.includes("미수금")&&h.some(x=>x.startsWith("채권"))&&h.some(x=>x.startsWith("업체명"))){if(ui.noRecv||!hasRecvX())return toast("미수·채권관리를 쓰려면 Supabase에서 phase1z.sql·phase1za.sql을 먼저 실행해 주세요");const rr=parseRecvSheet(rows,r);if(!rr.length)return toast("가져올 줄이 없습니다");return recvImportDlg(f.name,rr)}}}
   for(const sn of wb.SheetNames){const rows=XLSX.utils.sheet_to_json(wb.Sheets[sn],{header:1,raw:true,defval:""});
     for(let r=0;r<Math.min(10,rows.length);r++){const h=rows[r].map(nk);if(h.includes("업장명")&&h.some(x=>x.startsWith("유입"))){if(ui.noLeads)return toast("DB관리를 쓰려면 Supabase에서 phase1y.sql을 먼저 실행해 주세요");const lr=parseLeadSheet(rows,r);if(!lr.length)return toast("가져올 상담 줄이 없습니다");return leadImportDlg(f.name,lr)}}}
   for(const sn of wb.SheetNames){const rows=XLSX.utils.sheet_to_json(wb.Sheets[sn],{header:1,raw:true,defval:""});
