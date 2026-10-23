@@ -2187,15 +2187,19 @@ function sortPicker(onDone){let cur=getSort().map(x=>({...x}));
 function hasTrialCol(){return contracts.some(k=>"trial_end" in k)}
 function trialCell(k){const d=k.trial_end;if(!d)return"";const td=today();const open=!["완료","취소","철거"].includes(k.stage);const days=Math.round((new Date(d)-new Date(td))/864e5);
   const cls=open&&days<0?"late":open&&days<=3?"soon":"";return `<span class="trial ${cls}" title="${open?(days<0?-days+"일 지남":days===0?"오늘 종료":days+"일 남음"):""}">${esc(ymd2(d))}</span>`}
-function contractDlg(c,k,tpl){ui.payEdit=null;
-  const isNew=!k;
+function contractDlg(c,k,tpl,opts){ui.payEdit=null;
+  const isNew=!k;const pickM=!!(opts&&opts.pick&&isNew&&!c);const pool=pickM?customers.filter(x=>isOffice()||x.owner===me.id):[];
   if(!k&&tpl){k=Object.assign({},tpl,{serial:"",trial_end:null,contract_date:today(),stage:"미정",contract_doc:"미수령",chk_cust:"",chk_slip:"",chk_sales:"",tax:{},settle_month:"",import_raw:null,memo:tpl.memo||""});delete k.id;delete k.created_at;delete k.updated_at;delete k.created_by}
-  k=k||{stage:"미정",contract_type:"구매",contract_date:today(),sales3:me.role==="sales"?me.id:(c.owner||null),contract_doc:"미수령",pay_method:"",capital:{},cms:{},tax:{}};
-  const ro=!canEditCust(c);const cap=k.capital||{},cms=k.cms||{};
+  k=k||{stage:"미정",contract_type:"구매",contract_date:today(),sales3:me.role==="sales"?me.id:((c&&c.owner)||null),contract_doc:"미수령",pay_method:"",capital:{},cms:{},tax:{}};
+  const ro=c?!canEditCust(c):!(isOffice()||me.role==="sales");const cap=k.capital||{},cms=k.cms||{};
   const refreshK=c2=>{const el=document.querySelector("#kf .dsum");if(el)el.outerHTML=custSummary(c2,isNew?null:k);document.getElementById("dlgH").textContent=(isNew?(tpl?"신규계약 (복사)":"신규계약"):"계약")+" · "+c2.name;
     const s3=document.querySelector('#kf [name="sales3"]');if(s3&&!isNew&&(custContracts(c2.id)[0]||{}).id===k.id){const v=custS3(c2);if(v)s3.value=v}};
   const ij=isNew?null:installOf(k);const sinkRo=ro||!isOffice()||(!isNew&&!ij);const srcJ=ij||(tpl?installOf(tpl):null);
-  openDlg((isNew?(tpl?"신규계약 (복사)":"신규계약"):"계약")+" · "+esc(c.name),`<div id="kf" style="display:grid;gap:10px">${custSummary(c,isNew?null:k)}${isNew?"":transferNote(k)}${tpl?`<p class="warnbox" style="margin:0">복사한 계약입니다. 시리얼·계약일·진행단계·계약서·마감·입금은 새로 입력하세요.</p>`:""}
+  const pickHtml=pickM?`<label class="f">고객 검색<input id="jcQ" type="search" autocomplete="off" placeholder="업체명(상호)·대표자·전화번호·주소·시리얼"></label>
+     <input type="hidden" id="jcId"><div id="jcSel"></div><div id="jcRes" class="pickres"></div>
+     <p class="mapt" id="jcHint" style="margin:0">두 글자 이상 입력하면 고객 목록이 나옵니다. 없는 고객은 아래 ‘새 고객 등록’으로 먼저 등록하세요.</p>
+     <div class="kpick chk" role="radiogroup" aria-label="구분"><label><input type="radio" name="kkind" value="ctr" checked>계약</label>${KINDS.filter(x=>x!=="install").map(x=>`<label><input type="radio" name="kkind" value="${x}">${KLABEL[x]}</label>`).join("")}</div>`:"";
+  openDlg(pickM?"신규접수 · 계약":(isNew?(tpl?"신규계약 (복사)":"신규계약"):"계약")+" · "+esc(c.name),`<div id="kf" style="display:grid;gap:10px">${pickM?pickHtml:custSummary(c,isNew?null:k)}${isNew?"":transferNote(k)}${tpl?`<p class="warnbox" style="margin:0">복사한 계약입니다. 시리얼·계약일·진행단계·계약서·마감·입금은 새로 입력하세요.</p>`:""}
    <h3 class="ksec">계약 정보</h3>
    <div class="g3">${inp("contract_date","계약일자",k.contract_date,"date",ro)}${sel("contract_type","구분",CTYPES,k.contract_type||"구매",ro)}${sel("stage","진행단계",STAGES,STAGES.includes(k.stage)?k.stage:"확정",ro)}</div>
    <div class="g3">${sel("contract_doc","계약서",DOCS.map(d=>[d,d==="사진"?"사진 수령(○)":d==="원본"?"원본 수령(●)":d]),k.contract_doc,ro)}${inp("trial_end","무료체험 종료일",k.trial_end,"date",ro)}${inp("free_trial","무료체험 메모",k.free_trial,"text",ro)}</div>
@@ -2226,7 +2230,8 @@ function contractDlg(c,k,tpl){ui.payEdit=null;
    <datalist id="s3List">${staff.filter(s=>s.active&&["admin","office","sales"].includes(s.role)).map(s=>`<option value="${esc(s.name)}">${esc(ROLE[s.role])}</option>`).join("")}</datalist>
    <datalist id="stList">${staff.filter(s=>s.active).map(s=>`<option value="${esc(s.name)}">`).join("")}<option value="무료체험"></datalist>
    <datalist id="pdList">${[...new Set(contracts.map(x=>x.product).filter(Boolean))].map(x=>`<option value="${esc(x)}">`).join("")}</datalist></div>`,
-   ro?[["고객정보","gocust",()=>{openCustPopup(c,refreshK);return true}],["닫기"]]:[["고객정보","gocust",()=>{openCustPopup(c,refreshK);return true}],...(!isNew&&canNewJob(c)?[["접수","",()=>{ctrIntake(c,k);return true}]]:[]),["취소"],...(!isNew?[["복사","",()=>{contractDlg(c,null,k);return true}]]:[]),...(!isNew&&isOffice()?[["양도","",()=>{transferDlg(c,k);return true}]]:[]),...(!isNew&&isAdmin()?[["삭제","danger",async()=>{await undoTransfers([k.id]);const {error}=await sb.from("contracts").delete().eq("id",k.id);toast(error?"삭제하지 못했습니다":"삭제했습니다");reload(["contracts","customers"])}]]:[]),["저장","pri",async()=>{
+   ro?[["고객정보","gocust",()=>{openCustPopup(c,refreshK);return true}],["닫기"]]:[pickM?["새 고객 등록","gocust",()=>{newCustomer(null,nc=>contractDlg(nc,null));return true}]:["고객정보","gocust",()=>{if(!c)return toast("고객을 먼저 고르세요");openCustPopup(c,refreshK);return true}],...(!isNew&&canNewJob(c)?[["접수","",()=>{ctrIntake(c,k);return true}]]:[]),["취소"],...(!isNew?[["복사","",()=>{contractDlg(c,null,k);return true}]]:[]),...(!isNew&&isOffice()?[["양도","",()=>{transferDlg(c,k);return true}]]:[]),...(!isNew&&isAdmin()?[["삭제","danger",async()=>{await undoTransfers([k.id]);const {error}=await sb.from("contracts").delete().eq("id",k.id);toast(error?"삭제하지 못했습니다":"삭제했습니다");reload(["contracts","customers"])}]]:[]),["저장","pri",async()=>{
+     if(pickM&&!c){const cc=pool.find(x=>x.id===(document.getElementById("jcId")||{}).value);if(!cc)return toast("고객을 검색해서 목록에서 골라 주세요");c=cc}
      if(isNew){const gg=gradeOf(c);if(gg&&gg.g==="블랙"&&!(await askConfirm(`블랙(거래 중지) 고객입니다.${gg.reason?" ("+gg.reason+")":""} 계속 등록할까요?`)))return true}
      const f=fdata("kf");const n=x=>Number(f.get(x)||0)||0;
      const p={contract_date:f.get("contract_date")||null,stage:f.get("stage"),contract_type:f.get("contract_type")||"구매",contract_doc:f.get("contract_doc"),channel:f.get("channel").trim(),referrer:f.get("referrer").trim(),free_trial:f.get("free_trial").trim(),...(hasTrialCol()||f.get("trial_end")?{trial_end:f.get("trial_end")||null}:{}),
@@ -2248,6 +2253,10 @@ function contractDlg(c,k,tpl){ui.payEdit=null;
        if(sp.owner.name)await sb.from("customers").update(cp).eq("id",c.id)}
      toast("저장했습니다");reload(["customers","contracts","jobs"])}]]);
   if(!isNew)renderPaySec(k);
+  if(pickM){bindCustPicker(pool);const h=document.getElementById("jcId");
+    h.addEventListener("change",()=>{const cc=pool.find(x=>x.id===h.value);if(!cc)return;document.getElementById("dlgH").textContent="신규접수 · 계약 · "+cc.name;
+      const s3=document.querySelector('#kf [name="sales3"]');if(s3&&!s3.value){const v=custS3(cc);if(v)s3.value=v}});
+    document.querySelectorAll('#kf input[name=kkind]').forEach(r=>r.onchange=()=>{if(r.value==="ctr")return;const cc=pool.find(x=>x.id===h.value)||null;jobDlg(null,cc,r.value)})}
   /* 초음파·워시·부자재를 고치면 합계금액 자동 계산 */
   (()=>{const f=document.getElementById("kf");if(!f||ro)return;const q=n=>f.querySelector(`[name="${n}"]`);const parts=["amt_ultra","amt_wash","amt_parts"].map(q);const tot=q("amount");if(!tot)return;
     const sum=()=>parts.reduce((a,el)=>a+(Number(el&&el.value||0)||0),0);
@@ -2463,6 +2472,7 @@ function jobDlg(j,c,kind,tpl,preset){
   const techs=staff.filter(s=>s.active&&s.role==="tech");
   const pickable=customers.filter(x=>isOffice()||x.owner===me.id);
   const canCtr=isNew&&!tpl&&(isOffice()||me.role==="sales");if(!canCtr)wantCtr=false;
+  if(wantCtr)return contractDlg(c||null,null,null,{pick:!c});
   const nTitle=isNew&&!tpl;
   const pick=isNew&&!c?`<label class="f">고객 검색<input id="jcQ" type="search" autocomplete="off" placeholder="업체명(상호)·대표자·전화번호·주소·시리얼"></label>
      <input type="hidden" name="custId" id="jcId"><div id="jcSel"></div><div id="jcRes" class="pickres"></div>
@@ -2546,7 +2556,7 @@ function jobDlg(j,c,kind,tpl,preset){
     if(k){[["as_product",k.product],["as_size",k.size],["as_serial",k.serial]].forEach(([n,v])=>{const el=q(n);if(el&&!el.value)el.value=v||""})}
     _instMap=null;const d=asInstDate({customer_id:cc.id,product:{}});const di=q("as_idate");if(di&&!di.value&&d)di.value=d})}
   document.querySelectorAll('#jf input[name=kind]').forEach(x=>x.onchange=()=>{const isC=x.value==="ctr";document.getElementById("jBody").style.display=isC?"none":"grid";document.getElementById("jCtrHint").style.display=isC?"block":"none";
-    if(isC){const cc=c||pickable.find(y=>y.id===(document.getElementById("jcId")||{}).value);if(cc)contractDlg(cc,null);return}
+    if(isC){const cc=c||pickable.find(y=>y.id===(document.getElementById("jcId")||{}).value)||null;contractDlg(cc,null,null,{pick:!cc});return}
     const as=x.value==="as"||x.value==="move";document.getElementById("payBox").hidden=!as;document.getElementById("asBox").hidden=!as;document.getElementById("sinkBox").hidden=as;document.getElementById("addonBox").hidden=x.value!=="addon";
     const t=document.getElementById("jf").querySelector('textarea[name=symptom]');if(t)t.previousSibling.textContent=as?"불편사항·접수 내용":"요청 사항";
     document.getElementById("dlgH").textContent=`${nTitle?"신규접수":KLABEL[x.value]+" "+(isNew?"접수":"작업")}${j.customer_name?" · "+j.customer_name:""}`;
