@@ -649,7 +649,7 @@ function lastStage(id){const k=custContracts(id)[0];return k?k.stage:""}
 function renderCustView(){
   view().innerHTML=`<div class="body"><aside><div class="search">
     <input id="q" type="search" placeholder="업체명(상호)·전화·시리얼·담당자 검색" value="${esc(ui.q)}" aria-label="고객 검색">
-    ${me.role!=="tech"?`<select id="grf" aria-label="관리등급"><option value="">관리등급 전체</option><option value="레드" ${ui.grade==="레드"?"selected":""}>레드만</option><option value="블랙" ${ui.grade==="블랙"?"selected":""}>블랙만</option><option value="any" ${ui.grade==="any"?"selected":""}>레드·블랙</option></select>`:""}<select id="ctf" aria-label="구분"><option value="">구분 전체</option>${CTYPES.map(x=>`<option ${ui.ctype===x?"selected":""}>${x}</option>`).join("")}</select><select id="stf" aria-label="진행단계"><option value="">진행단계 전체</option>${STAGES.map(x=>`<option ${ui.stage===x?"selected":""}>${x}</option>`).join("")}</select>
+    ${me.role!=="tech"?`<select id="grf" aria-label="관리등급"><option value="">관리등급 전체</option><option value="블랙" ${ui.grade==="블랙"?"selected":""}>블랙만</option></select>`:""}<select id="ctf" aria-label="구분"><option value="">구분 전체</option>${CTYPES.map(x=>`<option ${ui.ctype===x?"selected":""}>${x}</option>`).join("")}</select><select id="stf" aria-label="진행단계"><option value="">진행단계 전체</option>${STAGES.map(x=>`<option ${ui.stage===x?"selected":""}>${x}</option>`).join("")}</select>
     <div class="row"><span id="cnt"></span>${isOffice()||me.role==="sales"?`<button class="btn pri sm" id="bNewC">+ 새 고객</button>`:""}</div></div>
     <div class="clist" id="clist"></div></aside><main id="main"></main></div>`;
   document.getElementById("q").oninput=e=>{ui.q=e.target.value;clearTimeout(window._qT);window._qT=setTimeout(renderCustList,150)};
@@ -704,7 +704,7 @@ function custFieldsHtml(c,ro){return `    <div class="g2">${inp("name","업체�
 function gradeFieldsHtml(c){if(!me||me.role==="tech"||ui.noGrades&&!isOffice())return"";const r=gradeRow(c)||{};const g=gradeOf(c);
   if(ui.noGrades)return `<p class="warnbox">관리등급을 쓰려면 Supabase에서 phase1o.sql을 실행해 주세요.</p>`;
   if(!isOffice())return g?`<p class="gwarn ${g.g==="블랙"?"g-black":"g-red"}">관리등급: ${g.g}${g.reason?" — "+esc(g.reason):""}</p>`:"";
-  return `<fieldset class="nfiles"><legend>관리등급</legend><div class="g2">${sel("grade","등급",[["","없음"],["레드","레드 (주의)"],["블랙","블랙 (거래 중지)"]],r.grade||"")}${inp("grade_reason","사유 (사실 위주로)",r.reason||"","text",false,'placeholder="예: 미수 120만원, 3회 독촉 / 분쟁 중"')}</div>
+  return `<fieldset class="nfiles"><legend>관리등급</legend><div class="g2">${sel("grade","등급",[["","없음"],["블랙","블랙 (거래 중지)"]],r.grade||"")}${inp("grade_reason","사유 (사실 위주로)",r.reason||"","text",false,'placeholder="예: 미수 120만원, 3회 독촉 / 분쟁 중"')}</div>
     <p class="mapt" style="margin:4px 0 0">지금 표시: <b>${g?g.g:"없음"}</b>${g&&g.reason?" — "+esc(g.reason):""}${r.set_at?` · ${esc(r.set_at.slice(0,10))} 지정`:""}</p></fieldset>`}
 async function saveCustomer(c,fd){
     const p={name:fd.get("name").trim(),biz_name:fd.get("biz_name").trim(),ceo:fd.get("ceo").trim(),phone:fmtPhone(fd.get("phone")),phone2:fmtPhone(fd.get("phone2")),biz_no:fmtBiz(fd.get("biz_no")),address:fd.get("address").trim(),memo:fd.get("memo")};if(fd.get("search_text")!==null&&"search_text" in c)p.search_text=fd.get("search_text").trim();
@@ -2150,10 +2150,10 @@ function newContractPick(){const pool=customers.filter(x=>isOffice()||x.owner===
     <p class="mapt" id="jcHint">두 글자 이상 입력하면 고객 목록이 나옵니다. 처음 오는 고객은 ‘새 고객 등록’으로 먼저 등록하세요.</p></div>`,
     [["새 고객 등록","gocust",()=>{newCustomer(null,c=>contractDlg(c,null));return true}],["취소"],["다음","pri",()=>{const c=pool.find(x=>x.id===val("jcId"));if(!c){toast("고객을 검색해서 목록에서 골라 주세요");return true}contractDlg(c,null);return true}]]);
   bindCustPicker(pool)}
-/* 관리등급: 레드(주의)·블랙(거래 중지). 직접 지정한 것만 표시 (자동 레드 없음). 기사에게는 표시 안 함 */
+/* 관리등급: 블랙(거래 중지)만. 직접 지정한 것만 표시. 기사에게는 표시 안 함 */
 function gradeRow(c){return grades.find(g=>g.customer_id===c.id)||null}
 function gradeOf(c){if(!c||!me||me.role==="tech")return null;const r=gradeRow(c);
-  if(r&&r.grade!=="정상")return{g:r.grade,reason:r.reason||"",auto:false};if(r)return null;
+  if(r&&r.grade==="블랙")return{g:r.grade,reason:r.reason||"",auto:false};if(r)return null;
   return null}
 function gradeWarn(c){const g=gradeOf(c);return g?`<p class="gwarn ${g.g==="블랙"?"g-black":"g-red"}">⚠ ${g.g} 고객${g.reason?" — "+esc(g.reason):""}</p>`:""}
 function gradeBadge(c){const g=gradeOf(c);return g?` <span class="gbadge ${g.g==="블랙"?"g-black":"g-red"}" title="${esc(g.reason)}">${g.g}</span>`:""}
