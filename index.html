@@ -1963,7 +1963,7 @@ case"next":return (x.cs&&x.cs.next_date)||"";case"idate":case"ym":return x.idate
     ${shown.length?`<tfoot><tr><th></th>${cols.map(c=>`<th class="${RMONEY.has(c)?"num":""}">${RMONEY.has(c)&&c!=="csum"?won0(tot[c]):c===cols[0]?"합계":""}</th>`).join("")}</tr></tfoot>`:""}</table></div></div>`;
   applyColW(cols,null,"recv");bindColResize(cols,"recv");view().querySelectorAll(".wtbox").forEach(hbar);
   const re=()=>renderRecvView();
-  view().querySelectorAll("[data-rkpi]").forEach(el=>{const go=()=>{ui.rkpi=ui.rkpi===el.dataset.rkpi?"":el.dataset.rkpi;ui.rage="";ui.rstage="";re()};el.onclick=go;el.onkeydown=e=>{if(e.key==="Enter"||e.key===" "){e.preventDefault();go()}}});
+  view().querySelectorAll("[data-rkpi]").forEach(el=>{const go=()=>{const k=el.dataset.rkpi;const other=ui.rage||ui.rstage||ui.rown||ui.rkind;ui.rkpi=ui.rkpi===k&&!other?"":k;ui.rage="";ui.rstage="";ui.rown="";ui.rkind="";re()};el.onclick=go;el.onkeydown=e=>{if(e.key==="Enter"||e.key===" "){e.preventDefault();go()}}});
   view().querySelectorAll("[data-age]").forEach(b=>b.onclick=()=>{ui.rage=ui.rage===b.dataset.age?"":b.dataset.age;re()});
   view().querySelectorAll("[data-rst]").forEach(b=>b.onclick=()=>{ui.rstage=ui.rstage===b.dataset.rst?"":b.dataset.rst;if(ui.rstage==="대손처리")ui.rdone=true;re()});
   view().querySelectorAll("[data-own]").forEach(b=>b.onclick=()=>{ui.rown=b.dataset.own;ui.rkind=b.dataset.kind;re()});
