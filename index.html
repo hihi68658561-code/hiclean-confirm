@@ -962,7 +962,8 @@ const CHKV=["OK","임시코드","기존고객","소매마감","소매매출","�
 let payIdx={};
 function buildPayIdx(){payIdx={};payments.forEach(p=>(payIdx[p.contract_id]=payIdx[p.contract_id]||[]).push(p));Object.values(payIdx).forEach(a=>a.sort((x,y)=>(x.pay_date||"").localeCompare(y.pay_date||"")))}
 function paysOf(k){return payIdx[k.id]||[]}
-function payStat(k){const ps=paysOf(k);let card=0,other=0,last="";ps.forEach(p=>{const a=Number(p.amount||0);if(p.method==="카드")card+=a;else other+=a;if(p.pay_date&&p.pay_date>last)last=p.pay_date});
+function payStat(k){if(k.__job){const j=k.__job;const c_=Number(j.cost||0);const pd=j.pay_status==="완료"?c_:0;const card=j.pay_method==="카드"?pd:0;return{card,other:pd-card,paid:pd,last:pd?(j.pay_date||""):"",unpaid:c_-pd,n:pd?1:0}}
+  const ps=paysOf(k);let card=0,other=0,last="";ps.forEach(p=>{const a=Number(p.amount||0);if(p.method==="카드")card+=a;else other+=a;if(p.pay_date&&p.pay_date>last)last=p.pay_date});
   const paid=card+other;return{card,other,paid,last,unpaid:Number(k.amount||0)-paid,n:ps.length}}
 function monthRange(ym){const [y,m]=ym.split("-").map(Number);return[ym+"-01",(m===12?(y+1)+"-01":y+"-"+String(m+1).padStart(2,"0"))+"-01"]}
 const CROWS=[["done","설치완료",k=>k.stage==="완료"],["open","미완료",k=>k.stage==="미정"||k.stage==="확정"],["hold","보류",k=>k.stage==="보류"],["cancel","취소",k=>k.stage==="취소"],["unpaid","미수",k=>k.stage==="미수"],["remove","철거",k=>k.stage==="철거"]];
@@ -1080,7 +1081,7 @@ function bulkMonthClose(){const ym=thisMonth();const ids=contracts.filter(k=>k.c
 function hasMonthCol(){return contracts.some(k=>"chk_month" in k)}
 function monthClosed(k){if(k.__job){const p=ctrById(k.__job.contract_id);return !!p&&p.chk_month==="OK"}return k.chk_month==="OK"}
 function addonRow(j){const k0=ctrById(j.contract_id)||custContracts(j.customer_id)[0]||{};const a=addonItem(j);
-  return{id:"a:"+j.id,__job:j,customer_id:j.customer_id,contract_type:"추가설치",stage:j.status,contract_date:j.request_date,product:a.product,size:a.size,serial:"",memo:j.symptom||"",amount:0,
+  return{id:"a:"+j.id,__job:j,customer_id:j.customer_id,contract_type:"추가설치",stage:j.status,contract_date:j.request_date,product:a.product,size:a.size,serial:"",memo:j.symptom||"",amount:Number(j.cost||0),
     sales3:k0.sales3||null,sales3_name:k0.sales3_name||"",channel:k0.channel||"",created_at:j.created_at,tax:{}}}
 function ctrCell(col,k,c,st,basis){
   const ij=installOf(k);
@@ -1873,7 +1874,7 @@ function recvItems(){const out=[];const byRef=new Map(rcases.filter(c=>c.ref_id)
     const open=s.unpaid>0&&(k.stage==="미수"||s.n>0);if(!open&&!cs)return;
     const ij=installOf(k);const idate=(ij&&(ij.done_date||ij.visit_date))||k.contract_date||"";
     out.push({t:"ctr",id:k.id,k,ij,c:custById(k.customer_id)||{},amount:Number(k.amount||0),card:s.card,cash:s.other,paid:s.paid,unpaid:Math.max(0,s.unpaid),last:s.last,idate,cs,open})});
-  jobs.forEach(j=>{if(j.kind!=="as"&&j.kind!=="move")return;const cs=byRef.get("as|"+j.id)||null;const open=j.pay_status==="미수"&&j.status!=="취소"&&Number(j.cost||0)>0;if(!open&&!cs)return;
+  jobs.forEach(j=>{if(j.kind!=="as"&&j.kind!=="move"&&j.kind!=="addon")return;const cs=byRef.get("as|"+j.id)||null;const open=j.pay_status==="미수"&&j.status!=="취소"&&Number(j.cost||0)>0;if(!open&&!cs)return;
     const p=open?0:Number(j.cost||0);out.push({t:"as",id:j.id,j,c:custById(j.customer_id)||{},amount:Number(j.cost||0),card:j.pay_method==="카드"?p:0,cash:j.pay_method==="카드"?0:p,paid:p,unpaid:open?Number(j.cost||0):0,last:j.pay_date||"",idate:j.done_date||j.visit_date||j.request_date||"",cs,open})});
   rcases.filter(c=>c.ref_type==="etc").forEach(cs=>{const L=ledgerOf(cs);const add=L.reduce((a,x)=>a+Number(x.add||0),0)||Number(cs.amount||0);const paid=L.reduce((a,x)=>a+Number(x.pay||0),0);
     const last=L.filter(x=>Number(x.pay||0)>0).map(x=>x.d).filter(Boolean).sort().pop()||"";const c=(cs.customer_id&&custById(cs.customer_id))||{name:cs.title};
@@ -1998,12 +1999,12 @@ async function recvAutoBlack(x,stage){if(!RHARD.includes(stage)||ui.noGrades||!x
 /* 입금내역 (채권발생·입금·남은 미수금) */
 function recvLedgerRows(x){const rows=[];
   if(x.t==="ctr"){rows.push({d:x.idate,t:x.ij&&x.ij.done_date?"설치완료":"계약",add:x.amount,pay:0});paysOf(x.k).forEach(p=>rows.push({d:p.pay_date||"",t:[p.method,p.payer,p.memo].filter(Boolean).join(" · "),add:0,pay:Number(p.amount||0)}))}
-  else if(x.t==="as"){rows.push({d:x.idate,t:"A/S 청구",add:x.amount,pay:0});if(x.paid)rows.push({d:x.last,t:x.j.pay_method||"입금",add:0,pay:x.paid})}
+  else if(x.t==="as"){rows.push({d:x.idate,t:(KLABEL[x.j.kind]||"A/S")+" 청구",add:x.amount,pay:0});if(x.paid)rows.push({d:x.last,t:x.j.pay_method||"입금",add:0,pay:x.paid})}
   else ledgerOf(x.cs).forEach(l=>rows.push({d:l.d||"",t:l.t||"",add:Number(l.add||0),pay:Number(l.pay||0)}));
   rows.sort((a,b)=>(a.add&&!b.add?-1:0)||String(a.d||"").localeCompare(String(b.d||"")));let bal=0;rows.forEach(r=>{bal+=r.add-r.pay;r.bal=bal});return rows}
 function recvDlg(x){const cs=x.cs||{stage:"정상관리",transfer:{}};const off=isOffice(),adm=isAdmin();const tr=cs.transfer||{};const ext=hasRecvX();
   const canStage=s=>off&&(!RHARD.includes(s)||adm);
-  const title=(x.t==="ctr"?"계약":x.t==="etc"?x.kind:"A/S")+" 채권 · "+(x.c.name||"");
+  const title=(x.t==="ctr"?"계약":x.t==="etc"?x.kind:KLABEL[x.j.kind]||"A/S")+" 채권 · "+(x.c.name||"");
   const L=recvLedgerRows(x);
   openDlg(esc(title),`<div id="rf" style="display:grid;gap:10px">
    <p class="mapt dsum" style="margin:0"><b>${esc(x.c.name||"")}</b>${x.c.id?gradeBadge(x.c):""}${x.c.phone?" · "+esc(x.c.phone):""}${x.c.address?" · "+esc(x.c.address):""}</p>
@@ -2116,7 +2117,7 @@ function recvImportDlg(fname,rows){
 /* 고객 화면 '채권' 탭 */
 function renderCustRecv(c){const tb=document.getElementById("tabBody");const xs=recvItems().filter(x=>x.c.id===c.id);
   tb.innerHTML=`<div class="paysum" style="margin:12px 20px"><span>고객 미수 합계 <b class="neg">${won0(xs.reduce((a,x)=>a+x.unpaid,0))}</b></span><span>채권 ${xs.length}건</span></div>
-   <div class="cards">${xs.map(x=>{const L=x.logs[0];return `<div class="card click" data-rt="${x.t}" data-rid="${x.id}"><div class="t"><span class="tag rs-${esc(x.stage)}">${esc(x.stage)}</span> ${esc(x.t==="ctr"?"계약":x.t==="etc"?x.kind:"A/S")} · 미수 <b class="neg">${won0(x.unpaid)}</b> · 설치 ${esc(x.idate||"-")} (${x.days??"-"}일)${x.cs&&x.cs.progress?" · "+esc(x.cs.progress):""}</div>
+   <div class="cards">${xs.map(x=>{const L=x.logs[0];return `<div class="card click" data-rt="${x.t}" data-rid="${x.id}"><div class="t"><span class="tag rs-${esc(x.stage)}">${esc(x.stage)}</span> ${esc(x.t==="ctr"?"계약":x.t==="etc"?x.kind:KLABEL[x.j.kind]||"A/S")} · 미수 <b class="neg">${won0(x.unpaid)}</b> · 설치 ${esc(x.idate||"-")} (${x.days??"-"}일)${x.cs&&x.cs.progress?" · "+esc(x.cs.progress):""}</div>
      <div class="d">${L?`<span>${esc(fmtD(L.created_at))} ${esc(L.by_name)} · ${esc(L.content.slice(0,60))}</span>`:"<span>관리이력 없음</span>"}${x.cs&&x.cs.next_date?`<span>다음 조치 ${esc(x.cs.next_date)}</span>`:""}</div></div>`}).join("")||`<div class="empty" style="padding:8px 0">미수 채권이 없습니다.</div>`}</div>`;
   tb.querySelectorAll("[data-rid]").forEach(el=>el.onclick=()=>{const x=recvItems().find(y=>y.t===el.dataset.rt&&y.id===el.dataset.rid);if(x)recvDlg(x)})}
 
@@ -2509,7 +2510,7 @@ function jobDlg(j,c,kind,tpl,preset){
      ${asx?`<div class="g3">${inp("as_parts","교체부품",j.parts||"","text",!can,'placeholder="예: LCD, 파워"')}${inp("distance","거리(km)",j.distance??"","number",!can)}${sel("satisfaction","만족도",[["","(선택)"],["상","상"],["중","중"],["하","하"]],j.satisfaction||"",!can)}</div>`:`<div class="g3">${inp("as_parts","교체부품",j.parts||"","text",!can,'placeholder="예: LCD, 파워"')}<span></span><span></span></div><p class="mapt" style="margin:0">조치방법·출장비·부품비·거리·만족도·세금계산서 칸은 Supabase에서 phase1q.sql을 실행하면 쓸 수 있습니다.</p>`}
      ${p.install_note&&!/중고/.test(p.install_note)?`<p class="mapt" style="margin:0">엑셀 설치일 칸: ${esc(p.install_note)}</p>`:""}
      <datalist id="actList">${AS_ACTS.map(x=>`<option value="${esc(x)}">`).join("")}</datalist><datalist id="pdList2">${[...new Set(contracts.map(x=>x.product).filter(Boolean))].map(x=>`<option value="${esc(x)}">`).join("")}</datalist></fieldset>
-   <fieldset id="payBox" style="padding:10px 12px" ${asLike(j)?"":"hidden"}><legend>비용·결제</legend>
+   <fieldset id="payBox" style="padding:10px 12px" ${asLike(j)||j.kind==="addon"?"":"hidden"}><legend>비용·결제</legend>
      <div class="g3">${sel("paid_type","유상/무상",[["","(선택)"],["유상","유상"],["무상","무상"]],j.paid_type||"",!can)}${asx?inp("trip_fee","출장비",j.trip_fee||"","number",!can)+inp("part_fee","부품비",j.part_fee||"","number",!can):"<span></span><span></span>"}</div>
      <div class="g3">${inp("cost","청구금액 (총합계)",j.cost||"","number",!can)}${sel("pay_status","납부 여부",[["","(선택)"],["완료","완료"],["미수","미수"]],j.pay_status||"",!can)}${sel("pay_method","청구방법",[["","(선택)"],["카드","카드"],["현금","현금"]],j.pay_method==="입금"?"현금":(j.pay_method||""),!can)}</div>
      <div class="g3">${inp("pay_date","입금일",j.pay_date,"date",!can)}${inp("pay_name","카드사 / 입금자명",j.pay_name,"text",!can,'list="cardList"')}${asx?inp("tax_date","세금계산서 발행일자",j.tax_date,"date",!off):"<span></span>"}</div>
@@ -2544,7 +2545,11 @@ function jobDlg(j,c,kind,tpl,preset){
          if(f.get("as_used")){delete pr.install_date;pr.install_note="중고구매"}else{if(/중고/.test(pr.install_note||""))delete pr.install_note;if(iv&&iv!==base){pr.install_date=iv;delete pr.install_note}else delete pr.install_date}pt.product=pr}
        if(asx){const nn=x=>Number(f.get(x)||0)||0;Object.assign(pt,{action:(f.get("action")||"").trim(),trip_fee:nn("trip_fee"),part_fee:nn("part_fee"),distance:f.get("distance")===""||f.get("distance")==null?null:nn("distance"),satisfaction:f.get("satisfaction")||""});
          if(off)pt.tax_date=f.get("tax_date")||null;if(!pt.cost&&pt.paid_type!=="무상"){pt.cost=pt.trip_fee+pt.part_fee;if(pt.cost&&!pt.paid_type)pt.paid_type="유상"}}
-     }else{pt.sink_status=f.get("sink_status")||"";pt.sink_memo=f.get("sink_memo")||"";pt.parts=f.get("parts")||""}
+     }else{pt.sink_status=f.get("sink_status")||"";pt.sink_memo=f.get("sink_memo")||"";pt.parts=f.get("parts")||"";
+       if(j.kind==="addon"){Object.assign(pt,{paid_type:f.get("paid_type")||"",cost:Number(f.get("cost")||0)||0,pay_status:f.get("pay_status")||"",pay_method:f.get("pay_method")||"",pay_date:f.get("pay_date")||null,pay_name:(f.get("pay_name")||"").trim(),pay_memo:(f.get("pay_memo")||"").trim()});
+         if(asx){const nn=x=>Number(f.get(x)||0)||0;pt.trip_fee=nn("trip_fee");pt.part_fee=nn("part_fee");if(off)pt.tax_date=f.get("tax_date")||null;if(!pt.cost&&pt.paid_type!=="무상")pt.cost=pt.trip_fee+pt.part_fee}
+         if(pt.paid_type==="무상"){pt.cost=0;pt.pay_status="";pt.pay_method=""}else{if(pt.cost&&!pt.paid_type)pt.paid_type="유상";if(pt.pay_method&&!pt.pay_status&&pt.cost)pt.pay_status="완료";if(pt.pay_status==="완료"&&!pt.pay_date)pt.pay_date=today()}
+         if(off)pt.closed=!!f.get("closed")}}
      if(off||isNew){Object.assign(pt,{request_date:f.get("request_date")||today(),visit_date:f.get("visit_date")||null,visit_time:f.get("visit_time")||"",symptom:f.get("symptom")||""})}
      if(he&&can)pt.end_time=(f.get("end_time")||"").trim();
      if(off){pt.techs=f.getAll("tech");pt.tech_names=f.get("tech_names")||"";if(pt.status==="접수"&&(pt.techs.length||pt.tech_names))pt.status="배정"}
@@ -2571,7 +2576,7 @@ function jobDlg(j,c,kind,tpl,preset){
     _instMap=null;const d=asInstDate({customer_id:cc.id,product:{}});const di=q("as_idate");if(di&&!di.value&&d)di.value=d})}
   document.querySelectorAll('#jf input[name=kind]').forEach(x=>x.onchange=()=>{const isC=x.value==="ctr";document.getElementById("jBody").style.display=isC?"none":"grid";document.getElementById("jCtrHint").style.display=isC?"block":"none";
     if(isC){const cc=c||pickable.find(y=>y.id===(document.getElementById("jcId")||{}).value)||null;contractDlg(cc,null,null,{pick:!cc});return}
-    const as=x.value==="as"||x.value==="move";document.getElementById("payBox").hidden=!as;document.getElementById("asBox").hidden=!as;document.getElementById("sinkBox").hidden=as;document.getElementById("addonBox").hidden=x.value!=="addon";
+    const as=x.value==="as"||x.value==="move";document.getElementById("payBox").hidden=!(as||x.value==="addon");document.getElementById("asBox").hidden=!as;document.getElementById("sinkBox").hidden=as;document.getElementById("addonBox").hidden=x.value!=="addon";
     const t=document.getElementById("jf").querySelector('textarea[name=symptom]');if(t)t.previousSibling.textContent=as?"불편사항·접수 내용":"요청 사항";
     document.getElementById("dlgH").textContent=`${nTitle?"신규접수":KLABEL[x.value]+" "+(isNew?"접수":"작업")}${j.customer_name?" · "+j.customer_name:""}`;
     const jk=document.getElementById("jpKind");if(jk&&JOBPHOTO[x.value])jk.value=JOBPHOTO[x.value]});
