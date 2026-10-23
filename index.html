@@ -2452,6 +2452,8 @@ function payTable(list){
 function custLabel(c){return `${c.name} · ${c.phone||c.phone2||"전화 없음"}`}
 function jobDlg(j,c,kind,tpl,preset){
   let wantCtr=false;if(kind==="ctr"){wantCtr=true;kind="as"}
+  /* 신규접수에는 '설치'가 없음 (설치는 계약으로 접수) */
+  if(!j&&!tpl&&kind==="install"){wantCtr=true;kind="as"}
   const isNew=!j;c=c||(j&&custById(j.customer_id))||null;
   if(isNew&&tpl){j=Object.assign({},tpl,{status:"접수",request_date:today(),visit_date:null,done_date:null,result:"",pay_status:"",pay_method:"",pay_date:null,pay_name:"",pay_memo:"",closed:false});
     ["id","created_at","updated_at","created_by"].forEach(x=>delete j[x]);kind=j.kind}
@@ -2468,7 +2470,7 @@ function jobDlg(j,c,kind,tpl,preset){
     :`<p class="mapt dsum"><b>${esc(j.customer_name)}</b> · ${esc(j.address||"")}${c&&c.phone?" · "+esc(c.phone):""} · 제품: ${esc([p.product,p.size,p.options&&"("+p.options+")",p.serial&&"SN "+p.serial].filter(Boolean).join(" ")||"-")}${(()=>{const kk=ctrById(j.contract_id);return kk?` · <b>연결 계약</b> ${esc([kk.contract_date,kk.contract_type&&kk.contract_type!=="구매"?kk.contract_type:"",kk.stage].filter(Boolean).join(" · "))}`:""})()}</p>${c?gradeWarn(c):""}`;
   openDlg(`${nTitle?"신규접수":KLABEL[j.kind]+" "+(isNew?(tpl?"접수 (복사)":"접수"):"작업")}${j.customer_name?" · "+esc(j.customer_name):""}`,`<div id="jf" style="display:grid;gap:10px">${tpl?`<p class="warnbox" style="margin:0">복사한 접수입니다. 방문일·상태·처리 내용은 새로 입력하세요. 사진은 복사되지 않습니다.</p>`:""}
    ${pick}
-   ${isNew||off?`<div class="kpick chk" role="radiogroup" aria-label="구분">${canCtr?`<label><input type="radio" name="kind" value="ctr" ${wantCtr?"checked":""}>계약</label>`:""}${KINDS.map(k=>`<label><input type="radio" name="kind" value="${k}" ${!wantCtr&&j.kind===k?"checked":""}>${KLABEL[k]}</label>`).join("")}</div>`:""}
+   ${isNew||off?`<div class="kpick chk" role="radiogroup" aria-label="구분">${canCtr?`<label><input type="radio" name="kind" value="ctr" ${wantCtr?"checked":""}>계약</label>`:""}${KINDS.filter(k=>!(nTitle&&k==="install")).map(k=>`<label><input type="radio" name="kind" value="${k}" ${!wantCtr&&j.kind===k?"checked":""}>${KLABEL[k]}</label>`).join("")}</div>`:""}
    <p class="mapt" id="jCtrHint" style="margin:0;display:${wantCtr?"block":"none"}">고객을 고르면 계약 창이 바로 열립니다.</p>
    <div id="jBody" style="display:${wantCtr?"none":"grid"};gap:10px">
    <div class="g3">${sel("status","상태",JST,j.status,!can)}${inp("request_date","접수일",j.request_date,"date",!off&&!isNew)}${inp("done_date","완료일",j.done_date,"date",!can)}</div>
