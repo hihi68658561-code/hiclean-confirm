@@ -184,6 +184,8 @@ body.resizing,body.resizing *{cursor:col-resize!important;user-select:none}
 .wt.sch .gs{border-left:3px solid #555}.wt.sch td.sref .khol{color:#c00000}.wt.sch tr.swork td.sref{font-weight:700}.wt.sch tr.shol td:not(.sk):not(.sres):not(.stm):not(.lv){background:#D9D9D9;color:#1b1b1b}
 .wt.sch tr.sfirst td{border-top:2px solid var(--mute)}.wt.sch tr.stoday td.sday{background:var(--accent);color:#fff}.wt.sch td.se{height:24px}.wt.sch td.se:hover{background:var(--accent-weak)}.wt.sch tr:hover td{filter:none}
 .wt.am td.kc{color:#1b1b1b!important;font-weight:700}
+.wt.ld tr.rl-오더 td{background:#E2EFDA;color:#1b1b1b}.wt.ld tr.rl-미수 td{background:#F4D7DD;color:#1b1b1b}.wt.ld tr.rl-관리 td{background:#D3EDE6;color:#1b1b1b}.wt.ld tr.rl-방문 td{background:#FFF2CC;color:#1b1b1b}.wt.ld tr.rl-종결 td{background:#EEEEEE;color:#888}
+.wt.ld tfoot th{position:sticky;bottom:0}.tag.ls-오더{background:#fff;color:#2e7d32;border-color:#2e7d32}.tag.ls-미수{background:#fff;color:#c2185b;border-color:#c2185b}.tag.ls-관리{background:#fff;color:#00796b;border-color:#00796b}.tag.ls-방문{background:#FFF3C4;color:#8a5a00;border-color:#FFF3C4}.tag.ls-종결{background:#e9ecef;color:#6c757d;border-color:#e9ecef}.tag.lp{background:#fff;color:#1d4ed8;border-color:#93b4f5}
 .wt th .fbtn{display:inline-block;margin-left:4px;font-size:8px;line-height:14px;padding:0 3px;border-radius:3px;color:var(--mute);border:1px solid var(--line);background:var(--panel);cursor:pointer;vertical-align:middle}.wt th .fbtn:hover{color:var(--accent);border-color:var(--accent)}.wt th .fbtn.on{background:var(--accent);color:#fff;border-color:var(--accent)}
 .cfpop{position:fixed;z-index:60;width:270px;background:var(--panel);color:var(--fg);border:1px solid var(--line);border-radius:8px;box-shadow:0 8px 24px rgba(0,0,0,.18);padding:10px;display:grid;gap:8px}
 .cfpop .cfq{padding:6px 8px;border:1px solid var(--line);border-radius:5px;background:var(--field);color:var(--fg)}.cfpop .cflist{max-height:300px;overflow:auto;border:1px solid var(--line2);border-radius:5px;padding:4px}
@@ -574,7 +576,7 @@ async function incFetch(tb,cur,full,withCount){const since=maxUpd(cur);if(!cur.l
 async function loadAll(){
   view().innerHTML=`<div class="empty"><h2>불러오는 중…</h2></div>`;
   try{
-    [staff,customers,contracts,jobs,payments,files,grades,notes]=await Promise.all([fetchAll("staff","user_id,name,role,aliases,active"),fetchAll("customers"),fetchCtr(),fetchAll("jobs"),fetchPays(),fetchFiles(),fetchGrades(),fetchNotes()]);
+    [staff,customers,contracts,jobs,payments,files,grades,notes,leads]=await Promise.all([fetchAll("staff","user_id,name,role,aliases,active"),fetchAll("customers"),fetchCtr(),fetchAll("jobs"),fetchPays(),fetchFiles(),fetchGrades(),fetchNotes(),fetchLeads()]);
     const st=await sb.from("settings").select("bank").eq("id",1).maybeSingle();if(st.data&&st.data.bank)S.bank=st.data.bank;
   }catch(e){view().innerHTML=`<div class="empty"><h2>데이터를 불러오지 못했습니다</h2><p>${esc(e.message||"")}</p><p>1단계 데이터베이스 설정(phase1.sql)을 실행했는지 확인해 주세요.</p></div>`;return}
   if(ui.sel&&!custById(ui.sel))ui.sel=null;
@@ -583,19 +585,19 @@ async function loadAll(){
 async function fetchPays(){if(me&&me.role==="tech")return[];try{const r=await fetchAll("payments");ui.noPay=false;return r}catch(e){ui.noPay=true;return[]}}
 async function fetchFiles(){try{const r=await fetchAll("customer_files");ui.noFiles=false;return r}catch(e){ui.noFiles=true;return[]}}
 async function fetchGrades(){if(me&&me.role==="tech")return[];try{const r=await fetchAll("customer_grades");ui.noGrades=false;return r}catch(e){ui.noGrades=true;return[]}}
-const TBL={notes:fetchNotes,grades:fetchGrades,files:fetchFiles,payments:fetchPays,customers:()=>fetchAll("customers"),contracts:fetchCtr,jobs:()=>fetchAll("jobs"),staff:()=>fetchAll("staff","user_id,name,role,aliases,active")};
+const TBL={leads:fetchLeads,notes:fetchNotes,grades:fetchGrades,files:fetchFiles,payments:fetchPays,customers:()=>fetchAll("customers"),contracts:fetchCtr,jobs:()=>fetchAll("jobs"),staff:()=>fetchAll("staff","user_id,name,role,aliases,active")};
 let reloadSeq=0;
 async function reload(tables,quiet){
   const seq=++reloadSeq;let res;
-  const INC={customers:()=>customers,contracts:()=>contracts,jobs:()=>jobs,payments:()=>(me.role==="tech"||ui.noPay)?null:payments};
+  const INC={customers:()=>customers,contracts:()=>contracts,jobs:()=>jobs,payments:()=>(me.role==="tech"||ui.noPay)?null:payments,leads:()=>(me.role==="tech"||ui.noLeads)?null:leads};
   const chg=[];ui.rtick=(ui.rtick||0)+1;const forceFull=quiet&&ui.rtick%10===0;
   try{res=await Promise.all(tables.map(async(t,i)=>{const cur=!forceFull&&INC[t]&&INC[t]();if(cur){const r=await incFetch(t,cur,TBL[t],!quiet);chg[i]=r.changed;return r.rows}
-    const d=await TBL[t]();const old={customers,contracts,jobs,staff,payments,files,grades,notes}[t];chg[i]=JSON.stringify(old)!==JSON.stringify(d);return d}))}
+    const d=await TBL[t]();const old={customers,contracts,jobs,staff,payments,files,grades,notes,leads}[t];chg[i]=JSON.stringify(old)!==JSON.stringify(d);return d}))}
   catch(e){if(!quiet)toast("최신 내용을 불러오지 못했습니다. 인터넷 연결을 확인해 주세요.");return false}
   if(seq!==reloadSeq&&quiet)return false;
   let changed=chg.some(Boolean);
   tables.forEach((t,i)=>{const d=res[i];
-    if(t==="customers")customers=d;if(t==="contracts")contracts=d;if(t==="jobs")jobs=d;if(t==="staff")staff=d;if(t==="payments")payments=d;if(t==="files")files=d;if(t==="grades")grades=d;if(t==="notes")notes=d});
+    if(t==="customers")customers=d;if(t==="contracts")contracts=d;if(t==="jobs")jobs=d;if(t==="staff")staff=d;if(t==="payments")payments=d;if(t==="files")files=d;if(t==="grades")grades=d;if(t==="notes")notes=d;if(t==="leads")leads=d});
   if(tables.includes("staff")&&me){const s=staff.find(x=>x.user_id===me.id);if(s){me.name=s.name;me.role=s.role;document.getElementById("modeLabel").textContent=`${me.name||me.email} · ${ROLE[me.role]}`}}
   if(ui.sel&&!custById(ui.sel))ui.sel=null;
   buildIdx();if(!quiet||changed)render();return true;
@@ -604,7 +606,7 @@ async function reload(tables,quiet){
 function bgRefresh(){
   if(!me||!me.role||document.hidden||ui.dirty||document.getElementById("dlg").open)return;
   const a=document.activeElement;if(a&&a.closest&&a.closest("#view form,#view .stafft,#view fieldset"))return;
-  reload(["customers","contracts","jobs","staff","payments","files","grades","notes"],true);
+  reload(["customers","contracts","jobs","staff","payments","files","grades","notes","leads"],true);
 }
 setInterval(bgRefresh,30000);
 window.addEventListener("focus",bgRefresh);
@@ -621,11 +623,11 @@ function restoreScroll(s){if(!s||s.v!==ui.view)return;const els=[...document.que
 function render(){if(ui._fresh){ui._fresh=false;render0();window.scrollTo(0,0);return}const _sv=snapScroll();try{render0()}finally{restoreScroll(_sv)}}
 function render0(){
   ui.dirty=false;
-  const tabs=[["cust","고객"],["work","당월 설치·A/S 전체리스트"]];if(me.role!=="tech")tabs.push(["ctrm","당월리스트"],["allm","전체리스트"],["asm","A/S관리"]);tabs.push(["sched","담당자별 일정표"]);if(isAdmin())tabs.push(["staff","직원"],["settings","설정"]);
+  const tabs=[["cust","고객"]];if(me.role!=="tech")tabs.push(["leads","DB관리"]);tabs.push(["work","당월 설치·A/S 전체리스트"]);if(me.role!=="tech")tabs.push(["ctrm","당월리스트"],["allm","전체리스트"],["asm","A/S관리"]);tabs.push(["sched","담당자별 일정표"]);if(isAdmin())tabs.push(["staff","직원"],["settings","설정"]);
   document.getElementById("nav").innerHTML=tabs.map(([k,l])=>`<button type="button" class="${ui.view===k?"on":""}" data-v="${k}">${l}</button>`).join("");
   document.querySelectorAll("#nav button").forEach(b=>b.onclick=()=>{ui.view=b.dataset.v;ui.jsel=new Set();ui._fresh=true;render()});
   if(ui.view==="install"||ui.view==="as")ui.view="work";
-  if(ui.view==="cust")renderCustView();else if(ui.view==="work")renderWorkView();else if(ui.view==="ctrm")renderCtrView();else if(ui.view==="asm")renderAsView();else if(ui.view==="allm")renderAllView();else if(ui.view==="sched")renderSchedView();else if(ui.view==="staff")renderStaffView();else if(ui.view==="delete")renderDeleteView();else renderSettings();
+  if(ui.view==="cust")renderCustView();else if(ui.view==="work")renderWorkView();else if(ui.view==="ctrm")renderCtrView();else if(ui.view==="asm")renderAsView();else if(ui.view==="leads")renderLeadView();else if(ui.view==="allm")renderAllView();else if(ui.view==="sched")renderSchedView();else if(ui.view==="staff")renderStaffView();else if(ui.view==="delete")renderDeleteView();else renderSettings();
 }
 
 /* ================= 고객 ================= */
@@ -669,11 +671,12 @@ function renderCustMain(){
   if(!c){m.innerHTML=`<div class="empty"><h2>고객을 고르세요</h2><p>${me.role==="sales"?"본인이 담당하거나 수금을 배정받은 고객만 보입니다.":me.role==="tech"?"배정받은 작업의 고객만 보입니다. 위쪽 ‘작업현황’ 메뉴에서 설치·A/S 목록을 볼 수 있습니다.":"왼쪽에서 업체명(상호), 전화번호, 시리얼, 담당자로 검색하세요."}</p></div>`;return}
   const ks=custContracts(c.id),js=custJobs(c.id);
   const tabs=[["info","고객정보"]];if(me.role!=="tech")tabs.push(["ctr",`계약 (${ks.length})`]);tabs.push(["install",`설치·철거 (${js.filter(j=>j.kind!=="as").length})`],["as",`A/S (${js.filter(j=>j.kind==="as").length})`],["files",`사진·서류 (${custFiles(c).filter(f=>!(me.role==="tech"&&f.kind==="계약서")).length})`],["conf","확인서"]);
+  if(me.role!=="tech"&&!ui.noLeads)tabs.splice(1,0,["lead",`DB 상담 (${custLeads(c).length})`]);
   if(!tabs.some(t=>t[0]===ui.ctab))ui.ctab="info";
   m.innerHTML=`<div class="chead"><h2>${esc(c.name)}</h2><span class="meta">${esc([c.ceo,c.phone||c.phone2,"담당 "+(staffName(c.owner)||c.owner_name||"-")].filter(Boolean).join(" · "))}</span></div>
    <div class="tabs">${tabs.map(([k,l])=>`<button type="button" class="tab${ui.ctab===k?" on":""}" data-t="${k}">${l}</button>`).join("")}</div><div id="tabBody"></div>`;
   m.querySelectorAll(".tab").forEach(b=>b.onclick=()=>{ui.ctab=b.dataset.t;ui.draft=null;renderCustMain()});
-  if(ui.ctab==="info")renderCustInfo(c);else if(ui.ctab==="ctr")renderContracts(c);else if(ui.ctab==="install"||ui.ctab==="as")renderCustJobs(c,ui.ctab);else if(ui.ctab==="files")renderCustFiles(c);else renderConf(c);
+  if(ui.ctab==="info")renderCustInfo(c);else if(ui.ctab==="lead")renderCustLeads(c);else if(ui.ctab==="ctr")renderContracts(c);else if(ui.ctab==="install"||ui.ctab==="as")renderCustJobs(c,ui.ctab);else if(ui.ctab==="files")renderCustFiles(c);else renderConf(c);
 }
 function inp(name,label,v,type="text",ro=false,extra=""){return `<label class="f">${label}<input name="${name}" type="${type}" value="${esc(v??"")}" ${ro?"readonly":""} ${extra}></label>`}
 function sel(name,label,opts,v,ro=false){return `<label class="f">${label}<select name="${name}" ${ro?"disabled":""}>${opts.map(o=>Array.isArray(o)?`<option value="${esc(o[0])}" ${o[0]===v?"selected":""}>${esc(o[1])}</option>`:`<option ${o===v?"selected":""}>${esc(o)}</option>`).join("")}</select></label>`}
@@ -725,7 +728,7 @@ function renderCustInfo(c){
   document.getElementById("cf").onsubmit=async e=>{e.preventDefault();await saveCustomer(c,new FormData(e.target))};
   const d=document.getElementById("bDelC");if(d)d.onclick=()=>openDlg("고객 삭제",`<p><b>${esc(c.name)}</b>과 그 계약·설치·A/S 기록을 모두 삭제합니다. 되돌릴 수 없습니다.</p>`,[["취소"],["삭제","danger",async()=>{const {error}=await sb.from("customers").delete().eq("id",c.id);if(error)return toast("삭제하지 못했습니다");ui.sel=null;toast("삭제했습니다");reload(["customers","contracts","jobs"])}]]);
 }
-function newCustomer(tpl,afterNew){if(!tpl||!tpl.id)tpl=null;
+function newCustomer(tpl,afterNew,pre){if(!tpl||!tpl.id)tpl=null;
   openDlg("새 고객",`${bizUploadBox("nBizUp")}<div class="g2"><label class="f">업체명(상호)<input id="nName"></label><label class="f">대표자<input id="nCeo"></label></div>
    <div class="g2"><label class="f">전화번호<input id="nPhone"></label><label class="f">사업자등록번호<input id="nBiz"></label></div>
    <label class="f">상점주소<input id="nAddr"></label><label class="f">메모<input id="nMemo" placeholder="개업일·업태 등"></label>${ui.noFiles?"":newCustFilesBox()}${me.role==="sales"?`<p class="mapt">담당자는 본인으로 등록됩니다.</p>`:""}`,
@@ -744,6 +747,7 @@ function newCustomer(tpl,afterNew){if(!tpl||!tpl.id)tpl=null;
      if(afterNew){await reload(["customers","files"]);afterNew(custById(data.id)||data);return true}
      reload(["customers","files"])}]]);
   const nfSel=bindNewCustFiles();
+  if(pre)[["nName",pre.name],["nCeo",pre.ceo],["nPhone",pre.phone],["nAddr",pre.address],["nMemo",pre.memo]].forEach(([id,v])=>{const el=document.getElementById(id);if(el&&v)el.value=v});
   if(tpl){document.getElementById("dlgH").textContent="새 고객 (복사)";[["nName",tpl.name],["nCeo",tpl.ceo],["nPhone",tpl.phone||tpl.phone2],["nBiz",tpl.biz_no],["nAddr",tpl.address],["nMemo",tpl.memo]].forEach(([id,v])=>{const el=document.getElementById(id);if(el&&v)el.value=v});
     const b=document.getElementById("dlgB");b.insertAdjacentHTML("afterbegin",`<p class="warnbox" style="margin:0">‘${esc(tpl.name)}’의 정보를 복사했습니다. 업체명·사업자번호처럼 다른 부분을 고친 뒤 등록하세요.</p>`)}
   bindBizUpload("nBizUp",fd=>{const set=(id,v)=>{const el=document.getElementById(id);if(el&&v)el.value=v};
@@ -981,7 +985,7 @@ function setColW(o,t="ctr"){try{localStorage.setItem(cwKey(t),JSON.stringify(o))
 function applyColW(cols,live,t="ctr"){const w=Object.assign(getColW(t),live||{});const id="colwStyle_"+t;let st=document.getElementById(id);if(!st){st=document.createElement("style");st.id=id;document.head.appendChild(st)}
   const sel=TCFG[t].sel,lead=TCFG[t].lead();
   st.textContent=cols.map((c,i)=>w[c]?`${sel} tr>*:nth-child(${i+lead+1}){width:${w[c]}px;min-width:${w[c]}px;max-width:${w[c]}px;overflow:hidden;text-overflow:ellipsis}`:"").join("\n");
-  if(t==="ctr"||t==="as"||t==="all")freezeCols(t,cols)}
+  if(t==="ctr"||t==="as"||t==="all"||t==="lead")freezeCols(t,cols)}
 /* 틀 고정: 맨 앞(체크·순번)부터 업체명(상호) 열까지는 가로로 밀어도 고정 */
 function freezeCols(t,cols){const sel=TCFG[t].sel;const id="frzStyle_"+t;let st=document.getElementById(id);if(!st){st=document.createElement("style");st.id=id;document.head.appendChild(st)}
   const tbl=view().querySelector(sel);const ni=cols.indexOf("name");if(!tbl||ni<0){st.textContent="";return}
@@ -1621,6 +1625,199 @@ function transferDlg(c,k,c2){const pool=customers.filter(x=>x.id!==c.id);
       toast(`${to.name}에 양도했습니다`);await reload(["customers","contracts"],true);const nk2=ctrById(r.data.id);const tc=custById(to.id);if(nk2&&tc)contractDlg(tc,nk2);return true}]]);
   if(!c2)bindCustPicker(pool)}
 
+/* ================= DB관리 (전화·중앙회 등 상담 신청 건) ================= */
+let leads=[];
+async function fetchLeads(){if(me&&me.role==="tech")return[];try{const r=await fetchAll("leads");ui.noLeads=false;return r}catch(e){ui.noLeads=true;return[]}}
+const LSTAT=["오더","미수","종결","방문","관리"];
+const LPROG=["오더","무료체험","통화요망","방문요망"];
+const LSRC=["중앙회","인바운드","홍보관","MOU","소개","온라인"];
+const LITEM=["초음파","젤라또","수압식","싱크대"];
+const LCOLS=[["status","상태",1],["rdate","접수일자",1],["item","품목",1],["source","유입경로",1],["receiver","접수자·선행자",1],["org","소속(지회/업체)",1],["branch","지부",1],
+ ["contact","담당자/직급",1],["cphone","연락처",1],["open","운영여부(오픈일자)",1],["ceo","대표자",1],["name","업장명",1],["addr","주소",1],["phone","업장 연락처",1],["note","참고사항",1],
+ ["sales","영업담당",1],["progress","최종 진행내역",1],["fdate","피드백 일자",1],["next","다음 연락일",1],["clast","최근 상담일",1],["ctext","최근 상담내역",1],["ccount","상담 횟수",0],["cust","연결 고객",1],["reg","등록일시",0]];
+TCFG.lead={cols:()=>LCOLS,sel:".wt.ld",lead:()=>isAdmin()?2:1};
+const dg=s=>String(s||"").replace(/\D/g,"");
+function leadCons(l){return (Array.isArray(l.consults)?l.consults:[]).slice().sort((a,b)=>String(a.d||"").localeCompare(String(b.d||"")))}
+function leadLast(l){const c=leadCons(l);return c[c.length-1]||null}
+function leadOpen(l){return l.status!=="종결"&&l.status!=="오더"&&!l.customer_id}
+function leadDue(l){return leadOpen(l)&&l.next_date&&l.next_date<=today()}
+function leadCell(col,l){const td=today();const last=leadLast(l);
+  switch(col){
+    case"status":return `<td>${l.status?`<span class="tag ls-${esc(l.status)}">${esc(l.status)}</span>`:""}</td>`;
+    case"rdate":return `<td>${esc(ymd2(l.recv_date))}</td>`;
+    case"item":return `<td>${esc(l.item)}</td>`;case"source":return `<td>${esc(l.source)}</td>`;case"receiver":return `<td>${esc(l.receiver)}</td>`;
+    case"org":return `<td>${esc(l.org)}</td>`;case"branch":return `<td>${esc(l.branch)}</td>`;case"contact":return `<td>${esc(l.contact_name)}</td>`;
+    case"cphone":return `<td>${esc(l.contact_phone)}</td>`;case"open":return `<td>${esc(l.open_info)}</td>`;case"ceo":return `<td>${esc(l.ceo)}</td>`;
+    case"name":return `<td title="${esc(l.biz_name)}"><b>${esc(l.biz_name)}</b></td>`;
+    case"addr":return `<td class="wrap memo" title="${esc(l.address)}"><div class="clamp">${esc(l.address)}</div></td>`;
+    case"phone":return `<td>${esc(l.phone)}</td>`;
+    case"note":return `<td class="wrap memo" title="${esc(l.note)}"><div class="clamp">${esc(l.note)}</div></td>`;
+    case"sales":return `<td>${esc(staffName(l.sales)||l.sales_name)}</td>`;
+    case"progress":return `<td>${l.progress?`<span class="tag lp">${esc(l.progress)}</span>`:""}</td>`;
+    case"fdate":return `<td>${esc(ymd2(l.feedback_date))}</td>`;
+    case"next":{const d=l.next_date||"";const open=leadOpen(l);return `<td class="${open&&d?(d===td?"due":d<td?"late":""):""}">${esc(ymd2(d))}</td>`}
+    case"clast":return `<td>${esc(last?ymd2(last.d):"")}</td>`;
+    case"ctext":return `<td class="wrap memo" title="${esc(last?last.t:"")}"><div class="clamp">${esc(last?last.t:"")}</div></td>`;
+    case"ccount":return `<td class="num">${leadCons(l).length||""}</td>`;
+    case"cust":{const c=l.customer_id&&custById(l.customer_id);return `<td>${c?`<a href="#" data-gocust="${c.id}">${esc(c.name)}</a>`:""}</td>`}
+    case"reg":{const d=l.created_at?new Date(l.created_at):null;return `<td>${d&&!isNaN(d)?`${String(d.getMonth()+1).padStart(2,"0")}/${String(d.getDate()).padStart(2,"0")} ${String(d.getHours()).padStart(2,"0")}:${String(d.getMinutes()).padStart(2,"0")}`:""}</td>`}
+  }
+  return "<td></td>"}
+function leadSortKey(){return "hc.sort.lead."+(me&&me.id||"")}
+function leadGetSort(){try{const v=JSON.parse(localStorage.getItem(leadSortKey())||"null");if(v&&v.c)return v}catch(e){}return{c:"rdate",d:1}}
+function leadSetSort(v){try{localStorage.setItem(leadSortKey(),JSON.stringify(v))}catch(e){}}
+function leadSortVal(c,l){switch(c){case"rdate":return l.recv_date||"";case"fdate":return l.feedback_date||"";case"next":return l.next_date||"";case"clast":{const x=leadLast(l);return x?x.d||"":""}
+  case"ccount":return leadCons(l).length;case"reg":return l.created_at||"";case"status":return LSTAT.indexOf(l.status);}return cfText(leadCell(c,l)).replace("(빈 칸)","")}
+function renderLeadView(){const _sv=snapScroll();renderLeadView0();restoreScroll(_sv)}
+function renderLeadView0(){
+  if(!ui.lm)ui.lm=thisMonth();["lq","lrow","lsrc","lkpi"].forEach(k=>{if(ui[k]===undefined)ui[k]=""});
+  if(ui.noLeads){view().innerHTML=`<div class="sec"><h2>DB관리</h2><p class="warnbox">DB관리를 쓰려면 Supabase SQL Editor에서 <b>phase1y.sql</b>을 실행해 주세요.</p></div>`;return}
+  const [st0,en0]=monthRange(ui.lm);const inM=d=>d&&d>=st0&&d<en0;
+  const mon=ui.lall?leads:leads.filter(l=>inM(l.recv_date));
+  const due=leads.filter(leadDue);const care=leads.filter(l=>l.status==="관리"||(leadOpen(l)&&!l.status));
+  const ord=mon.filter(l=>l.status==="오더"||l.customer_id);
+  const KPI={mon:[ui.lall?"전체 상담":"이달 접수",mon],ord:["계약(오더)",ord],due:["연락할 건",due],care:["관리 중",care]};
+  const src=ui.lkpi&&KPI[ui.lkpi]?KPI[ui.lkpi][1]:mon;
+  const srcs=[...new Set([...LSRC.filter(s=>mon.some(l=>l.source===s)),...mon.map(l=>l.source).filter(Boolean)])];
+  const stOf=l=>LSTAT.includes(l.status)?l.status:"";
+  const cnt=(r,s)=>src.filter(l=>(r===null||stOf(l)===r)&&(s===null||(l.source||"")===s)).length;
+  const qq=ui.lq.trim().toLowerCase().replace(/-/g,"");
+  let list=src.filter(l=>(ui.lrow===""||ui.lrow==="*"||stOf(l)===(ui.lrow==="(미정)"?"":ui.lrow))&&(ui.lsrc===""||ui.lsrc==="*"||(l.source||"")===(ui.lsrc==="(없음)"?"":ui.lsrc))
+    &&(!qq||[l.biz_name,l.ceo,l.phone,l.contact_phone,l.contact_name,l.address,l.org,l.branch,l.receiver,l.sales_name,staffName(l.sales),l.note,...leadCons(l).map(c=>c.t)].join(" ").toLowerCase().replace(/-/g,"").includes(qq)));
+  const S=leadGetSort();const cache=new Map();const v=(l)=>{if(!cache.has(l))cache.set(l,leadSortVal(S.c,l));return cache.get(l)};
+  list.sort((a,b)=>{const A=v(a),B=v(b);const ea=A===""||A==null,eb=B===""||B==null;if(ea!==eb)return ea?1:-1;const r=typeof A==="number"&&typeof B==="number"?A-B:KO.compare(String(A),String(B));return r*S.d||regCmp(a,b)});
+  list=cfApply("lead",list,(c,l)=>cfText(leadCell(c,l)));
+  ui.lsel=ui.lsel||new Set();[...ui.lsel].forEach(id=>{if(!list.some(l=>l.id===id))ui.lsel.delete(id)});
+  const cols=getCols("lead");const shown=list.slice(0,ui.lN||500);
+  const rowsS=[...LSTAT,"(미정)"],colsS=[...srcs,"(없음)"].filter((s,i,a)=>s!=="(없음)"||mon.some(l=>!l.source));
+  const sumT=`<table class="sumt" aria-label="상담 집계"><thead><tr><th></th>${colsS.map(s=>`<th>${esc(s)}</th>`).join("")}<th>합계</th></tr></thead><tbody>
+    ${rowsS.map(r=>`<tr class="${r==="오더"?"open":""}"><th>${esc(r)}</th>${[...colsS,"*"].map(s=>`<td class="cl ${ui.lrow===r&&(ui.lsrc||"*")===s?"on":""}" data-r="${esc(r)}" data-s="${esc(s)}">${cnt(r==="(미정)"?"":r,s==="*"?null:s==="(없음)"?"":s)}</td>`).join("")}</tr>`).join("")}
+    <tr><th>합계</th>${[...colsS,"*"].map(s=>`<td class="cl ${ui.lrow==="*"&&(ui.lsrc||"*")===s?"on":""}" data-r="*" data-s="${esc(s)}"><b>${cnt(null,s==="*"?null:s==="(없음)"?"":s)}</b></td>`).join("")}</tr></tbody></table>`;
+  const label=[ui.lkpi&&KPI[ui.lkpi]?KPI[ui.lkpi][0]:"",ui.lrow&&ui.lrow!=="*"?ui.lrow:"",ui.lsrc&&ui.lsrc!=="*"?ui.lsrc:""].filter(Boolean).join(" · ");
+  const conv=mon.length?Math.round(ord.length*100/mon.length):0;
+  view().innerHTML=`<div class="sumwrap"><div style="display:grid;gap:8px;align-content:start"><div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap"><h2 style="margin:0;font-size:18px">DB관리</h2>
+      <input id="lM" type="month" value="${esc(ui.lm)}" aria-label="기준 월" ${ui.lall?"disabled":""} style="padding:5px 8px;border:1px solid var(--line);border-radius:6px;background:var(--field)">${ui.lm!==thisMonth()&&!ui.lall?`<button class="btn sm" type="button" id="lNow">이번 달</button>`:""}
+      <label class="chip"><input type="checkbox" id="lAllP" ${ui.lall?"checked":""}>전체 기간</label></div>
+      <div class="kpis"><div class="kpi kc ${ui.lkpi==="mon"?"on":""}" data-lkpi="mon" role="button" tabindex="0"><span>${ui.lall?"전체 상담":"이달 접수"}</span><b>${mon.length}건</b></div>
+       <div class="kpi kc ${ui.lkpi==="ord"?"on":""}" data-lkpi="ord" role="button" tabindex="0"><span>계약(오더)</span><b>${ord.length}건</b><small>전환율 ${conv}%</small></div>
+       <div class="kpi bad kc ${ui.lkpi==="due"?"on":""}" data-lkpi="due" role="button" tabindex="0"><span>연락할 건 (오늘까지)</span><b>${due.length}건</b></div>
+       <div class="kpi kc ${ui.lkpi==="care"?"on":""}" data-lkpi="care" role="button" tabindex="0"><span>관리 중 (전체)</span><b>${care.length}건</b></div></div>
+      <p class="mapt" style="margin:0">접수일자 기준으로 그달 상담 건이 나옵니다. ‘다음 연락일’이 오늘이거나 지난 건은 ‘연락할 건’에 모입니다.<br>숫자를 누르면 아래 목록이 그 건들로 바뀝니다.</p></div>
+     <div class="sumbox">${sumT}</div></div>
+   <div class="toolbar"><input id="lQ" type="search" placeholder="업장명·대표자·연락처·주소·소속·상담내용 검색" value="${esc(ui.lq)}">
+     <div class="nav" role="group"><button type="button" id="lAll" class="${label?"":"on"}">전체</button></div><span class="mapt">${label?esc(label)+" · ":""}${list.length}건</span>
+     <span style="flex:1"></span>${isAdmin()?`<label class="chip"><input type="checkbox" id="lSelAll">전체 선택</label><button class="btn danger" type="button" id="lDel" disabled>선택 삭제 (0)</button>`:""}
+     ${cfClearBtn("lead")}<button class="btn" type="button" id="lCols">입력화면설정</button>${isOffice()?`<button class="btn" type="button" id="lImp">엑셀 가져오기</button>`:""}<button class="btn pri" type="button" id="lNew">+ 상담 등록</button></div>
+   <div class="wrapx vis" style="padding-top:10px"><div class="wtbox"><table class="wt ld"><thead><tr>${isAdmin()?"<th></th>":""}<th>순번</th>${colHead(cols,"lead",new Set(["ccount"]))}</tr></thead><tbody>
+    ${shown.map((l,i)=>`<tr data-lid="${l.id}" class="rl-${esc(l.customer_id&&!l.status?"오더":l.status)}">${isAdmin()?`<td><input type="checkbox" class="lsel" data-id="${l.id}" ${ui.lsel.has(l.id)?"checked":""} aria-label="선택"></td>`:""}<td>${i+1}</td>${cols.map(c=>leadCell(c,l)).join("")}</tr>`).join("")||`<tr><td colspan="${cols.length+2}" class="mapt" style="cursor:default">해당하는 상담이 없습니다. ‘+ 상담 등록’으로 추가하세요.</td></tr>`}</tbody></table></div>
+    ${list.length>shown.length?`<p style="text-align:center"><button class="btn" type="button" id="lMore">다음 500건 더 보기</button></p>`:""}</div>`;
+  applyColW(cols,null,"lead");bindColResize(cols,"lead");view().querySelectorAll(".wtbox").forEach(hbar);
+  const re=()=>renderLeadView();
+  view().querySelectorAll(".sumt td.cl").forEach(td=>td.onclick=()=>{ui.lrow=td.dataset.r;ui.lsrc=td.dataset.s;re()});
+  document.getElementById("lM").onchange=e=>{if(e.target.value){ui.lm=e.target.value;re()}};
+  const ln=document.getElementById("lNow");if(ln)ln.onclick=()=>{ui.lm=thisMonth();re()};
+  document.getElementById("lAllP").onchange=e=>{ui.lall=e.target.checked;re()};
+  document.getElementById("lAll").onclick=()=>{ui.lrow="";ui.lsrc="";ui.lkpi="";re()};
+  view().querySelectorAll("[data-lkpi]").forEach(el=>{const go=()=>{ui.lkpi=ui.lkpi===el.dataset.lkpi?"":el.dataset.lkpi;ui.lrow="";ui.lsrc="";re()};el.onclick=go;el.onkeydown=e=>{if(e.key==="Enter"||e.key===" "){e.preventDefault();go()}}});
+  document.getElementById("lCols").onclick=()=>colPicker(re,"lead");cfBind("lead",re);
+  const im=document.getElementById("lImp");if(im)im.onclick=()=>document.getElementById("fileIn").click();
+  document.getElementById("lNew").onclick=()=>leadDlg(null);
+  const mo=document.getElementById("lMore");if(mo)mo.onclick=()=>{ui.lN=(ui.lN||500)+500;re()};
+  view().querySelectorAll(".wt.ld thead th[data-ck]").forEach(th=>{th.classList.add("sortable");const S=leadGetSort();if(S.c===th.dataset.ck)th.dataset.sort=S.d===1?"asc":"desc";
+    th.onclick=e=>{if(e.target.closest(".rz")||e.target.closest(".fbtn"))return;const c=th.dataset.ck;const S=leadGetSort();leadSetSort({c,d:S.c===c?-S.d:1});re()}});
+  const q=document.getElementById("lQ");q.oninput=e=>{ui.lq=e.target.value;clearTimeout(q._t);q._t=setTimeout(()=>{re();const n=document.getElementById("lQ");n.focus();n.setSelectionRange(n.value.length,n.value.length)},250)};
+  if(isAdmin())bindRowSel(ui.lsel,"lsel","lSelAll","lDel",ids=>openDlg(`상담 ${ids.length}건 삭제`,`<p><b>되돌릴 수 없습니다.</b> 연결된 고객·계약은 그대로 남습니다.</p>`,[["취소"],["삭제","danger",async()=>{const {error}=await sb.from("leads").delete().in("id",ids);if(error)return toast("삭제하지 못했습니다: "+error.message);ids.forEach(id=>ui.lsel.delete(id));toast(`${ids.length}건 삭제했습니다`);reload(["leads"])}]]));
+  view().querySelectorAll("[data-gocust]").forEach(a=>a.onclick=e=>{e.preventDefault();e.stopPropagation();goCust(custById(a.dataset.gocust))});
+  view().querySelectorAll("tr[data-lid]").forEach(tr=>tr.onclick=e=>{const tdc=e.target.closest("td");if(tdc&&tdc.querySelector(".lsel")){const x=tdc.querySelector(".lsel");if(e.target!==x)x.click();return}
+    const l=leads.find(x=>x.id===tr.dataset.lid);if(l)leadDlg(l)});
+}
+/* 같은 연락처의 다른 상담·등록 고객 */
+function leadMatches(l){const ps=[dg(l.phone),dg(l.contact_phone)].filter(p=>p.length>=9);
+  const ls=leads.filter(x=>x.id!==l.id&&ps.some(p=>dg(x.phone)===p||dg(x.contact_phone)===p));
+  const cs=customers.filter(c=>ps.some(p=>dg(c.phone)===p||dg(c.phone2)===p)||(l.biz_name&&nk(c.name)===nk(l.biz_name)));
+  return{ls,cs}}
+function leadDlg(l,pre){const isNew=!l;l=l||Object.assign({status:"",recv_date:today(),item:"초음파",source:"",receiver:"",org:"",branch:"",contact_name:"",contact_phone:"",open_info:"",ceo:"",biz_name:"",address:"",phone:"",note:"",sales:me.role==="sales"?me.id:null,sales_name:me.role==="sales"?(me.name||""):"",progress:"",feedback_date:null,next_date:null,consults:[]},pre||{});
+  const can=isNew||isOffice()||l.sales===me.id||l.created_by===me.id;const ro=!can;
+  let cons=leadCons(l).map(x=>Object.assign({},x));
+  const m=isNew?{ls:[],cs:[]}:leadMatches(l);
+  const c0=l.customer_id&&custById(l.customer_id);
+  openDlg((isNew?"상담 등록":"상담")+(l.biz_name?" · "+esc(l.biz_name):""),`<div id="lf" style="display:grid;gap:10px">
+   ${c0?`<p class="mapt dsum" style="margin:0">✔ 계약 전환됨 → 고객 <a href="#" id="lGo"><b>${esc(c0.name)}</b></a></p>`:""}
+   ${m.cs.length||m.ls.length?`<p class="warnbox" style="margin:0">${m.cs.length?`같은 연락처·업장명의 <b>등록 고객</b>: ${m.cs.slice(0,3).map(c=>esc(c.name)).join(", ")}${m.cs.length>3?" 외":""}<br>`:""}${m.ls.length?`같은 연락처의 <b>이전 상담</b> ${m.ls.length}건: ${m.ls.slice(0,3).map(x=>esc((x.recv_date||"")+" "+x.biz_name+(x.status?" ("+x.status+")":""))).join(", ")}`:""}</p>`:""}
+   <h3 class="ksec">접수정보</h3>
+   <div class="g3">${sel("status","상태",[["","(미정)"],...LSTAT.map(s=>[s,s])],l.status||"",ro)}${inp("recv_date","접수일자",l.recv_date,"date",ro)}${inp("item","품목",l.item,"text",ro,'list="lItem"')}</div>
+   <div class="g3">${inp("source","유입경로",l.source,"text",ro,'list="lSrc" placeholder="중앙회·인바운드·홍보관"')}${inp("receiver","접수자·선행자",l.receiver,"text",ro,'list="stList2"')}${inp("org","소속 (지회/업체)",l.org,"text",ro)}</div>
+   <div class="g3">${inp("branch","지부",l.branch,"text",ro)}${inp("contact_name","담당자/직급",l.contact_name,"text",ro)}${inp("contact_phone","연락처 (담당자)",l.contact_phone,"text",ro)}</div>
+   <h3 class="ksec">업장정보</h3>
+   <div class="g3">${inp("biz_name","업장명",l.biz_name,"text",ro)}${inp("ceo","대표자",l.ceo,"text",ro)}${inp("phone","업장 연락처",l.phone,"text",ro)}</div>
+   <div class="g3"><div style="grid-column:span 2">${inp("address","주소",l.address,"text",ro)}</div>${inp("open_info","운영여부 (오픈일자)",l.open_info,"text",ro,'placeholder="운영중 / 3월 중 개업"')}</div>
+   <label class="f">참고사항<textarea name="note" ${ro?"readonly":""}>${esc(l.note)}</textarea></label>
+   <h3 class="ksec">피드백</h3>
+   <div class="g3">${isOffice()?inp("sales_name","영업담당",staffName(l.sales)||l.sales_name,"text",ro,'list="stList2" placeholder="이름 입력 또는 선택"'):inp("_s","영업담당",staffName(l.sales)||l.sales_name,"text",true)}${inp("progress","최종 진행내역",l.progress,"text",ro,'list="lProg"')}${inp("feedback_date","피드백 일자",l.feedback_date,"date",ro)}</div>
+   <div class="g3">${inp("next_date","다음 연락일",l.next_date,"date",ro)}<span></span><span></span></div>
+   <h3 class="ksec">상담 이력</h3>
+   <div id="lCons"></div>
+   ${ro?"":`<div class="payadd"><input id="lcD" type="date" value="${today()}" aria-label="상담일자"><input id="lcT" placeholder="상담 내용 (예: 사장님께 상담 후 오더, 기물 측정 요청)" aria-label="상담 내용" style="flex:1;min-width:240px"><button type="button" class="btn" id="lcAdd">상담 추가</button></div>
+   <p class="mapt" style="margin:0">상담을 추가한 뒤 ‘저장’을 눌러야 반영됩니다.</p>`}
+   <datalist id="lItem">${LITEM.map(x=>`<option value="${x}">`).join("")}</datalist><datalist id="lSrc">${LSRC.map(x=>`<option value="${x}">`).join("")}</datalist>
+   <datalist id="lProg">${LPROG.map(x=>`<option value="${x}">`).join("")}</datalist><datalist id="stList2">${staff.filter(s=>s.active&&s.role!=="tech").map(s=>`<option value="${esc(s.name)}">`).join("")}</datalist></div>`,
+   [...(!isNew&&!l.customer_id&&can?[["계약 전환","gocust",()=>{leadConvert(l);return true}]]:[]),["닫기"],...(!isNew&&isAdmin()?[["삭제","danger",async()=>{const {error}=await sb.from("leads").delete().eq("id",l.id);if(error)return toast("삭제하지 못했습니다: "+error.message);toast("삭제했습니다");reload(["leads"])}]]:[]),
+    ...(can?[["저장","pri",async()=>{const r=await leadSave(l,isNew,cons);if(!r)return true}]]:[])]);
+  const draw=()=>{const box=document.getElementById("lCons");if(!box)return;box.innerHTML=cons.length?`<table class="stafft"><thead><tr><th style="width:110px">상담일자</th><th>내용</th>${ro?"":"<th style='width:50px'></th>"}</tr></thead><tbody>${cons.map((x,i)=>`<tr><td>${esc(x.d||"")}</td><td style="white-space:pre-wrap">${esc(x.t||"")}${x.by?` <small class="mapt">· ${esc(x.by)}</small>`:""}</td>${ro?"":`<td><button type="button" class="btn sm danger" data-cx="${i}" aria-label="상담 삭제">삭제</button></td>`}</tr>`).join("")}</tbody></table>`:`<p class="mapt" style="margin:0">상담 이력이 없습니다.</p>`;
+    box.querySelectorAll("[data-cx]").forEach(b=>b.onclick=()=>{cons.splice(+b.dataset.cx,1);draw()})};
+  draw();
+  const add=document.getElementById("lcAdd");if(add){const go=()=>{const t=val("lcT").trim();if(!t)return toast("상담 내용을 입력하세요");cons.push({d:val("lcD")||today(),t,by:me.name||""});document.getElementById("lcT").value="";draw()};add.onclick=go;
+    document.getElementById("lcT").addEventListener("keydown",e=>{if(e.key==="Enter"&&!e.isComposing){e.preventDefault();e.stopPropagation();go()}})}
+  const lg=document.getElementById("lGo");if(lg)lg.onclick=e=>{e.preventDefault();goCust(c0)};
+}
+async function leadSave(l,isNew,cons){const f=fdata("lf");const s=k=>(f.get(k)||"").trim();
+  const p={status:f.get("status")||"",recv_date:f.get("recv_date")||null,item:s("item"),source:s("source"),receiver:s("receiver"),org:s("org"),branch:s("branch"),contact_name:s("contact_name"),contact_phone:fmtPhone(s("contact_phone")),
+    open_info:s("open_info"),ceo:s("ceo"),biz_name:s("biz_name"),address:s("address"),phone:fmtPhone(s("phone")),note:f.get("note")||"",progress:s("progress"),feedback_date:f.get("feedback_date")||null,next_date:f.get("next_date")||null,
+    consults:cons.slice().sort((a,b)=>String(a.d||"").localeCompare(String(b.d||"")))};
+  if(isOffice()){const w=whoIs(s("sales_name"));p.sales=w.id;p.sales_name=w.name}else if(isNew){p.sales=me.id;p.sales_name=me.name||""}
+  if(isNew&&l.customer_id)p.customer_id=l.customer_id;
+  if(!p.biz_name&&!p.phone&&!p.contact_phone){toast("업장명이나 연락처를 입력하세요");return false}
+  if(!p.feedback_date&&cons.length)p.feedback_date=p.consults[p.consults.length-1].d||null;
+  const r=isNew?await sb.from("leads").insert(p).select().single():await sb.from("leads").update(p).eq("id",l.id).select().single();
+  if(r.error){toast(/leads/.test(r.error.message)&&/exist|find/.test(r.error.message)?"DB관리 칸이 아직 없습니다. Supabase에서 phase1y.sql을 실행해 주세요.":"저장하지 못했습니다: "+r.error.message);return false}
+  toast(isNew?"상담을 등록했습니다":"저장했습니다");await reload(["leads"]);return r.data}
+/* 계약 전환: 등록된 고객이면 그 고객에, 아니면 새 고객 등록 후 신규계약 */
+async function leadConvert(l){
+  const link=async c=>{const {error}=await sb.from("leads").update({customer_id:c.id,status:"오더",progress:l.progress||"오더"}).eq("id",l.id);if(error)toast("상담과 고객을 연결하지 못했습니다: "+error.message);
+    await reload(["leads"],true);contractDlg(c,null)};
+  const m=leadMatches(l);const ex=m.cs[0];
+  if(ex&&await askConfirm(`이미 등록된 고객 ‘${ex.name}’이(가) 있습니다. 이 고객에 계약을 등록할까요? (아니오를 누르면 새 고객으로 등록)`))return link(ex);
+  newCustomer(null,c=>link(c),{name:l.biz_name,ceo:l.ceo,phone:l.phone||l.contact_phone,address:l.address,memo:[l.source&&("유입: "+l.source),l.org,l.open_info].filter(Boolean).join(" · ")})}
+/* 고객 화면의 'DB 상담' 탭 */
+function custLeads(c){const ps=[dg(c.phone),dg(c.phone2)].filter(p=>p.length>=9);return leads.filter(l=>l.customer_id===c.id||ps.some(p=>dg(l.phone)===p||dg(l.contact_phone)===p))}
+function renderCustLeads(c){const tb=document.getElementById("tabBody");const ls=custLeads(c).slice().sort((a,b)=>String(b.recv_date||"").localeCompare(String(a.recv_date||"")));
+  tb.innerHTML=`<div class="toolbar"><button class="btn pri" type="button" id="clNew">+ 상담 등록</button></div><div class="cards">${ls.map(l=>{const last=leadLast(l);return `<div class="card click" data-lid="${l.id}"><div class="t">${l.status?`<span class="tag ls-${esc(l.status)}">${esc(l.status)}</span>`:""} ${esc(l.recv_date||"")} · ${esc(l.source||"유입경로 없음")} · ${esc(l.biz_name)}${l.customer_id===c.id?` <span class="badge">계약 전환</span>`:""}</div>
+    <div class="d"><span>영업 ${esc(staffName(l.sales)||l.sales_name||"-")}</span><span>상담 ${leadCons(l).length}회</span>${last?`<span>${esc(last.d||"")} ${esc((last.t||"").slice(0,60))}</span>`:""}</div></div>`}).join("")||`<div class="empty" style="padding:8px 0">이 고객의 DB 상담 기록이 없습니다.</div>`}</div>`;
+  tb.querySelectorAll("[data-lid]").forEach(el=>el.onclick=()=>{const l=leads.find(x=>x.id===el.dataset.lid);if(l)leadDlg(l)});
+  document.getElementById("clNew").onclick=()=>leadDlg(null,{biz_name:c.name,ceo:c.ceo||"",phone:c.phone||c.phone2||"",address:c.address||"",customer_id:c.id})}
+/* DB관리대장 엑셀 가져오기 */
+function leadDate(v){if(v instanceof Date)return toDate(v);const s=String(v??"").trim();if(!s)return null;
+  if(/\d{2,4}\D+\d{1,2}\D+\d{1,2}/.test(s)){const d=toDate(s);if(d)return d}
+  const m=s.match(/^(\d{1,2})\s*[.\/월-]\s*(\d{1,2})/);if(!m)return null;const td=new Date();let y=td.getFullYear();
+  const mk=yy=>`${yy}-${String(+m[1]).padStart(2,"0")}-${String(+m[2]).padStart(2,"0")}`;if(+m[1]<1||+m[1]>12||+m[2]<1||+m[2]>31)return null;
+  if(new Date(mk(y))-td>60*864e5)y--;return mk(y)}
+function parseLeadSheet(rows,hr){const H=rows[hr].map(h=>nk(h));const at=(pre,k=0)=>{let c=-1;const p=nk(pre);for(let i=0;i<H.length;i++)if(H[i].startsWith(p)&&++c===k)return i;return -1};
+  const I={st:at("순번"),rd:at("접수일자"),item:at("품목"),src:at("유입"),rcv:at("접수자"),org:at("소속"),br:at("지부"),cn:at("담당자"),cp:at("연락처",0),open:at("운영"),ceo:at("대표자"),bn:at("업장명"),addr:at("주소"),ph:at("연락처",1),note:at("참고"),sales:at("영업담당"),prog:at("최종"),fb:at("피드백")};
+  const cpairs=[];H.forEach((h,i)=>{if(h.startsWith("상담일자"))cpairs.push(i)});
+  const out=[];rows.slice(hr+1).forEach(row=>{const g=i=>i<0?"":row[i];const t=i=>{const v=g(i);return v instanceof Date?toDate(v):String(v??"").trim()};
+    if(!t(I.bn)&&!t(I.ph)&&!t(I.cp))return;
+    const st=t(I.st);const cons=[];cpairs.forEach(i=>{const d=leadDate(row[i]);const tx=String(row[i+1]??"").trim();if(d||tx)cons.push({d:d||"",t:tx||String(row[i]??"").trim()})});
+    out.push({status:LSTAT.includes(st)?st:"",recv_date:leadDate(g(I.rd)),item:t(I.item),source:t(I.src),receiver:t(I.rcv),org:t(I.org),branch:t(I.br),contact_name:t(I.cn),contact_phone:fmtPhone(t(I.cp)),
+      open_info:t(I.open),ceo:t(I.ceo),biz_name:t(I.bn),address:t(I.addr),phone:fmtPhone(t(I.ph)),note:t(I.note),sales_name:t(I.sales),progress:t(I.prog),feedback_date:leadDate(g(I.fb)),consults:cons})});
+  return out}
+function leadImportDlg(fname,rows){
+  const key=l=>(l.recv_date||"")+"|"+nk(l.biz_name)+"|"+dg(l.phone||l.contact_phone);const ex=new Set(leads.map(key));
+  const add=[];let skip=0;rows.forEach(r=>{const k=key(r);if(ex.has(k)){skip++;return}ex.add(k);const w=whoIs(r.sales_name);r.sales=w.id;r.sales_name=w.name;add.push(r)});
+  openDlg("DB관리 엑셀 가져오기",`<p><b>${esc(fname)}</b> · ${rows.length}줄</p><table class="stafft"><tbody><tr><td>새 상담</td><td>${add.length}건</td></tr><tr><td>이미 있는 상담 (건너뜀)</td><td>${skip}건</td></tr><tr><td>상담 이력</td><td>${add.reduce((a,r)=>a+r.consults.length,0)}개</td></tr></tbody></table>
+    <p class="mapt">접수일자·업장명·연락처가 같은 줄은 이미 있는 것으로 보고 건너뜁니다. ‘3. 1’처럼 연도 없는 날짜는 올해(앞으로 두 달 넘게 남은 날짜면 작년)로 넣습니다.</p>`,
+    [["취소"],["가져오기","pri",async()=>{try{for(let i=0;i<add.length;i+=300){toast(`가져오는 중… ${Math.min(i+300,add.length)}/${add.length}`);const {error}=await sb.from("leads").insert(add.slice(i,i+300));if(error)throw error}
+      toast(`가져오기 완료: 상담 ${add.length}건`);await reload(["leads"])}catch(e){toast("가져오는 중 멈췄습니다: "+(e.message||""))}}]])}
+
 /* ================= 계약 ================= */
 function renderContracts(c){
   const ks=custContracts(c.id);const can=canEditCust(c);const tb=document.getElementById("tabBody");
@@ -2186,6 +2383,8 @@ document.getElementById("fileIn").onchange=async e=>{
   const f=e.target.files[0];e.target.value="";if(!f)return;
   if(!window.XLSX)return toast("엑셀 도구를 불러오지 못했습니다");
   let wb;try{wb=XLSX.read(await f.arrayBuffer(),{type:"array",cellDates:true})}catch(err){return toast("파일을 읽지 못했습니다")}
+  for(const sn of wb.SheetNames){const rows=XLSX.utils.sheet_to_json(wb.Sheets[sn],{header:1,raw:true,defval:""});
+    for(let r=0;r<Math.min(10,rows.length);r++){const h=rows[r].map(nk);if(h.includes("업장명")&&h.some(x=>x.startsWith("유입"))){if(ui.noLeads)return toast("DB관리를 쓰려면 Supabase에서 phase1y.sql을 먼저 실행해 주세요");const lr=parseLeadSheet(rows,r);if(!lr.length)return toast("가져올 상담 줄이 없습니다");return leadImportDlg(f.name,lr)}}}
   for(const sn of wb.SheetNames){const rows=XLSX.utils.sheet_to_json(wb.Sheets[sn],{header:1,raw:true,defval:""});
     for(let r=0;r<Math.min(10,rows.length);r++){const h=rows[r].map(nk);if(h.includes("상호")&&h.includes("접수내용")){const ar=parseAsSheet(rows,r);if(!ar.length)return toast("가져올 A/S 줄이 없습니다");return asImportDlg(f.name,ar)}}}
   let parsed=null;
