@@ -656,7 +656,7 @@ function renderCustView(){
   document.getElementById("stf").onchange=e=>{ui.stage=e.target.value;renderCustList()};
   const grf=document.getElementById("grf");if(grf)grf.onchange=e=>{ui.grade=e.target.value;renderCustList()};
   document.getElementById("ctf").onchange=e=>{ui.ctype=e.target.value;renderCustList()};
-  const nb=document.getElementById("bNewC");if(nb)nb.onclick=()=>newCustomer();
+  const nb=document.getElementById("bNewC");if(nb)nb.onclick=()=>newCustomer(null,async c=>{render();if(isOffice()&&await askConfirm("고객을 등록했습니다. 계약도 바로 등록하시겠습니까?"))contractDlg(c,null);else document.getElementById("dlg").close()});
   document.getElementById("clist").onclick=e=>{const it=e.target.closest(".citem");if(it){ui.sel=it.dataset.id;ui.ctab="info";ui.draft=null;document.querySelectorAll("#clist .citem.sel").forEach(x=>x.classList.remove("sel"));it.classList.add("sel");renderCustMain()}};
   renderCustList();renderCustMain();
 }
@@ -1071,7 +1071,7 @@ function colPicker(onDone,t="ctr"){
 /* 추가설치 건을 계약관리 목록에 한 줄로 (금액·입금은 원래 계약에서 관리) */
 /* 당월리스트에 나오는 계약(설치·결제가 그달이거나 해결 안 된 미수) */
 function ctrInMonth(k,ym){const [st0,en0]=monthRange(ym);const inM=d=>d&&d>=st0&&d<en0;const s=payStat(k);const bd=baseDate(k);
-  return inM(bd)||inM(s.last)||(k.stage==="미수"&&(!bd||bd<en0))}
+  return inM(bd)||inM(s.last)||!bd||bd>=en0||(k.stage==="미수"&&bd<en0)}
 function bulkMonthClose(){const ym=thisMonth();const ids=contracts.filter(k=>k.chk_month!=="OK"&&!ctrInMonth(k,ym)).map(k=>k.id);
   if(!ids.length)return toast("월마감할 계약이 없습니다");
   openDlg("나머지 계약 일괄 월마감",`<p>이번 달(${esc(ym)}) 당월리스트에 나오는 계약을 <b>제외한</b> 나머지 계약 <b>${ids.length}건</b>을 월마감 OK로 바꿉니다.</p><p class="mapt">이번 달 설치·결제된 건과 해결되지 않은 미수 건은 당월리스트에 그대로 남습니다. 바꾼 건은 전체리스트에서 보이고, 각 계약의 월마감 칸을 지우면 되돌릴 수 있습니다.</p>`,
@@ -1132,6 +1132,8 @@ function renderCtrView0(){
     if(inM(baseDate(k)))b.push("설치");
     if(inM(s.last))b.push("결제");
     if(k.stage==="미수"&&(!baseDate(k)||baseDate(k)<en0)&&!b.length)b.push("미수");
+    /* 이번 달 화면: 날짜가 없거나 다음 달 이후로 잡힌 계약, 지난달 것 중 월마감 안 된 계약도 보이게 (어느 목록에도 안 나오는 일 방지) */
+    if(!b.length&&ui.cm===thisMonth()&&k.stage!=="취소"){const bd=baseDate(k);b.push(!bd?"날짜 없음":bd>=en0?"예정":"이월")}
     if(b.length&&!monthClosed(k))rows.push({k,c:custById(k.customer_id)||{},s,b})});
   jobs.forEach(j=>{if(j.kind!=="addon")return;const k=addonRow(j);if(inM(baseDate(k))&&!monthClosed(k))rows.push({k,c:custById(j.customer_id)||{},s:payStat(k),b:["설치"],a:j})});
   // 금액 요약
