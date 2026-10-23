@@ -2495,7 +2495,7 @@ function jobDlg(j,c,kind,tpl,preset){
   const pick=isNew&&!c?`<label class="f">고객 검색<input id="jcQ" type="search" autocomplete="off" placeholder="업체명(상호)·대표자·전화번호·주소·시리얼"></label>
      <input type="hidden" name="custId" id="jcId"><div id="jcSel"></div><div id="jcRes" class="pickres"></div>
      <p class="mapt" id="jcHint">두 글자 이상 입력하면 고객 목록이 나옵니다. 없는 고객은 아래 ‘새 고객 등록’으로 먼저 등록하세요.</p>`
-    :`<div id="jcWrap"><p class="mapt dsum"><b>${esc(j.customer_name)}</b> · ${esc(j.address||"")}${c&&c.phone?" · "+esc(c.phone):""} · 제품: ${esc([p.product,p.size,p.options&&"("+p.options+")",p.serial&&"SN "+p.serial].filter(Boolean).join(" ")||"-")}${(()=>{const kk=ctrById(j.contract_id);return kk?` · <b>연결 계약</b> ${esc([kk.contract_date,kk.contract_type&&kk.contract_type!=="구매"?kk.contract_type:"",kk.stage].filter(Boolean).join(" · "))}`:""})()}${isNew?` <button type="button" class="btn sm" id="jcChange">고객 변경</button>`:""}</p>${c?gradeWarn(c):""}</div>`;
+    :`<div id="jcWrap"><p class="mapt dsum"><b>${esc(j.customer_name)}</b> · ${esc(j.address||"")}${c&&c.phone?" · "+esc(c.phone):""} · 제품: ${esc([p.product,p.size,p.options&&"("+p.options+")",p.serial&&"SN "+p.serial].filter(Boolean).join(" ")||"-")}${(()=>{const kk=ctrById(j.contract_id);return kk?` · <b>연결 계약</b> ${esc([kk.contract_date,kk.contract_type&&kk.contract_type!=="구매"?kk.contract_type:"",kk.stage].filter(Boolean).join(" · "))}`:""})()}${isNew||isOffice()?` <button type="button" class="btn sm" id="jcChange">고객 변경</button>`:""}</p>${c?gradeWarn(c):""}</div>`;
   openDlg(`${nTitle?"신규접수":KLABEL[j.kind]+" "+(isNew?(tpl?"접수 (복사)":"접수"):"작업")}${j.customer_name?" · "+esc(j.customer_name):""}`,`<div id="jf" style="display:grid;gap:10px">${tpl?`<p class="warnbox" style="margin:0">복사한 접수입니다. 방문일·상태·처리 내용은 새로 입력하세요. 사진은 복사되지 않습니다.</p>`:""}
    ${pick}
    ${isNew||off?`<div class="kpick chk" role="radiogroup" aria-label="구분">${canCtr?`<label><input type="radio" name="kind" value="ctr" ${wantCtr?"checked":""}>계약</label>`:""}${KINDS.filter(k=>!(nTitle&&k==="install")).map(k=>`<label><input type="radio" name="kind" value="${k}" ${!wantCtr&&j.kind===k?"checked":""}>${KLABEL[k]}</label>`).join("")}</div>`:""}
@@ -2556,7 +2556,9 @@ function jobDlg(j,c,kind,tpl,preset){
      if(off||isNew){Object.assign(pt,{request_date:f.get("request_date")||today(),visit_date:f.get("visit_date")||null,visit_time:f.get("visit_time")||"",symptom:f.get("symptom")||""})}
      if(he&&can)pt.end_time=(f.get("end_time")||"").trim();
      if(off){pt.techs=f.getAll("tech");pt.tech_names=f.get("tech_names")||"";if(pt.status==="접수"&&(pt.techs.length||pt.tech_names))pt.status="배정"}
+     if(!isNew&&chgTo&&chgTo.customer_id!==j.customer_id){if(!(await askConfirm(`이 작업의 고객을 ‘${j.customer_name}’에서 ‘${chgTo.customer_name}’(으)로 바꿔 저장할까요?`)))return true;Object.assign(pt,chgTo)}
      let r;if(isNew){const row=Object.assign({},j,pt);delete row.id;r=await sb.from("jobs").insert(row).select().single()}else r=await sb.from("jobs").update(pt).eq("id",j.id);
+     if(!r.error&&!isNew&&pt.customer_id&&pt.customer_id!==j.customer_id)await sb.from("customer_files").update({customer_id:pt.customer_id}).eq("job_id",j.id);
      if(r.error&&/jobs_kind_check/.test(r.error.message))return toast(j.kind==="move"?"이전설치 구분이 아직 없습니다. Supabase에서 phase1t.sql을 실행해 주세요.":"철거·추가설치 구분이 아직 없습니다. Supabase에서 phase1e.sql을 실행해 주세요.");
      if(r.error)return toast(/pay_status|pay_method/.test(r.error.message)?"납부 칸이 아직 없습니다. Supabase에서 phase1b.sql을 실행해 주세요.":/paid_type|pay_date|pay_name|pay_memo|closed/.test(r.error.message)?"결제 상세 칸이 아직 없습니다. Supabase에서 phase1c.sql을 실행해 주세요.":"저장하지 못했습니다: "+r.error.message);
      let pmsg="";if(isNew&&jpSel.length&&r.data){const up={ok:0,fail:[]};const gr={};jpSel.forEach(x=>(gr[x.kind]=gr[x.kind]||[]).push(x.file));
@@ -2574,10 +2576,11 @@ function jobDlg(j,c,kind,tpl,preset){
   (()=>{const jf=document.getElementById("jf");const dd=jf&&jf.querySelector('[name="done_date"]'),st=jf&&jf.querySelector('[name="status"]');
     if(dd&&st&&!dd.readOnly)dd.addEventListener("change",()=>{if(dd.value&&st.value!=="완료"&&st.value!=="취소"){st.value="완료";st.classList.add("autocalc");setTimeout(()=>st.classList.remove("autocalc"),700)}})})();
   /* 새 접수·복사: 다른 고객으로 바꾸기 */
+  let chgTo=null;const c0=c;
   const chg=document.getElementById("jcChange");if(chg)chg.onclick=()=>{const w=document.getElementById("jcWrap");
     w.innerHTML=`<label class="f">고객 검색<input id="jcQ" type="search" autocomplete="off" placeholder="업체명(상호)·대표자·전화번호·주소·시리얼"></label><input type="hidden" name="custId" id="jcId"><div id="jcSel"></div><div id="jcRes" class="pickres"></div><p class="mapt" id="jcHint" style="margin:0">바꿀 고객을 검색해서 고르세요.</p>`;
     bindCustPicker(pickable);const h=document.getElementById("jcId");h.addEventListener("change",()=>{const cc=pickable.find(x=>x.id===h.value);if(!cc)return;c=cc;const k=custContracts(cc.id)[0];
-      Object.assign(j,{customer_id:cc.id,contract_id:k?k.id:null,customer_name:cc.name,address:cc.address,...(j.kind==="addon"?{}:{product:productOf(k)})});
+      const upd={customer_id:cc.id,contract_id:k?k.id:null,customer_name:cc.name,address:cc.address};if(isNew)Object.assign(j,upd,j.kind==="addon"?{}:{product:productOf(k)});else chgTo=upd;
       const jf=document.getElementById("jf");const q=n=>jf.querySelector(`[name="${n}"]`);[["as_product",k&&k.product],["as_size",k&&k.size],["as_serial",k&&k.serial]].forEach(([n,v])=>{const el=q(n);if(el)el.value=v||""});
       _instMap=null;const di=q("as_idate");if(di)di.value=asInstDate({customer_id:cc.id,product:{}})||"";
       const H=document.getElementById("dlgH");H.textContent=H.textContent.replace(/ · [^·]*$/,"")+" · "+cc.name})};
