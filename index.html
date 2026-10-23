@@ -1946,7 +1946,7 @@ case"next":return (x.cs&&x.cs.next_date)||"";case"idate":case"ym":return x.idate
   const label=[ui.rkpi&&KPI[ui.rkpi]?KPI[ui.rkpi][0]:"",ui.rown,ui.rkind,ui.rage?AGES.find(a=>a[0]===ui.rage)[1]:"",ui.rstage].filter(Boolean).join(" · ");
   view().innerHTML=`${hasRecvX()?"":`<div class="sec" style="max-width:none"><p class="warnbox">담당자·진행단계·채권분류와 가불금·대여금 등록을 쓰려면 Supabase에서 <b>phase1za.sql</b>을 실행해 주세요.</p></div>`}
    <div class="sumwrap"><div style="display:grid;gap:8px;align-content:start;width:fit-content;max-width:670px"><h2 style="margin:0;font-size:18px">미수채권현황</h2>
-      <div class="kpis"><div class="kpi bad kc ${ui.rkpi==="open"?"on":""}" data-rkpi="open" role="button" tabindex="0"><span>총 미수금 (${open.length}건)</span><b>${won0(sum(open))}원</b><small>회수율 ${oT.rate}%</small></div>
+      <div class="kpis" style="display:grid;grid-template-columns:repeat(4,minmax(0,1fr))"><div class="kpi bad kc ${ui.rkpi==="open"?"on":""}" data-rkpi="open" role="button" tabindex="0"><span>총 미수금 (${open.length}건)</span><b>${won0(sum(open))}원</b><small>회수율 ${oT.rate}%</small></div>
        <div class="kpi kc"><span>이번 달 회수 (입금)</span><b>${won0(recovered)}원</b></div>
        <div class="kpi kc ${ui.rkpi==="due"?"on":""}" data-rkpi="due" role="button" tabindex="0"><span>오늘 조치할 건</span><b>${due.length}건</b></div>
        <div class="kpi bad kc ${ui.rkpi==="broke"?"on":""}" data-rkpi="broke" role="button" tabindex="0"><span>약속일 지난 건</span><b>${broke.length}건</b></div></div>
