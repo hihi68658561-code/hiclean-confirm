@@ -656,6 +656,7 @@ function render0(){
   document.querySelectorAll("#nav button").forEach(b=>b.onclick=()=>{ui.view=b.dataset.v;ui.jsel=new Set();ui._fresh=true;render()});
   if(ui.view==="install"||ui.view==="as")ui.view="work";
   if(ui.view==="home")renderHomeView();else if(ui.view==="cust")renderCustView();else if(ui.view==="work")renderWorkView();else if(ui.view==="ctrm")renderCtrView();else if(ui.view==="asm")renderAsView();else if(ui.view==="leads")renderLeadView();else if(ui.view==="recv")renderRecvView();else if(ui.view==="allm")renderAllView();else if(ui.view==="sched")renderSchedView();else if(ui.view==="sms")renderSmsView();else if(ui.view==="notice")renderNoticeView();else if(ui.view==="staff")renderStaffView();else if(ui.view==="delete")renderDeleteView();else renderSettings();
+  addXlsBtn();
 }
 
 /* ================= 고객 ================= */
@@ -1185,7 +1186,7 @@ function renderCtrView0(){
     ${CROWS.map(([r,l])=>`<tr class="${r==="unpaid"?"open":""}"><th>${l}</th>${[...CTYPES,"추가설치",""].map(t=>`<td class="cl ${ui.crow===r&&ui.cct===t?"on":""}" data-r="${r}" data-t="${t}">${cnt(r,t)}</td>`).join("")}</tr>`).join("")}
     <tr><th>합계</th>${[...CTYPES,"추가설치",""].map(t=>`<td class="cl ${ui.crow===""&&ui.cct===t?"on":""}" data-r="" data-t="${t}"><b>${cnt("",t)}</b></td>`).join("")}</tr></tbody></table>`;
   const cols=getCols();const lab=Object.fromEntries(CCOLS.map(c=>[c[0],c[1]]));
-  const shown=list.slice(0,500);
+  const shown=list.slice(0,ui.xAll?1e9:500);
   const tot={amount:0,card:0,cash:0,paid:0,unpaid:0};shown.forEach(x=>{tot.amount+=Number(x.k.amount||0);tot.card+=x.s.card;tot.cash+=x.s.other;tot.paid+=x.s.paid;if(x.s.n||x.k.stage==="미수")tot.unpaid+=x.s.unpaid});
   view().innerHTML=`${ui.noPay?`<div class="sec" style="max-width:none"><p class="warnbox">입금 내역 칸이 아직 없습니다. Supabase SQL Editor에서 <b>phase1h.sql</b>을 실행하면 입금·미수금·마감 체크를 쓸 수 있습니다.</p></div>`:""}
    <div class="sumwrap"><div style="display:grid;gap:8px;align-content:start"><div style="display:flex;gap:8px;align-items:center"><h2 style="margin:0;font-size:18px">당월리스트</h2>
@@ -1251,7 +1252,7 @@ function renderAllView0(){
   let list=rows.filter(x=>!qq||[x.c.name,x.c.search_text,x.c.ceo,x.c.phone,x.c.phone2,x.c.address,x.k.serial,x.k.memo,x.k.approval,staffName(x.k.sales3),x.k.sales3_name].join(" ").toLowerCase().includes(qq));
   sortCtrList(list);
   list=cfApply("all",list,(c,x)=>cfText(ctrCell(c,x.k,x.c,x.s,x.b)));
-  const cols=getCols("all");const shown=list.slice(0,ui.allN);
+  const cols=getCols("all");const shown=list.slice(0,ui.xAll?1e9:ui.allN);
   view().innerHTML=`<div class="toolbar"><h2 style="margin:0;font-size:18px">전체리스트</h2><span class="mapt">월마감(OK)된 계약</span>${hasMonthCol()?"":`<span class="warnbox" style="margin:0">월마감을 쓰려면 Supabase에서 phase1x.sql을 실행해 주세요.</span>`}</div>
    <div class="toolbar"><input id="caQ" type="search" placeholder="업체명(상호)·대표자·전화·주소·시리얼·담당 검색" value="${esc(ui.aq2)}">
      <span class="mapt" id="caCnt">${list.length}건${list.length>shown.length?` 중 ${shown.length}건 표시`:""}</span>
@@ -1435,7 +1436,7 @@ function renderAsView0(){
   const sumT=`<table class="sumt" aria-label="${esc(ui.am)} A/S 집계"><thead><tr><th></th>${APT.map(t=>`<th>${aptLab(t)}</th>`).join("")}<th>합계</th></tr></thead><tbody>
     ${ASTAT.map(([r,l])=>`<tr class="${r==="unpaid"?"open":""}"><th>${l}</th>${[...APT.map(ptKey),"*"].map(t=>`<td class="cl ${ui.arow===r&&(ui.apt||"*")===t?"on":""}" data-r="${r}" data-t="${t}">${cnt(r,t==="*"?null:t==="미정"?"":t)}</td>`).join("")}</tr>`).join("")}
     <tr><th>합계</th>${[...APT.map(ptKey),"*"].map(t=>`<td class="cl ${ui.arow===""&&(ui.apt||"*")===t?"on":""}" data-r="" data-t="${t}"><b>${cnt("",t==="*"?null:t==="미정"?"":t)}</b></td>`).join("")}</tr></tbody></table>`;
-  const cols=getCols("as");const shown=list.slice(0,500);
+  const cols=getCols("as");const shown=list.slice(0,ui.xAll?1e9:500);
   const tot={cost:0,trip:0,pfee:0,unpaid:0,card:0,cash:0};shown.forEach(x=>{tot.cost+=x.m.cost;tot.trip+=Number(x.j.trip_fee||0);tot.pfee+=Number(x.j.part_fee||0);tot.unpaid+=x.m.unpaid;tot.card+=x.m.card;tot.cash+=x.m.cash});
   const label=[ui.akpi&&KPI[ui.akpi]?KPI[ui.akpi][0]:"",ui.arow?ASTAT.find(y=>y[0]===ui.arow)[1]:"",ui.apt].filter(Boolean).join(" · ");
   view().innerHTML=`${hasAsx()||!all.length?"":`<div class="sec" style="max-width:none"><p class="warnbox">A/S 상세 칸(조치방법·출장비·부품비·거리·만족도·세금계산서)이 아직 없습니다. Supabase SQL Editor에서 <b>phase1q.sql</b>을 실행해 주세요.</p></div>`}
@@ -1730,7 +1731,7 @@ function renderLeadView0(){
   list.sort((a,b)=>{const A=v(a),B=v(b);const ea=A===""||A==null,eb=B===""||B==null;if(ea!==eb)return ea?1:-1;const r=typeof A==="number"&&typeof B==="number"?A-B:KO.compare(String(A),String(B));return r*S.d||regCmp(a,b)});
   list=cfApply("lead",list,(c,l)=>cfText(leadCell(c,l)));
   ui.lsel=ui.lsel||new Set();[...ui.lsel].forEach(id=>{if(!list.some(l=>l.id===id))ui.lsel.delete(id)});
-  const cols=getCols("lead");const shown=list.slice(0,ui.lN||500);
+  const cols=getCols("lead");const shown=list.slice(0,ui.xAll?1e9:(ui.lN||500));
   const rowsS=[...LSTAT,"(미정)"],colsS=[...srcs,"(없음)"].filter((s,i,a)=>s!=="(없음)"||mon.some(l=>!l.source));
   const sumT=`<table class="sumt" aria-label="상담 집계"><thead><tr><th></th>${colsS.map(s=>`<th>${esc(s)}</th>`).join("")}<th>합계</th></tr></thead><tbody>
     ${rowsS.map(r=>`<tr class="${r==="오더"?"open":""}"><th>${esc(r)}</th>${[...colsS,"*"].map(s=>`<td class="cl ${ui.lrow===r&&(ui.lsrc||"*")===s?"on":""}" data-r="${esc(r)}" data-s="${esc(s)}">${cnt(r==="(미정)"?"":r,s==="*"?null:s==="(없음)"?"":s)}</td>`).join("")}</tr>`).join("")}
@@ -1985,7 +1986,7 @@ case"next":return (x.cs&&x.cs.next_date)||"";case"idate":case"ym":return x.idate
   const ownT=`<table class="sumt" aria-label="담당자별 채권 현황"><thead><tr><th rowspan="2">담당자</th><th colspan="3">채권분류 (건수)</th><th rowspan="2">합계</th><th rowspan="2">매출액</th><th rowspan="2">입금액</th><th rowspan="2">미수금</th><th rowspan="2">회수율</th></tr><tr>${RKINDS.map(k=>`<th>${k}</th>`).join("")}</tr></thead><tbody>
     ${oRows.map(r=>`<tr><th>${esc(r.n)}</th>${r.k.map((v,i)=>`<td class="cl ${ui.rown===r.n&&ui.rkind===RKINDS[i]?"on":""}" data-own="${esc(r.n)}" data-kind="${RKINDS[i]}">${v||""}</td>`).join("")}<td class="cl ${ui.rown===r.n&&!ui.rkind?"on":""}" data-own="${esc(r.n)}" data-kind=""><b>${r.cnt}</b></td><td class="num">${won0(r.amt)}</td><td class="num">${won0(r.paid)}</td><td class="num neg">${won0(r.un)}</td><td class="num">${r.rate}%</td></tr>`).join("")}
     <tr><th>합계</th>${oT.k.map((v,i)=>`<td class="cl ${!ui.rown&&ui.rkind===RKINDS[i]?"on":""}" data-own="" data-kind="${RKINDS[i]}"><b>${v||""}</b></td>`).join("")}<td><b>${oT.cnt}</b></td><td class="num"><b>${won0(oT.amt)}</b></td><td class="num"><b>${won0(oT.paid)}</b></td><td class="num neg"><b>${won0(oT.un)}</b></td><td class="num"><b>${oT.rate}%</b></td></tr></tbody></table>`;
-  const cols=getCols("recv");const shown=list.slice(0,500);
+  const cols=getCols("recv");const shown=list.slice(0,ui.xAll?1e9:500);
   const tot={};RMONEY.forEach(c=>tot[c]=0);shown.forEach(x=>{tot.amount+=x.amount;tot.card+=x.card;tot.cash+=x.cash;tot.paid+=x.paid;tot.unpaid+=x.unpaid;if(x.t==="ctr"){tot.ultra+=Number(x.k.amt_ultra||0);tot.wash+=Number(x.k.amt_wash||0);tot.parts+=Number(x.k.amt_parts||0)}});
   const label=[ui.rkpi&&KPI[ui.rkpi]?KPI[ui.rkpi][0]:"",ui.rown,ui.rkind,ui.rage?AGES.find(a=>a[0]===ui.rage)[1]:"",ui.rstage].filter(Boolean).join(" · ");
   view().innerHTML=`${hasRecvX()?"":`<div class="sec" style="max-width:none"><p class="warnbox">담당자·진행단계·채권분류와 가불금·대여금 등록을 쓰려면 Supabase에서 <b>phase1za.sql</b>을 실행해 주세요.</p></div>`}
@@ -2340,6 +2341,25 @@ function renderHomeView(){const td=today(),tm=addDays(td,1),ym=thisMonth(),[m0,m
   if(!tech)(async()=>{const box=document.getElementById("hSms");const {data,error}=await sb.from("sms_logs").select("*").order("created_at",{ascending:false}).limit(5);if(!box)return;
     box.innerHTML=error?`<p class="mapt">문자 기능이 아직 설치되지 않았습니다.</p>`:(data||[]).map(l=>{const cu=l.customer_id&&custById(l.customer_id);return `<div class="hrow static"><span class="htime">${esc(fmtDT(l.created_at).slice(5))}</span><b class="hname">${esc(cu?cu.name:fmtPhone(l.to_phone))}</b><span class="mapt hmsg">${esc(l.content)}</span>${l.status==="실패"?`<span class="neg">실패</span>`:""}</div>`}).join("")||`<p class="mapt">보낸 문자가 없습니다.</p>`})();
 }
+
+/* ================= 엑셀 다운로드 (지금 화면의 표를 그대로, 필터·검색 적용된 전체) ================= */
+const XSEL={leads:".wt.ld",work:".wt.wk",ctrm:".wt.ct",allm:".wt.ca",asm:".wt.am",recv:".wt.rv",sched:".wt.sch"};
+const XNAME={leads:"DB관리",work:"당월 설치·AS 전체리스트",ctrm:"당월리스트",allm:"전체리스트",asm:"AS관리",recv:"미수·채권관리",sched:"담당자별 일정표"};
+function addXlsBtn(){const v=ui.view;if(!XSEL[v]||!isOffice()||!window.XLSX)return;const tbl=view().querySelector(XSEL[v]);if(!tbl||document.getElementById("xlsDown"))return;
+  let tb=null,el=tbl.closest(".wrapx")||tbl.closest(".wtbox");while(el&&!tb){let s=el.previousElementSibling;while(s&&!tb){if(s.classList&&s.classList.contains("toolbar"))tb=s;s=s.previousElementSibling}el=el.parentElement;if(el===view())break}
+  tb=tb||view().querySelector(".toolbar");if(!tb)return;const b=document.createElement("button");b.type="button";b.className="btn";b.id="xlsDown";b.textContent="엑셀 다운로드";b.onclick=()=>exportView();tb.appendChild(b)}
+function exportView(){const v=ui.view;const sel=XSEL[v];if(!sel)return;toast("엑셀 파일을 만드는 중…");
+  setTimeout(()=>{let tbl;ui.xAll=true;try{render();tbl=view().querySelector(sel);if(!tbl)return toast("내려받을 표가 없습니다");tbl=tbl.cloneNode(true)}finally{ui.xAll=false}
+    try{tbl.querySelectorAll(".fbtn,.rz,button,svg").forEach(x=>{if(x.tagName==="BUTTON"&&x.closest("td")&&x.textContent.trim()&&!x.classList.contains("fbtn"))x.replaceWith(document.createTextNode(x.textContent));else x.remove()});
+      tbl.querySelectorAll("th,td").forEach(c=>{if(c.querySelector('input[type=checkbox]')&&!c.textContent.trim())c.remove()});
+      tbl.querySelectorAll("th").forEach(c=>{c.textContent=c.textContent.replace(/[▼▲]/g,"").trim()});
+      const ws=XLSX.utils.table_to_sheet(tbl,{raw:true});const rg=XLSX.utils.decode_range(ws["!ref"]||"A1");const wid=[];
+      for(let R=rg.s.r;R<=rg.e.r;R++)for(let C=rg.s.c;C<=rg.e.c;C++){const a=XLSX.utils.encode_cell({r:R,c:C}),cell=ws[a];if(!cell)continue;let s=String(cell.v??"").trim();
+        if(typeof cell.v==="string"&&(/^-?\d{1,3}(,\d{3})+$/.test(s)||/^-?[1-9]\d{0,8}$/.test(s)||s==="0")){cell.t="n";cell.v=Number(s.replace(/,/g,""));cell.z="#,##0"}
+        wid[C]=Math.max(wid[C]||4,Math.min(40,[...s].reduce((n,ch)=>n+(ch.charCodeAt(0)>127?2:1),0)+2))}
+      ws["!cols"]=wid.map(w=>({wch:w}));const wb=XLSX.utils.book_new();const nm=XNAME[v]||"목록";XLSX.utils.book_append_sheet(wb,ws,nm.slice(0,31).replace(/[\\/?*\[\]:]/g,""));
+      const tag=v==="sched"?(ui.sm||thisMonth()):v==="ctrm"?(ui.cm||thisMonth()):today();XLSX.writeFile(wb,`${nm}_${tag}.xlsx`);toast("엑셀 파일을 내려받았습니다")}
+    catch(e){toast("엑셀 파일을 만들지 못했습니다: "+(e.message||""))}finally{render()}},30)}
 
 /* ================= 계약 ================= */
 function renderContracts(c){
