@@ -190,6 +190,7 @@ body.resizing,body.resizing *{cursor:col-resize!important;user-select:none}
 .wt.rv td.rc-법적조치 .mapt,.wt.rv td.rc-추심이관 .mapt,.wt.rv td.rc-대손처리 .mapt{color:#fff}
 .tag.rs-당월매출{background:#fff;color:#1b1b1b;border-color:#adb5bd}.tag.rs-정상{background:#BFE4FF;color:#1b1b1b;border-color:#BFE4FF}.tag.rs-관리{background:#FFD6AD;color:#1b1b1b;border-color:#FFD6AD}.tag.rs-불량{background:#FF7A55;color:#1b1b1b;border-color:#FF7A55}
 .tag.rs-정상관리{background:#fff;color:#495057;border-color:#adb5bd}.tag.rs-독촉중{background:#FFF3C4;color:#8a5a00;border-color:#FFF3C4}.tag.rs-분할약정{background:#DCEBFF;color:#1d4ed8;border-color:#DCEBFF}.tag.rs-내용증명{background:#fff;color:#c2410c;border-color:#c2410c}.tag.rs-법적조치{background:#FF0000;color:#fff;border-color:#FF0000}.tag.rs-추심이관{background:#9933FF;color:#fff;border-color:#9933FF}.tag.rs-회수완료{background:#fff;color:#2e7d32;border-color:#2e7d32}.tag.rs-대손처리{background:#495057;color:#fff;border-color:#495057}
+.smtpls{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:8px}.smtpl{border:1px solid var(--line);background:var(--panel);border-radius:8px;padding:10px 12px;cursor:pointer;display:grid;gap:6px}.smtpl:hover,.smtpl:focus-visible{border-color:var(--accent);outline:none;box-shadow:0 0 0 2px var(--accent-weak)}.smt-h{display:flex;align-items:center;gap:6px}.smt-h b{flex:1}.smt-c{font-size:13px;color:var(--mute);white-space:pre-wrap;display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden}
 .rstages{display:flex;gap:6px;flex-wrap:wrap}.rstages .chip.on{outline:2px solid var(--accent)}
 .ageb{display:grid;gap:4px}.agerow{display:grid;grid-template-columns:80px 1fr 110px 44px;gap:8px;align-items:center;border:0;background:none;padding:4px 6px;border-radius:6px;cursor:pointer;font:inherit;color:inherit;text-align:left}.agerow:hover,.agerow.on{background:var(--accent-weak)}
 .agebar{height:14px;background:var(--line2);border-radius:7px;overflow:hidden}.agebar i{display:block;height:100%;background:#f0ad4e}.agebar i.a30{background:#9ccc65}.agebar i.a60{background:#ffd54f}.agebar i.a90{background:#ffb74d}.agebar i.a180{background:#ff8a65}.agebar i.a999{background:#e53935}
@@ -2167,8 +2168,15 @@ async function smsDlg(opts){opts=opts||{};let c=opts.c||null;const pick=!c;let v
     document.getElementById("dlgH").textContent="문자 보내기"+(c?" · "+c.name:"");if(sel_.value)sel_.onchange()})}
 }
 /* 상단 '문자' 메뉴: 보내기 + 최근 보낸 문자 */
-async function renderSmsView(){view().innerHTML=`<div class="toolbar" style="padding:16px 20px 0"><h2 style="margin:0;font-size:18px">문자</h2><span style="flex:1"></span><button class="btn pri" type="button" id="smGo">+ 문자 보내기</button></div><div id="smAll" class="mapt" style="padding:12px 20px">불러오는 중…</div>`;
+async function renderSmsView(){const tpls=await loadSmsTpl(true);const off=isOffice();
+  view().innerHTML=`<div class="toolbar" style="padding:16px 20px 0"><h2 style="margin:0;font-size:18px">문자</h2><span style="flex:1"></span><button class="btn pri" type="button" id="smGo">+ 문자 보내기</button></div>
+   <div style="padding:12px 20px 0"><div style="display:flex;align-items:center;gap:8px;margin-bottom:8px"><b>자주 쓰는 문구</b><span class="mapt">누르면 그 문구로 문자 창이 열립니다${off?" · ✎로 고치기":""}</span><span style="flex:1"></span>${off&&!ui.noSms?`<button class="btn sm" type="button" id="smTAdd">+ 문구 추가</button>`:""}</div>
+    <div class="smtpls">${tpls.map(x=>`<div class="smtpl" role="button" tabindex="0" data-tp="${x.id}"><div class="smt-h"><b>${esc(x.title)}</b>${off?`<button type="button" class="btn sm" data-te="${x.id}" title="고치기" aria-label="${esc(x.title)} 고치기">✎</button>`:""}</div><div class="smt-c">${esc(x.content)}</div></div>`).join("")||`<span class="mapt">${ui.noSms?"Supabase에서 phase1zc.sql을 실행하면 문구를 저장할 수 있습니다.":"저장된 문구가 없습니다."}</span>`}</div></div>
+   <div id="smAll" class="mapt" style="padding:12px 20px">불러오는 중…</div>`;
   document.getElementById("smGo").onclick=()=>smsDlg({});
+  view().querySelectorAll("[data-tp]").forEach(el=>{const go=e=>{if(e.target.closest("[data-te]"))return;const x=tpls.find(y=>y.id===el.dataset.tp);smsDlg({tpl:x&&x.title})};el.onclick=go;el.onkeydown=e=>{if(e.key==="Enter"||e.key===" "){e.preventDefault();go(e)}}});
+  view().querySelectorAll("[data-te]").forEach(b=>b.onclick=e=>{e.stopPropagation();smsTplDlg(tpls.find(y=>y.id===b.dataset.te))});
+  const ta_=document.getElementById("smTAdd");if(ta_)ta_.onclick=()=>smsTplDlg(null);
   const {data,error}=await sb.from("sms_logs").select("*").order("created_at",{ascending:false}).limit(300);const box=document.getElementById("smAll");if(!box)return;
   if(error){box.textContent="문자 기록 칸이 아직 없습니다. Supabase에서 phase1zc.sql을 실행해 주세요.";return}
   box.outerHTML=`<div class="wrapx" style="padding:12px 20px 20px"><p class="mapt" style="margin:0 0 8px">최근 보낸 문자 ${data.length}건${isOffice()?"":" (본인이 보냈거나 담당 고객에게 보낸 문자)"}</p><table class="stafft"><thead><tr><th style="width:130px">보낸 시각</th><th style="width:70px">보낸 사람</th><th style="width:170px">업체명(상호)</th><th style="width:120px">받는 번호</th><th>내용</th><th style="width:60px">결과</th></tr></thead><tbody>
@@ -2181,6 +2189,14 @@ async function renderCustSms(c){const tb=document.getElementById("tabBody");tb.i
   if(error){box.innerHTML="문자 기록 칸이 아직 없습니다. Supabase에서 phase1zc.sql을 실행해 주세요.";return}
   box.outerHTML=`<div class="wrapx" style="padding:0 20px 20px"><table class="stafft"><thead><tr><th style="width:130px">보낸 시각</th><th style="width:70px">보낸 사람</th><th style="width:120px">받는 번호</th><th>내용</th><th style="width:70px">결과</th></tr></thead><tbody>
     ${(data||[]).map(l=>`<tr><td>${esc(fmtDT(l.created_at))}</td><td>${esc(l.by_name)}</td><td>${esc(fmtPhone(l.to_phone))}</td><td style="white-space:pre-wrap">${esc(l.content)}</td><td>${l.status==="실패"?`<span class="neg" title="${esc(l.error)}">실패</span>`:esc(l.msg_type||"보냄")}</td></tr>`).join("")||`<tr><td colspan="5" class="mapt">보낸 문자가 없습니다.</td></tr>`}</tbody></table></div>`}
+/* 문구 추가·고치기 창 */
+function smsTplDlg(x){const isNew=!x;openDlg(isNew?"문구 추가":"문구 고치기",`<div id="stf" style="display:grid;gap:10px">${inp("title","제목",x?x.title:"","text",false,'placeholder="예: 방문 안내"')}
+   <label class="f">내용<textarea name="content" rows="6" style="min-height:130px" placeholder="[하이클린] {업체명} 고객님, …">${esc(x?x.content:"")}</textarea></label>
+   <p class="mapt" style="margin:0">{업체명} {대표자} {방문일} {시간} {제품} {금액} {미수금} {계좌} 를 넣으면 보낼 때 자동으로 채워집니다.</p></div>`,
+  [["취소"],...(isNew?[]:[["삭제","danger",async()=>{if(!(await askConfirm("이 문구를 삭제할까요?")))return true;const {error}=await sb.from("sms_templates").delete().eq("id",x.id);if(error)return toast("삭제하지 못했습니다: "+error.message);toast("삭제했습니다");smsTpl=null;if(ui.view==="sms")renderSmsView()}]]),
+   ["저장","pri",async()=>{const f=fdata("stf");const p={title:(f.get("title")||"").trim(),content:(f.get("content")||"").trim()};if(!p.title||!p.content){toast("제목과 내용을 입력하세요");return true}
+     const r=isNew?await sb.from("sms_templates").insert(Object.assign(p,{sort:(smsTpl||[]).length+1})):await sb.from("sms_templates").update(p).eq("id",x.id);if(r.error){toast("저장하지 못했습니다: "+r.error.message);return true}
+     toast("저장했습니다");smsTpl=null;if(ui.view==="sms")renderSmsView()}]])}
 /* 설정: 자주 쓰는 문구 */
 async function renderSmsTplSet(){const box=document.getElementById("smsSet");if(!box)return;const tpls=await loadSmsTpl(true);
   if(ui.noSms){box.innerHTML=`<legend>문자 문구</legend><p class="mapt">문자 기능을 쓰려면 Supabase에서 phase1zc.sql을 실행하고, send-sms 기능을 설치해 주세요.</p>`;return}
