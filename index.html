@@ -195,6 +195,12 @@ body.resizing,body.resizing *{cursor:col-resize!important;user-select:none}
 .nt-b{padding:0 14px 14px;border-top:1px solid var(--line)}.nt-c{white-space:pre-wrap;padding-top:12px;line-height:1.6}.tag.ntpin{background:var(--accent);color:#fff;border-color:var(--accent)}
 .nt-imgs{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:8px;margin-top:12px}.nt-imgs img{width:100%;height:200px;object-fit:cover;border-radius:6px;border:1px solid var(--line);background:var(--line2);display:block}
 .nt-imgs.edit img{height:120px}.nt-imgs a.bad img{display:none}.nt-imgs a.bad::after{content:"이미지를 불러올 수 없는 링크";font-size:12px;color:var(--mute)}.nt-c a{color:var(--accent);word-break:break-all}.nti{display:grid;gap:4px}#nav button.ndot::after{content:"";display:inline-block;width:7px;height:7px;border-radius:50%;background:#e53935;margin-left:4px;vertical-align:top}
+.home{padding:16px 20px 28px;display:grid;gap:14px;max-width:1400px}.hhead{display:flex;align-items:baseline;gap:12px;flex-wrap:wrap}.hhead h2{margin:0;font-size:20px}
+.hsec{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:12px 14px;display:grid;gap:10px;align-content:start}.hsec h3{margin:0;font-size:15px;display:flex;align-items:baseline;gap:8px}.hsec h3 a{margin-left:auto;font-weight:400}
+.hk{display:grid!important;grid-template-columns:repeat(auto-fill,minmax(170px,1fr))}.hgrid{display:grid;grid-template-columns:repeat(auto-fit,minmax(340px,1fr));gap:14px}
+.hlist{display:grid;gap:2px}.hrow{all:unset;box-sizing:border-box;display:flex;align-items:center;gap:8px;padding:8px 6px;border-radius:6px;cursor:pointer;border-bottom:1px solid var(--line2);min-width:0}.hrow:hover,.hrow:focus-visible{background:var(--accent-weak)}.hrow.static{cursor:default}.hrow.static:hover{background:none}
+.htime{min-width:64px;font-variant-numeric:tabular-nums;color:var(--mute);font-size:13px}.hname{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex:1;min-width:0}.hmsg{flex:2;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.hrecv{display:grid;grid-template-columns:minmax(180px,240px) 1fr;gap:10px;align-items:start}@media (max-width:760px){.hrecv{grid-template-columns:1fr}.home{padding:12px 16px 24px}.hgrid{grid-template-columns:1fr}}
 .smtpls{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:8px}.smtpl{border:1px solid var(--line);background:var(--panel);border-radius:8px;padding:10px 12px;cursor:pointer;display:grid;gap:6px}.smtpl:hover,.smtpl:focus-visible{border-color:var(--accent);outline:none;box-shadow:0 0 0 2px var(--accent-weak)}.smt-h{display:flex;align-items:center;gap:6px}.smt-h b{flex:1}.smt-c{font-size:13px;color:var(--mute);white-space:pre-wrap;display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden}
 .rstages{display:flex;gap:6px;flex-wrap:wrap}.rstages .chip.on{outline:2px solid var(--accent)}
 .ageb{display:grid;gap:4px}.agerow{display:grid;grid-template-columns:80px 1fr 110px 44px;gap:8px;align-items:center;border:0;background:none;padding:4px 6px;border-radius:6px;cursor:pointer;font:inherit;color:inherit;text-align:left}.agerow:hover,.agerow.on{background:var(--accent-weak)}
@@ -521,7 +527,7 @@ const SINKS=["해당없음","발주대기","발주완료","중고사용","재고
 const JST=["접수","배정","보류","완료","취소"];
 const KINDS=["as","install","remove","addon","move"];
 let sb=null, me=null, staff=[], customers=[], contracts=[], jobs=[], payments=[], files=[], grades=[];
-let ui={view:"cust", sel:null, ctab:"info", q:"", stage:"", ctype:"", jscope:"mine", jkind:"", jpay:"", jview:"card", dkind:"as", dq:"", dsel:new Set(), jsel:new Set(), jst:"open", jq:"", draft:null, conf:null};
+let ui={view:"home", sel:null, ctab:"info", q:"", stage:"", ctype:"", jscope:"mine", jkind:"", jpay:"", jview:"card", dkind:"as", dq:"", dsel:new Set(), jsel:new Set(), jst:"open", jq:"", draft:null, conf:null};
 const isAdmin=()=>me&&me.role==="admin", isOffice=()=>me&&(me.role==="admin"||me.role==="office");
 /* 고객 찾기: 색인(Map) 사용 */
 let _cm=null,_cmArr=null,_cmLen=-1;const custById=id=>{if(_cmArr!==customers||_cmLen!==customers.length||!_cm){_cm=new Map(customers.map(c=>[c.id,c]));_cmArr=customers;_cmLen=customers.length}return _cm.get(id)};
@@ -556,7 +562,7 @@ async function afterLogin(user){
   document.getElementById("bLogout").hidden=false;document.getElementById("bPw").hidden=false;
   if(!data||!data.active){me={id:user.id,email:user.email,role:""};view().innerHTML=`<div class="empty"><h2>아직 직원으로 등록되지 않은 계정입니다</h2><p>${esc(user.email)} 계정으로 로그인했습니다. 관리자에게 직원 등록을 요청하세요.</p></div>`;return}
   me={id:user.id,email:user.email,name:data.name,role:data.role};
-  if(me.role==="tech"){ui.view="work";ui.jscope="mine"}else ui.jscope="all";
+  ui.view="home";if(me.role==="tech"){ui.jscope="mine"}else ui.jscope="all";
   document.getElementById("modeLabel").textContent=`${me.name||me.email} · ${ROLE[me.role]}`;document.getElementById("bMore").textContent=`${me.name||"메뉴"} ▾`;
   document.getElementById("bImport").hidden=!isOffice();
   await loadAll();
@@ -645,11 +651,11 @@ function restoreScroll(s){if(!s||s.v!==ui.view)return;const els=[...document.que
 function render(){if(ui._fresh){ui._fresh=false;render0();window.scrollTo(0,0);return}const _sv=snapScroll();try{render0()}finally{restoreScroll(_sv)}}
 function render0(){
   ui.dirty=false;
-  const tabs=[["cust","고객"]];if(me.role!=="tech")tabs.push(["leads","DB관리"]);tabs.push(["work","당월 설치·A/S 전체리스트"]);if(me.role!=="tech")tabs.push(["ctrm","당월리스트"],["allm","전체리스트"],["asm","A/S관리"],["recv","미수·채권관리"]);tabs.push(["sched","담당자별 일정표"]);if(me.role!=="tech")tabs.push(["sms","문자"]);tabs.push(["notice","공지사항"]);if(isAdmin())tabs.push(["staff","직원"],["settings","설정"]);
+  const tabs=[["home","홈"],["cust","고객"]];if(me.role!=="tech")tabs.push(["leads","DB관리"]);tabs.push(["work","당월 설치·A/S 전체리스트"]);if(me.role!=="tech")tabs.push(["ctrm","당월리스트"],["allm","전체리스트"],["asm","A/S관리"],["recv","미수·채권관리"]);tabs.push(["sched","담당자별 일정표"]);if(me.role!=="tech")tabs.push(["sms","문자"]);tabs.push(["notice","공지사항"]);if(isAdmin())tabs.push(["staff","직원"],["settings","설정"]);
   document.getElementById("nav").innerHTML=tabs.map(([k,l])=>`<button type="button" class="${ui.view===k?"on":""}${k==="notice"&&ui.view!=="notice"&&noticeUnread()?" ndot":""}" data-v="${k}">${l}</button>`).join("");
   document.querySelectorAll("#nav button").forEach(b=>b.onclick=()=>{ui.view=b.dataset.v;ui.jsel=new Set();ui._fresh=true;render()});
   if(ui.view==="install"||ui.view==="as")ui.view="work";
-  if(ui.view==="cust")renderCustView();else if(ui.view==="work")renderWorkView();else if(ui.view==="ctrm")renderCtrView();else if(ui.view==="asm")renderAsView();else if(ui.view==="leads")renderLeadView();else if(ui.view==="recv")renderRecvView();else if(ui.view==="allm")renderAllView();else if(ui.view==="sched")renderSchedView();else if(ui.view==="sms")renderSmsView();else if(ui.view==="notice")renderNoticeView();else if(ui.view==="staff")renderStaffView();else if(ui.view==="delete")renderDeleteView();else renderSettings();
+  if(ui.view==="home")renderHomeView();else if(ui.view==="cust")renderCustView();else if(ui.view==="work")renderWorkView();else if(ui.view==="ctrm")renderCtrView();else if(ui.view==="asm")renderAsView();else if(ui.view==="leads")renderLeadView();else if(ui.view==="recv")renderRecvView();else if(ui.view==="allm")renderAllView();else if(ui.view==="sched")renderSchedView();else if(ui.view==="sms")renderSmsView();else if(ui.view==="notice")renderNoticeView();else if(ui.view==="staff")renderStaffView();else if(ui.view==="delete")renderDeleteView();else renderSettings();
 }
 
 /* ================= 고객 ================= */
@@ -2289,6 +2295,52 @@ function noticeDlg(n){const isNew=!n;const keep=new Set((n&&n.images||[]).map(i=
   ua.onclick=addUrl;ui_.addEventListener("keydown",e=>{if(e.key==="Enter"&&!e.isComposing){e.preventDefault();e.stopPropagation();addUrl()}});
   const fi=document.getElementById("ntIn");fi.onchange=()=>{[...fi.files].filter(f=>/^image\//.test(f.type)).forEach(file=>add.push({file,url:URL.createObjectURL(file)}));fi.value="";draw()}}
 
+/* ================= 홈 (대시보드) ================= */
+function addDays(d,n){const x=new Date(d+"T00:00:00");x.setDate(x.getDate()+n);const p=v=>String(v).padStart(2,"0");return `${x.getFullYear()}-${p(x.getMonth()+1)}-${p(x.getDate())}`}
+function homeJobRow(j){const c=custById(j.customer_id);const who=whoOf(j);return `<button type="button" class="hrow" data-hj="${j.id}"><span class="htime">${esc(j.visit_time||"-")}</span><span class="badge ${j.kind}">${KLABEL[j.kind]||j.kind}</span><b class="hname">${esc(j.customer_name||(c&&c.name)||"")}</b><span class="mapt">${esc(who||"미배정")}</span>${j.status==="완료"?`<span class="badge s-완료">완료</span>`:""}</button>`}
+function renderHomeView(){const td=today(),tm=addDays(td,1),ym=thisMonth(),[m0,m1]=monthRange(ym);const inM=d=>d&&d>=m0&&d<m1;const tech=me.role==="tech";
+  const live=jobs.filter(j=>j.status!=="취소");const tk=j=>timeKey(j.visit_time);
+  const tJobs=live.filter(j=>j.visit_date===td).sort((a,b)=>tk(a).localeCompare(tk(b))),nJobs=live.filter(j=>j.visit_date===tm).sort((a,b)=>tk(a).localeCompare(tk(b)));
+  const unasg=live.filter(j=>j.status==="접수"&&!(j.techs||[]).length&&!String(j.tech_names||"").trim());
+  const leadDue=tech||ui.noLeads?[]:leads.filter(l=>leadOpen(l)&&l.next_date&&l.next_date<=td);
+  const rv=tech||ui.noRecv?[]:recvItems();const rOpen=rv.filter(x=>x.open&&x.stage!=="대손처리");
+  const rDue=rOpen.filter(x=>x.cs&&x.cs.next_date&&x.cs.next_date<=td),rBroke=rOpen.filter(x=>x.cs&&x.cs.promise_date&&x.cs.promise_date<td);
+  const card=(go,label,val,sub,cls="")=>`<div class="kpi kc ${cls}" role="button" tabindex="0" data-hgo="${go}"><span>${label}</span><b>${val}</b>${sub?`<small>${sub}</small>`:""}</div>`;
+  const w=["일","월","화","수","목","금","토"][new Date(td+"T00:00:00").getDay()];
+  let h=`<div class="home"><div class="hhead"><h2>${esc(me.name||"")}님, 안녕하세요</h2><span class="mapt">${td.slice(0,4)}년 ${+td.slice(5,7)}월 ${+td.slice(8,10)}일 (${w})</span></div>`;
+  /* 할 일 */
+  h+=`<section class="hsec"><h3>오늘 할 일</h3><div class="kpis hk">${card("t-today","오늘 일정",tJobs.length+"건",tJobs.filter(j=>j.status==="완료").length?`완료 ${tJobs.filter(j=>j.status==="완료").length}건`:"")}${card("t-tom","내일 일정",nJobs.length+"건")}
+    ${tech?"":card("work","미배정 접수",unasg.length+"건","기사 배정 필요",unasg.length?"bad":"")}${tech?"":card("leads","연락할 DB",leadDue.length+"건","다음 연락일 오늘까지",leadDue.length?"bad":"")}${tech||ui.noRecv?"":card("recv-due","조치할 채권",rDue.length+"건",rBroke.length?`약속일 지난 건 ${rBroke.length}건`:"",rDue.length||rBroke.length?"bad":"")}</div></section>`;
+  /* 일정 */
+  h+=`<div class="hgrid"><section class="hsec"><h3>오늘 일정 <span class="mapt">${tJobs.length}건</span></h3><div class="hlist">${tJobs.map(homeJobRow).join("")||`<p class="mapt">오늘 잡힌 일정이 없습니다.</p>`}</div></section>
+    <section class="hsec"><h3>내일 일정 <span class="mapt">${nJobs.length}건</span></h3><div class="hlist">${nJobs.map(homeJobRow).join("")||`<p class="mapt">내일 잡힌 일정이 없습니다.</p>`}</div></section></div>`;
+  if(!tech){
+    /* 이번 달 숫자 */
+    const kM=contracts.filter(k=>inM(k.contract_date)&&k.stage!=="취소"),pay=payments.filter(p=>inM(p.pay_date)).reduce((a,p)=>a+Number(p.amount||0),0);
+    const inst=jobs.filter(j=>j.kind==="install"&&j.status==="완료"&&inM(j.done_date)).length,asIn=jobs.filter(j=>j.kind==="as"&&inM(j.request_date)&&j.status!=="취소"),asDone=jobs.filter(j=>j.kind==="as"&&j.status==="완료"&&inM(j.done_date)).length;
+    const lM=ui.noLeads?[]:leads.filter(l=>inM(l.recv_date)),lConv=lM.filter(l=>l.status==="오더"||l.customer_id).length;
+    h+=`<section class="hsec"><h3>이번 달 (${+ym.slice(5)}월)</h3><div class="kpis hk">${card("ctrm","계약",kM.length+"건",won0(kM.reduce((a,k)=>a+Number(k.amount||0),0))+"원")}${card("ctrm","입금",won0(pay)+"원")}${card("work","설치 완료",inst+"건")}${card("asm","A/S",asIn.length+"건 접수",`완료 ${asDone}건`)}${ui.noLeads?"":card("leads","DB 접수",lM.length+"건",`계약 전환 ${lConv}건 (${lM.length?Math.round(lConv*100/lM.length):0}%)`)}</div></section>`;
+    /* 미수·채권 */
+    if(!ui.noRecv){const sum=a=>a.reduce((s,x)=>s+x.unpaid,0);
+      h+=`<section class="hsec"><h3>미수·채권</h3><div class="hrecv">${card("recv","총 미수금",won0(sum(rOpen))+"원",`${rOpen.length}건`,"bad")}<div class="rstages">${RSHOW.map(s=>{const xs=rOpen.filter(x=>x.stage===s);return `<button type="button" class="chip" data-hrs="${esc(s)}"><span class="tag rs-${esc(s)}">${esc(s)}</span> ${xs.length}건 · ${won0(sum(xs))}</button>`}).join("")}</div></div></section>`}
+  }
+  /* 공지·문자 */
+  h+=`<div class="hgrid"><section class="hsec"><h3>공지사항 <a href="#" data-hgo="notice" class="mapt">전체 보기</a></h3><div class="hlist" id="hNotice"><p class="mapt">불러오는 중…</p></div></section>
+    ${tech?"":`<section class="hsec"><h3>최근 보낸 문자 <a href="#" data-hgo="sms" class="mapt">전체 보기</a></h3><div class="hlist" id="hSms"><p class="mapt">불러오는 중…</p></div></section>`}</div></div>`;
+  view().innerHTML=h;
+  const go=k=>{if(k==="t-today"||k==="t-tom"){const el=view().querySelectorAll(".hgrid .hsec")[k==="t-today"?0:1];if(el)el.scrollIntoView({behavior:"smooth",block:"start"});return}
+    if(k==="recv-due"){ui.view="recv";ui.rkpi="due";ui.rage="";ui.rstage="";ui.rown="";ui.rkind=""}else{ui.view=k;if(k==="recv"){ui.rkpi="";ui.rstage="";ui.rage="";ui.rown="";ui.rkind=""}}ui._fresh=true;render()};
+  view().querySelectorAll("[data-hgo]").forEach(el=>{el.onclick=e=>{e.preventDefault();go(el.dataset.hgo)};el.onkeydown=e=>{if(e.key==="Enter"||e.key===" "){e.preventDefault();go(el.dataset.hgo)}}});
+  view().querySelectorAll("[data-hj]").forEach(b=>b.onclick=()=>{const j=jobs.find(x=>x.id===b.dataset.hj);if(j)jobDlg(j)});
+  view().querySelectorAll("[data-hrs]").forEach(b=>b.onclick=()=>{ui.view="recv";ui.rkpi="";ui.rage="";ui.rown="";ui.rkind="";ui.rstage=b.dataset.hrs;ui._fresh=true;render()});
+  (async()=>{const ns=await fetchNotices();const box=document.getElementById("hNotice");if(!box)return;
+    const list=ns.slice().sort((a,b)=>(b.pinned-a.pinned)||String(b.created_at).localeCompare(String(a.created_at))).slice(0,5);
+    box.innerHTML=ui.noNotice?`<p class="mapt">공지사항 기능이 아직 설치되지 않았습니다.</p>`:list.map(n=>`<button type="button" class="hrow" data-hn="${n.id}">${n.pinned?`<span class="tag ntpin">고정</span>`:""}<b class="hname">${esc(n.title)}</b><span class="mapt">${esc(fmtD(n.created_at).slice(5).replace("-","/"))}</span></button>`).join("")||`<p class="mapt">등록된 공지가 없습니다.</p>`;
+    box.querySelectorAll("[data-hn]").forEach(b=>b.onclick=()=>{if(ui.nopen===undefined)ui.nopen=new Set();ui.nopen.add(b.dataset.hn);ui.view="notice";ui._fresh=true;render()})})();
+  if(!tech)(async()=>{const box=document.getElementById("hSms");const {data,error}=await sb.from("sms_logs").select("*").order("created_at",{ascending:false}).limit(5);if(!box)return;
+    box.innerHTML=error?`<p class="mapt">문자 기능이 아직 설치되지 않았습니다.</p>`:(data||[]).map(l=>{const cu=l.customer_id&&custById(l.customer_id);return `<div class="hrow static"><span class="htime">${esc(fmtDT(l.created_at).slice(5))}</span><b class="hname">${esc(cu?cu.name:fmtPhone(l.to_phone))}</b><span class="mapt hmsg">${esc(l.content)}</span>${l.status==="실패"?`<span class="neg">실패</span>`:""}</div>`}).join("")||`<p class="mapt">보낸 문자가 없습니다.</p>`})();
+}
+
 /* ================= 계약 ================= */
 function renderContracts(c){
   const ks=custContracts(c.id);const can=canEditCust(c);const tb=document.getElementById("tabBody");
@@ -2887,6 +2939,7 @@ function renderSettings(){
 (()=>{const b=document.getElementById("bMore"),m=document.getElementById("tacts");const set=o=>{m.classList.toggle("open",o);b.setAttribute("aria-expanded",o)};
   b.onclick=e=>{e.stopPropagation();set(!m.classList.contains("open"))};document.addEventListener("click",e=>{if(m.classList.contains("open")&&(!m.contains(e.target)||e.target.closest("button")))set(false)});
   document.addEventListener("keydown",e=>{if(e.key==="Escape")set(false)})})();
+(()=>{const h=document.querySelector("header.top h1");h.style.cursor="pointer";h.title="홈으로";h.onclick=()=>{if(!me)return;ui.view="home";ui._fresh=true;render()}})();
 document.getElementById("bImport").onclick=()=>document.getElementById("fileIn").click();
 document.getElementById("fileIn").onchange=async e=>{
   const f=e.target.files[0];e.target.value="";if(!f)return;
