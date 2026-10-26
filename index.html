@@ -2562,7 +2562,7 @@ function stockUltraHtml(){const cm=stkCtrMap();const units=stkUnits.map(u=>({u,s
       +sizes.map(s=>STK_TY.map(t=>{const n=cnt(m,s,t,lip,dr);return `<td class="num cl${t==="A"?" szs":""}${on(m,s,t,lip,dr)}" data-sf="${m}|${s}|${t}|${lip}|${dr}">${n||""}</td>`}).join("")).join("")+`<td></td></tr>`});
     tb+=`<tr class="ssum"><th colspan="2">합계</th>${sizes.map(s=>STK_TY.map(t=>{const n=cnt(m,s,t);return `<td class="num cl${t==="A"?" szs":""}${on(m,s,t,undefined,undefined)}" data-sf="${m}|${s}|${t}||">${n||""}</td>`}).join("")).join("")}<td class="num"><b>${tot}</b></td></tr>`;
     if(!noT){tb+=`<tr class="stgt"><th colspan="2">적정 재고</th>${sizes.map(s=>STK_TY.map(t=>{const v=tgt(m,s,t);return `<td class="num ed${t==="A"?" szs":""}" data-tg="${m}|${s}|${t}" title="눌러서 적정 재고 입력">${v||""}</td>`}).join("")).join("")}<td></td></tr>`;
-    tb+=`<tr class="sneed"><th colspan="2">생산 필요</th>${sizes.map(s=>STK_TY.map(t=>{const v=tgt(m,s,t)-cnt(m,s,t,1,"R");return `<td class="num${t==="A"?" szs":""}${v>0?" need":""}" title="적정 재고 − 유턱·우배수 재고">${v>0?"- "+v:""}</td>`}).join("")).join("")}<td></td></tr>`}});
+    tb+=`<tr class="sneed"><th colspan="2">생산 필요</th>${sizes.map(s=>STK_TY.map(t=>{const v=tgt(m,s,t)-cnt(m,s,t,1);return `<td class="num${t==="A"?" szs":""}${v>0?" need":""}" title="적정 재고 − 유턱(우·좌) 재고">${v>0?"- "+v:""}</td>`}).join("")).join("")}<td></td></tr>`}});
   const allT=sizes.map(s=>STK_TY.map(t=>fresh.filter(x=>x.u.size===s&&x.u.ty===t).length));
   const usedIn=live.filter(x=>x.u.used).length;
   const ug={};live.filter(x=>x.u.used).forEach(x=>{const k=stkSpec(x.u);ug[k]=(ug[k]||0)+1});
@@ -2574,7 +2574,7 @@ function stockUltraHtml(){const cm=stkCtrMap();const units=stkUnits.map(u=>({u,s
   const mat=`<div class="srow"><div class="wrapx vis" style="padding-top:6px;min-width:0;max-width:100%"><div class="wtbox" style="max-height:none;width:fit-content;max-width:100%"><table class="wt sm"><thead><tr><th colspan="3">구분</th>${sizes.map(s=>`<th colspan="3" class="szs">${s}</th>`).join("")}<th rowspan="2">합계</th></tr>
       <tr><th>제품</th><th>턱</th><th>배수</th>${sizes.map(()=>STK_TY.map(t=>`<th title="${STK_TYNAME[t]}" class="${t==="A"?"szs":""}">${t}</th>`).join("")).join("")}</tr></thead><tbody>${tb}
       <tr class="stot"><th colspan="3">총계</th>${allT.map(a=>a.map((n,i)=>`<td class="num${i===0?" szs":""}">${n||""}</td>`).join("")).join("")}<td class="num"><b>${fresh.length}</b></td></tr></tbody></table></div>
-    <p class="mapt" style="margin:6px 0 0">현황표는 새 제품 재고만 셉니다(중고 ${usedIn}대는 오른쪽 ‘중고 내역’). 숫자를 누르면 아래 목록이 그 제품으로 바뀝니다. ‘적정 재고’ 칸을 누르면 입력할 수 있습니다. 생산 필요 = 적정 재고 − 유턱·우배수 재고.</p></div>${side}</div>`;
+    <p class="mapt" style="margin:6px 0 0">현황표는 새 제품 재고만 셉니다(중고 ${usedIn}대는 오른쪽 ‘중고 내역’). 숫자를 누르면 아래 목록이 그 제품으로 바뀝니다. ‘적정 재고’ 칸을 누르면 입력할 수 있습니다. 생산 필요 = 적정 재고 − 유턱(우·좌) 재고.</p></div>${side}</div>`;
   return mat+stockListHtml(units,false)}
 /* ---------- 제품(시리얼) 목록: 초음파·중고 공통 ---------- */
 const STKCF=[["y","년"],["m","월"],["d","일"],["model","품명"],["ch","채널"],["size","SIZE"],["ty","TY"],["lip","유턱"],["drain","배수"],["no","No.(시리얼)"]];
