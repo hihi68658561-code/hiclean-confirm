@@ -2586,7 +2586,7 @@ function stockListHtml(units,usedOnly){if(!ui.sst)ui.sst="in";if(ui.sq===undefin
   let list=units.filter(x=>(!usedOnly||x.u.used)&&stOk(x,ui.sst)
     &&(!f||(f.spec?(x.u.used&&stkSpec(x.u)===f.spec):(x.u.model===f.m&&x.u.size===f.s&&x.u.ty===f.t&&(f.lip==null||x.u.lip===f.lip)&&(f.dr==null||x.u.drain===f.dr)&&!x.u.used)))
     &&(!qq||[x.u.serial,x.u.no,x.u.remark,x.s.site,stkSpec(x.u),x.u.grade].join(" ").toLowerCase().includes(qq)));
-  list.sort((a,b)=>String(b.u.in_date||"").localeCompare(String(a.u.in_date||""))||String(b.u.no).localeCompare(String(a.u.no)));
+  list.sort((a,b)=>{const na=Number(a.u.no),nb=Number(b.u.no),fa=isFinite(na)&&String(a.u.no??"").trim()!=="",fb=isFinite(nb)&&String(b.u.no??"").trim()!=="";if(fa&&fb&&na!==nb)return na-nb;if(fa!==fb)return fa?-1:1;return String(a.u.no??"").localeCompare(String(b.u.no??""),"ko",{numeric:true})});
   list=cfApply("stk",list,stkTxt);
   const cntSt=s=>units.filter(x=>(!usedOnly||x.u.used)&&stOk(x,s)).length;
   const shown=list.slice(0,ui.xAll?1e9:500);
