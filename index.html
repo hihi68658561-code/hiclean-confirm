@@ -205,6 +205,14 @@ body.resizing,body.resizing *{cursor:col-resize!important;user-select:none}
 .tag.sk-신규접수{background:#fff;color:#1d4ed8;border-color:#1d4ed8}.tag.sk-주문완료{background:#FFF3C4;color:#8a5a00;border-color:#FFF3C4}.tag.sk-입고완료{background:#DCEBFF;color:#1d4ed8;border-color:#DCEBFF}.tag.sk-출고완료{background:#00CC66;color:#1b1b1b;border-color:#00CC66}.tag.sk-재고등록{background:#efe2ff;color:#6b21a8;border-color:#efe2ff}.tag.sk-취소{background:#c62828;color:#fff;border-color:#c62828}
 .skit{border:1px solid var(--line);border-radius:8px;padding:8px 10px;display:grid;gap:6px}.skit-h{display:flex;align-items:center;justify-content:space-between}.skg{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:6px}.skg .s2{grid-column:span 2}.skg input{width:100%;min-width:0}.skg.sp{grid-template-columns:1fr 1fr 2fr;align-items:end}
 @media (max-width:760px){.skg{grid-template-columns:repeat(3,minmax(0,1fr))}.skg .s2{grid-column:span 3}.skg.sp{grid-template-columns:1fr 1fr}}
+.wt.sm{font-size:12px}.wt.sm th,.wt.sm td{padding:3px 5px;text-align:center;min-width:26px}.wt.sm td.cl{cursor:pointer}.wt.sm td.cl:hover,.wt.sm td.cl.on{background:var(--accent-weak);outline:2px solid var(--accent)}
+.wt.sm th.smodel{writing-mode:horizontal-tb;font-weight:700;min-width:84px}.wt.sm th.sm0{background:#FFFF00;color:#1b1b1b}.wt.sm th.sm1{background:#00B0F0;color:#1b1b1b}.wt.sm th.sm2{background:#DDEBF7;color:#1b1b1b}
+.wt.sm tr.smf td,.wt.sm tr.smf th{border-top:2px solid #555}.wt.sm tr.ssum td,.wt.sm tr.ssum th{background:#F8CBAD;color:#1b1b1b}.wt.sm tr.stgt td{color:#c00000;font-weight:700}.wt.sm td.ed{cursor:pointer}.wt.sm td.ed:hover{background:var(--accent-weak)}
+.wt.sm tr.sneed th{background:#FF00FF;color:#fff}.wt.sm td.need{background:#FF0000;color:#fff;font-weight:700}.wt.sm tr.stot td,.wt.sm tr.stot th{background:#FFFF00;color:#1b1b1b;font-weight:700;border-top:2px solid #555}
+.wt.su tr.sout td{color:#777}.wt.su tr.sx td{color:#999;text-decoration:line-through}.wt.su tbody tr{cursor:pointer}.mono{font-family:ui-monospace,Consolas,monospace;font-size:12px}
+.tag.skin{background:#00CC66;color:#1b1b1b;border-color:#00CC66}.tag.skout{background:#fff;color:#555;border-color:#aaa}.usedsum{display:flex;gap:14px;align-items:flex-start;flex-wrap:wrap}
+.wgrid{display:grid;grid-template-columns:minmax(260px,1fr) minmax(0,3fr);gap:14px;padding:6px 20px 20px}.wgrid .wtbox{max-height:calc(100vh - 330px)}.kpi.wstock b{font-size:26px;color:#1b1b1b}.kpi.wstock{background:#FFFF00;border-color:#e6c200}
+.wt.wi tbody tr,.wt.wm tbody tr{cursor:pointer}@media (max-width:760px){.wgrid{grid-template-columns:1fr;padding:6px 16px 16px}}
 .smtpls{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:8px}.smtpl{border:1px solid var(--line);background:var(--panel);border-radius:8px;padding:10px 12px;cursor:pointer;display:grid;gap:6px}.smtpl:hover,.smtpl:focus-visible{border-color:var(--accent);outline:none;box-shadow:0 0 0 2px var(--accent-weak)}.smt-h{display:flex;align-items:center;gap:6px}.smt-h b{flex:1}.smt-c{font-size:13px;color:var(--mute);white-space:pre-wrap;display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden}
 .rstages{display:flex;gap:6px;flex-wrap:wrap}.rstages .chip.on{outline:2px solid var(--accent)}
 .ageb{display:grid;gap:4px}.agerow{display:grid;grid-template-columns:80px 1fr 110px 44px;gap:8px;align-items:center;border:0;background:none;padding:4px 6px;border-radius:6px;cursor:pointer;font:inherit;color:inherit;text-align:left}.agerow:hover,.agerow.on{background:var(--accent-weak)}
@@ -659,11 +667,11 @@ function render(){if(ui._fresh){ui._fresh=false;render0();window.scrollTo(0,0);r
 function render0(){
   ui.dirty=false;
   if(me.role==="sales"&&(ui.view==="work"||ui.view==="asm"))ui.view="home";
-  const tabs=[["home","홈"],["cust","고객"]];if(me.role!=="tech")tabs.push(["leads","DB관리"]);if(me.role!=="sales")tabs.push(["work","당월 설치·A/S 전체리스트"]);if(me.role!=="tech")tabs.push(["ctrm","당월리스트"],["allm","전체리스트"],...(me.role==="sales"?[]:[["asm","A/S관리"]]),["recv","미수·채권관리"]);tabs.push(["sched","담당자별 일정표"]);if(me.role!=="tech")tabs.push(["sink","싱크대발주"]);if(me.role!=="tech")tabs.push(["sms","문자"]);tabs.push(["notice","공지사항"]);if(isAdmin())tabs.push(["staff","직원"],["settings","설정"]);
+  const tabs=[["home","홈"],["cust","고객"]];if(me.role!=="tech")tabs.push(["leads","DB관리"]);if(me.role!=="sales")tabs.push(["work","당월 설치·A/S 전체리스트"]);if(me.role!=="tech")tabs.push(["ctrm","당월리스트"],["allm","전체리스트"],...(me.role==="sales"?[]:[["asm","A/S관리"]]),["recv","미수·채권관리"]);tabs.push(["sched","담당자별 일정표"]);if(me.role!=="tech")tabs.push(["sink","싱크대발주"]);if(isOffice())tabs.push(["stock","재고관리"]);if(me.role!=="tech")tabs.push(["sms","문자"]);tabs.push(["notice","공지사항"]);if(isAdmin())tabs.push(["staff","직원"],["settings","설정"]);
   document.getElementById("nav").innerHTML=tabs.map(([k,l])=>`<button type="button" class="${ui.view===k?"on":""}${k==="notice"&&ui.view!=="notice"&&noticeUnread()?" ndot":""}" data-v="${k}">${l}</button>`).join("");
   document.querySelectorAll("#nav button").forEach(b=>b.onclick=()=>{ui.view=b.dataset.v;if(ui.view==="sched")ui.schJump=true;ui.jsel=new Set();ui._fresh=true;render()});
   if(ui.view==="install"||ui.view==="as")ui.view="work";
-  if(ui.view==="home")renderHomeView();else if(ui.view==="cust")renderCustView();else if(ui.view==="work")renderWorkView();else if(ui.view==="ctrm")renderCtrView();else if(ui.view==="asm")renderAsView();else if(ui.view==="leads")renderLeadView();else if(ui.view==="recv")renderRecvView();else if(ui.view==="allm")renderAllView();else if(ui.view==="sched")renderSchedView();else if(ui.view==="sms")renderSmsView();else if(ui.view==="notice")renderNoticeView();else if(ui.view==="sink")renderSinkView();else if(ui.view==="staff")renderStaffView();else if(ui.view==="delete")renderDeleteView();else renderSettings();
+  if(ui.view==="home")renderHomeView();else if(ui.view==="cust")renderCustView();else if(ui.view==="work")renderWorkView();else if(ui.view==="ctrm")renderCtrView();else if(ui.view==="asm")renderAsView();else if(ui.view==="leads")renderLeadView();else if(ui.view==="recv")renderRecvView();else if(ui.view==="allm")renderAllView();else if(ui.view==="sched")renderSchedView();else if(ui.view==="sms")renderSmsView();else if(ui.view==="notice")renderNoticeView();else if(ui.view==="sink")renderSinkView();else if(ui.view==="stock")renderStockView();else if(ui.view==="staff")renderStaffView();else if(ui.view==="delete")renderDeleteView();else renderSettings();
   addXlsBtn();
 }
 
@@ -2502,6 +2510,184 @@ function sinkDlg(o,pre){const off=isOffice();const isNew=!o;pre=pre||{};
   drawItems();
   const ad=document.getElementById("skAdd");if(ad)ad.onclick=()=>{readItems();items.push({qty:1});drawItems()};
 }
+
+/* ================= 재고관리 (초음파세척기·수압식세척기·중고세척기) ================= */
+const STK_MODELS={CL:{name:"Clean 1CH",short:"클린1",ch:1},ON:{name:"Oncare 3CH",short:"온케어3",ch:3},AT:{name:"올뉴트리플 3CH",short:"올뉴3",ch:3}};
+const STK_SIZES=[600,700,800,900,1000,1200,1500,1800,2000,2100],STK_TY=["A","B","C"];
+const STK_TYNAME={A:"세로 700",B:"세로 600",C:"세로 특수"};
+let stkUnits=null,stkTargets=[],washMoves=[];
+async function fetchStock(){const [u,t,w]=await Promise.all([fetchAll("stock_units").then(d=>({d}),e=>({e})),sb.from("stock_targets").select("*"),sb.from("wash_moves").select("*").order("move_date",{ascending:false})]);
+  if(u.e){ui.noStock=true;stkUnits=[];stkTargets=[];washMoves=[];return}ui.noStock=false;stkUnits=u.d;stkTargets=t.data||[];washMoves=w.data||[]}
+const sp2=n=>String(n??"").padStart(2,"0");
+function stkSerial(u){const no=String(u.no||"").replace(/\D/g,"");if(!u.model||!u.size||!no)return u.serial||"";
+  return `${sp2(u.mfg_y)}${sp2(u.mfg_m)}-${u.model}${u.ch||""}${sp2(Math.round(u.size/100))}${u.ty||""}${u.lip??""}${u.drain||""}-${no.padStart(5,"0")}`}
+function stkSpec(u){const m=STK_MODELS[u.model];return `${m?m.short:u.model} ${u.size||""}${u.ty||""} ${u.lip===1?"유턱":u.lip===0?"무턱":""} ${u.drain==="R"?"우배수":u.drain==="L"?"좌배수":""}`.replace(/\s+/g," ").trim()}
+/* 계약 시리얼(번호)로 출고 자동 연결: 설치가 완료된 계약만 */
+function stkCtrMap(){const m=new Map();contracts.forEach(k=>{if(k.stage==="취소")return;const d=String(k.serial||"").replace(/\D/g,"");if(d.length<3)return;const n=String(Number(d));(m.get(n)||m.set(n,[]).get(n)).push(k)});return m}
+function stkState(u,cm){if(u.status==="불량"||u.status==="폐기")return{st:"x",label:u.status};
+  if(u.out_date)return{st:"out",date:u.out_date,site:u.site_name||((u.customer_id&&custById(u.customer_id))||{}).name||"",auto:false,cid:u.customer_id};
+  const no=String(Number(String(u.no||"").replace(/\D/g,"")||"0"));const ks=no!=="0"&&cm.get(no)||[];
+  for(const k of ks){const ij=installOf(k);const d=ij&&ij.status==="완료"?(ij.done_date||ij.visit_date||""):"";if(!d)continue;if(u.in_date&&d<u.in_date)continue;
+    const c=custById(k.customer_id);return{st:"out",date:d,site:c?c.name:"",auto:true,cid:k.customer_id,k}}
+  return{st:"in"}}
+async function renderStockView(){if(!isOffice()){view().innerHTML=`<div class="empty"><h2>사무실·관리자만 쓸 수 있는 화면입니다</h2></div>`;return}
+  if(!stkUnits)view().innerHTML=`<p class="mapt" style="padding:20px">불러오는 중…</p>`;await fetchStock();if(!ui.stab)ui.stab="ultra";
+  const tabs=[["ultra","초음파세척기"],["wash","수압식세척기"],["used","중고세척기"]];
+  const head=`<div class="toolbar" style="padding:16px 20px 0;flex-wrap:wrap"><h2 style="margin:0;font-size:18px">재고관리</h2><div class="nav" role="tablist">${tabs.map(([k,l])=>`<button type="button" role="tab" class="${ui.stab===k?"on":""}" data-stab="${k}">${l}</button>`).join("")}</div></div>
+    ${ui.noStock?`<div class="sec"><p class="warnbox">재고관리를 쓰려면 Supabase SQL Editor에서 <b>phase1zg.sql</b>을 실행해 주세요.</p></div>`:""}`;
+  const body=ui.stab==="wash"?stockWashHtml():ui.stab==="used"?stockUsedHtml():stockUltraHtml();
+  view().innerHTML=head+body;
+  view().querySelectorAll("[data-stab]").forEach(b=>b.onclick=()=>{ui.stab=b.dataset.stab;ui.sfil=null;renderStockView()});
+  XSEL.stock=ui.stab==="wash"?".wt.wm":".wt.su";XNAME.stock=ui.stab==="wash"?"수압식 재고":ui.stab==="used"?"중고세척기":"초음파 재고";
+  if(ui.stab==="wash")bindStockWash();else bindStockUnits();addXlsBtn()}
+/* ---------- 초음파 ---------- */
+function stockUltraHtml(){const cm=stkCtrMap();const units=stkUnits.map(u=>({u,s:stkState(u,cm)}));ui._stk=units;
+  const live=units.filter(x=>x.s.st==="in");const fresh=live.filter(x=>!x.u.used);
+  const models=[...new Set(["CL","ON","AT",...stkUnits.map(u=>u.model).filter(Boolean)])];
+  const sizes=[...new Set([...STK_SIZES,...stkUnits.map(u=>u.size).filter(Boolean)])].sort((a,b)=>a-b);
+  const cnt=(m,s,t,lip,dr)=>fresh.filter(x=>x.u.model===m&&x.u.size===s&&x.u.ty===t&&(lip==null||x.u.lip===lip)&&(dr==null||x.u.drain===dr)).length;
+  const tgt=(m,s,t)=>{const r=stkTargets.find(x=>x.model===m&&x.size===s&&x.ty===t);return r?r.qty:0};
+  const f=ui.sfil||{};const on=(m,s,t,lip,dr)=>f.m===m&&f.s===s&&f.t===t&&f.lip===lip&&f.dr===dr?" on":"";
+  const combos=[[1,"R","유","우"],[1,"L","","좌"],[0,"R","무","우"],[0,"L","","좌"]];
+  let tb="";models.forEach((m,mi)=>{const M=STK_MODELS[m]||{name:m};const tot=fresh.filter(x=>x.u.model===m).length;
+    combos.forEach(([lip,dr,ll,dl],ci)=>{tb+=`<tr class="${ci===0?"smf":""}">${ci===0?`<th rowspan="7" class="smodel sm${mi%3}">${esc(M.name)}</th>`:""}${ll?`<th rowspan="2">${ll}</th>`:""}<th>${dl}</th>`
+      +sizes.map(s=>STK_TY.map(t=>{const n=cnt(m,s,t,lip,dr);return `<td class="num cl${on(m,s,t,lip,dr)}" data-sf="${m}|${s}|${t}|${lip}|${dr}">${n||""}</td>`}).join("")).join("")+`<td></td></tr>`});
+    tb+=`<tr class="ssum"><th colspan="2">합계</th>${sizes.map(s=>STK_TY.map(t=>{const n=cnt(m,s,t);return `<td class="num cl${on(m,s,t,undefined,undefined)}" data-sf="${m}|${s}|${t}||">${n||""}</td>`}).join("")).join("")}<td class="num"><b>${tot}</b></td></tr>`;
+    tb+=`<tr class="stgt"><th colspan="2">적정 재고</th>${sizes.map(s=>STK_TY.map(t=>{const v=tgt(m,s,t);return `<td class="num ed" data-tg="${m}|${s}|${t}" title="눌러서 적정 재고 입력">${v||""}</td>`}).join("")).join("")}<td></td></tr>`;
+    tb+=`<tr class="sneed"><th colspan="2">생산 필요</th>${sizes.map(s=>STK_TY.map(t=>{const v=tgt(m,s,t)-cnt(m,s,t);return `<td class="num${v>0?" need":""}">${v>0?"- "+v:""}</td>`}).join("")).join("")}<td></td></tr>`});
+  const allT=sizes.map(s=>STK_TY.map(t=>fresh.filter(x=>x.u.size===s&&x.u.ty===t).length));
+  const usedIn=live.filter(x=>x.u.used).length;
+  const mat=`<div class="wrapx vis" style="padding-top:6px"><div class="wtbox" style="max-height:none"><table class="wt sm"><thead><tr><th colspan="3">구분</th>${sizes.map(s=>`<th colspan="3">${s}</th>`).join("")}<th rowspan="2">합계</th></tr>
+      <tr><th>제품</th><th>턱</th><th>배수</th>${sizes.map(()=>STK_TY.map(t=>`<th title="${STK_TYNAME[t]}">${t}</th>`).join("")).join("")}</tr></thead><tbody>${tb}
+      <tr class="stot"><th colspan="3">총계</th>${allT.map(a=>a.map(n=>`<td class="num">${n||""}</td>`).join("")).join("")}<td class="num"><b>${fresh.length}</b></td></tr></tbody></table></div>
+    <p class="mapt" style="margin:6px 0 0">새 제품 재고만 셉니다(중고 ${usedIn}대는 ‘중고세척기’에서). A: 세로 700 · B: 세로 600 · C: 세로 특수 / 숫자를 누르면 아래 목록이 그 제품으로 바뀝니다. ‘적정 재고’ 칸을 누르면 입력할 수 있습니다.</p></div>`;
+  return mat+stockListHtml(units,false)}
+/* ---------- 제품(시리얼) 목록: 초음파·중고 공통 ---------- */
+function stockListHtml(units,usedOnly){if(!ui.sst)ui.sst="in";if(ui.sq===undefined)ui.sq="";
+  const f=ui.sfil;const qq=ui.sq.trim().toLowerCase();
+  let list=units.filter(x=>(!usedOnly||x.u.used)&&(ui.sst==="all"||(ui.sst==="x"?x.s.st==="x":x.s.st===ui.sst))
+    &&(!f||(x.u.model===f.m&&x.u.size===f.s&&x.u.ty===f.t&&(f.lip==null||x.u.lip===f.lip)&&(f.dr==null||x.u.drain===f.dr)&&!x.u.used))
+    &&(!qq||[x.u.serial,x.u.no,x.u.remark,x.s.site,stkSpec(x.u),x.u.grade].join(" ").toLowerCase().includes(qq)));
+  list.sort((a,b)=>String(b.u.in_date||"").localeCompare(String(a.u.in_date||""))||String(b.u.no).localeCompare(String(a.u.no)));
+  const cntSt=s=>units.filter(x=>(!usedOnly||x.u.used)&&(s==="all"||(s==="x"?x.s.st==="x":x.s.st===s))).length;
+  const shown=list.slice(0,ui.xAll?1e9:500);
+  return `<div class="toolbar" style="flex-wrap:wrap"><input id="sQ" type="search" placeholder="시리얼·번호·업장·메모 검색" value="${esc(ui.sq)}">
+     <div class="nav" role="group">${[["in","재고"],["out","출고"],["x","불량·폐기"],["all","전체"]].map(([k,l])=>`<button type="button" data-sst="${k}" class="${ui.sst===k?"on":""}">${l} ${cntSt(k)}</button>`).join("")}</div>
+     ${f?`<span class="chip on">${esc((STK_MODELS[f.m]||{}).short||f.m)} ${f.s}${f.t}${f.lip===1?" 유턱":f.lip===0?" 무턱":""}${f.dr==="R"?" 우":f.dr==="L"?" 좌":""} <button type="button" class="btn sm" id="sFx">✕</button></span>`:""}<span class="mapt">${list.length}대</span><span style="flex:1"></span>
+     <button class="btn" type="button" id="sImp">엑셀 가져오기</button><button class="btn pri" type="button" id="sNew">${usedOnly?"+ 중고 입고":"+ 입고 등록"}</button><input type="file" id="sImpIn" accept=".xlsx,.xls" hidden></div>
+   <div class="wrapx vis" style="padding-top:6px"><div class="wtbox"><table class="wt su"><thead><tr><th>년</th><th>월</th><th>일</th><th>품명</th><th>채널</th><th>SIZE</th><th>TY</th><th>유턱</th><th>배수</th><th>No.</th><th>상태</th><th>입고일</th><th>출고일자</th><th>설치업장</th><th>Remark</th><th>Serial No.</th><th>구분</th><th>등급</th></tr></thead><tbody>
+    ${shown.map(x=>{const u=x.u,s=x.s;return `<tr data-su="${u.id}" class="${s.st==="out"?"sout":s.st==="x"?"sx":""}"><td>${u.mfg_y??""}</td><td>${u.mfg_m??""}</td><td>${u.mfg_d??""}</td><td>${esc(u.model)}</td><td>${u.ch??""}</td><td>${u.size??""}</td><td>${esc(u.ty)}</td><td>${u.lip??""}</td><td>${esc(u.drain)}</td><td>${esc(u.no)}</td>
+      <td>${s.st==="in"?`<span class="tag skin">재고</span>`:s.st==="out"?`<span class="tag skout">출고${s.auto?" (계약)":""}</span>`:`<span class="tag sk-취소">${esc(s.label)}</span>`}</td><td>${esc(ymd2(u.in_date))}</td><td>${esc(ymd2(s.date||""))}</td><td>${esc(s.site||"")}</td>
+      <td class="wrap memo"><div class="clamp">${esc(u.remark)}</div></td><td class="mono">${esc(u.serial||stkSerial(u))}</td><td>${u.used?"중고":""}</td><td>${esc(u.grade)}</td></tr>`}).join("")||`<tr><td colspan="18" class="mapt">해당하는 제품이 없습니다.</td></tr>`}</tbody></table></div></div>`}
+function bindStockUnits(){const re=()=>renderStockView();
+  view().querySelectorAll("[data-sf]").forEach(td=>td.onclick=()=>{const [m,s,t,lip,dr]=td.dataset.sf.split("|");const nf={m,s:+s,t,lip:lip===""?undefined:+lip,dr:dr||undefined};
+    const f=ui.sfil;ui.sfil=f&&f.m===nf.m&&f.s===nf.s&&f.t===nf.t&&f.lip===nf.lip&&f.dr===nf.dr?null:nf;ui.sst="in";re().then(()=>{const t=view().querySelector(".wt.su");if(t)t.scrollIntoView({behavior:"smooth",block:"start"})})});
+  view().querySelectorAll("[data-tg]").forEach(td=>td.onclick=async()=>{const [model,size,ty]=td.dataset.tg.split("|");const v=prompt(`${(STK_MODELS[model]||{}).name||model} ${size}${ty} 적정 재고 (대)`,td.textContent.trim()||"0");if(v==null)return;
+    const qty=Math.max(0,parseInt(v,10)||0);const {error}=await sb.from("stock_targets").upsert({model,size:+size,ty,qty});if(error)return toast("저장하지 못했습니다: "+error.message);re()});
+  const q=document.getElementById("sQ");if(q)q.oninput=()=>{ui.sq=q.value;clearTimeout(q._t);q._t=setTimeout(()=>re().then(()=>{const n=document.getElementById("sQ");if(n){n.focus();n.setSelectionRange(n.value.length,n.value.length)}}),250)};
+  view().querySelectorAll("[data-sst]").forEach(b=>b.onclick=()=>{ui.sst=b.dataset.sst;re()});
+  const fx=document.getElementById("sFx");if(fx)fx.onclick=()=>{ui.sfil=null;re()};
+  const nb=document.getElementById("sNew");if(nb)nb.onclick=()=>stockUnitDlg(null,ui.stab==="used");
+  view().querySelectorAll("tr[data-su]").forEach(tr=>tr.onclick=()=>stockUnitDlg(stkUnits.find(u=>u.id===tr.dataset.su)));
+  const imp=document.getElementById("sImp"),inp_=document.getElementById("sImpIn");if(imp)imp.onclick=()=>inp_.click();
+  if(inp_)inp_.onchange=async()=>{const f=inp_.files[0];inp_.value="";if(!f)return;if(!window.XLSX)return toast("엑셀 도구를 불러오지 못했습니다");
+    let wb;try{wb=XLSX.read(await f.arrayBuffer(),{type:"array",cellDates:true})}catch(e){return toast("파일을 읽지 못했습니다")}stockImport(f.name,wb)}}
+/* 제품 입고·수정 창 */
+function stockUnitDlg(u,asUsed){const isNew=!u;const cm=stkCtrMap();const s=u?stkState(u,cm):{st:"in"};const td_=today();
+  u=u||{mfg_y:+td_.slice(2,4),mfg_m:+td_.slice(5,7),mfg_d:+td_.slice(8,10),model:"AT",ch:3,size:700,ty:"A",lip:1,drain:"R",no:"",in_date:td_,used:!!asUsed,grade:"",remark:"",status:""};
+  const opt=(a,v)=>a.map(([k,l])=>`<option value="${esc(k)}" ${String(k)===String(v??"")?"selected":""}>${esc(l)}</option>`).join("");
+  const nextNo=()=>{const mx=stkUnits.reduce((a,x)=>Math.max(a,Number(String(x.no||"").replace(/\D/g,""))||0),0);return String(mx+1).padStart(5,"0")};
+  openDlg(isNew?(asUsed?"중고세척기 입고":"초음파세척기 입고 등록"):"제품 · "+esc(u.serial||stkSerial(u)),`<div id="suf" style="display:grid;gap:10px">
+    <h3 class="ksec">생산 정보</h3>
+    <div class="g3">${inp("mfg_y","제조 년(2자리)",u.mfg_y??"","number")}${inp("mfg_m","월",u.mfg_m??"","number")}${inp("mfg_d","일",u.mfg_d??"","number")}</div>
+    <div class="g3"><label class="f">품명<select name="model">${opt([["CL","CL · Clean 1CH"],["ON","ON · Oncare 3CH"],["AT","AT · 올뉴트리플 3CH"],...(u.model&&!STK_MODELS[u.model]?[[u.model,u.model]]:[])],u.model)}</select></label>${sel("ch","채널",[["1","1채널"],["3","3채널"]],String(u.ch??""))}${inp("size","SIZE",u.size??"","number",false,'list="stSz"')}</div>
+    <div class="g3">${sel("ty","TY",[["A","A · 세로 700"],["B","B · 세로 600"],["C","C · 세로 특수"]],u.ty)}${sel("lip","유턱",[["1","1 · 유턱"],["0","0 · 무턱"]],String(u.lip??""))}${sel("drain","배수",[["R","R · 우"],["L","L · 좌"]],u.drain)}</div>
+    <div class="g3">${inp("no","No.",u.no||(isNew?nextNo():""))}${isNew?inp("cnt","연속 등록 대수",1,"number",false,'min="1" max="200"'):"<span></span>"}<label class="f">Serial No.<input name="serial" value="${esc(u.serial||stkSerial(u))}" class="mono"></label></div>
+    <datalist id="stSz">${STK_SIZES.map(x=>`<option value="${x}">`).join("")}</datalist>
+    <h3 class="ksec">관리</h3>
+    <div class="g3">${inp("in_date","입고일",u.in_date||"","date")}${sel("status","상태",[["","정상"],["불량","불량"],["폐기","폐기"]],u.status||"")}<span></span></div>
+    <div class="g3"><label class="f">구분<span class="chk" style="padding:0"><label style="padding:6px 10px"><input type="checkbox" name="used" ${u.used?"checked":""}>중고</label></span></label>${inp("grade","중고 등급",u.grade,"text",false,'list="stGr" placeholder="A++ · B+ · B"')}<span></span></div>
+    <datalist id="stGr">${["A++","A+","A","B+","B","C"].map(x=>`<option value="${x}">`).join("")}</datalist>
+    <label class="f">Remark (입고 사유 등)<input name="remark" value="${esc(u.remark)}" placeholder="예: 보상판매 입고, 장기 재고"></label>
+    <h3 class="ksec">출고</h3>
+    ${s.st==="out"&&s.auto?`<p class="mapt" style="margin:0">계약과 자동 연결됨: <b>${esc(s.site)}</b> · 설치 ${esc(s.date)} (계약 시리얼 ${esc(s.k.serial)})</p>`:""}
+    <div class="g3">${inp("out_date","출고일자 (직접 처리)",u.out_date||"","date")}<div class="f" style="grid-column:span 2"><span>설치업장</span><input name="site_name" value="${esc(u.site_name||"")}" list="stCu" placeholder="업체명(상호)"></div></div>
+    <datalist id="stCu">${customers.slice(0,3000).map(c=>`<option value="${esc(c.name)}">`).join("")}</datalist>
+    <p class="mapt" style="margin:0">계약에 이 번호(No.)를 시리얼로 넣고 설치가 완료되면 자동으로 출고됩니다. 계약 없이 나간 제품만 출고일자를 직접 넣으세요.</p></div>`,
+   [["닫기"],...(!isNew?[["삭제","danger",async()=>{if(!(await askConfirm("이 제품 기록을 삭제할까요?")))return true;const {error}=await sb.from("stock_units").delete().eq("id",u.id);if(error){toast("삭제하지 못했습니다: "+error.message);return true}toast("삭제했습니다");renderStockView()}]]:[]),
+    ...(!isNew&&s.st==="out"?[["중고로 재입고","",async()=>{const g=prompt("중고 등급 (예: A++, B+, B)",u.grade||"B");if(g==null)return true;const why=prompt("입고 사유 (예: 철거 회수, 보상판매 입고)",u.remark||"")??"";
+      const {error}=await sb.from("stock_units").update({used:true,grade:g.trim(),remark:why.trim(),in_date:today(),out_date:null,site_name:"",customer_id:null,status:""}).eq("id",u.id);if(error){toast("저장하지 못했습니다: "+error.message);return true}toast("중고로 다시 입고했습니다");renderStockView()}]]:[]),
+    ["저장","pri",async()=>{const f=fdata("suf");const n=k=>{const v=f.get(k);return v===""||v==null?null:Number(v)};
+      const p={mfg_y:n("mfg_y"),mfg_m:n("mfg_m"),mfg_d:n("mfg_d"),model:f.get("model"),ch:n("ch"),size:n("size"),ty:f.get("ty"),lip:n("lip"),drain:f.get("drain"),no:(f.get("no")||"").trim(),
+        in_date:f.get("in_date")||null,status:f.get("status")||"",used:!!f.get("used"),grade:(f.get("grade")||"").trim(),remark:(f.get("remark")||"").trim(),out_date:f.get("out_date")||null,site_name:(f.get("site_name")||"").trim()};
+      const cu=p.site_name&&customers.find(c=>c.name===p.site_name);p.customer_id=cu?cu.id:null;
+      if(!p.no){toast("No.를 입력하세요");return true}
+      const typed=(f.get("serial")||"").trim();
+      if(isNew){const c=Math.min(200,Math.max(1,parseInt(f.get("cnt"),10)||1));const base=Number(p.no.replace(/\D/g,""))||0;const w=Math.max(5,p.no.length);const rows=[];
+        for(let i=0;i<c;i++){const r=Object.assign({},p,{no:String(base+i).padStart(w,"0")});r.serial=c===1&&typed?typed:stkSerial(r);rows.push(r)}
+        const dup=rows.filter(r=>stkUnits.some(x=>String(Number(x.no))===String(Number(r.no))));if(dup.length&&!(await askConfirm(`이미 있는 번호가 ${dup.length}개 있습니다 (${dup.slice(0,3).map(r=>r.no).join(", ")}…). 그래도 등록할까요?`)))return true;
+        const {error}=await sb.from("stock_units").insert(rows);if(error){toast(/stock_units/.test(error.message)?"Supabase에서 phase1zg.sql을 먼저 실행해 주세요.":"저장하지 못했습니다: "+error.message);return true}toast(`${rows.length}대 입고했습니다`)}
+      else{p.serial=typed&&typed!==stkSerial(u)?typed:stkSerial(p);const {error}=await sb.from("stock_units").update(p).eq("id",u.id);if(error){toast("저장하지 못했습니다: "+error.message);return true}toast("저장했습니다")}
+      renderStockView()}]]);
+  /* 생산 정보가 바뀌면 시리얼 다시 만들기 */
+  const box=document.getElementById("suf");const sr=box.querySelector('[name="serial"]');let touched=false;sr.addEventListener("input",()=>touched=true);
+  box.querySelectorAll('[name=mfg_y],[name=mfg_m],[name=model],[name=ch],[name=size],[name=ty],[name=lip],[name=drain],[name=no]').forEach(el=>el.addEventListener("input",()=>{if(touched)return;const g=k=>box.querySelector(`[name="${k}"]`).value;
+    sr.value=stkSerial({mfg_y:g("mfg_y"),mfg_m:g("mfg_m"),model:g("model"),ch:g("ch"),size:Number(g("size")),ty:g("ty"),lip:g("lip"),drain:g("drain"),no:g("no")})}));
+  const ms=box.querySelector('[name=model]');ms.addEventListener("change",()=>{const M=STK_MODELS[ms.value];if(M)box.querySelector('[name=ch]').value=String(M.ch);box.querySelector('[name=ch]').dispatchEvent(new Event("input"))})}
+/* 엑셀 가져오기: 생산부 기입 목록 (년·월·일·품명·채널·SIZE·TY·유턱·배수·No.·출고일자·설치업장·Remark·Serial No.·CODE) */
+function stockImport(fname,wb){let rows=null,hr=-1;
+  for(const sn of wb.SheetNames){const r=XLSX.utils.sheet_to_json(wb.Sheets[sn],{header:1,raw:true,defval:""});for(let i=0;i<Math.min(60,r.length);i++){const h=r[i].map(nk);if(h.includes("ty")&&h.includes("유턱")){rows=r;hr=i;break}}if(rows)break}
+  if(!rows)return openDlg("가져올 수 없습니다",`<p>제목 줄에서 ‘TY’와 ‘유턱’ 열을 찾지 못했습니다. 초음파 재고 엑셀(생산부 기입 목록)이 맞는지 확인해 주세요.</p>`,[["닫기"]]);
+  const W=Math.max(...rows.slice(Math.max(0,hr-3),hr+1).map(r=>r.length));const H=[];for(let c=0;c<W;c++){let v="";for(let k=hr;k>=Math.max(0,hr-3)&&!v;k--)v=nk(rows[k][c]);H.push(v)}
+  const at=(...names)=>{for(const n of names){const i=H.indexOf(nk(n));if(i>=0)return i}for(const n of names){const i=H.findIndex(h=>h.startsWith(nk(n)));if(i>=0)return i}return -1};
+  const I={y:at("년"),m:at("월"),d:at("일"),model:at("품명"),ch:at("채널"),size:at("SIZE"),ty:at("TY"),lip:at("유턱"),drain:at("배수"),no:at("No.","No"),out:at("출고일자"),site:at("설치업장"),remark:at("Remark"),serial:at("Serial No.","Serial"),code:at("CODE")};
+  const out=[];rows.slice(hr+1).forEach(r=>{const g=i=>i<0?"":r[i];const t=i=>String(g(i)??"").trim();const no=t(I.no).replace(/\D/g,"");if(!no||!t(I.model))return;
+    const N=v=>{const x=parseInt(String(v).replace(/\D/g,""),10);return isNaN(x)?null:x};const code=t(I.code);
+    const u={mfg_y:N(g(I.y)),mfg_m:N(g(I.m)),mfg_d:N(g(I.d)),model:t(I.model).toUpperCase(),ch:N(g(I.ch)),size:N(g(I.size)),ty:t(I.ty).toUpperCase(),lip:N(g(I.lip)),drain:t(I.drain).toUpperCase(),no:no.padStart(5,"0"),
+      remark:t(I.remark),used:/중고/.test(code),grade:I.code>=0?t(I.code+1):"",out_date:toDate(g(I.out))||null,site_name:t(I.site),status:""};
+    if(!u.used)u.grade="";u.serial=t(I.serial)||stkSerial(u);u.in_date=u.mfg_y&&u.mfg_m?`20${sp2(u.mfg_y)}-${sp2(u.mfg_m)}-${sp2(u.mfg_d||1)}`:null;if(u.in_date&&!toDate(u.in_date))u.in_date=null;out.push(u)});
+  const byNo=new Map(stkUnits.map(x=>[String(Number(x.no)),x]));const neu=out.filter(u=>!byNo.has(String(Number(u.no)))),upd=out.filter(u=>byNo.has(String(Number(u.no))));
+  openDlg("초음파 재고 엑셀 가져오기",`<p><b>${esc(fname)}</b> · ${out.length}대</p><table class="stafft"><tbody><tr><td>새로 등록</td><td>${neu.length}대</td></tr><tr><td>이미 있는 번호 → 엑셀 내용으로 갱신</td><td>${upd.length}대</td></tr><tr><td>그중 중고</td><td>${out.filter(u=>u.used).length}대</td></tr><tr><td>출고일자가 적힌 제품</td><td>${out.filter(u=>u.out_date).length}대</td></tr></tbody></table>
+    <p class="mapt">계약 시리얼과 번호가 같고 설치가 끝난 제품은 출고일자가 없어도 자동으로 출고로 표시됩니다.</p>`,
+   [["취소"],["가져오기","pri",async()=>{try{for(let i=0;i<neu.length;i+=300){toast(`가져오는 중… ${Math.min(i+300,neu.length)}/${neu.length}`);const {error}=await sb.from("stock_units").insert(neu.slice(i,i+300));if(error)throw error}
+      for(let i=0;i<upd.length;i++){if(i%20===0)toast(`갱신 중… ${i+1}/${upd.length}`);const u=upd[i];const {error}=await sb.from("stock_units").update(u).eq("id",byNo.get(String(Number(u.no))).id);if(error)throw error}
+      toast(`가져오기 완료: 새로 ${neu.length}대 · 갱신 ${upd.length}대`);renderStockView()}catch(e){toast("가져오는 중 멈췄습니다: "+(e.message||""))}}]])}
+/* ---------- 중고 ---------- */
+function stockUsedHtml(){const cm=stkCtrMap();const units=stkUnits.filter(u=>u.used).map(u=>({u,s:stkState(u,cm)}));
+  const live=units.filter(x=>x.s.st==="in");const g={};live.forEach(x=>{const k=stkSpec(x.u);g[k]=(g[k]||0)+1});
+  const sum=`<div class="sec" style="max-width:none;padding-bottom:0"><div class="usedsum"><div class="kpi bad"><span>중고 재고</span><b>${live.length}대</b><small>출고 ${units.filter(x=>x.s.st==="out").length}대</small></div>
+    <table class="stafft" style="max-width:520px"><thead><tr><th>중고 내역 (재고)</th><th class="num">대수</th></tr></thead><tbody>${Object.entries(g).sort((a,b)=>b[1]-a[1]).map(([k,n])=>`<tr><td>${esc(k)}</td><td class="num">${n}</td></tr>`).join("")||`<tr><td colspan="2" class="mapt">중고 재고가 없습니다.</td></tr>`}</tbody></table></div></div>`;
+  return sum+stockListHtml(units,true)}
+/* ---------- 수압식 ---------- */
+function washAuto(){const out=[];contracts.forEach(k=>{if(!k.wash_added||k.stage==="취소")return;const ij=installOf(k);if(!ij||ij.status!=="완료")return;const c=custById(k.customer_id)||{};
+  out.push({auto:true,id:"k:"+k.id,move_date:ij.done_date||ij.visit_date||k.contract_date||"",site_name:c.name||"",phone:c.phone||c.phone2||"",address:c.address||"",product:"워시",qty:1,k,c})});return out}
+function stockWashHtml(){if(ui.wq===undefined)ui.wq="";const ins=washMoves.filter(m=>m.kind!=="출고"),manOut=washMoves.filter(m=>m.kind==="출고"),auto=washAuto();
+  const inSum=ins.reduce((a,m)=>a+Number(m.qty||0),0),outs=[...auto,...manOut].sort((a,b)=>String(b.move_date||"").localeCompare(String(a.move_date||"")));const outSum=outs.reduce((a,m)=>a+Number(m.qty||0),0);
+  const qq=ui.wq.trim().toLowerCase();const outL=outs.filter(m=>!qq||[m.site_name,m.phone,m.address,m.product,m.memo].join(" ").toLowerCase().includes(qq));
+  return `<div class="sec" style="max-width:none;padding-bottom:0"><div class="kpis"><div class="kpi kc wstock"><span>현 재고</span><b>${inSum-outSum}대</b><small>입고·조정 ${inSum} − 출고 ${outSum}</small></div></div>
+     <p class="mapt" style="margin:6px 0 0">계약에서 ‘수압식 추가 구매 = 예’인 건은 설치가 완료되면 자동으로 출고에 들어갑니다. 처음 쓰실 때 현 재고가 실제와 다르면 ‘재고조정’으로 한 번 맞춰 주세요.</p></div>
+   <div class="toolbar" style="flex-wrap:wrap"><input id="wQ" type="search" placeholder="업체명·전화·주소 검색" value="${esc(ui.wq)}"><span style="flex:1"></span>
+     <button class="btn" type="button" data-wadd="조정">재고조정</button><button class="btn" type="button" data-wadd="출고">+ 출고 (계약 없음)</button><button class="btn pri" type="button" data-wadd="입고">+ 입고</button></div>
+   <div class="wgrid"><div><h3 class="ksec" style="margin:0 0 6px">입고 <span class="mapt">${inSum}대</span></h3><div class="wtbox"><table class="wt wi"><thead><tr><th>입고일지</th><th>수량</th><th>내용</th></tr></thead><tbody>
+      ${ins.map(m=>`<tr data-wm="${m.id}"><td>${m.kind==="조정"?`<span class="tag sk-재고등록">재고조정</span> `:""}${esc(ymd2(m.move_date))}</td><td class="num">${m.qty}</td><td>${esc(m.memo||m.product||"")}</td></tr>`).join("")||`<tr><td colspan="3" class="mapt">입고 기록이 없습니다.</td></tr>`}</tbody></table></div></div>
+    <div><h3 class="ksec" style="margin:0 0 6px">출고 <span class="mapt">${outSum}대</span></h3><div class="wtbox"><table class="wt wm"><thead><tr><th>설치일자</th><th>업체명</th><th>전화번호</th><th>주소</th><th>제품명</th><th>수량</th><th>구분</th></tr></thead><tbody>
+      ${outL.slice(0,ui.xAll?1e9:500).map(m=>`<tr ${m.auto?`data-wk="${m.k.id}"`:`data-wm="${m.id}"`}><td>${esc(ymd2(m.move_date))}</td><td><b>${esc(m.site_name)}</b></td><td>${esc(m.phone)}</td><td class="wrap memo"><div class="clamp">${esc(m.address)}</div></td><td>${esc(m.product)}</td><td class="num">${m.qty}</td><td>${m.auto?`<span class="mapt">계약</span>`:"직접"}</td></tr>`).join("")||`<tr><td colspan="7" class="mapt">출고 기록이 없습니다.</td></tr>`}</tbody></table></div></div></div>`}
+function bindStockWash(){const q=document.getElementById("wQ");q.oninput=()=>{ui.wq=q.value;clearTimeout(q._t);q._t=setTimeout(()=>renderStockView().then(()=>{const n=document.getElementById("wQ");n.focus();n.setSelectionRange(n.value.length,n.value.length)}),250)};
+  view().querySelectorAll("[data-wadd]").forEach(b=>b.onclick=()=>washDlg(null,b.dataset.wadd));
+  view().querySelectorAll("tr[data-wm]").forEach(tr=>tr.onclick=()=>washDlg(washMoves.find(m=>m.id===tr.dataset.wm)));
+  view().querySelectorAll("tr[data-wk]").forEach(tr=>tr.onclick=()=>{const k=ctrById(tr.dataset.wk);if(k)contractDlg(custById(k.customer_id),k)})}
+function washDlg(m,kind){const isNew=!m;m=m||{kind,move_date:today(),qty:kind==="조정"?0:1,product:"워시",site_name:"",phone:"",address:"",memo:""};const K=m.kind;
+  openDlg((isNew?"":"")+(K==="입고"?"수압식 입고":K==="조정"?"수압식 재고조정":"수압식 출고 (계약 없음)"),`<div id="wmf" style="display:grid;gap:10px">
+    <div class="g3">${inp("move_date",K==="출고"?"설치(출고)일자":"날짜",m.move_date,"date")}${inp("qty",K==="조정"?"조정 수량 (+/−)":"수량",m.qty,"number")}${sel("product","제품명",["워시","워시 (중고)"],m.product)}</div>
+    ${K==="출고"?`<div class="g3">${inp("site_name","업체명",m.site_name,"text",false,'list="wCu"')}${inp("phone","전화번호",m.phone)}${inp("address","주소",m.address)}</div><datalist id="wCu">${customers.slice(0,3000).map(c=>`<option value="${esc(c.name)}">`).join("")}</datalist>`:""}
+    <label class="f">${K==="조정"?"조정 사유":"내용·메모"}<input name="memo" value="${esc(m.memo)}" placeholder="${K==="조정"?"예: 재고 실사 맞춤":"예: 나인주방 입고"}"></label>
+    ${K==="조정"?`<p class="mapt" style="margin:0">재고가 실제보다 많으면 −, 적으면 +로 넣으세요. 예: 실제 4대인데 화면이 9대면 −5.</p>`:""}</div>`,
+   [["닫기"],...(!isNew?[["삭제","danger",async()=>{if(!(await askConfirm("이 기록을 삭제할까요?")))return true;const {error}=await sb.from("wash_moves").delete().eq("id",m.id);if(error){toast("삭제하지 못했습니다: "+error.message);return true}toast("삭제했습니다");renderStockView()}]]:[]),
+    ["저장","pri",async()=>{const f=fdata("wmf");const qty=parseInt(f.get("qty"),10);if(isNaN(qty)||(K!=="조정"&&qty<=0)||(K==="조정"&&qty===0)){toast("수량을 확인해 주세요");return true}
+      const p={kind:K,move_date:f.get("move_date")||today(),qty,product:f.get("product")||"워시",memo:(f.get("memo")||"").trim()};
+      if(K==="출고"){Object.assign(p,{site_name:(f.get("site_name")||"").trim(),phone:(f.get("phone")||"").trim(),address:(f.get("address")||"").trim()});const cu=customers.find(c=>c.name===p.site_name);p.customer_id=cu?cu.id:null;if(cu){if(!p.phone)p.phone=cu.phone||cu.phone2||"";if(!p.address)p.address=cu.address||""}}
+      const r=isNew?await sb.from("wash_moves").insert(p):await sb.from("wash_moves").update(p).eq("id",m.id);if(r.error){toast(/wash_moves/.test(r.error.message)?"Supabase에서 phase1zg.sql을 먼저 실행해 주세요.":"저장하지 못했습니다: "+r.error.message);return true}
+      toast("저장했습니다");renderStockView()}]])}
 
 /* ================= 계약 ================= */
 function renderContracts(c){
