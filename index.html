@@ -211,7 +211,7 @@ body.resizing,body.resizing *{cursor:col-resize!important;user-select:none}
 .wt.sm tr.sneed th{background:#FF00FF;color:#fff}.wt.sm td.need{background:#FF0000;color:#fff;font-weight:700}.wt.sm tr.stot td,.wt.sm tr.stot th{background:#FFFF00;color:#1b1b1b;font-weight:700;border-top:2px solid #555}
 .wt.su tr.sout td{color:#777}.wt.su tr.sx td{color:#999;text-decoration:line-through}.wt.su tbody tr{cursor:pointer}.mono{font-family:ui-monospace,Consolas,monospace;font-size:12px}
 .tag.skplan{background:#FFFF00;color:#FF0000;border-color:#FFFF00;font-weight:700}
-.srow{display:flex;gap:14px;align-items:flex-start;flex-wrap:wrap}.sside{display:grid;gap:10px;width:250px;padding:6px 20px 0 0}.sside .stafft th{text-align:left;white-space:nowrap}.slegend thead th{color:#c00000}.sused thead th{color:#c00000}
+.srow{display:flex;gap:14px;align-items:flex-start;flex-wrap:wrap}.sside{display:grid;gap:10px;width:250px;padding:6px 0 0 0}.sside .stafft th{text-align:left;white-space:nowrap}.slegend thead th{color:#c00000}.sused thead th{color:#c00000}
 .splanbox{background:#FFFF00;color:#FF0000;font-weight:700;text-align:center;padding:10px;border:1px solid #e6c200;border-radius:6px;cursor:pointer;line-height:1.4}.splanbox b{font-size:18px;margin-left:6px}
 @media (max-width:760px){.sside{width:auto;padding:6px 16px 0}}.tag.skin{background:#00CC66;color:#1b1b1b;border-color:#00CC66}.tag.skout{background:#fff;color:#555;border-color:#aaa}.usedsum{display:flex;gap:14px;align-items:flex-start;flex-wrap:wrap}
 .wgrid{display:grid;grid-template-columns:minmax(260px,1fr) minmax(0,3fr);gap:14px;padding:6px 20px 20px}.wgrid .wtbox{max-height:calc(100vh - 330px)}.kpi.wstock b{font-size:26px;color:#1b1b1b}.kpi.wstock{background:#FFFF00;border-color:#e6c200}
@@ -2568,7 +2568,7 @@ function stockUltraHtml(){const cm=stkCtrMap();const units=stkUnits.map(u=>({u,s
       <tr><th>TYPE</th><td>A : 세로 700<br>B : 세로 600<br>C : 세로 특수 사이즈</td></tr><tr><th>턱</th><td>유턱 : 1 · 무턱 : 0</td></tr><tr><th>배수</th><td>우 : R · 좌 : L</td></tr></tbody></table>
     <table class="stafft sused"><thead><tr><th>중고 내역</th><th class="num">${usedIn}</th></tr></thead><tbody>${Object.entries(ug).sort((a,b)=>b[1]-a[1]).map(([k,n])=>`<tr><td>${esc(k)}</td><td class="num">${n}</td></tr>`).join("")||`<tr><td colspan="2" class="mapt">중고 재고 없음</td></tr>`}</tbody></table>
     ${(()=>{const pl=units.filter(x=>x.u.status==="생산예정").length;return pl?`<div class="splanbox" role="button" tabindex="0" id="sPlan">생산입고<br>등록요망 <b>${pl}</b></div>`:""})()}</div>`;
-  const mat=`<div class="srow"><div class="wrapx vis" style="padding-top:6px;min-width:0;flex:1"><div class="wtbox" style="max-height:none"><table class="wt sm"><thead><tr><th colspan="3">구분</th>${sizes.map(s=>`<th colspan="3" class="szs">${s}</th>`).join("")}<th rowspan="2">합계</th></tr>
+  const mat=`<div class="srow"><div class="wrapx vis" style="padding-top:6px;min-width:0;max-width:100%"><div class="wtbox" style="max-height:none;width:fit-content;max-width:100%"><table class="wt sm"><thead><tr><th colspan="3">구분</th>${sizes.map(s=>`<th colspan="3" class="szs">${s}</th>`).join("")}<th rowspan="2">합계</th></tr>
       <tr><th>제품</th><th>턱</th><th>배수</th>${sizes.map(()=>STK_TY.map(t=>`<th title="${STK_TYNAME[t]}" class="${t==="A"?"szs":""}">${t}</th>`).join("")).join("")}</tr></thead><tbody>${tb}
       <tr class="stot"><th colspan="3">총계</th>${allT.map(a=>a.map((n,i)=>`<td class="num${i===0?" szs":""}">${n||""}</td>`).join("")).join("")}<td class="num"><b>${fresh.length}</b></td></tr></tbody></table></div>
     <p class="mapt" style="margin:6px 0 0">현황표는 새 제품 재고만 셉니다(중고 ${usedIn}대는 오른쪽 ‘중고 내역’). 숫자를 누르면 아래 목록이 그 제품으로 바뀝니다. ‘적정 재고’ 칸을 누르면 입력할 수 있습니다.</p></div>${side}</div>`;
@@ -2576,7 +2576,7 @@ function stockUltraHtml(){const cm=stkCtrMap();const units=stkUnits.map(u=>({u,s
 /* ---------- 제품(시리얼) 목록: 초음파·중고 공통 ---------- */
 function stockListHtml(units,usedOnly){if(!ui.sst)ui.sst="in";if(ui.sq===undefined)ui.sq="";
   const f=ui.sfil;const qq=ui.sq.trim().toLowerCase();
-  const stOk=(x,s)=>s==="all"||(s==="x"?x.s.st==="x":s==="used"?(x.u.used&&x.s.st==="in"):x.s.st===s);
+  if(ui.sst==="x"&&false)ui.sst="in";const stOk=(x,s)=>s==="all"||(s==="x"?(x.s.st==="x"&&x.s.label==="생산예정"):s==="used"?(x.u.used&&x.s.st==="in"):x.s.st===s);
   let list=units.filter(x=>(!usedOnly||x.u.used)&&stOk(x,ui.sst)
     &&(!f||(x.u.model===f.m&&x.u.size===f.s&&x.u.ty===f.t&&(f.lip==null||x.u.lip===f.lip)&&(f.dr==null||x.u.drain===f.dr)&&!x.u.used))
     &&(!qq||[x.u.serial,x.u.no,x.u.remark,x.s.site,stkSpec(x.u),x.u.grade].join(" ").toLowerCase().includes(qq)));
@@ -2584,7 +2584,7 @@ function stockListHtml(units,usedOnly){if(!ui.sst)ui.sst="in";if(ui.sq===undefin
   const cntSt=s=>units.filter(x=>(!usedOnly||x.u.used)&&stOk(x,s)).length;
   const shown=list.slice(0,ui.xAll?1e9:500);
   return `<div class="toolbar" style="flex-wrap:wrap"><input id="sQ" type="search" placeholder="시리얼·번호·업장·메모 검색" value="${esc(ui.sq)}">
-     <div class="nav" role="group">${[["in","재고"],["out","출고"],["used","중고"],["x","생산예정·불량·폐기"],["all","전체"]].map(([k,l])=>`<button type="button" data-sst="${k}" class="${ui.sst===k?"on":""}">${l} ${cntSt(k)}</button>`).join("")}</div>
+     <div class="nav" role="group">${[["all","전체"],["in","재고"],["out","출고"],["used","중고"],["x","생산예정"]].map(([k,l])=>`<button type="button" data-sst="${k}" class="${ui.sst===k?"on":""}">${l} ${cntSt(k)}</button>`).join("")}</div>
      ${f?`<span class="chip on">${esc((STK_MODELS[f.m]||{}).short||f.m)} ${f.s}${f.t}${f.lip===1?" 유턱":f.lip===0?" 무턱":""}${f.dr==="R"?" 우":f.dr==="L"?" 좌":""} <button type="button" class="btn sm" id="sFx">✕</button></span>`:""}<span class="mapt">${list.length}대</span><span style="flex:1"></span>
      <button class="btn" type="button" id="sImp">엑셀 가져오기</button><button class="btn" type="button" id="sNewU">+ 중고 입고</button><button class="btn pri" type="button" id="sNew">+ 입고 등록</button><input type="file" id="sImpIn" accept=".xlsx,.xls" hidden></div>
    <div class="wrapx vis" style="padding-top:6px"><div class="wtbox"><table class="wt su"><thead><tr><th>년</th><th>월</th><th>일</th><th>품명</th><th>채널</th><th>SIZE</th><th>TY</th><th>유턱</th><th>배수</th><th>No.</th><th>상태</th><th>입고일</th><th>출고일자</th><th>설치업장</th><th>Remark</th><th>Serial No.</th><th>구분</th><th>등급</th></tr></thead><tbody>
@@ -2618,7 +2618,7 @@ function stockUnitDlg(u,asUsed){const isNew=!u;const cm=stkCtrMap();const s=u?st
     <div class="g3">${inp("no","No.",u.no||(isNew?nextNo():""))}${isNew?inp("cnt","연속 등록 대수",1,"number",false,'min="1" max="200"'):"<span></span>"}<label class="f">Serial No.<input name="serial" value="${esc(u.serial||stkSerial(u))}" class="mono"></label></div>
     <datalist id="stSz">${STK_SIZES.map(x=>`<option value="${x}">`).join("")}</datalist>
     <h3 class="ksec">관리</h3>
-    <div class="g3">${inp("in_date","입고일",u.in_date||"","date")}${sel("status","상태",[["","정상 (재고)"],["생산예정","생산예정"],["불량","불량"],["폐기","폐기"]],u.status||"")}<span></span></div>
+    <div class="g3">${inp("in_date","입고일",u.in_date||"","date")}${sel("status","상태",[["","정상 (재고)"],["생산예정","생산예정"],...(u.status&&u.status!=="생산예정"?[[u.status,u.status]]:[])],u.status||"")}<span></span></div>
     <div class="g3"><label class="f">구분<span class="chk" style="padding:0"><label style="padding:6px 10px"><input type="checkbox" name="used" ${u.used?"checked":""}>중고</label></span></label>${inp("grade","중고 등급",u.grade,"text",false,'list="stGr" placeholder="A++ · B+ · B"')}<span></span></div>
     <datalist id="stGr">${["A++","A+","A","B+","B","C"].map(x=>`<option value="${x}">`).join("")}</datalist>
     <label class="f">Remark (입고 사유 등)<input name="remark" value="${esc(u.remark)}" placeholder="예: 보상판매 입고, 장기 재고"></label>
