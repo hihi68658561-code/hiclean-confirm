@@ -1010,8 +1010,8 @@ const MONEYC=new Set(["amount","card","cash","paid","unpaid"]);
 const TCFG={ctr:{cols:()=>CCOLS,sel:".wt.ct",lead:()=>isOffice()?2:1},work:{cols:()=>WCOLS,sel:".wt.wk",lead:()=>isAdmin()?2:1}};
 function colKey(t="ctr"){return "hc.cols."+t+"."+(me&&me.id||"")}
 function getCols(t="ctr"){const C=TCFG[t].cols();let v=null;try{v=JSON.parse(localStorage.getItem(colKey(t))||"null")}catch(e){}
-  if(!v&&t==="all")return getCols("ctr");
-  const all=C.map(c=>c[0]);if(Array.isArray(v))v={cols:v,seen:all.filter(x=>!["sink","parts"].includes(x))};
+  const all=C.map(c=>c[0]);
+  if(!v&&t==="all")return getCols("ctr").filter(x=>all.includes(x));if(Array.isArray(v))v={cols:v,seen:all.filter(x=>!["sink","parts"].includes(x))};
   if(!v||!Array.isArray(v.cols))return C.filter(c=>c[2]).map(c=>c[0]);
   const cols=v.cols.filter(x=>all.includes(x));const seen=v.seen||all;
   C.forEach(([k,,d],i)=>{if(d&&!seen.includes(k)&&!cols.includes(k)){const prev=C.slice(0,i).map(c=>c[0]).reverse().find(x=>cols.includes(x));cols.splice(prev?cols.indexOf(prev)+1:cols.length,0,k)}});
