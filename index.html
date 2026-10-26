@@ -895,7 +895,7 @@ function bindBizUpload(id,onRead){
 }
 
 /* ================= 고객 사진·서류 ================= */
-const FKINDS=[["계약서","ctr"],["설치사진","inst"],["철거사진","rm"],["A/S사진","as"],["사업자등록증","biz"],["채권","debt"],["기타","etc"]];
+const FKINDS=[["계약서","ctr"],["사업자등록증","biz"],["설치사진","inst"],["철거사진","rm"],["A/S사진","as"],["채권","debt"],["기타","etc"]];
 const JOBPHOTO={install:"설치사진",addon:"설치사진",move:"설치사진",remove:"철거사진",as:"A/S사진"};
 function jobFiles(j){return files.filter(f=>f.job_id===j.id).sort((a,b)=>(b.created_at||"").localeCompare(a.created_at||""))}
 function jobLabel(id){const j=jobs.find(x=>x.id===id);return j?`${KLABEL[j.kind]||""} ${(j.visit_date||j.request_date||"").slice(5).replace("-","/")}`:""}
@@ -923,7 +923,8 @@ async function uploadCustFiles(custId,list,kind,prog,jobId){
 function fileErrHint(fail){const m=fail.join(" ");return /job_id|kind_check/i.test(m)?" — Supabase에서 phase1k.sql을 실행해 주세요":/customer_files|bucket|not found|relation/i.test(m)?" — Supabase에서 phase1i.sql, phase1j.sql을 실행해 주세요":""}
 function renderCustFiles(c){
   const tb=document.getElementById("tabBody");const all=custFiles(c);const fk=ui.fkind||"";
-  const list=all.filter(f=>!fk||f.kind===fk);const cnt=k=>all.filter(f=>f.kind===k).length;
+  const ko=k=>{const i=FKINDS.findIndex(x=>x[0]===k);return i<0?99:i};
+  const list=all.filter(f=>!fk||f.kind===fk).map((f,i)=>[f,i]).sort((a,b)=>ko(a[0].kind)-ko(b[0].kind)||a[1]-b[1]).map(x=>x[0]);const cnt=k=>all.filter(f=>f.kind===k).length;
   tb.innerHTML=`${ui.noFiles?`<div class="sec" style="max-width:none"><p class="warnbox">사진·서류 칸이 아직 없습니다. Supabase에서 <b>phase1i.sql</b>, <b>phase1j.sql</b>을 실행해 주세요.</p></div>`:""}
    <div class="toolbar"><div class="nav" role="group" aria-label="종류">${[["","전체 ("+all.length+")"],...FKINDS.map(k=>[k[0],k[0]+" ("+cnt(k[0])+")"])].filter(x=>!(me.role==="tech"&&x[0]==="계약서")).map(([k,l])=>`<button type="button" data-fk="${esc(k)}" class="${fk===k?"on":""}">${esc(l)}</button>`).join("")}</div>
      <span style="flex:1"></span>${ui.noFiles?"":`<select id="fKind" aria-label="올릴 종류">${upKinds().map(k=>`<option ${k===(fk||ui.fupKind||"설치사진")?"selected":""}>${k}</option>`).join("")}</select>
