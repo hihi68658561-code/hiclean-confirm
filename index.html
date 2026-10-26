@@ -210,7 +210,10 @@ body.resizing,body.resizing *{cursor:col-resize!important;user-select:none}
 .wt.sm tr.smf td,.wt.sm tr.smf th{border-top:2px solid #555}.wt.sm tr.ssum td,.wt.sm tr.ssum th{background:#F8CBAD;color:#1b1b1b}.wt.sm tr.stgt td{color:#c00000;font-weight:700}.wt.sm td.ed{cursor:pointer}.wt.sm td.ed:hover{background:var(--accent-weak)}
 .wt.sm tr.sneed th{background:#FF00FF;color:#fff}.wt.sm td.need{background:#FF0000;color:#fff;font-weight:700}.wt.sm tr.stot td,.wt.sm tr.stot th{background:#FFFF00;color:#1b1b1b;font-weight:700;border-top:2px solid #555}
 .wt.su tr.sout td{color:#777}.wt.su tr.sx td{color:#999;text-decoration:line-through}.wt.su tbody tr{cursor:pointer}.mono{font-family:ui-monospace,Consolas,monospace;font-size:12px}
-.tag.skplan{background:#DCEBFF;color:#1d4ed8;border-color:#DCEBFF}.tag.skin{background:#00CC66;color:#1b1b1b;border-color:#00CC66}.tag.skout{background:#fff;color:#555;border-color:#aaa}.usedsum{display:flex;gap:14px;align-items:flex-start;flex-wrap:wrap}
+.tag.skplan{background:#FFFF00;color:#FF0000;border-color:#FFFF00;font-weight:700}
+.srow{display:flex;gap:14px;align-items:flex-start;flex-wrap:wrap}.sside{display:grid;gap:10px;width:250px;padding:6px 20px 0 0}.sside .stafft th{text-align:left;white-space:nowrap}.slegend thead th{color:#c00000}.sused thead th{color:#c00000}
+.splanbox{background:#FFFF00;color:#FF0000;font-weight:700;text-align:center;padding:10px;border:1px solid #e6c200;border-radius:6px;cursor:pointer;line-height:1.4}.splanbox b{font-size:18px;margin-left:6px}
+@media (max-width:760px){.sside{width:auto;padding:6px 16px 0}}.tag.skin{background:#00CC66;color:#1b1b1b;border-color:#00CC66}.tag.skout{background:#fff;color:#555;border-color:#aaa}.usedsum{display:flex;gap:14px;align-items:flex-start;flex-wrap:wrap}
 .wgrid{display:grid;grid-template-columns:minmax(260px,1fr) minmax(0,3fr);gap:14px;padding:6px 20px 20px}.wgrid .wtbox{max-height:calc(100vh - 330px)}.kpi.wstock b{font-size:26px;color:#1b1b1b}.kpi.wstock{background:#FFFF00;border-color:#e6c200}
 .wt.wi tbody tr,.wt.wm tbody tr{cursor:pointer}@media (max-width:760px){.wgrid{grid-template-columns:1fr;padding:6px 16px 16px}}
 .smtpls{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:8px}.smtpl{border:1px solid var(--line);background:var(--panel);border-radius:8px;padding:10px 12px;cursor:pointer;display:grid;gap:6px}.smtpl:hover,.smtpl:focus-visible{border-color:var(--accent);outline:none;box-shadow:0 0 0 2px var(--accent-weak)}.smt-h{display:flex;align-items:center;gap:6px}.smt-h b{flex:1}.smt-c{font-size:13px;color:var(--mute);white-space:pre-wrap;display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden}
@@ -2533,7 +2536,7 @@ function stkState(u,cm){if(u.status)return{st:"x",label:u.status};
   return{st:"in"}}
 async function renderStockView(){if(!isOffice()){view().innerHTML=`<div class="empty"><h2>사무실·관리자만 쓸 수 있는 화면입니다</h2></div>`;return}
   if(!stkUnits)view().innerHTML=`<p class="mapt" style="padding:20px">불러오는 중…</p>`;await fetchStock();if(!ui.stab)ui.stab="ultra";
-  const tabs=[["ultra","초음파세척기"],["wash","수압식세척기"],["used","중고세척기"]];
+  const tabs=[["ultra","초음파세척기"],["wash","수압식세척기"]];if(ui.stab==="used")ui.stab="ultra";
   const head=`<div class="toolbar" style="padding:16px 20px 0;flex-wrap:wrap"><h2 style="margin:0;font-size:18px">재고관리</h2><div class="nav" role="tablist">${tabs.map(([k,l])=>`<button type="button" role="tab" class="${ui.stab===k?"on":""}" data-stab="${k}">${l}</button>`).join("")}</div></div>
     ${ui.noStock?`<div class="sec"><p class="warnbox">재고관리를 쓰려면 Supabase SQL Editor에서 <b>phase1zg.sql</b>을 실행해 주세요.</p></div>`:""}`;
   const body=ui.stab==="wash"?stockWashHtml():ui.stab==="used"?stockUsedHtml():stockUltraHtml();
@@ -2551,31 +2554,39 @@ function stockUltraHtml(){const cm=stkCtrMap();const units=stkUnits.map(u=>({u,s
   const f=ui.sfil||{};const on=(m,s,t,lip,dr)=>f.m===m&&f.s===s&&f.t===t&&f.lip===lip&&f.dr===dr?" on":"";
   const combos=[[1,"R","유","우"],[1,"L","","좌"],[0,"R","무","우"],[0,"L","","좌"]];
   let tb="";models.forEach((m,mi)=>{const M=STK_MODELS[m]||{name:m};const tot=fresh.filter(x=>x.u.model===m).length;
-    combos.forEach(([lip,dr,ll,dl],ci)=>{tb+=`<tr class="${ci===0?"smf":""}">${ci===0?`<th rowspan="7" class="smodel sm${mi%3}">${esc(M.name)}</th>`:""}${ll?`<th rowspan="2">${ll}</th>`:""}<th>${dl}</th>`
+    const noT=m==="AT";/* 올뉴트리플은 적정 재고·생산 필요 없음 */
+    combos.forEach(([lip,dr,ll,dl],ci)=>{tb+=`<tr class="${ci===0?"smf":""}">${ci===0?`<th rowspan="${noT?5:7}" class="smodel sm${mi%3}">${esc(M.name)}</th>`:""}${ll?`<th rowspan="2">${ll}</th>`:""}<th>${dl}</th>`
       +sizes.map(s=>STK_TY.map(t=>{const n=cnt(m,s,t,lip,dr);return `<td class="num cl${t==="A"?" szs":""}${on(m,s,t,lip,dr)}" data-sf="${m}|${s}|${t}|${lip}|${dr}">${n||""}</td>`}).join("")).join("")+`<td></td></tr>`});
     tb+=`<tr class="ssum"><th colspan="2">합계</th>${sizes.map(s=>STK_TY.map(t=>{const n=cnt(m,s,t);return `<td class="num cl${t==="A"?" szs":""}${on(m,s,t,undefined,undefined)}" data-sf="${m}|${s}|${t}||">${n||""}</td>`}).join("")).join("")}<td class="num"><b>${tot}</b></td></tr>`;
-    tb+=`<tr class="stgt"><th colspan="2">적정 재고</th>${sizes.map(s=>STK_TY.map(t=>{const v=tgt(m,s,t);return `<td class="num ed${t==="A"?" szs":""}" data-tg="${m}|${s}|${t}" title="눌러서 적정 재고 입력">${v||""}</td>`}).join("")).join("")}<td></td></tr>`;
-    tb+=`<tr class="sneed"><th colspan="2">생산 필요</th>${sizes.map(s=>STK_TY.map(t=>{const v=tgt(m,s,t)-cnt(m,s,t);return `<td class="num${t==="A"?" szs":""}${v>0?" need":""}">${v>0?"- "+v:""}</td>`}).join("")).join("")}<td></td></tr>`});
+    if(!noT){tb+=`<tr class="stgt"><th colspan="2">적정 재고</th>${sizes.map(s=>STK_TY.map(t=>{const v=tgt(m,s,t);return `<td class="num ed${t==="A"?" szs":""}" data-tg="${m}|${s}|${t}" title="눌러서 적정 재고 입력">${v||""}</td>`}).join("")).join("")}<td></td></tr>`;
+    tb+=`<tr class="sneed"><th colspan="2">생산 필요</th>${sizes.map(s=>STK_TY.map(t=>{const v=tgt(m,s,t)-cnt(m,s,t);return `<td class="num${t==="A"?" szs":""}${v>0?" need":""}">${v>0?"- "+v:""}</td>`}).join("")).join("")}<td></td></tr>`}});
   const allT=sizes.map(s=>STK_TY.map(t=>fresh.filter(x=>x.u.size===s&&x.u.ty===t).length));
   const usedIn=live.filter(x=>x.u.used).length;
-  const mat=`<div class="wrapx vis" style="padding-top:6px"><div class="wtbox" style="max-height:none"><table class="wt sm"><thead><tr><th colspan="3">구분</th>${sizes.map(s=>`<th colspan="3" class="szs">${s}</th>`).join("")}<th rowspan="2">합계</th></tr>
+  const ug={};live.filter(x=>x.u.used).forEach(x=>{const k=stkSpec(x.u);ug[k]=(ug[k]||0)+1});
+  const side=`<div class="sside"><table class="stafft slegend"><thead><tr><th colspan="2">TYPE 정리</th></tr></thead><tbody>
+      <tr><th>품명</th><td>ON : Oncare<br>AT : 올뉴트리플<br>CL : 클린365</td></tr><tr><th>채널</th><td>1 : 1채널 · 3 : 3채널</td></tr>
+      <tr><th>TYPE</th><td>A : 세로 700<br>B : 세로 600<br>C : 세로 특수 사이즈</td></tr><tr><th>턱</th><td>유턱 : 1 · 무턱 : 0</td></tr><tr><th>배수</th><td>우 : R · 좌 : L</td></tr></tbody></table>
+    <table class="stafft sused"><thead><tr><th>중고 내역</th><th class="num">${usedIn}</th></tr></thead><tbody>${Object.entries(ug).sort((a,b)=>b[1]-a[1]).map(([k,n])=>`<tr><td>${esc(k)}</td><td class="num">${n}</td></tr>`).join("")||`<tr><td colspan="2" class="mapt">중고 재고 없음</td></tr>`}</tbody></table>
+    ${(()=>{const pl=units.filter(x=>x.u.status==="생산예정").length;return pl?`<div class="splanbox" role="button" tabindex="0" id="sPlan">생산입고<br>등록요망 <b>${pl}</b></div>`:""})()}</div>`;
+  const mat=`<div class="srow"><div class="wrapx vis" style="padding-top:6px;min-width:0;flex:1"><div class="wtbox" style="max-height:none"><table class="wt sm"><thead><tr><th colspan="3">구분</th>${sizes.map(s=>`<th colspan="3" class="szs">${s}</th>`).join("")}<th rowspan="2">합계</th></tr>
       <tr><th>제품</th><th>턱</th><th>배수</th>${sizes.map(()=>STK_TY.map(t=>`<th title="${STK_TYNAME[t]}" class="${t==="A"?"szs":""}">${t}</th>`).join("")).join("")}</tr></thead><tbody>${tb}
       <tr class="stot"><th colspan="3">총계</th>${allT.map(a=>a.map((n,i)=>`<td class="num${i===0?" szs":""}">${n||""}</td>`).join("")).join("")}<td class="num"><b>${fresh.length}</b></td></tr></tbody></table></div>
-    <p class="mapt" style="margin:6px 0 0">새 제품 재고만 셉니다(중고 ${usedIn}대는 ‘중고세척기’에서). A: 세로 700 · B: 세로 600 · C: 세로 특수 / 숫자를 누르면 아래 목록이 그 제품으로 바뀝니다. ‘적정 재고’ 칸을 누르면 입력할 수 있습니다.</p></div>`;
+    <p class="mapt" style="margin:6px 0 0">현황표는 새 제품 재고만 셉니다(중고 ${usedIn}대는 오른쪽 ‘중고 내역’). 숫자를 누르면 아래 목록이 그 제품으로 바뀝니다. ‘적정 재고’ 칸을 누르면 입력할 수 있습니다.</p></div>${side}</div>`;
   return mat+stockListHtml(units,false)}
 /* ---------- 제품(시리얼) 목록: 초음파·중고 공통 ---------- */
 function stockListHtml(units,usedOnly){if(!ui.sst)ui.sst="in";if(ui.sq===undefined)ui.sq="";
   const f=ui.sfil;const qq=ui.sq.trim().toLowerCase();
-  let list=units.filter(x=>(!usedOnly||x.u.used)&&(ui.sst==="all"||(ui.sst==="x"?x.s.st==="x":x.s.st===ui.sst))
+  const stOk=(x,s)=>s==="all"||(s==="x"?x.s.st==="x":s==="used"?(x.u.used&&x.s.st==="in"):x.s.st===s);
+  let list=units.filter(x=>(!usedOnly||x.u.used)&&stOk(x,ui.sst)
     &&(!f||(x.u.model===f.m&&x.u.size===f.s&&x.u.ty===f.t&&(f.lip==null||x.u.lip===f.lip)&&(f.dr==null||x.u.drain===f.dr)&&!x.u.used))
     &&(!qq||[x.u.serial,x.u.no,x.u.remark,x.s.site,stkSpec(x.u),x.u.grade].join(" ").toLowerCase().includes(qq)));
   list.sort((a,b)=>String(b.u.in_date||"").localeCompare(String(a.u.in_date||""))||String(b.u.no).localeCompare(String(a.u.no)));
-  const cntSt=s=>units.filter(x=>(!usedOnly||x.u.used)&&(s==="all"||(s==="x"?x.s.st==="x":x.s.st===s))).length;
+  const cntSt=s=>units.filter(x=>(!usedOnly||x.u.used)&&stOk(x,s)).length;
   const shown=list.slice(0,ui.xAll?1e9:500);
   return `<div class="toolbar" style="flex-wrap:wrap"><input id="sQ" type="search" placeholder="시리얼·번호·업장·메모 검색" value="${esc(ui.sq)}">
-     <div class="nav" role="group">${[["in","재고"],["out","출고"],["x","생산예정·불량·폐기"],["all","전체"]].map(([k,l])=>`<button type="button" data-sst="${k}" class="${ui.sst===k?"on":""}">${l} ${cntSt(k)}</button>`).join("")}</div>
+     <div class="nav" role="group">${[["in","재고"],["out","출고"],["used","중고"],["x","생산예정·불량·폐기"],["all","전체"]].map(([k,l])=>`<button type="button" data-sst="${k}" class="${ui.sst===k?"on":""}">${l} ${cntSt(k)}</button>`).join("")}</div>
      ${f?`<span class="chip on">${esc((STK_MODELS[f.m]||{}).short||f.m)} ${f.s}${f.t}${f.lip===1?" 유턱":f.lip===0?" 무턱":""}${f.dr==="R"?" 우":f.dr==="L"?" 좌":""} <button type="button" class="btn sm" id="sFx">✕</button></span>`:""}<span class="mapt">${list.length}대</span><span style="flex:1"></span>
-     <button class="btn" type="button" id="sImp">엑셀 가져오기</button><button class="btn pri" type="button" id="sNew">${usedOnly?"+ 중고 입고":"+ 입고 등록"}</button><input type="file" id="sImpIn" accept=".xlsx,.xls" hidden></div>
+     <button class="btn" type="button" id="sImp">엑셀 가져오기</button><button class="btn" type="button" id="sNewU">+ 중고 입고</button><button class="btn pri" type="button" id="sNew">+ 입고 등록</button><input type="file" id="sImpIn" accept=".xlsx,.xls" hidden></div>
    <div class="wrapx vis" style="padding-top:6px"><div class="wtbox"><table class="wt su"><thead><tr><th>년</th><th>월</th><th>일</th><th>품명</th><th>채널</th><th>SIZE</th><th>TY</th><th>유턱</th><th>배수</th><th>No.</th><th>상태</th><th>입고일</th><th>출고일자</th><th>설치업장</th><th>Remark</th><th>Serial No.</th><th>구분</th><th>등급</th></tr></thead><tbody>
     ${shown.map(x=>{const u=x.u,s=x.s;return `<tr data-su="${u.id}" class="${s.st==="out"?"sout":s.st==="x"?(s.label==="생산예정"?"splan":"sx"):""}"><td>${u.mfg_y??""}</td><td>${u.mfg_m??""}</td><td>${u.mfg_d??""}</td><td>${esc(u.model)}</td><td>${u.ch??""}</td><td>${u.size??""}</td><td>${esc(u.ty)}</td><td>${u.lip??""}</td><td>${esc(u.drain)}</td><td>${esc(u.no)}</td>
       <td>${s.st==="in"?`<span class="tag skin">재고</span>`:s.st==="out"?`<span class="tag skout">출고${s.auto?" (계약)":""}</span>`:s.label==="생산예정"?`<span class="tag skplan">생산예정</span>`:`<span class="tag sk-취소">${esc(s.label)}</span>`}</td><td>${esc(ymd2(u.in_date))}</td><td>${esc(ymd2(s.date||""))}</td><td>${esc(s.site||u.site_name||"")}</td>
@@ -2588,7 +2599,8 @@ function bindStockUnits(){const re=()=>renderStockView();
   const q=document.getElementById("sQ");if(q)q.oninput=()=>{ui.sq=q.value;clearTimeout(q._t);q._t=setTimeout(()=>re().then(()=>{const n=document.getElementById("sQ");if(n){n.focus();n.setSelectionRange(n.value.length,n.value.length)}}),250)};
   view().querySelectorAll("[data-sst]").forEach(b=>b.onclick=()=>{ui.sst=b.dataset.sst;re()});
   const fx=document.getElementById("sFx");if(fx)fx.onclick=()=>{ui.sfil=null;re()};
-  const nb=document.getElementById("sNew");if(nb)nb.onclick=()=>stockUnitDlg(null,ui.stab==="used");
+  const nb=document.getElementById("sNew");if(nb)nb.onclick=()=>stockUnitDlg(null,false);const nu=document.getElementById("sNewU");if(nu)nu.onclick=()=>stockUnitDlg(null,true);
+  const sp=document.getElementById("sPlan");if(sp)sp.onclick=()=>{ui.sst="x";ui.sfil=null;renderStockView().then(()=>{const t=view().querySelector(".wt.su");if(t)t.scrollIntoView({behavior:"smooth",block:"start"})})};
   view().querySelectorAll("tr[data-su]").forEach(tr=>tr.onclick=()=>stockUnitDlg(stkUnits.find(u=>u.id===tr.dataset.su)));
   const imp=document.getElementById("sImp"),inp_=document.getElementById("sImpIn");if(imp)imp.onclick=()=>inp_.click();
   if(inp_)inp_.onchange=async()=>{const f=inp_.files[0];inp_.value="";if(!f)return;if(!window.XLSX)return toast("엑셀 도구를 불러오지 못했습니다");
