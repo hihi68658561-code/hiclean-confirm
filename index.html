@@ -632,11 +632,11 @@ function restoreScroll(s){if(!s||s.v!==ui.view)return;const els=[...document.que
 function render(){if(ui._fresh){ui._fresh=false;render0();window.scrollTo(0,0);return}const _sv=snapScroll();try{render0()}finally{restoreScroll(_sv)}}
 function render0(){
   ui.dirty=false;
-  const tabs=[["cust","고객"]];if(me.role!=="tech")tabs.push(["leads","DB관리"]);tabs.push(["work","당월 설치·A/S 전체리스트"]);if(me.role!=="tech")tabs.push(["ctrm","당월리스트"],["allm","전체리스트"],["asm","A/S관리"],["recv","미수·채권관리"]);tabs.push(["sched","담당자별 일정표"]);if(isAdmin())tabs.push(["staff","직원"],["settings","설정"]);
+  const tabs=[["cust","고객"]];if(me.role!=="tech")tabs.push(["leads","DB관리"]);tabs.push(["work","당월 설치·A/S 전체리스트"]);if(me.role!=="tech")tabs.push(["ctrm","당월리스트"],["allm","전체리스트"],["asm","A/S관리"],["recv","미수·채권관리"]);tabs.push(["sched","담당자별 일정표"]);if(me.role!=="tech")tabs.push(["sms","문자"]);if(isAdmin())tabs.push(["staff","직원"],["settings","설정"]);
   document.getElementById("nav").innerHTML=tabs.map(([k,l])=>`<button type="button" class="${ui.view===k?"on":""}" data-v="${k}">${l}</button>`).join("");
   document.querySelectorAll("#nav button").forEach(b=>b.onclick=()=>{ui.view=b.dataset.v;ui.jsel=new Set();ui._fresh=true;render()});
   if(ui.view==="install"||ui.view==="as")ui.view="work";
-  if(ui.view==="cust")renderCustView();else if(ui.view==="work")renderWorkView();else if(ui.view==="ctrm")renderCtrView();else if(ui.view==="asm")renderAsView();else if(ui.view==="leads")renderLeadView();else if(ui.view==="recv")renderRecvView();else if(ui.view==="allm")renderAllView();else if(ui.view==="sched")renderSchedView();else if(ui.view==="staff")renderStaffView();else if(ui.view==="delete")renderDeleteView();else renderSettings();
+  if(ui.view==="cust")renderCustView();else if(ui.view==="work")renderWorkView();else if(ui.view==="ctrm")renderCtrView();else if(ui.view==="asm")renderAsView();else if(ui.view==="leads")renderLeadView();else if(ui.view==="recv")renderRecvView();else if(ui.view==="allm")renderAllView();else if(ui.view==="sched")renderSchedView();else if(ui.view==="sms")renderSmsView();else if(ui.view==="staff")renderStaffView();else if(ui.view==="delete")renderDeleteView();else renderSettings();
 }
 
 /* ================= 고객 ================= */
@@ -684,10 +684,9 @@ function renderCustMain(){
   if(me.role!=="tech"&&!ui.noRecv){const rn=recvItems().filter(x=>x.c.id===c.id&&x.open).length;if(rn||ui.ctab==="recv")tabs.push(["recv",`채권 (${rn})`])}
   if(me.role!=="tech")tabs.push(["sms","문자"]);
   if(!tabs.some(t=>t[0]===ui.ctab))ui.ctab="info";
-  m.innerHTML=`<div class="chead"><h2>${esc(c.name)}</h2><span class="meta">${esc([c.ceo,c.phone||c.phone2,"담당 "+(staffName(c.owner)||c.owner_name||"-")].filter(Boolean).join(" · "))}</span><span style="margin-left:auto;display:flex;gap:8px">${c.phone||c.phone2?`<button class="btn" type="button" id="cSms">문자</button>`:""}${canNewJob(c)||(me.role!=="tech"&&canEditCust(c))?`<button class="btn pri" type="button" id="cIntake">+ 신규접수</button>`:""}</span></div>
+  m.innerHTML=`<div class="chead"><h2>${esc(c.name)}</h2><span class="meta">${esc([c.ceo,c.phone||c.phone2,"담당 "+(staffName(c.owner)||c.owner_name||"-")].filter(Boolean).join(" · "))}</span><span style="margin-left:auto;display:flex;gap:8px">${canNewJob(c)||(me.role!=="tech"&&canEditCust(c))?`<button class="btn pri" type="button" id="cIntake">+ 신규접수</button>`:""}</span></div>
    <div class="tabs">${tabs.map(([k,l])=>`<button type="button" class="tab${ui.ctab===k?" on":""}" data-t="${k}">${l}</button>`).join("")}</div><div id="tabBody"></div>`;
   m.querySelectorAll(".tab").forEach(b=>b.onclick=()=>{ui.ctab=b.dataset.t;ui.draft=null;renderCustMain()});
-  const cs_=document.getElementById("cSms");if(cs_)cs_.onclick=()=>smsDlg({c});
   const ci=document.getElementById("cIntake");if(ci)ci.onclick=()=>jobDlg(null,c,ui.ctab==="as"?"as":(me.role==="tech"?"as":"ctr"));
   if(ui.ctab==="info")renderCustInfo(c);else if(ui.ctab==="lead")renderCustLeads(c);else if(ui.ctab==="recv")renderCustRecv(c);else if(ui.ctab==="ctr")renderContracts(c);else if(ui.ctab==="install"||ui.ctab==="as")renderCustJobs(c,ui.ctab);else if(ui.ctab==="files")renderCustFiles(c);else if(ui.ctab==="sms")renderCustSms(c);else renderConf(c);
 }
@@ -2130,15 +2129,18 @@ async function loadSmsTpl(force){if(smsTpl&&!force)return smsTpl;const {data,err
 function smsBytes(s){let n=0;for(const ch of String(s||""))n+=ch.charCodeAt(0)>127?2:1;return n}
 function smsFill(t,v){return String(t||"").replace(/\{(업체명|대표자|방문일|시간|미수금|금액|제품|계좌)\}/g,(m,k)=>v[k]!=null&&v[k]!==""?String(v[k]):m)}
 function smsDate(d){if(!d)return"";const [y,m,dd]=d.split("-").map(Number);if(!m)return d;const w="일월화수목금토"[new Date(d).getDay()];return `${m}월 ${dd}일(${w})`}
-/* opts: {c, vars, ref_type, ref_id, tpl(문구 제목)} */
-async function smsDlg(opts){const c=opts.c||{};const v=Object.assign({업체명:c.name||"",대표자:c.ceo||"",계좌:S.bank||""},opts.vars||{});
-  const tpls=await loadSmsTpl();
-  const phones=[...new Set([c.phone,c.phone2].map(x=>String(x||"").trim()).filter(x=>/^0\d/.test(x.replace(/\D/g,""))))];
+/* opts: {c, vars, ref_type, ref_id, tpl(문구 제목), pick(고객 검색)} */
+async function smsDlg(opts){opts=opts||{};let c=opts.c||null;const pick=!c;let v={};
+  const setV=()=>{v=Object.assign({업체명:(c&&c.name)||"",대표자:(c&&c.ceo)||"",계좌:S.bank||""},opts.vars||{})};setV();
+  const tpls=await loadSmsTpl();const pool=customers.filter(x=>isOffice()||x.owner===me.id||x.collector===me.id);
+  const phonesOf=cc=>cc?[...new Set([cc.phone,cc.phone2].map(x=>String(x||"").trim()).filter(x=>/^0\d/.test(x.replace(/\D/g,""))))]:[];
   const t0=opts.tpl&&tpls.find(t=>t.title===opts.tpl);
-  openDlg("문자 보내기"+(c.name?" · "+esc(c.name):""),`<div id="smf" style="display:grid;gap:10px">
+  openDlg("문자 보내기"+(c?" · "+esc(c.name):""),`<div id="smf" style="display:grid;gap:10px">
     ${ui.noSms?`<p class="warnbox" style="margin:0">문자 문구·기록 칸이 아직 없습니다. Supabase에서 <b>phase1zc.sql</b>을 실행해 주세요.</p>`:""}
-    <div class="f"><span>받는 번호</span><div class="chk">${phones.map((p,i)=>`<label><input type="checkbox" name="to" value="${esc(p)}" ${i===0?"checked":""}>${esc(p)}</label>`).join("")}</div>
-      <input id="smTo2" placeholder="다른 번호 (여러 개는 쉼표로)" aria-label="다른 번호"></div>
+    ${pick?`<label class="f">고객 찾기 (선택)<input id="jcQ" type="search" autocomplete="off" placeholder="업체명(상호)·대표자·전화번호·주소·시리얼"></label>
+      <input type="hidden" id="jcId"><div id="jcSel"></div><div id="jcRes" class="pickres"></div><p class="mapt" id="jcHint" style="margin:0">고객을 찾아 고르거나, 아래 ‘받는 번호’에 번호를 직접 입력하세요.</p>`:""}
+    <div class="f"><span>받는 번호</span><div class="chk" id="smPh"></div>
+      <input id="smTo2" placeholder="번호 직접 입력 (여러 개는 쉼표로)" aria-label="번호 직접 입력"></div>
     <label class="f">자주 쓰는 문구<select id="smTpl"><option value="">(직접 입력)</option>${tpls.map(t=>`<option value="${t.id}" ${t0&&t0.id===t.id?"selected":""}>${esc(t.title)}</option>`).join("")}</select></label>
     <label class="f">내용<textarea id="smText" rows="6" style="min-height:130px">${esc(t0?smsFill(t0.content,v):"")}</textarea></label>
     <p class="mapt" id="smInfo" style="margin:0"></p>
@@ -2150,16 +2152,28 @@ async function smsDlg(opts){const c=opts.c||{};const v=Object.assign({업체명:
      const uniq=[...new Set(to)];if(!uniq.length){toast("받는 번호를 고르거나 입력하세요");return true}
      const bad=uniq.filter(x=>!/^0\d{8,10}$/.test(x));if(bad.length){toast("번호를 확인해 주세요: "+bad.join(", "));return true}
      if(!(await askConfirm(`${uniq.length}명에게 ${smsBytes(text)>90?"장문(LMS)":"단문(SMS)"} 문자를 보낼까요?`)))return true;
+     const dg_=x=>String(x||"").replace(/\D/g,"");const cid=p=>{if(c&&[c.phone,c.phone2].some(x=>dg_(x)===p))return c.id;const f=customers.find(x=>dg_(x.phone)===p||dg_(x.phone2)===p);return f?f.id:(c?c.id:null)};
      toast("보내는 중…");
-     const {data,error}=await sb.functions.invoke("send-sms",{body:{messages:uniq.map(p=>({to:p,text,customer_id:c.id||null,ref_type:opts.ref_type||"",ref_id:opts.ref_id||null}))}});
+     const {data,error}=await sb.functions.invoke("send-sms",{body:{messages:uniq.map(p=>({to:p,text,customer_id:cid(p),ref_type:opts.ref_type||"",ref_id:opts.ref_id||null}))}});
      if(error){let msg="";try{const b=await error.context.json();msg=b.error||(b.failed||[]).map(f=>f.to+" "+f.error).join(", ")}catch(e){}
        if(!msg)msg=/Failed to send|404|not found/i.test(error.message||"")?"Supabase에 문자 기능(send-sms)이 아직 설치되지 않았습니다":(error.message||"");toast("보내지 못했습니다: "+msg);return true}
      if(data&&data.failed&&data.failed.length){toast(`${data.sent}건 보냄, ${data.failed.length}건 실패: ${data.failed.map(f=>f.to+" "+f.error).join(", ")}`);return true}
-     toast(`문자를 보냈습니다 (${uniq.length}건)`);if(ui.ctab==="sms"&&c.id&&ui.sel===c.id)renderCustSms(c)}]]);
-  const ta=document.getElementById("smText"),info=document.getElementById("smInfo");
+     toast(`문자를 보냈습니다 (${uniq.length}건)`);if(ui.view==="sms")renderSmsView();else if(ui.ctab==="sms"&&c&&ui.sel===c.id)renderCustSms(c)}]]);
+  const ta=document.getElementById("smText"),info=document.getElementById("smInfo"),sel_=document.getElementById("smTpl");
   const upd=()=>{const b=smsBytes(ta.value);info.textContent=`${b}바이트 · ${b>90?"장문(LMS)":"단문(SMS)"}${b>2000?" — 2000바이트를 넘어 보낼 수 없습니다":""}`};ta.addEventListener("input",upd);upd();
-  document.getElementById("smTpl").onchange=e=>{const t=tpls.find(x=>x.id===e.target.value);if(t){ta.value=smsFill(t.content,v);upd()}};
+  const drawPh=()=>{const ps=phonesOf(c);document.getElementById("smPh").innerHTML=ps.map((p,i)=>`<label><input type="checkbox" name="to" value="${esc(p)}" ${i===0?"checked":""}>${esc(p)}</label>`).join("")||(pick?`<span class="mapt">고객을 고르면 그 고객의 번호가 여기에 나옵니다.</span>`:"")};drawPh();
+  sel_.onchange=()=>{const t=tpls.find(x=>x.id===sel_.value);if(t){ta.value=smsFill(t.content,v);upd()}};
+  if(pick){bindCustPicker(pool);const h=document.getElementById("jcId");h.addEventListener("change",()=>{c=pool.find(x=>x.id===h.value)||null;setV();drawPh();
+    document.getElementById("dlgH").textContent="문자 보내기"+(c?" · "+c.name:"");if(sel_.value)sel_.onchange()})}
 }
+/* 상단 '문자' 메뉴: 보내기 + 최근 보낸 문자 */
+async function renderSmsView(){view().innerHTML=`<div class="toolbar" style="padding:16px 20px 0"><h2 style="margin:0;font-size:18px">문자</h2><span style="flex:1"></span><button class="btn pri" type="button" id="smGo">+ 문자 보내기</button></div><div id="smAll" class="mapt" style="padding:12px 20px">불러오는 중…</div>`;
+  document.getElementById("smGo").onclick=()=>smsDlg({});
+  const {data,error}=await sb.from("sms_logs").select("*").order("created_at",{ascending:false}).limit(300);const box=document.getElementById("smAll");if(!box)return;
+  if(error){box.textContent="문자 기록 칸이 아직 없습니다. Supabase에서 phase1zc.sql을 실행해 주세요.";return}
+  box.outerHTML=`<div class="wrapx" style="padding:12px 20px 20px"><p class="mapt" style="margin:0 0 8px">최근 보낸 문자 ${data.length}건${isOffice()?"":" (본인이 보냈거나 담당 고객에게 보낸 문자)"}</p><table class="stafft"><thead><tr><th style="width:130px">보낸 시각</th><th style="width:70px">보낸 사람</th><th style="width:170px">업체명(상호)</th><th style="width:120px">받는 번호</th><th>내용</th><th style="width:60px">결과</th></tr></thead><tbody>
+    ${data.map(l=>{const cu=l.customer_id&&custById(l.customer_id);return `<tr><td>${esc(fmtDT(l.created_at))}</td><td>${esc(l.by_name)}</td><td>${cu?`<a href="#" data-gocust="${cu.id}">${esc(cu.name)}</a>`:""}</td><td>${esc(fmtPhone(l.to_phone))}</td><td style="white-space:pre-wrap">${esc(l.content)}</td><td>${l.status==="실패"?`<span class="neg" title="${esc(l.error)}">실패</span>`:esc(l.msg_type||"보냄")}</td></tr>`}).join("")||`<tr><td colspan="6" class="mapt">보낸 문자가 없습니다.</td></tr>`}</tbody></table></div>`;
+  view().querySelectorAll("[data-gocust]").forEach(a=>a.onclick=e=>{e.preventDefault();goCust(custById(a.dataset.gocust))})}
 /* 고객 화면 '문자' 탭: 보낸 기록 */
 async function renderCustSms(c){const tb=document.getElementById("tabBody");tb.innerHTML=`<div class="toolbar"><button class="btn pri" type="button" id="smNew">문자 보내기</button></div><div id="smLog" class="mapt" style="padding:0 20px">불러오는 중…</div>`;
   document.getElementById("smNew").onclick=()=>smsDlg({c});
