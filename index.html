@@ -1187,7 +1187,7 @@ function renderCtrView0(){
   sortCtrList(list);
   list=cfApply("ctr",list,(c,x)=>cfText(ctrCell(c,x.k,x.c,x.s,x.b)));
   ui.csel=ui.csel||new Set();[...ui.csel].forEach(id=>{if(!list.some(x=>x.k.id===id))ui.csel.delete(id)});
-  const sumT=`<table class="sumt" aria-label="${esc(ui.cm)} 계약 집계"><thead><tr><th></th>${[...CTYPES,"추가설치"].map(t=>`<th class="${t==="추가설치"?"k-addon":""}">${t}</th>`).join("")}<th>합계</th></tr></thead><tbody>
+  const sumT=`<table class="sumt" aria-label="${esc(ui.cm)} 계약 집계"><thead><tr><th></th>${[...CTYPES,"추가설치"].map(t=>`<th>${t}</th>`).join("")}<th>합계</th></tr></thead><tbody>
     ${CROWS.map(([r,l])=>`<tr class="${r==="unpaid"?"open":""}"><th>${l}</th>${[...CTYPES,"추가설치",""].map(t=>`<td class="cl ${ui.crow===r&&ui.cct===t?"on":""}" data-r="${r}" data-t="${t}">${cnt(r,t)}</td>`).join("")}</tr>`).join("")}
     <tr><th>합계</th>${[...CTYPES,"추가설치",""].map(t=>`<td class="cl ${ui.crow===""&&ui.cct===t?"on":""}" data-r="" data-t="${t}"><b>${cnt("",t)}</b></td>`).join("")}</tr></tbody></table>`;
   const cols=getCols();const lab=Object.fromEntries(CCOLS.map(c=>[c[0],c[1]]));
