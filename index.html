@@ -201,6 +201,10 @@ body.resizing,body.resizing *{cursor:col-resize!important;user-select:none}
 .hlist{display:grid;gap:2px}.hrow{all:unset;box-sizing:border-box;display:flex;align-items:center;gap:8px;padding:8px 6px;border-radius:6px;cursor:pointer;border-bottom:1px solid var(--line2);min-width:0}.hrow:hover,.hrow:focus-visible{background:var(--accent-weak)}.hrow.static{cursor:default}.hrow.static:hover{background:none}
 .htime{min-width:64px;font-variant-numeric:tabular-nums;color:var(--mute);font-size:13px}.hname{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex:1;min-width:0}.hmsg{flex:2;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .hrecv{display:grid;grid-template-columns:minmax(180px,240px) 1fr;gap:10px;align-items:start}@media (max-width:1000px){.htop{grid-template-columns:1fr}}@media (max-width:760px){.hrecv{grid-template-columns:1fr}.home{padding:12px 16px 24px}.hgrid{grid-template-columns:1fr}}
+.wt.sk td{vertical-align:middle}.wt.sk tr.alt td{background:#F3F7FC}.wt.sk tr.cx td{color:#999;text-decoration:line-through}.wt.sk td.skded{color:#1d4ed8}.wt.sk tbody tr{cursor:pointer}.wt.sk tbody tr:hover td{background:var(--accent-weak)}
+.tag.sk-신규접수{background:#fff;color:#1d4ed8;border-color:#1d4ed8}.tag.sk-주문완료{background:#FFF3C4;color:#8a5a00;border-color:#FFF3C4}.tag.sk-입고완료{background:#DCEBFF;color:#1d4ed8;border-color:#DCEBFF}.tag.sk-출고완료{background:#00CC66;color:#1b1b1b;border-color:#00CC66}.tag.sk-재고등록{background:#efe2ff;color:#6b21a8;border-color:#efe2ff}.tag.sk-취소{background:#c62828;color:#fff;border-color:#c62828}
+.skit{border:1px solid var(--line);border-radius:8px;padding:8px 10px;display:grid;gap:6px}.skit-h{display:flex;align-items:center;justify-content:space-between}.skg{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:6px}.skg .s2{grid-column:span 2}.skg input{width:100%;min-width:0}.skg.sp{grid-template-columns:1fr 1fr 2fr;align-items:end}
+@media (max-width:760px){.skg{grid-template-columns:repeat(3,minmax(0,1fr))}.skg .s2{grid-column:span 3}.skg.sp{grid-template-columns:1fr 1fr}}
 .smtpls{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:8px}.smtpl{border:1px solid var(--line);background:var(--panel);border-radius:8px;padding:10px 12px;cursor:pointer;display:grid;gap:6px}.smtpl:hover,.smtpl:focus-visible{border-color:var(--accent);outline:none;box-shadow:0 0 0 2px var(--accent-weak)}.smt-h{display:flex;align-items:center;gap:6px}.smt-h b{flex:1}.smt-c{font-size:13px;color:var(--mute);white-space:pre-wrap;display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden}
 .rstages{display:flex;gap:6px;flex-wrap:wrap}.rstages .chip.on{outline:2px solid var(--accent)}
 .ageb{display:grid;gap:4px}.agerow{display:grid;grid-template-columns:80px 1fr 110px 44px;gap:8px;align-items:center;border:0;background:none;padding:4px 6px;border-radius:6px;cursor:pointer;font:inherit;color:inherit;text-align:left}.agerow:hover,.agerow.on{background:var(--accent-weak)}
@@ -655,11 +659,11 @@ function render(){if(ui._fresh){ui._fresh=false;render0();window.scrollTo(0,0);r
 function render0(){
   ui.dirty=false;
   if(me.role==="sales"&&(ui.view==="work"||ui.view==="asm"))ui.view="home";
-  const tabs=[["home","홈"],["cust","고객"]];if(me.role!=="tech")tabs.push(["leads","DB관리"]);if(me.role!=="sales")tabs.push(["work","당월 설치·A/S 전체리스트"]);if(me.role!=="tech")tabs.push(["ctrm","당월리스트"],["allm","전체리스트"],...(me.role==="sales"?[]:[["asm","A/S관리"]]),["recv","미수·채권관리"]);tabs.push(["sched","담당자별 일정표"]);if(me.role!=="tech")tabs.push(["sms","문자"]);tabs.push(["notice","공지사항"]);if(isAdmin())tabs.push(["staff","직원"],["settings","설정"]);
+  const tabs=[["home","홈"],["cust","고객"]];if(me.role!=="tech")tabs.push(["leads","DB관리"]);if(me.role!=="sales")tabs.push(["work","당월 설치·A/S 전체리스트"]);if(me.role!=="tech")tabs.push(["ctrm","당월리스트"],["allm","전체리스트"],...(me.role==="sales"?[]:[["asm","A/S관리"]]),["recv","미수·채권관리"]);tabs.push(["sched","담당자별 일정표"]);if(me.role!=="tech")tabs.push(["sink","싱크대발주"]);if(me.role!=="tech")tabs.push(["sms","문자"]);tabs.push(["notice","공지사항"]);if(isAdmin())tabs.push(["staff","직원"],["settings","설정"]);
   document.getElementById("nav").innerHTML=tabs.map(([k,l])=>`<button type="button" class="${ui.view===k?"on":""}${k==="notice"&&ui.view!=="notice"&&noticeUnread()?" ndot":""}" data-v="${k}">${l}</button>`).join("");
   document.querySelectorAll("#nav button").forEach(b=>b.onclick=()=>{ui.view=b.dataset.v;ui.jsel=new Set();ui._fresh=true;render()});
   if(ui.view==="install"||ui.view==="as")ui.view="work";
-  if(ui.view==="home")renderHomeView();else if(ui.view==="cust")renderCustView();else if(ui.view==="work")renderWorkView();else if(ui.view==="ctrm")renderCtrView();else if(ui.view==="asm")renderAsView();else if(ui.view==="leads")renderLeadView();else if(ui.view==="recv")renderRecvView();else if(ui.view==="allm")renderAllView();else if(ui.view==="sched")renderSchedView();else if(ui.view==="sms")renderSmsView();else if(ui.view==="notice")renderNoticeView();else if(ui.view==="staff")renderStaffView();else if(ui.view==="delete")renderDeleteView();else renderSettings();
+  if(ui.view==="home")renderHomeView();else if(ui.view==="cust")renderCustView();else if(ui.view==="work")renderWorkView();else if(ui.view==="ctrm")renderCtrView();else if(ui.view==="asm")renderAsView();else if(ui.view==="leads")renderLeadView();else if(ui.view==="recv")renderRecvView();else if(ui.view==="allm")renderAllView();else if(ui.view==="sched")renderSchedView();else if(ui.view==="sms")renderSmsView();else if(ui.view==="notice")renderNoticeView();else if(ui.view==="sink")renderSinkView();else if(ui.view==="staff")renderStaffView();else if(ui.view==="delete")renderDeleteView();else renderSettings();
   addXlsBtn();
 }
 
@@ -2353,8 +2357,8 @@ function renderHomeView(){const td=today(),tm=addDays(td,1),ym=thisMonth(),[m0,m
 }
 
 /* ================= 엑셀 다운로드 (지금 화면의 표를 그대로, 필터·검색 적용된 전체) ================= */
-const XSEL={leads:".wt.ld",work:".wt.wk",ctrm:".wt.ct",allm:".wt.ca",asm:".wt.am",recv:".wt.rv",sched:".wt.sch"};
-const XNAME={leads:"DB관리",work:"당월 설치·AS 전체리스트",ctrm:"당월리스트",allm:"전체리스트",asm:"AS관리",recv:"미수·채권관리",sched:"담당자별 일정표"};
+const XSEL={sink:".wt.sk",leads:".wt.ld",work:".wt.wk",ctrm:".wt.ct",allm:".wt.ca",asm:".wt.am",recv:".wt.rv",sched:".wt.sch"};
+const XNAME={sink:"싱크대 발주",leads:"DB관리",work:"당월 설치·AS 전체리스트",ctrm:"당월리스트",allm:"전체리스트",asm:"AS관리",recv:"미수·채권관리",sched:"담당자별 일정표"};
 function addXlsBtn(){const v=ui.view;if(!XSEL[v]||!isOffice()||!window.XLSX)return;const tbl=view().querySelector(XSEL[v]);if(!tbl||document.getElementById("xlsDown"))return;
   let tb=null,el=tbl.closest(".wrapx")||tbl.closest(".wtbox");while(el&&!tb){let s=el.previousElementSibling;while(s&&!tb){if(s.classList&&s.classList.contains("toolbar"))tb=s;s=s.previousElementSibling}el=el.parentElement;if(el===view())break}
   tb=tb||view().querySelector(".toolbar");if(!tb)return;const b=document.createElement("button");b.type="button";b.className="btn";b.id="xlsDown";b.textContent="엑셀 다운로드";b.onclick=()=>exportView();tb.appendChild(b)}
@@ -2375,6 +2379,111 @@ function exportView(){const v=ui.view;const sel=XSEL[v];if(!sel)return;toast("�
       ws["!cols"]=wid.map(w=>({wch:w}));const wb=XLSX.utils.book_new();const nm=XNAME[v]||"목록";XLSX.utils.book_append_sheet(wb,ws,nm.slice(0,31).replace(/[\\/?*\[\]:]/g,""));
       const tag=v==="sched"?(ui.sm||thisMonth()):v==="ctrm"?(ui.cm||thisMonth()):today();XLSX.writeFile(wb,`${nm}_${tag}.xlsx`);toast("엑셀 파일을 내려받았습니다")}
     catch(e){toast("엑셀 파일을 만들지 못했습니다: "+(e.message||""))}finally{render()}},30)}
+
+/* ================= 싱크대 발주 ================= */
+const SK_NAMES=["01. 싱크대 / 왕대","02. 작업대(T)","03. 벽선반","04. 상부선반","05. 까치선반","06. 역까치선반","07. 절곡판 / 1.0T","08. 판 / 1.0T","09. 바트"];
+const SK_OPT1=["1조","2조","1단","2단","3단","ㄱ자","ㄷ자","□자"],SK_OPT2=["기본형","좌우전30","다리형","해당없음"],SK_HOLE=["3Φ 타공","5Φ 타공","해당없음"],SK_WHEEL=["2개","4개","해당없음"];
+const SK_ST=["신규접수","주문완료","입고완료","출고완료","재고등록","취소"];
+let skOrders=null,skPrices={};
+async function fetchSink(){const {data,error}=await sb.from("sink_orders").select("*").order("order_date",{ascending:false}).order("created_at",{ascending:false}).limit(2000);
+  if(error){ui.noSink=true;skOrders=[];return}ui.noSink=false;skOrders=data||[];
+  if(isOffice()){const {data:p}=await sb.from("sink_prices").select("*");skPrices=Object.fromEntries((p||[]).map(x=>[x.order_id,x]))}}
+function skSpec(it){const nm=String(it.name||"").replace(/^\d+\.\s*/,"");const sz=[it.w,it.d,it.h].filter(v=>v!==""&&v!=null).join("*");
+  return [nm,it.opt1,it.opt2&&it.opt2!=="해당없음"?it.opt2:"",it.hole&&it.hole!=="해당없음"?it.hole:"",it.wheel&&it.wheel!=="해당없음"?"바퀴 "+it.wheel:""].filter(Boolean).join(" / ")+(sz?` [${sz}]`:"")}
+function skLine(o,i){const L=((skPrices[o.id]||{}).lines||[])[i]||{};const it=(o.items||[])[i]||{};const q=Number(it.qty||1)||1;const pr=Number(L.price||0);const sup=pr*q,vat=Math.round(sup/10);return{price:pr,sup,vat,tot:sup+vat,deduct:Number(L.deduct||0)}}
+async function renderSinkView(){const off=isOffice();if(!skOrders)view().innerHTML=`<p class="mapt" style="padding:20px">불러오는 중…</p>`;await fetchSink();
+  ["skq","skst","skown"].forEach(k=>{if(ui[k]===undefined)ui[k]=""});if(ui.skm===undefined)ui.skm="";
+  const qq=ui.skq.trim().toLowerCase();
+  let list=skOrders.filter(o=>(!ui.skst||o.status===ui.skst)&&(!ui.skown||o.owner_name===ui.skown)&&(!ui.skm||String(o.order_date||"").startsWith(ui.skm))
+    &&(!qq||[o.site_name,o.owner_name,o.memo,...(o.items||[]).map(skSpec)].join(" ").toLowerCase().includes(qq)));
+  const cnt=s=>skOrders.filter(o=>o.status===s).length;const owners=[...new Set(skOrders.map(o=>o.owner_name).filter(Boolean))].sort(KO.compare);
+  const tot={sup:0,vat:0,tot:0,deduct:0};
+  const rows=list.map((o,oi)=>{const its=(o.items||[]).length?o.items:[{}];const n=its.length;
+    return its.map((it,i)=>{const L=skLine(o,i);if(o.status!=="취소"){tot.sup+=L.sup;tot.vat+=L.vat;tot.tot+=L.tot;tot.deduct+=L.deduct}
+      const head=i===0;const rs=n>1?` rowspan="${n}"`:"";
+      return `<tr data-sk="${o.id}" class="skr${oi%2?" alt":""}${o.status==="취소"?" cx":""}">${head?`<td${rs}>${esc(ymd2(o.order_date))}</td><td${rs}><span class="tag sk-${esc(o.status)}">${esc(o.status)}</span></td><td${rs}>${esc(o.owner_name)}</td><td${rs}><b>${esc(o.site_name||"")}</b></td>`:""}
+        <td class="skspec">${esc(skSpec(it))}${it.note?` <small class="mapt">(${esc(it.note)})</small>`:""}</td><td class="num">${esc(it.qty||1)}</td>
+        ${head?`<td${rs}>${esc(ymd2(o.due_date))}</td>`:""}
+        ${off?`<td class="num">${L.price?won0(L.price):""}</td><td class="num">${L.sup?won0(L.sup):""}</td><td class="num">${L.vat?won0(L.vat):""}</td><td class="num">${L.tot?won0(L.tot):""}</td>`:""}
+        ${head?`<td${rs}>${esc(ymd2(o.in_date))}</td><td${rs}>${esc(ymd2(o.out_date))}</td><td${rs} class="wrap memo"><div class="clamp">${esc(o.memo||"")}</div></td>`:""}
+        ${off?`<td class="num skded">${L.deduct?won0(L.deduct):""}</td>`:""}</tr>`}).join("")}).join("");
+  view().innerHTML=`<div class="toolbar" style="padding:16px 20px 0;flex-wrap:wrap"><h2 style="margin:0;font-size:18px">싱크대 발주</h2><span class="mapt">${off?"전체 발주":"내 발주"}</span><span style="flex:1"></span>${me.role==="tech"?"":`<button class="btn pri" type="button" id="skNew">+ 신규발주</button>`}</div>
+   ${ui.noSink?`<div class="sec"><p class="warnbox">싱크대 발주를 쓰려면 Supabase SQL Editor에서 <b>phase1ze.sql</b>을 실행해 주세요.</p></div>`:""}
+   <div class="toolbar" style="flex-wrap:wrap"><input id="skQ" type="search" placeholder="업체명·담당자·품명 검색" value="${esc(ui.skq)}">
+     <input id="skM" type="month" value="${esc(ui.skm)}" aria-label="발주 월" style="padding:5px 8px;border:1px solid var(--line);border-radius:6px;background:var(--field)">
+     ${off?`<select id="skOwn" aria-label="담당자"><option value="">담당자 전체</option>${owners.map(x=>`<option ${ui.skown===x?"selected":""}>${esc(x)}</option>`).join("")}</select>`:""}
+     <div class="rstages"><button type="button" class="chip ${ui.skst?"":"on"}" data-sks="">전체 ${skOrders.length}</button>${SK_ST.map(s=>`<button type="button" class="chip ${ui.skst===s?"on":""}" data-sks="${s}"><span class="tag sk-${s}">${s}</span> ${cnt(s)}</button>`).join("")}</div>
+     <span class="mapt">${list.length}건</span></div>
+   <div class="wrapx vis" style="padding-top:6px"><div class="wtbox"><table class="wt sk"><thead><tr><th>발주일자</th><th>진행사항</th><th>담당자</th><th>업체명(상호)</th><th>품명 및 규격</th><th>수량</th><th>입고예정</th>${off?"<th>단가</th><th>공급가액</th><th>부가세</th><th>합계금액</th>":""}<th>입고일자</th><th>출고일자</th><th>비고</th>${off?"<th>변경 공제가</th>":""}</tr></thead>
+     <tbody>${rows||`<tr><td colspan="${off?15:10}" class="mapt">발주가 없습니다.</td></tr>`}</tbody>
+     ${off&&list.length?`<tfoot><tr><th colspan="7">합계</th><th></th><th class="num">${won0(tot.sup)}</th><th class="num">${won0(tot.vat)}</th><th class="num">${won0(tot.tot)}</th><th colspan="3"></th><th class="num">${won0(tot.deduct)}</th></tr></tfoot>`:""}</table></div></div>`;
+  const re=()=>renderSinkView();
+  const q=document.getElementById("skQ");q.oninput=()=>{ui.skq=q.value;clearTimeout(q._t);q._t=setTimeout(()=>{re().then(()=>{const n=document.getElementById("skQ");n.focus();n.setSelectionRange(n.value.length,n.value.length)})},250)};
+  document.getElementById("skM").onchange=e=>{ui.skm=e.target.value;re()};const so=document.getElementById("skOwn");if(so)so.onchange=e=>{ui.skown=e.target.value;re()};
+  view().querySelectorAll("[data-sks]").forEach(b=>b.onclick=()=>{ui.skst=b.dataset.sks;re()});
+  const nb=document.getElementById("skNew");if(nb)nb.onclick=()=>sinkDlg(null);
+  view().querySelectorAll("tr[data-sk]").forEach(tr=>tr.onclick=()=>sinkDlg(skOrders.find(o=>o.id===tr.dataset.sk)));
+  addXlsBtn()}
+/* 발주서 창 (신규·수정). pre: {c, k} 계약에서 열 때 */
+function sinkDlg(o,pre){const off=isOffice();const isNew=!o;pre=pre||{};
+  o=o||{order_date:today(),owner:me.role==="sales"?me.id:null,owner_name:me.role==="sales"?(me.name||""):"",customer_id:pre.c?pre.c.id:null,contract_id:pre.k?pre.k.id:null,site_name:pre.c?pre.c.name:"",due_date:"",status:"신규접수",items:[{name:"",opt1:"",opt2:"",w:"",d:"",h:"",hole:"",wheel:"",qty:1,note:""}],memo:""};
+  const canEdit=off||(isNew||(o.status==="신규접수"&&o.owner===me.id));
+  const items=JSON.parse(JSON.stringify(o.items&&o.items.length?o.items:[{qty:1}]));const lines=JSON.parse(JSON.stringify(((skPrices[o.id]||{}).lines)||[]));
+  let cust=o.customer_id?custById(o.customer_id):null,ctrId=o.contract_id;
+  const pool=customers.filter(x=>isOffice()||x.owner===me.id||x.collector===me.id);
+  const dl=(id,a)=>`<datalist id="${id}">${a.map(x=>`<option value="${esc(x)}">`).join("")}</datalist>`;
+  openDlg(isNew?"싱크대 신규발주":"싱크대 발주서 · "+esc(o.site_name||""),`<div id="skf" style="display:grid;gap:10px">
+    ${canEdit?"":`<p class="warnbox" style="margin:0">주문이 들어간 발주는 사무실에서만 고칠 수 있습니다.</p>`}
+    <div class="g3">${off?inp("owner_name","주문자(담당자)",o.owner_name,"text",false,'list="skOwnL"'):inp("_o","주문자",o.owner_name||me.name,"text",true)}${inp("order_date","발주일자",o.order_date,"date",!off)}${inp("due_date","입고요청일",o.due_date||"","date",!canEdit)}</div>
+    ${dl("skOwnL",staff.filter(s=>s.active&&s.role!=="tech").map(s=>s.name))}
+    <div class="f"><span>설치업장명 (계약정보 조회)</span><div id="skCust"></div></div>
+    <h3 class="ksec">품목</h3><div id="skItems" style="display:grid;gap:8px"></div>
+    ${canEdit?`<button type="button" class="btn" id="skAdd" style="justify-self:start">+ 품목 추가</button>`:""}
+    ${dl("skN",SK_NAMES)}${dl("skO1",SK_OPT1)}${dl("skO2",SK_OPT2)}${dl("skH",SK_HOLE)}${dl("skW",SK_WHEEL)}
+    ${off?`<h3 class="ksec">진행 (사무실)</h3><div class="g3">${sel("status","진행사항",SK_ST,o.status)}${inp("in_date","입고일자",o.in_date||"","date")}${inp("out_date","출고일자",o.out_date||"","date")}</div>`
+      :`<p class="mapt" style="margin:0">진행사항: <span class="tag sk-${esc(o.status)}">${esc(o.status)}</span>${o.in_date?" · 입고 "+esc(o.in_date):""}${o.out_date?" · 출고 "+esc(o.out_date):""}</p>`}
+    <label class="f">비고·참조사항<textarea name="memo" rows="2" ${canEdit?"":"readonly"}>${esc(o.memo||"")}</textarea></label></div>`,
+   [["닫기"],...(!isNew&&(off||(o.status==="신규접수"&&o.owner===me.id))?[["삭제","danger",async()=>{if(!(await askConfirm("이 발주를 삭제할까요?")))return true;const {error}=await sb.from("sink_orders").delete().eq("id",o.id);if(error){toast("삭제하지 못했습니다: "+error.message);return true}toast("삭제했습니다");if(ui.view==="sink")renderSinkView()}]]:[]),
+    ...(canEdit?[["저장","pri",async()=>{const f=fdata("skf");readItems();
+      const its=items.filter(it=>it.name||it.w||it.d||it.h||it.opt1);if(!its.length){toast("품목을 하나 이상 입력하세요");return true}
+      if(its.some(it=>!it.name)){toast("품명을 입력하세요");return true}
+      const site=(document.getElementById("skSite")||{}).value;const p={site_name:(site||"").trim()||(cust?cust.name:""),customer_id:cust?cust.id:null,contract_id:cust?ctrId:null,due_date:f.get("due_date")||null,items:its,memo:(f.get("memo")||"").trim()};
+      if(!p.site_name){toast("설치업장명을 고르거나 입력하세요 (재고면 ‘재고’)");return true}
+      if(off){const w=whoIs((f.get("owner_name")||"").trim());Object.assign(p,{owner:w.id,owner_name:w.name,order_date:f.get("order_date")||today(),status:f.get("status")||"신규접수",in_date:f.get("in_date")||null,out_date:f.get("out_date")||null})}
+      else if(isNew)Object.assign(p,{owner:me.id,owner_name:me.name||"",order_date:today(),status:"신규접수"});
+      const r=isNew?await sb.from("sink_orders").insert(p).select().single():await sb.from("sink_orders").update(p).eq("id",o.id).select().single();
+      if(r.error){toast(/sink_orders/.test(r.error.message)&&/exist|find/.test(r.error.message)?"Supabase에서 phase1ze.sql을 먼저 실행해 주세요.":"저장하지 못했습니다: "+r.error.message);return true}
+      if(off){const ln=its.map((it,i)=>{const row=document.querySelector(`#skItems [data-i="${items.indexOf(it)}"]`);const g=n=>Number(((row&&row.querySelector(`[data-p="${n}"]`))||{}).value||0)||0;return{price:g("price"),deduct:g("deduct")}});
+        const e2=await sb.from("sink_prices").upsert({order_id:r.data.id,lines:ln,updated_at:new Date().toISOString()});if(e2.error)toast("금액은 저장하지 못했습니다: "+e2.error.message)}
+      /* 계약의 설치 작업 '싱크대 발주' 칸 맞추기 */
+      if(p.contract_id){const ij=installOf(ctrById(p.contract_id)||{});const st=(r.data.status==="신규접수")?"발주대기":["주문완료","입고완료","출고완료"].includes(r.data.status)?"발주완료":"";
+        if(ij&&st&&["","해당없음","발주대기","발주완료"].includes(ij.sink_status||"")&&ij.sink_status!==st)await sb.from("jobs").update({sink_status:st}).eq("id",ij.id)}
+      toast(isNew?"발주를 접수했습니다":"저장했습니다");reload(["jobs"],true);if(ui.view==="sink")renderSinkView()}]]:[])]);
+  /* 업장 선택 */
+  const drawCust=()=>{const box=document.getElementById("skCust");
+    if(cust){const ks=custContracts(cust.id).filter(k=>k.stage!=="취소");if(!ctrId&&ks[0])ctrId=ks[0].id;
+      box.innerHTML=`<div class="picked"><span><b>${esc(cust.name)}</b> · ${esc(cust.phone||cust.phone2||"")} · ${esc(cust.address||"")}</span>${canEdit?`<button class="btn sm" type="button" id="skChg">다른 업장</button>`:""}</div>
+        ${ks.length>1?`<label class="f" style="margin-top:6px">연결 계약<select id="skK" ${canEdit?"":"disabled"}>${ks.map(k=>`<option value="${k.id}" ${k.id===ctrId?"selected":""}>${esc([k.contract_date,k.product,k.size,k.serial&&"SN "+k.serial].filter(Boolean).join(" · "))}</option>`).join("")}</select></label>`:""}`;
+      const ch=document.getElementById("skChg");if(ch)ch.onclick=()=>{cust=null;ctrId=null;drawCust()};const ksel=document.getElementById("skK");if(ksel)ksel.onchange=()=>{ctrId=ksel.value}}
+    else{box.innerHTML=canEdit?`<label class="f" style="margin:0"><input id="jcQ" type="search" autocomplete="off" placeholder="업체명(상호)·전화번호로 계약 고객 찾기"></label><input type="hidden" id="jcId"><div id="jcSel"></div><div id="jcRes" class="pickres"></div>
+        <p class="mapt" id="jcHint" style="margin:4px 0 0">계약 고객을 찾아 고르거나, 아래 칸에 업장명을 직접 적으세요 (재고 발주는 ‘재고’).</p><input id="skSite" placeholder="설치업장명 직접 입력" value="${esc(o.customer_id?"":(o.site_name||""))}" style="margin-top:6px">`:`<span>${esc(o.site_name||"")}</span>`;
+      if(canEdit){bindCustPicker(pool);const h=document.getElementById("jcId");h.addEventListener("change",()=>{const c=pool.find(x=>x.id===h.value);if(c){cust=c;ctrId=null;setTimeout(drawCust,0)}})}}};
+  drawCust();
+  /* 품목 */
+  const ro=canEdit?"":"readonly";
+  const readItems=()=>{document.querySelectorAll("#skItems [data-i]").forEach(row=>{const it=items[+row.dataset.i];row.querySelectorAll("[data-k]").forEach(el=>{it[el.dataset.k]=el.value.trim()});it.qty=Number(it.qty||1)||1})};
+  const drawItems=()=>{const box=document.getElementById("skItems");
+    box.innerHTML=items.map((it,i)=>{const L=lines[i]||{};const x=(k,ph,list,cls)=>`<label class="f ${cls||""}">${ph}<input data-k="${k}" value="${esc(it[k]??"")}" ${list?`list="${list}"`:""} ${ro} ${k==="w"||k==="d"||k==="h"||k==="qty"?'inputmode="numeric"':""}></label>`;
+      return `<div class="skit" data-i="${i}"><div class="skit-h"><b>품목 ${i+1}</b>${canEdit&&items.length>1?`<button type="button" class="btn sm danger" data-rmi="${i}">삭제</button>`:""}</div>
+        <div class="skg">${x("name","품명","skN","s2")}${x("opt1","옵션1","skO1")}${x("opt2","옵션2","skO2")}${x("hole","타공","skH")}${x("wheel","바퀴","skW")}
+          ${x("w","W (가로)")}${x("d","D (깊이)")}${x("h","H (높이)")}${x("qty","수량")}${x("note","기타 요청사항","","s2")}</div>
+        ${off?`<div class="skg sp"><label class="f">단가<input type="number" data-p="price" value="${L.price||""}"></label><label class="f">변경 공제가<input type="number" data-p="deduct" value="${L.deduct||""}"></label><span class="mapt skcalc"></span></div>`:""}</div>`}).join("");
+    box.querySelectorAll("[data-rmi]").forEach(b=>b.onclick=()=>{readItems();const k=+b.dataset.rmi;items.splice(k,1);lines.splice(k,1);drawItems()});
+    const calc=()=>box.querySelectorAll("[data-i]").forEach(row=>{const c=row.querySelector(".skcalc");if(!c)return;const pr=Number(row.querySelector('[data-p="price"]').value||0),q=Number(row.querySelector('[data-k="qty"]').value||1)||1;const s=pr*q,v=Math.round(s/10);c.textContent=pr?`공급가액 ${won0(s)} · 부가세 ${won0(v)} · 합계 ${won0(s+v)}`:""});
+    box.querySelectorAll('[data-p="price"],[data-k="qty"]').forEach(el=>el.addEventListener("input",calc));calc()};
+  drawItems();
+  const ad=document.getElementById("skAdd");if(ad)ad.onclick=()=>{readItems();items.push({qty:1});drawItems()};
+}
 
 /* ================= 계약 ================= */
 function renderContracts(c){
@@ -2505,7 +2614,7 @@ function contractDlg(c,k,tpl,opts){ui.payEdit=null;
    <datalist id="s3List">${staff.filter(s=>s.active&&["admin","office","sales"].includes(s.role)).map(s=>`<option value="${esc(s.name)}">${esc(ROLE[s.role])}</option>`).join("")}</datalist>
    <datalist id="stList">${staff.filter(s=>s.active).map(s=>`<option value="${esc(s.name)}">`).join("")}<option value="무료체험"></datalist>
    <datalist id="pdList">${[...new Set(contracts.map(x=>x.product).filter(Boolean))].map(x=>`<option value="${esc(x)}">`).join("")}</datalist></div>`,
-   ro?[["고객정보","gocust",()=>{openCustPopup(c,refreshK);return true}],["닫기"]]:[pickM?["새 고객 등록","gocust",()=>{newCustomer(null,nc=>contractDlg(nc,null));return true}]:["고객정보","gocust",()=>{if(!c)return toast("고객을 먼저 고르세요");openCustPopup(c,refreshK);return true}],...(!isNew&&canNewJob(c)?[["접수","",()=>{ctrIntake(c,k);return true}]]:[]),["취소"],...(!isNew?[["복사","",()=>{contractDlg(c,null,k);return true}]]:[]),...(!isNew&&isOffice()?[["양도","",()=>{transferDlg(c,k);return true}]]:[]),...(!isNew&&isAdmin()?[["삭제","danger",async()=>{await undoTransfers([k.id]);const {error}=await sb.from("contracts").delete().eq("id",k.id);toast(error?"삭제하지 못했습니다":"삭제했습니다");reload(["contracts","customers"])}]]:[]),["저장","pri",async()=>{
+   ro?[["고객정보","gocust",()=>{openCustPopup(c,refreshK);return true}],["닫기"]]:[pickM?["새 고객 등록","gocust",()=>{newCustomer(null,nc=>contractDlg(nc,null));return true}]:["고객정보","gocust",()=>{if(!c)return toast("고객을 먼저 고르세요");openCustPopup(c,refreshK);return true}],...(!isNew&&canNewJob(c)?[["접수","",()=>{ctrIntake(c,k);return true}]]:[]),...(!isNew&&me.role!=="tech"?[["싱크대 발주","",()=>{sinkDlg(null,{c,k});return true}]]:[]),["취소"],...(!isNew?[["복사","",()=>{contractDlg(c,null,k);return true}]]:[]),...(!isNew&&isOffice()?[["양도","",()=>{transferDlg(c,k);return true}]]:[]),...(!isNew&&isAdmin()?[["삭제","danger",async()=>{await undoTransfers([k.id]);const {error}=await sb.from("contracts").delete().eq("id",k.id);toast(error?"삭제하지 못했습니다":"삭제했습니다");reload(["contracts","customers"])}]]:[]),["저장","pri",async()=>{
      if(pickM&&!c){const cc=pool.find(x=>x.id===(document.getElementById("jcId")||{}).value);if(!cc)return toast("고객을 검색해서 목록에서 골라 주세요");c=cc}
      if(isNew){const gg=gradeOf(c);if(gg&&gg.g==="블랙"&&!(await askConfirm(`블랙(거래 중지) 고객입니다.${gg.reason?" ("+gg.reason+")":""} 계속 등록할까요?`)))return true}
      const f=fdata("kf");const n=x=>Number(f.get(x)||0)||0;
