@@ -1005,10 +1005,16 @@ function applyColW(cols,live,t="ctr"){const w=Object.assign(getColW(t),live||{})
   const sel=TCFG[t].sel,lead=TCFG[t].lead();
   st.textContent=cols.map((c,i)=>w[c]?`${sel} tr>*:nth-child(${i+lead+1}){width:${w[c]}px;min-width:${w[c]}px;max-width:${w[c]}px;overflow:hidden;text-overflow:ellipsis}`:"").join("\n");
   if(t==="ctr"||t==="as"||t==="all"||t==="lead"||t==="recv")freezeCols(t,cols)}
+/* 화면 폭이 휴대폰↔PC 기준(768px)을 넘나들면 틀 고정을 다시 계산 */
+(()=>{let narrow=window.innerWidth<768,tm;window.addEventListener("resize",()=>{clearTimeout(tm);tm=setTimeout(()=>{const nw=window.innerWidth<768;if(nw!==narrow){narrow=nw;if(me&&!document.getElementById("dlg").open)render()}},250)})})();
 /* 틀 고정: 맨 앞(체크·순번)부터 업체명(상호) 열까지는 가로로 밀어도 고정 */
 function freezeCols(t,cols){const sel=TCFG[t].sel;const id="frzStyle_"+t;let st=document.getElementById(id);if(!st){st=document.createElement("style");st.id=id;document.head.appendChild(st)}
   const tbl=view().querySelector(sel);const ni=cols.indexOf(TCFG[t].freezeKey||"name");if(!tbl||ni<0){st.textContent="";return}
   const n=ni+TCFG[t].lead()+1;const hr=tbl.querySelector("thead tr");if(!hr)return;st.textContent="";
+  /* 휴대폰 등 좁은 화면: 업체명(상호) 한 칸만 좁게 고정하고, 앞쪽 칸은 밀려 나가게 */
+  if(window.innerWidth<768){st.textContent=`${sel} tr>*:nth-child(${n}){position:sticky;left:0;z-index:2;background:var(--panel);width:110px!important;min-width:110px!important;max-width:110px!important;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;box-shadow:inset -2px 0 0 var(--line)}
+    ${sel} thead tr>*:nth-child(${n}),${sel} tfoot tr>*:nth-child(${n}){z-index:4;background:var(--line2)}
+    ${sel} tbody tr:hover>*:nth-child(${n}){background:var(--accent-weak)}`;return}
   const ths=[...hr.children].slice(0,n);let x=0;const css=[];
   ths.forEach((th,i)=>{css.push(`${sel} tr>*:nth-child(${i+1}){position:sticky;left:${x}px;z-index:2;background:var(--panel)}`);x+=th.getBoundingClientRect().width});
   css.push(`${sel} thead tr>*:nth-child(-n+${n}),${sel} tfoot tr>*:nth-child(-n+${n}){z-index:4;background:var(--line2)}`);
