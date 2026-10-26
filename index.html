@@ -1011,7 +1011,7 @@ const CCOLS=[
  ["approval","승인처",1],["tax","계산서 발급",0],["chk_cust","고객등록",1],["chk_slip","전표마감",1],["chk_sales","매출마감",1],["chk_month","월마감",1],["memo","비고",1]];
 const MONEYC=new Set(["amount","card","cash","paid","unpaid"]);
 /* 표 열 설정(넣고 빼기·순서·너비) — 계약관리(ctr)·작업현황(work) 공용, 브라우저별로 기억 */
-const TCFG={ctr:{cols:()=>CCOLS,sel:".wt.ct",lead:()=>isOffice()?2:1},work:{cols:()=>WCOLS,sel:".wt.wk",lead:()=>isAdmin()?2:1}};
+const TCFG={ctr:{cols:()=>CCOLS.filter(c=>!(me&&me.role==="sales"&&["chk_cust","chk_slip","chk_sales","chk_month"].includes(c[0]))),sel:".wt.ct",lead:()=>isOffice()?2:1},work:{cols:()=>WCOLS,sel:".wt.wk",lead:()=>isAdmin()?2:1}};
 function colKey(t="ctr"){return "hc.cols."+t+"."+(me&&me.id||"")}
 function getCols(t="ctr"){const C=TCFG[t].cols();let v=null;try{v=JSON.parse(localStorage.getItem(colKey(t))||"null")}catch(e){}
   const all=C.map(c=>c[0]);
@@ -1192,9 +1192,11 @@ function renderCtrView0(){
   sortCtrList(list);
   list=cfApply("ctr",list,(c,x)=>cfText(ctrCell(c,x.k,x.c,x.s,x.b)));
   ui.csel=ui.csel||new Set();[...ui.csel].forEach(id=>{if(!list.some(x=>x.k.id===id))ui.csel.delete(id)});
-  const sumT=`<table class="sumt" aria-label="${esc(ui.cm)} 계약 집계"><thead><tr><th></th>${[...CTYPES,"추가설치"].map(t=>`<th>${t}</th>`).join("")}<th>합계</th></tr></thead><tbody>
-    ${CROWS.map(([r,l])=>`<tr class="${r==="unpaid"?"open":""}"><th>${l}</th>${[...CTYPES,"추가설치",""].map(t=>`<td class="cl ${ui.crow===r&&ui.cct===t?"on":""}" data-r="${r}" data-t="${t}">${cnt(r,t)}</td>`).join("")}</tr>`).join("")}
-    <tr><th>합계</th>${[...CTYPES,"추가설치",""].map(t=>`<td class="cl ${ui.crow===""&&ui.cct===t?"on":""}" data-r="" data-t="${t}"><b>${cnt("",t)}</b></td>`).join("")}</tr></tbody></table>`;
+  /* 영업: 무상증정·무상임대·경품·양도 칸은 숨김 */
+  const TY=me.role==="sales"?["구매","무료체험","추가설치"]:[...CTYPES,"추가설치"];
+  const sumT=`<table class="sumt" aria-label="${esc(ui.cm)} 계약 집계"><thead><tr><th></th>${TY.map(t=>`<th>${t}</th>`).join("")}<th>합계</th></tr></thead><tbody>
+    ${CROWS.map(([r,l])=>`<tr class="${r==="unpaid"?"open":""}"><th>${l}</th>${[...TY,""].map(t=>`<td class="cl ${ui.crow===r&&ui.cct===t?"on":""}" data-r="${r}" data-t="${t}">${cnt(r,t)}</td>`).join("")}</tr>`).join("")}
+    <tr><th>합계</th>${[...TY,""].map(t=>`<td class="cl ${ui.crow===""&&ui.cct===t?"on":""}" data-r="" data-t="${t}"><b>${cnt("",t)}</b></td>`).join("")}</tr></tbody></table>`;
   const cols=getCols();const lab=Object.fromEntries(CCOLS.map(c=>[c[0],c[1]]));
   const shown=list.slice(0,ui.xAll?1e9:500);
   const tot={amount:0,card:0,cash:0,paid:0,unpaid:0};shown.forEach(x=>{tot.amount+=Number(x.k.amount||0);tot.card+=x.s.card;tot.cash+=x.s.other;tot.paid+=x.s.paid;if(x.s.n||x.k.stage==="미수")tot.unpaid+=x.s.unpaid});
