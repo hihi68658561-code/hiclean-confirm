@@ -190,6 +190,11 @@ body.resizing,body.resizing *{cursor:col-resize!important;user-select:none}
 .wt.rv td.rc-법적조치 .mapt,.wt.rv td.rc-추심이관 .mapt,.wt.rv td.rc-대손처리 .mapt{color:#fff}
 .tag.rs-당월매출{background:#fff;color:#1b1b1b;border-color:#adb5bd}.tag.rs-정상{background:#BFE4FF;color:#1b1b1b;border-color:#BFE4FF}.tag.rs-관리{background:#FFD6AD;color:#1b1b1b;border-color:#FFD6AD}.tag.rs-불량{background:#FF7A55;color:#1b1b1b;border-color:#FF7A55}
 .tag.rs-정상관리{background:#fff;color:#495057;border-color:#adb5bd}.tag.rs-독촉중{background:#FFF3C4;color:#8a5a00;border-color:#FFF3C4}.tag.rs-분할약정{background:#DCEBFF;color:#1d4ed8;border-color:#DCEBFF}.tag.rs-내용증명{background:#fff;color:#c2410c;border-color:#c2410c}.tag.rs-법적조치{background:#FF0000;color:#fff;border-color:#FF0000}.tag.rs-추심이관{background:#9933FF;color:#fff;border-color:#9933FF}.tag.rs-회수완료{background:#fff;color:#2e7d32;border-color:#2e7d32}.tag.rs-대손처리{background:#495057;color:#fff;border-color:#495057}
+.ntlist{display:grid;gap:8px;padding:12px 20px 24px;max-width:1000px}.nt{border:1px solid var(--line);background:var(--panel);border-radius:8px}.nt.pin{border-color:var(--accent)}
+.nt-h{all:unset;box-sizing:border-box;width:100%;display:flex;align-items:center;gap:8px;padding:12px 14px;cursor:pointer}.nt-h:focus-visible{outline:2px solid var(--accent);border-radius:8px}
+.nt-b{padding:0 14px 14px;border-top:1px solid var(--line)}.nt-c{white-space:pre-wrap;padding-top:12px;line-height:1.6}.tag.ntpin{background:var(--accent);color:#fff;border-color:var(--accent)}
+.nt-imgs{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:8px;margin-top:12px}.nt-imgs img{width:100%;height:200px;object-fit:cover;border-radius:6px;border:1px solid var(--line);background:var(--line2);display:block}
+.nt-imgs.edit img{height:120px}.nti{display:grid;gap:4px}#nav button.ndot::after{content:"";display:inline-block;width:7px;height:7px;border-radius:50%;background:#e53935;margin-left:4px;vertical-align:top}
 .smtpls{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:8px}.smtpl{border:1px solid var(--line);background:var(--panel);border-radius:8px;padding:10px 12px;cursor:pointer;display:grid;gap:6px}.smtpl:hover,.smtpl:focus-visible{border-color:var(--accent);outline:none;box-shadow:0 0 0 2px var(--accent-weak)}.smt-h{display:flex;align-items:center;gap:6px}.smt-h b{flex:1}.smt-c{font-size:13px;color:var(--mute);white-space:pre-wrap;display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden}
 .rstages{display:flex;gap:6px;flex-wrap:wrap}.rstages .chip.on{outline:2px solid var(--accent)}
 .ageb{display:grid;gap:4px}.agerow{display:grid;grid-template-columns:80px 1fr 110px 44px;gap:8px;align-items:center;border:0;background:none;padding:4px 6px;border-radius:6px;cursor:pointer;font:inherit;color:inherit;text-align:left}.agerow:hover,.agerow.on{background:var(--accent-weak)}
@@ -590,7 +595,7 @@ async function loadAll(){
     const st=await sb.from("settings").select("bank").eq("id",1).maybeSingle();if(st.data&&st.data.bank)S.bank=st.data.bank;
   }catch(e){view().innerHTML=`<div class="empty"><h2>데이터를 불러오지 못했습니다</h2><p>${esc(e.message||"")}</p><p>1단계 데이터베이스 설정(phase1.sql)을 실행했는지 확인해 주세요.</p></div>`;return}
   if(ui.sel&&!custById(ui.sel))ui.sel=null;
-  buildIdx();render();
+  buildIdx();render();checkNoticeNew();
 }
 async function fetchPays(){if(me&&me.role==="tech")return[];try{const r=await fetchAll("payments");ui.noPay=false;return r}catch(e){ui.noPay=true;return[]}}
 async function fetchFiles(){try{const r=await fetchAll("customer_files");ui.noFiles=false;return r}catch(e){ui.noFiles=true;return[]}}
@@ -633,11 +638,11 @@ function restoreScroll(s){if(!s||s.v!==ui.view)return;const els=[...document.que
 function render(){if(ui._fresh){ui._fresh=false;render0();window.scrollTo(0,0);return}const _sv=snapScroll();try{render0()}finally{restoreScroll(_sv)}}
 function render0(){
   ui.dirty=false;
-  const tabs=[["cust","고객"]];if(me.role!=="tech")tabs.push(["leads","DB관리"]);tabs.push(["work","당월 설치·A/S 전체리스트"]);if(me.role!=="tech")tabs.push(["ctrm","당월리스트"],["allm","전체리스트"],["asm","A/S관리"],["recv","미수·채권관리"]);tabs.push(["sched","담당자별 일정표"]);if(me.role!=="tech")tabs.push(["sms","문자"]);if(isAdmin())tabs.push(["staff","직원"],["settings","설정"]);
-  document.getElementById("nav").innerHTML=tabs.map(([k,l])=>`<button type="button" class="${ui.view===k?"on":""}" data-v="${k}">${l}</button>`).join("");
+  const tabs=[["cust","고객"]];if(me.role!=="tech")tabs.push(["leads","DB관리"]);tabs.push(["work","당월 설치·A/S 전체리스트"]);if(me.role!=="tech")tabs.push(["ctrm","당월리스트"],["allm","전체리스트"],["asm","A/S관리"],["recv","미수·채권관리"]);tabs.push(["sched","담당자별 일정표"]);if(me.role!=="tech")tabs.push(["sms","문자"]);tabs.push(["notice","공지사항"]);if(isAdmin())tabs.push(["staff","직원"],["settings","설정"]);
+  document.getElementById("nav").innerHTML=tabs.map(([k,l])=>`<button type="button" class="${ui.view===k?"on":""}${k==="notice"&&ui.view!=="notice"&&noticeUnread()?" ndot":""}" data-v="${k}">${l}</button>`).join("");
   document.querySelectorAll("#nav button").forEach(b=>b.onclick=()=>{ui.view=b.dataset.v;ui.jsel=new Set();ui._fresh=true;render()});
   if(ui.view==="install"||ui.view==="as")ui.view="work";
-  if(ui.view==="cust")renderCustView();else if(ui.view==="work")renderWorkView();else if(ui.view==="ctrm")renderCtrView();else if(ui.view==="asm")renderAsView();else if(ui.view==="leads")renderLeadView();else if(ui.view==="recv")renderRecvView();else if(ui.view==="allm")renderAllView();else if(ui.view==="sched")renderSchedView();else if(ui.view==="sms")renderSmsView();else if(ui.view==="staff")renderStaffView();else if(ui.view==="delete")renderDeleteView();else renderSettings();
+  if(ui.view==="cust")renderCustView();else if(ui.view==="work")renderWorkView();else if(ui.view==="ctrm")renderCtrView();else if(ui.view==="asm")renderAsView();else if(ui.view==="leads")renderLeadView();else if(ui.view==="recv")renderRecvView();else if(ui.view==="allm")renderAllView();else if(ui.view==="sched")renderSchedView();else if(ui.view==="sms")renderSmsView();else if(ui.view==="notice")renderNoticeView();else if(ui.view==="staff")renderStaffView();else if(ui.view==="delete")renderDeleteView();else renderSettings();
 }
 
 /* ================= 고객 ================= */
@@ -2209,6 +2214,55 @@ async function renderSmsTplSet(){const box=document.getElementById("smsSet");if(
   box.querySelectorAll("[data-td]").forEach(b=>b.onclick=async()=>{if(!(await askConfirm("이 문구를 삭제할까요?")))return;const {error}=await sb.from("sms_templates").delete().eq("id",b.dataset.td);if(error)return toast("삭제하지 못했습니다: "+error.message);renderSmsTplSet()});
   document.getElementById("tAdd").onclick=async()=>{const title=val("tNewT").trim(),content=val("tNewC").trim();if(!title||!content)return toast("제목과 내용을 입력하세요");
     const {error}=await sb.from("sms_templates").insert({title,content,sort:tpls.length+1});if(error)return toast("추가하지 못했습니다: "+error.message);renderSmsTplSet()}}
+
+/* ================= 공지사항 (사진 첨부) ================= */
+let notices=null;const _nurl={};
+async function fetchNotices(){const {data,error}=await sb.from("notices").select("*").order("created_at",{ascending:false}).limit(300);if(error){ui.noNotice=true;notices=[];return notices}ui.noNotice=false;notices=data||[];return notices}
+async function signNotice(paths){const now=Date.now();const need=[...new Set(paths)].filter(p=>!_nurl[p]||_nurl[p].exp<now+60000);
+  if(need.length){const {data,error}=await sb.storage.from("notices").createSignedUrls(need,3600);
+    if(!error&&data)data.forEach(d=>{if(d&&d.signedUrl&&!d.error){const u=/^https?:/.test(d.signedUrl)?d.signedUrl:SB_URL+"/storage/v1"+d.signedUrl;_nurl[d.path]={url:u,exp:now+3600000}}})}
+  return Object.fromEntries(paths.map(p=>[p,(_nurl[p]||{}).url||""]))}
+function noticeSeenKey(){return "hc.notice.seen."+(me&&me.id||"")}
+function noticeUnread(){if(!ui.lastNotice)return false;let s="";try{s=localStorage.getItem(noticeSeenKey())||""}catch(e){}return ui.lastNotice>s}
+async function checkNoticeNew(){try{const {data}=await sb.from("notices").select("created_at").order("created_at",{ascending:false}).limit(1);ui.lastNotice=data&&data[0]?data[0].created_at:"";
+  const b=document.querySelector('#nav button[data-v="notice"]');if(b)b.classList.toggle("ndot",noticeUnread())}catch(e){}}
+async function renderNoticeView(){const off=isOffice();if(!notices)view().innerHTML=`<p class="mapt" style="padding:20px">불러오는 중…</p>`;await fetchNotices();
+  if(notices.length){ui.lastNotice=notices.map(n=>n.created_at).sort().pop();try{localStorage.setItem(noticeSeenKey(),ui.lastNotice)}catch(e){}const b=document.querySelector('#nav button[data-v="notice"]');if(b)b.classList.remove("ndot")}
+  if(ui.nopen===undefined)ui.nopen=new Set();
+  const list=notices.slice().sort((a,b)=>(b.pinned-a.pinned)||String(b.created_at).localeCompare(String(a.created_at)));
+  view().innerHTML=`<div class="toolbar" style="padding:16px 20px 0"><h2 style="margin:0;font-size:18px">공지사항</h2><span class="mapt">${list.length}건</span><span style="flex:1"></span>${off&&!ui.noNotice?`<button class="btn pri" type="button" id="ntNew">+ 공지 작성</button>`:""}</div>
+   ${ui.noNotice?`<div class="sec"><p class="warnbox">공지사항을 쓰려면 Supabase SQL Editor에서 <b>phase1zd.sql</b>을 실행해 주세요.</p></div>`:""}
+   <div class="ntlist">${list.map(n=>{const op=ui.nopen.has(n.id);const imgs=Array.isArray(n.images)?n.images:[];return `<article class="nt${n.pinned?" pin":""}${op?" open":""}" data-nid="${n.id}">
+     <button type="button" class="nt-h" data-nt="${n.id}" aria-expanded="${op}">${n.pinned?`<span class="tag ntpin">고정</span>`:""}<b>${esc(n.title)}</b>${imgs.length?`<span class="mapt">사진 ${imgs.length}</span>`:""}<span style="flex:1"></span><span class="mapt">${esc(n.author_name)} · ${esc(fmtDT(n.created_at))}</span></button>
+     ${op?`<div class="nt-b"><div class="nt-c">${esc(n.content)}</div>${imgs.length?`<div class="nt-imgs">${imgs.map(im=>`<a href="#" data-np="${esc(im.path)}" target="_blank" rel="noopener"><img alt="${esc(im.name||"사진")}" data-np="${esc(im.path)}"></a>`).join("")}</div>`:""}
+       ${off?`<div class="toolbar" style="padding:8px 0 0"><span style="flex:1"></span><button class="btn sm" type="button" data-ne="${n.id}">고치기</button><button class="btn sm danger" type="button" data-nd="${n.id}">삭제</button></div>`:""}</div>`:""}</article>`}).join("")||(ui.noNotice?"":`<p class="mapt">등록된 공지가 없습니다.</p>`)}</div>`;
+  view().querySelectorAll("[data-nt]").forEach(b=>b.onclick=()=>{const id=b.dataset.nt;ui.nopen.has(id)?ui.nopen.delete(id):ui.nopen.add(id);renderNoticeView()});
+  const nn=document.getElementById("ntNew");if(nn)nn.onclick=()=>noticeDlg(null);
+  view().querySelectorAll("[data-ne]").forEach(b=>b.onclick=()=>noticeDlg(notices.find(n=>n.id===b.dataset.ne)));
+  view().querySelectorAll("[data-nd]").forEach(b=>b.onclick=async()=>{const n=notices.find(x=>x.id===b.dataset.nd);if(!(await askConfirm(`‘${n.title}’ 공지를 삭제할까요? 첨부한 사진도 함께 지워집니다.`)))return;
+    const ps=(n.images||[]).map(i=>i.path);const {error}=await sb.from("notices").delete().eq("id",n.id);if(error)return toast("삭제하지 못했습니다: "+error.message);if(ps.length)await sb.storage.from("notices").remove(ps);toast("삭제했습니다");renderNoticeView()});
+  const ps=[...view().querySelectorAll("img[data-np]")].map(i=>i.dataset.np);
+  if(ps.length){const m=await signNotice(ps);view().querySelectorAll("[data-np]").forEach(el=>{const u=m[el.dataset.np];if(!u)return;if(el.tagName==="IMG")el.src=u;else el.href=u})}}
+function noticeDlg(n){const isNew=!n;const keep=new Set((n&&n.images||[]).map(i=>i.path));const add=[];
+  openDlg(isNew?"공지 작성":"공지 고치기",`<div id="ntf" style="display:grid;gap:10px">${inp("title","제목",n?n.title:"")}
+    <label class="f">내용<textarea name="content" rows="8" style="min-height:180px">${esc(n?n.content:"")}</textarea></label>
+    <label class="chip" style="justify-self:start"><input type="checkbox" name="pinned" ${n&&n.pinned?"checked":""}>맨 위에 고정</label>
+    <fieldset class="nfiles"><legend>사진</legend><div class="toolbar" style="padding:0"><label class="btn"><input type="file" id="ntIn" accept="image/*" multiple hidden>사진 추가</label><span class="mapt" id="ntSt">사진은 자동으로 줄여서 올립니다.</span></div><div class="nt-imgs edit" id="ntGrid"></div></fieldset></div>`,
+   [["취소"],["저장","pri",async()=>{const f=fdata("ntf");const title=(f.get("title")||"").trim(),content=(f.get("content")||"").trim();if(!title){toast("제목을 입력하세요");return true}
+     const st=document.getElementById("ntSt");const imgs=(n&&n.images||[]).filter(i=>keep.has(i.path));let fail=0;
+     for(let i=0;i<add.length;i++){st.textContent=`사진 올리는 중… ${i+1}/${add.length}`;try{const f0=add[i].file;if(f0.size>15*1024*1024)throw new Error("15MB 초과");const ff=await shrinkForStore(f0);const ext=((ff.name.match(/\.(\w+)$/)||[,""])[1]||"jpg").toLowerCase();
+       const path=`${today().slice(0,7)}/${Date.now()}-${Math.random().toString(36).slice(2,7)}.${ext}`;const up=await sb.storage.from("notices").upload(path,ff,{contentType:ff.type||"image/jpeg",upsert:false});if(up.error)throw up.error;imgs.push({path,name:f0.name.slice(0,120)})}catch(e){fail++}}
+     const row={title,content,pinned:!!f.get("pinned"),images:imgs};
+     const r=isNew?await sb.from("notices").insert(Object.assign(row,{author_name:me.name||""})):await sb.from("notices").update(row).eq("id",n.id);
+     if(r.error){toast("저장하지 못했습니다: "+r.error.message);return true}
+     const gone=(n&&n.images||[]).filter(i=>!keep.has(i.path)).map(i=>i.path);if(gone.length)await sb.storage.from("notices").remove(gone);
+     add.forEach(x=>x.url&&URL.revokeObjectURL(x.url));toast(fail?`저장했습니다 (사진 ${fail}장은 올리지 못했습니다)`:"저장했습니다");renderNoticeView()}]]);
+  const grid=document.getElementById("ntGrid");
+  const draw=async()=>{const old=(n&&n.images||[]).filter(i=>keep.has(i.path));const m=old.length?await signNotice(old.map(i=>i.path)):{};
+    grid.innerHTML=old.map(i=>`<div class="nti"><img alt="" src="${esc(m[i.path]||"")}"><button type="button" class="btn sm danger" data-rm="${esc(i.path)}">빼기</button></div>`).join("")+add.map((x,k)=>`<div class="nti"><img alt="" src="${x.url}"><button type="button" class="btn sm danger" data-rn="${k}">빼기</button></div>`).join("");
+    grid.querySelectorAll("[data-rm]").forEach(b=>b.onclick=()=>{keep.delete(b.dataset.rm);draw()});grid.querySelectorAll("[data-rn]").forEach(b=>b.onclick=()=>{const x=add.splice(+b.dataset.rn,1)[0];if(x&&x.url)URL.revokeObjectURL(x.url);draw()})};
+  draw();
+  const fi=document.getElementById("ntIn");fi.onchange=()=>{[...fi.files].filter(f=>/^image\//.test(f.type)).forEach(file=>add.push({file,url:URL.createObjectURL(file)}));fi.value="";draw()}}
 
 /* ================= 계약 ================= */
 function renderContracts(c){
