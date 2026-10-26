@@ -998,7 +998,7 @@ function installOf(k){if(k.__job)return k.__job;if(!instIdx)buildInstIdx();retur
 const CCOLS=[
  ["basis","기준",1],["ctype","구분",1],["stage","진행단계",1],["trial","무료체험 종료일",1],["name","업체명(상호)",1],["ceo","대표자",1],["phone","전화번호",1],["addr","상점주소",0],
  ["cdate","계약일자",1],["idate","예정일",1],["iwday","요일",1],["itime","시간",1],["channel","영업 경로",0],["referrer","소개",0],["s1","1차",0],["s2","2차",0],["s3","3차(담당)",1],["doc","계약서",0],["tech","설치기사",0],
- ["product","제품",1],["size","사이즈",1],["serial","시리얼",1],["wash","수압식",0],["sink","싱크준비",1],["parts","부자재",0],["amount","합계금액",1],["card","카드",1],["cash","현금+캐피탈",1],["paid","입금합계",0],["unpaid","미수금",1],["last","최종결제일",1],
+ ["product","제품",1],["size","사이즈",1],["serial","시리얼",1],["wash","수압식",0],["sink","싱크준비",1],["sinkm","싱크대 메모",1],["parts","부자재",0],["amount","합계금액",1],["card","카드",1],["cash","현금+캐피탈",1],["paid","입금합계",0],["unpaid","미수금",1],["last","최종결제일",1],
  ["approval","승인처",1],["tax","계산서 발급",0],["chk_cust","고객등록",1],["chk_slip","전표마감",1],["chk_sales","매출마감",1],["chk_month","월마감",1],["memo","비고",1]];
 const MONEYC=new Set(["amount","card","cash","paid","unpaid"]);
 /* 표 열 설정(넣고 빼기·순서·너비) — 계약관리(ctr)·작업현황(work) 공용, 브라우저별로 기억 */
@@ -1138,6 +1138,7 @@ function ctrCell(col,k,c,st,basis){
     case"serial":return `<td>${esc(k.serial||"")}</td>`;
     case"wash":return `<td>${k.wash_added?"수압식":""}</td>`;
     case"sink":return `<td>${ij?sinkCell(ij):""}</td>`;
+    case"sinkm":return `<td class="wrap memo"><div class="clamp">${esc(ij&&ij.sink_memo||"")}</div></td>`;
     case"parts":return `<td>${esc(ij&&ij.parts||"")}</td>`;
     case"amount":return `<td class="num">${won0(k.amount)}</td>`;
     case"card":return `<td class="num">${st.card?won0(st.card):""}</td>`;
@@ -2351,7 +2352,9 @@ function addXlsBtn(){const v=ui.view;if(!XSEL[v]||!isOffice()||!window.XLSX)retu
 function exportView(){const v=ui.view;const sel=XSEL[v];if(!sel)return;toast("엑셀 파일을 만드는 중…");
   setTimeout(()=>{let tbl;ui.xAll=true;try{render();tbl=view().querySelector(sel);if(!tbl)return toast("내려받을 표가 없습니다");tbl=tbl.cloneNode(true)}finally{ui.xAll=false}
     try{tbl.querySelectorAll(".fbtn,.rz,button,svg").forEach(x=>{if(x.tagName==="BUTTON"&&x.closest("td")&&x.textContent.trim()&&!x.classList.contains("fbtn"))x.replaceWith(document.createTextNode(x.textContent));else x.remove()});
-      tbl.querySelectorAll("th,td").forEach(c=>{if(c.querySelector('input[type=checkbox]')&&!c.textContent.trim())c.remove()});
+      /* 맨 앞 선택(체크) 칸은 제목·본문·합계 줄 모두에서 같이 빼서 칸이 밀리지 않게 */
+      const fr=tbl.querySelector("tbody tr");if(fr&&fr.cells[0]&&fr.cells[0].querySelector('input[type=checkbox]'))tbl.querySelectorAll("tr").forEach(r=>{if(r.cells[0]&&(r.cells.length>1))r.deleteCell(0)});
+      tbl.querySelectorAll("input,select,textarea").forEach(x=>x.remove());
       tbl.querySelectorAll("th").forEach(c=>{c.textContent=c.textContent.replace(/[▼▲]/g,"").trim()});
       const ws=XLSX.utils.table_to_sheet(tbl,{raw:true});const rg=XLSX.utils.decode_range(ws["!ref"]||"A1");const wid=[];
       for(let R=rg.s.r;R<=rg.e.r;R++)for(let C=rg.s.c;C<=rg.e.c;C++){const a=XLSX.utils.encode_cell({r:R,c:C}),cell=ws[a];if(!cell)continue;let s=String(cell.v??"").trim();
@@ -2617,7 +2620,7 @@ function monthBuckets(list,ym){
 }
 function whoOf(j){const tn=(j.techs||[]).map(staffName).filter(Boolean);const extra=String(j.tech_names||"").split(/[\s,/]+/).filter(t=>t&&!tn.includes(t)&&!staff.some(x=>tn.includes(x.name)&&(x.aliases||[]).includes(t))).join(" ");return [tn.join(", "),extra].filter(Boolean).join(" · ")}
 const WCOLS=[["rmon","접수월",1],["kind","구분",1],["name","업체명(상호)",1],["ceo","대표자",0],["phone","전화번호",1],["region","지역",1],["addr","상세주소",1],["cdate","계약/접수",1],["rdate","접수일",0],["visit","예정일",1],["wday","요일",1],["time","시간",1],
- ["product","제품",1],["size","규격",1],["serial","시리얼",1],["wash","수압식",1],["sink","싱크대",1],["parts","제공 부자재",0],["symptom","접수내용",1],["result","처리내용",0],["sales","영업담당",1],["tech","배정",1],["status","처리현황",1],["done","완료일",0],["photo","사진",0]];
+ ["product","제품",1],["size","규격",1],["serial","시리얼",1],["wash","수압식",1],["sink","싱크대",1],["sinkm","싱크대 메모",1],["parts","제공 부자재",0],["symptom","접수내용",1],["result","처리내용",0],["sales","영업담당",1],["tech","배정",1],["status","처리현황",1],["done","완료일",0],["photo","사진",0]];
 /* 설치 접수내용 = 계약 비고 (+ 작업에 적은 요청 사항) */
 function jobNote(j,k){if(j.kind!=="install")return j.symptom||"";const kk=(k&&k.id?k:ctrById(j.contract_id))||{};return [kk.memo,j.symptom].map(x=>String(x||"").trim()).filter(Boolean).filter((x,i,a)=>a.indexOf(x)===i).join(" / ")}
 function wCell(col,j,c,k,td){const p=asLike(j)?asProd(j):(j.product||{});const rd=rdOf(j);const vd=j.visit_date;const openJ=!["완료","취소"].includes(j.status);
@@ -2639,6 +2642,7 @@ function wCell(col,j,c,k,td){const p=asLike(j)?asProd(j):(j.product||{});const r
     case"serial":return `<td>${esc(j.kind==="addon"?"":p.serial||"")}</td>`;
     case"wash":return `<td>${j.kind==="install"&&k.wash_added?"수압식":""}</td>`;
     case"sink":return `<td>${asLike(j)?"":sinkCell(j)}</td>`;
+    case"sinkm":return `<td class="wrap memo"><div class="clamp">${asLike(j)?"":esc(j.sink_memo||"")}</div></td>`;
     case"parts":return `<td>${esc(j.parts||"")}</td>`;
     case"symptom":{const v=jobNote(j,k);return `<td class="wrap memo" title="${esc(v)}"><div class="clamp">${esc(v)}</div></td>`}
     case"result":return `<td class="wrap">${esc(j.result||"")}</td>`;
