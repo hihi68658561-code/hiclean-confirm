@@ -661,7 +661,7 @@ function render0(){
   if(me.role==="sales"&&(ui.view==="work"||ui.view==="asm"))ui.view="home";
   const tabs=[["home","홈"],["cust","고객"]];if(me.role!=="tech")tabs.push(["leads","DB관리"]);if(me.role!=="sales")tabs.push(["work","당월 설치·A/S 전체리스트"]);if(me.role!=="tech")tabs.push(["ctrm","당월리스트"],["allm","전체리스트"],...(me.role==="sales"?[]:[["asm","A/S관리"]]),["recv","미수·채권관리"]);tabs.push(["sched","담당자별 일정표"]);if(me.role!=="tech")tabs.push(["sink","싱크대발주"]);if(me.role!=="tech")tabs.push(["sms","문자"]);tabs.push(["notice","공지사항"]);if(isAdmin())tabs.push(["staff","직원"],["settings","설정"]);
   document.getElementById("nav").innerHTML=tabs.map(([k,l])=>`<button type="button" class="${ui.view===k?"on":""}${k==="notice"&&ui.view!=="notice"&&noticeUnread()?" ndot":""}" data-v="${k}">${l}</button>`).join("");
-  document.querySelectorAll("#nav button").forEach(b=>b.onclick=()=>{ui.view=b.dataset.v;ui.jsel=new Set();ui._fresh=true;render()});
+  document.querySelectorAll("#nav button").forEach(b=>b.onclick=()=>{ui.view=b.dataset.v;if(ui.view==="sched")ui.schJump=true;ui.jsel=new Set();ui._fresh=true;render()});
   if(ui.view==="install"||ui.view==="as")ui.view="work";
   if(ui.view==="home")renderHomeView();else if(ui.view==="cust")renderCustView();else if(ui.view==="work")renderWorkView();else if(ui.view==="ctrm")renderCtrView();else if(ui.view==="asm")renderAsView();else if(ui.view==="leads")renderLeadView();else if(ui.view==="recv")renderRecvView();else if(ui.view==="allm")renderAllView();else if(ui.view==="sched")renderSchedView();else if(ui.view==="sms")renderSmsView();else if(ui.view==="notice")renderNoticeView();else if(ui.view==="sink")renderSinkView();else if(ui.view==="staff")renderStaffView();else if(ui.view==="delete")renderDeleteView();else renderSettings();
   addXlsBtn();
@@ -1562,7 +1562,12 @@ const KHOL={"2025-01-01":"신정","2025-01-27":"임시공휴일","2025-01-28":"�
 const SCH_OUT=["싱크닥터","아트원","용달착불","쿡키스","이성진"];
 function schNames(j){return (j.techs||[]).length?[]:String(j.tech_names||"").split(/[\s,\/·]+/).map(x=>x.trim()).filter(Boolean)}
 function schDay(j){return j.visit_date||j.done_date||""}
-function renderSchedView(){const _sv=snapScroll();renderSchedView0();restoreScroll(_sv)}
+function renderSchedView(){const _sv=snapScroll();renderSchedView0();restoreScroll(_sv);if(ui.schJump){ui.schJump=false;schJumpToday()}}
+/* 일정표를 열면 오늘 날짜 줄이 맨 위에 오게 */
+function schJumpToday(){const tbl=view().querySelector(".wt.sch");if(!tbl)return;const row=tbl.querySelector("tbody tr.stoday");if(!row)return;const box=tbl.closest(".wtbox");
+  requestAnimationFrame(()=>{const th=tbl.querySelector("thead");const hh=th?th.getBoundingClientRect().height:0;
+    if(box&&box.scrollHeight>box.clientHeight+4){box.scrollTop=row.offsetTop-hh-2;box.getBoundingClientRect().top<0&&box.scrollIntoView({block:"start"})}
+    else row.scrollIntoView({block:"start"})})}
 function renderSchedView0(){
   if(!ui.sm)ui.sm=thisMonth();const [st0,en0]=monthRange(ui.sm);const inM=d=>d&&d>=st0&&d<en0;
   const mj=jobs.filter(j=>inM(schDay(j)));
@@ -1612,8 +1617,8 @@ function renderSchedView0(){
     st.textContent=window.innerWidth<768?`.wt.sch .sf1{left:0}.wt.sch .sf2{left:${w[0]}px;box-shadow:inset -3px 0 0 #555}.wt.sch .sf3{position:static!important;box-shadow:none;max-width:90px;overflow:hidden;text-overflow:ellipsis}`
       :`.wt.sch .sf1{left:0}.wt.sch .sf2{left:${w[0]}px}.wt.sch .sf3{left:${w[0]+w[1]}px}`})();
   const re=()=>renderSchedView();
-  document.getElementById("sM").onchange=e=>{if(e.target.value){ui.sm=e.target.value;re()}};
-  const sn=document.getElementById("sNow");if(sn)sn.onclick=()=>{ui.sm=thisMonth();re()};
+  document.getElementById("sM").onchange=e=>{if(e.target.value){ui.sm=e.target.value;if(ui.sm===thisMonth())ui.schJump=true;re()}};
+  const sn=document.getElementById("sNow");if(sn)sn.onclick=()=>{ui.sm=thisMonth();ui.schJump=true;re()};
   view().querySelectorAll("[data-shide]").forEach(x=>x.onchange=()=>{const h=schHidden();x.checked?h.delete(x.dataset.shide):h.add(x.dataset.shide);schSetHidden(h);re()});
   const tb=view().querySelector(".wt.sch tbody");
   tb.onclick=e=>{const t=e.target.closest("td");if(!t)return;
