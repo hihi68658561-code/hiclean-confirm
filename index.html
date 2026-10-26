@@ -206,7 +206,7 @@ body.resizing,body.resizing *{cursor:col-resize!important;user-select:none}
 .skit{border:1px solid var(--line);border-radius:8px;padding:8px 10px;display:grid;gap:6px}.skit-h{display:flex;align-items:center;justify-content:space-between}.skg{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:6px}.skg .s2{grid-column:span 2}.skg input{width:100%;min-width:0}.skg.sp{grid-template-columns:1fr 1fr 2fr;align-items:end}
 @media (max-width:760px){.skg{grid-template-columns:repeat(3,minmax(0,1fr))}.skg .s2{grid-column:span 3}.skg.sp{grid-template-columns:1fr 1fr}}
 .wt.sm{font-size:12px;border:2px solid #333!important}.wt.sm td,.wt.sm th{border-bottom:1px solid #9aa4ae!important}.wt.sm td,.wt.sm thead th{border-left:1px solid #9aa4ae}
-.wt.su{border:none}.wt.su thead{position:sticky;top:0;z-index:3}.wt.su thead th{position:static!important}.wt.su td,.wt.su th{border:none!important;border-right:1px solid #d5dbe1!important;border-bottom:1px solid #d5dbe1!important;text-align:center}.wt.su th .fbtn{margin-left:3px}.wt.su td.memo{text-align:left}.wt.su thead th{font-weight:700;color:#1b1b1b}
+.wt.su{border:none}.sused .uclk{cursor:pointer}.sused tbody .uclk:hover td,.sused thead .uclk:hover th{background:#fff4e5}.sused .uclk.on td{background:#ffe8cc;font-weight:600}.wt.su thead{position:sticky;top:0;z-index:3}.wt.su thead th{position:static!important}.wt.su td,.wt.su th{border:none!important;border-right:1px solid #d5dbe1!important;border-bottom:1px solid #d5dbe1!important;text-align:center}.wt.su th .fbtn{margin-left:3px}.wt.su td.memo{text-align:left}.wt.su thead th{font-weight:700;color:#1b1b1b}
 .wt.su th.hg-p{background:#D9D9D9}.wt.su th.hg-q{background:#FFFF00}.wt.su th.hg-m{background:#DDEBF7}.wt.su th.hg-c{background:#FFE699}.wt.su th.hg-s{background:#9BC2E6}.wt.su th.hg-u{background:#fff}
 .wt.su td.sq{font-weight:700}.wt.su td.q1{background:#FF0000!important;color:#fff!important}.wt.su td.qp{background:#FFFF00!important;color:#FF0000!important}.wt.su td.sser{font-weight:700}.wt.sm .szs{border-left:2px solid #555!important}.wt.sm tbody tr>td:last-child,.wt.sm thead tr:first-child>th:last-child{border-left:2px solid #555}.wt.sm th,.wt.sm td{padding:3px 5px;text-align:center;min-width:26px}.wt.sm td.cl{cursor:pointer}.wt.sm td.cl:hover,.wt.sm td.cl.on{background:var(--accent-weak);outline:2px solid var(--accent)}
 .wt.sm th.smodel{writing-mode:horizontal-tb;font-weight:700;min-width:84px}.wt.sm th.sm0{background:#FFFF00;color:#1b1b1b}.wt.sm th.sm1{background:#00B0F0;color:#1b1b1b}.wt.sm th.sm2{background:#DDEBF7;color:#1b1b1b}
@@ -2569,7 +2569,7 @@ function stockUltraHtml(){const cm=stkCtrMap();const units=stkUnits.map(u=>({u,s
   const side=`<div class="sside"><table class="stafft slegend"><thead><tr><th colspan="2">TYPE 정리</th></tr></thead><tbody>
       <tr><th>품명</th><td>ON : Oncare<br>AT : 올뉴트리플<br>CL : 클린365</td></tr><tr><th>채널</th><td>1 : 1채널 · 3 : 3채널</td></tr>
       <tr><th>TYPE</th><td>A : 세로 700<br>B : 세로 600<br>C : 세로 특수 사이즈</td></tr><tr><th>턱</th><td>유턱 : 1 · 무턱 : 0</td></tr><tr><th>배수</th><td>우 : R · 좌 : L</td></tr></tbody></table>
-    <table class="stafft sused"><thead><tr><th>중고 내역</th><th class="num">${usedIn}</th></tr></thead><tbody>${Object.entries(ug).sort((a,b)=>b[1]-a[1]).map(([k,n])=>`<tr><td>${esc(k)}</td><td class="num">${n}</td></tr>`).join("")||`<tr><td colspan="2" class="mapt">중고 재고 없음</td></tr>`}</tbody></table>
+    <table class="stafft sused"><thead><tr class="uclk" data-uspec="" role="button" tabindex="0" title="중고 재고 전체 보기"><th>중고 내역</th><th class="num">${usedIn}</th></tr></thead><tbody>${Object.entries(ug).sort((a,b)=>b[1]-a[1]).map(([k,n])=>`<tr class="uclk${ui.sfil&&ui.sfil.spec===k?" on":""}" data-uspec="${esc(k)}" role="button" tabindex="0" title="이 중고 제품 보기"><td>${esc(k)}</td><td class="num">${n}</td></tr>`).join("")||`<tr><td colspan="2" class="mapt">중고 재고 없음</td></tr>`}</tbody></table>
     ${(()=>{const pl=units.filter(x=>x.u.status==="생산예정").length;return pl?`<div class="splanbox" role="button" tabindex="0" id="sPlan">생산입고<br>등록요망 <b>${pl}</b></div>`:""})()}</div>`;
   const mat=`<div class="srow"><div class="wrapx vis" style="padding-top:6px;min-width:0;max-width:100%"><div class="wtbox" style="max-height:none;width:fit-content;max-width:100%"><table class="wt sm"><thead><tr><th colspan="3">구분</th>${sizes.map(s=>`<th colspan="3" class="szs">${s}</th>`).join("")}<th rowspan="2">합계</th></tr>
       <tr><th>제품</th><th>턱</th><th>배수</th>${sizes.map(()=>STK_TY.map(t=>`<th title="${STK_TYNAME[t]}" class="${t==="A"?"szs":""}">${t}</th>`).join("")).join("")}</tr></thead><tbody>${tb}
@@ -2584,7 +2584,7 @@ function stockListHtml(units,usedOnly){if(!ui.sst)ui.sst="in";if(ui.sq===undefin
   const f=ui.sfil;const qq=ui.sq.trim().toLowerCase();
   if(ui.sst==="x"&&false)ui.sst="in";const stOk=(x,s)=>s==="all"||(s==="x"?(x.s.st==="x"&&x.s.label==="생산예정"):s==="used"?(x.u.used&&x.s.st==="in"):x.s.st===s);
   let list=units.filter(x=>(!usedOnly||x.u.used)&&stOk(x,ui.sst)
-    &&(!f||(x.u.model===f.m&&x.u.size===f.s&&x.u.ty===f.t&&(f.lip==null||x.u.lip===f.lip)&&(f.dr==null||x.u.drain===f.dr)&&!x.u.used))
+    &&(!f||(f.spec?(x.u.used&&stkSpec(x.u)===f.spec):(x.u.model===f.m&&x.u.size===f.s&&x.u.ty===f.t&&(f.lip==null||x.u.lip===f.lip)&&(f.dr==null||x.u.drain===f.dr)&&!x.u.used)))
     &&(!qq||[x.u.serial,x.u.no,x.u.remark,x.s.site,stkSpec(x.u),x.u.grade].join(" ").toLowerCase().includes(qq)));
   list.sort((a,b)=>String(b.u.in_date||"").localeCompare(String(a.u.in_date||""))||String(b.u.no).localeCompare(String(a.u.no)));
   list=cfApply("stk",list,stkTxt);
@@ -2592,7 +2592,7 @@ function stockListHtml(units,usedOnly){if(!ui.sst)ui.sst="in";if(ui.sq===undefin
   const shown=list.slice(0,ui.xAll?1e9:500);
   return `<div class="toolbar" style="flex-wrap:wrap"><input id="sQ" type="search" placeholder="시리얼·번호·업장·메모 검색" value="${esc(ui.sq)}">
      <div class="nav" role="group">${[["all","전체"],["in","재고"],["out","출고"],["used","중고"],["x","생산예정"]].map(([k,l])=>`<button type="button" data-sst="${k}" class="${ui.sst===k?"on":""}">${l} ${cntSt(k)}</button>`).join("")}</div>
-     ${f?`<span class="chip on">${esc((STK_MODELS[f.m]||{}).short||f.m)} ${f.s}${f.t}${f.lip===1?" 유턱":f.lip===0?" 무턱":""}${f.dr==="R"?" 우":f.dr==="L"?" 좌":""} <button type="button" class="btn sm" id="sFx">✕</button></span>`:""}<span class="mapt">${list.length}대</span>${cfClearBtn("stk")}<span style="flex:1"></span>
+     ${f?`<span class="chip on">${f.spec?"중고 · "+esc(f.spec):`${esc((STK_MODELS[f.m]||{}).short||f.m)} ${f.s}${f.t}`}${f.lip===1?" 유턱":f.lip===0?" 무턱":""}${f.spec?"":f.dr==="R"?" 우":f.dr==="L"?" 좌":""} <button type="button" class="btn sm" id="sFx">✕</button></span>`:""}<span class="mapt">${list.length}대</span>${cfClearBtn("stk")}<span style="flex:1"></span>
      <button class="btn" type="button" id="sImp">엑셀 가져오기</button><button class="btn" type="button" id="sNewU">+ 중고 입고</button><button class="btn pri" type="button" id="sNew">+ 입고 등록</button><input type="file" id="sImpIn" accept=".xlsx,.xls" hidden></div>
    <div class="wrapx vis" style="padding-top:6px"><div class="wtbox"><table class="wt su"><thead>
      <tr><th colspan="10" class="hg-p">생산부 기입</th><th rowspan="3" class="hg-q">수량</th><th colspan="2" class="hg-m">관리부 기입</th><th class="hg-c">공통 기입</th><th rowspan="3" class="hg-s">Serial No.</th><th rowspan="3" class="hg-u">중고여부</th><th rowspan="3" class="hg-u">등급</th></tr>
@@ -2611,6 +2611,7 @@ function bindStockUnits(){const re=()=>renderStockView();cfBind("stk",re);
   view().querySelectorAll("[data-sst]").forEach(b=>b.onclick=()=>{ui.sst=b.dataset.sst;re()});
   const fx=document.getElementById("sFx");if(fx)fx.onclick=()=>{ui.sfil=null;re()};
   const nb=document.getElementById("sNew");if(nb)nb.onclick=()=>stockUnitDlg(null,false);const nu=document.getElementById("sNewU");if(nu)nu.onclick=()=>stockUnitDlg(null,true);
+  view().querySelectorAll("[data-uspec]").forEach(el=>{const go=()=>{const k=el.dataset.uspec;ui.sst="used";ui.sfil=k?(ui.sfil&&ui.sfil.spec===k?null:{spec:k}):null;re().then(()=>{const t=view().querySelector(".wt.su");if(t)t.scrollIntoView({behavior:"smooth",block:"start"})})};el.onclick=go;el.onkeydown=e=>{if(e.key==="Enter"||e.key===" "){e.preventDefault();go()}}});
   const sp=document.getElementById("sPlan");if(sp)sp.onclick=()=>{ui.sst="x";ui.sfil=null;renderStockView().then(()=>{const t=view().querySelector(".wt.su");if(t)t.scrollIntoView({behavior:"smooth",block:"start"})})};
   view().querySelectorAll("tr[data-su]").forEach(tr=>tr.onclick=()=>stockUnitDlg(stkUnits.find(u=>u.id===tr.dataset.su)));
   const imp=document.getElementById("sImp"),inp_=document.getElementById("sImpIn");if(imp)imp.onclick=()=>inp_.click();
