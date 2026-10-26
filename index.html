@@ -682,12 +682,14 @@ function renderCustMain(){
   const tabs=[["info","고객정보"]];if(me.role!=="tech")tabs.push(["ctr",`계약 (${ks.length})`]);tabs.push(["install",`설치·철거 (${js.filter(j=>j.kind!=="as").length})`],["as",`A/S (${js.filter(j=>j.kind==="as").length})`],["files",`사진·서류 (${custFiles(c).filter(f=>!(me.role==="tech"&&f.kind==="계약서")).length})`],["conf","확인서"]);
   if(me.role!=="tech"&&!ui.noLeads)tabs.splice(1,0,["lead",`DB 상담 (${custLeads(c).length})`]);
   if(me.role!=="tech"&&!ui.noRecv){const rn=recvItems().filter(x=>x.c.id===c.id&&x.open).length;if(rn||ui.ctab==="recv")tabs.push(["recv",`채권 (${rn})`])}
+  if(me.role!=="tech")tabs.push(["sms","문자"]);
   if(!tabs.some(t=>t[0]===ui.ctab))ui.ctab="info";
-  m.innerHTML=`<div class="chead"><h2>${esc(c.name)}</h2><span class="meta">${esc([c.ceo,c.phone||c.phone2,"담당 "+(staffName(c.owner)||c.owner_name||"-")].filter(Boolean).join(" · "))}</span>${canNewJob(c)||(me.role!=="tech"&&canEditCust(c))?`<button class="btn pri" type="button" id="cIntake" style="margin-left:auto">+ 신규접수</button>`:""}</div>
+  m.innerHTML=`<div class="chead"><h2>${esc(c.name)}</h2><span class="meta">${esc([c.ceo,c.phone||c.phone2,"담당 "+(staffName(c.owner)||c.owner_name||"-")].filter(Boolean).join(" · "))}</span><span style="margin-left:auto;display:flex;gap:8px">${c.phone||c.phone2?`<button class="btn" type="button" id="cSms">문자</button>`:""}${canNewJob(c)||(me.role!=="tech"&&canEditCust(c))?`<button class="btn pri" type="button" id="cIntake">+ 신규접수</button>`:""}</span></div>
    <div class="tabs">${tabs.map(([k,l])=>`<button type="button" class="tab${ui.ctab===k?" on":""}" data-t="${k}">${l}</button>`).join("")}</div><div id="tabBody"></div>`;
   m.querySelectorAll(".tab").forEach(b=>b.onclick=()=>{ui.ctab=b.dataset.t;ui.draft=null;renderCustMain()});
+  const cs_=document.getElementById("cSms");if(cs_)cs_.onclick=()=>smsDlg({c});
   const ci=document.getElementById("cIntake");if(ci)ci.onclick=()=>jobDlg(null,c,ui.ctab==="as"?"as":(me.role==="tech"?"as":"ctr"));
-  if(ui.ctab==="info")renderCustInfo(c);else if(ui.ctab==="lead")renderCustLeads(c);else if(ui.ctab==="recv")renderCustRecv(c);else if(ui.ctab==="ctr")renderContracts(c);else if(ui.ctab==="install"||ui.ctab==="as")renderCustJobs(c,ui.ctab);else if(ui.ctab==="files")renderCustFiles(c);else renderConf(c);
+  if(ui.ctab==="info")renderCustInfo(c);else if(ui.ctab==="lead")renderCustLeads(c);else if(ui.ctab==="recv")renderCustRecv(c);else if(ui.ctab==="ctr")renderContracts(c);else if(ui.ctab==="install"||ui.ctab==="as")renderCustJobs(c,ui.ctab);else if(ui.ctab==="files")renderCustFiles(c);else if(ui.ctab==="sms")renderCustSms(c);else renderConf(c);
 }
 function inp(name,label,v,type="text",ro=false,extra=""){return `<label class="f">${label}<input name="${name}" type="${type}" value="${esc(v??"")}" ${ro?"readonly":""} ${extra}></label>`}
 function sel(name,label,opts,v,ro=false){return `<label class="f">${label}<select name="${name}" ${ro?"disabled":""}>${opts.map(o=>Array.isArray(o)?`<option value="${esc(o[0])}" ${o[0]===v?"selected":""}>${esc(o[1])}</option>`:`<option ${o===v?"selected":""}>${esc(o)}</option>`).join("")}</select></label>`}
@@ -2033,7 +2035,7 @@ function recvDlg(x){const cs=x.cs||{stage:"정상관리",transfer:{}};const off=
      <datalist id="tStat">${["내용증명 발송","전자소송","지급명령 신청","지급명령 확정","소송 진행","강제집행","추심 진행","합의"].map(v=>`<option value="${v}">`).join("")}</datalist><datalist id="tTo"><option value="SCI"></datalist></fieldset>
    ${ui.noFiles||!x.c.id?"":`<fieldset class="nfiles"><legend>채권 서류 (내용증명·지급명령 등)</legend><div class="toolbar" style="padding:0"><label class="btn"><input type="file" id="rfIn" accept="image/*,application/pdf" multiple hidden>서류 올리기</label><span class="mapt" id="rfSt"></span></div><div class="fgrid sm" id="rfGrid"></div></fieldset>`}
    </div>`,
-   [...(x.c.id?[["고객정보","gocust",()=>{openCustPopup(x.c,()=>{});return true}]]:[]),["닫기"],...(x.t==="etc"&&adm?[["삭제","danger",async()=>{if(!(await askConfirm("이 직접 등록 채권과 관리이력을 삭제할까요?")))return true;const {error}=await sb.from("recv_cases").delete().eq("id",x.cs.id);if(error)return toast("삭제하지 못했습니다: "+error.message);toast("삭제했습니다");reload(["recv","rlogs"])}]]:[]),
+   [...(x.c.id?[["고객정보","gocust",()=>{openCustPopup(x.c,()=>{});return true}]]:[]),["닫기"],...(x.c.id&&(x.c.phone||x.c.phone2)?[["문자","",()=>{smsDlg({c:x.c,vars:{미수금:won0(x.unpaid),금액:won0(x.amount)},ref_type:"recv",ref_id:x.cs&&x.cs.id||null,tpl:"미수 안내"});return true}]]:[]),...(x.t==="etc"&&adm?[["삭제","danger",async()=>{if(!(await askConfirm("이 직접 등록 채권과 관리이력을 삭제할까요?")))return true;const {error}=await sb.from("recv_cases").delete().eq("id",x.cs.id);if(error)return toast("삭제하지 못했습니다: "+error.message);toast("삭제했습니다");reload(["recv","rlogs"])}]]:[]),
     ...(off||me.role==="sales"?[["저장","pri",async()=>{
       const f=fdata("rf");const st=f.get("stage")||x.mstage;
       const p={next_date:f.get("next_date")||null,promise_date:f.get("promise_date")||null,promise_amount:Number(f.get("promise_amount")||0)||0};
@@ -2121,6 +2123,62 @@ function renderCustRecv(c){const tb=document.getElementById("tabBody");const xs=
    <div class="cards">${xs.map(x=>{const L=x.logs[0];return `<div class="card click" data-rt="${x.t}" data-rid="${x.id}"><div class="t"><span class="tag rs-${esc(x.stage)}">${esc(x.stage)}</span> ${esc(x.t==="ctr"?"계약":x.t==="etc"?x.kind:KLABEL[x.j.kind]||"A/S")} · 미수 <b class="neg">${won0(x.unpaid)}</b> · 설치 ${esc(x.idate||"-")} (${x.days??"-"}일)${x.cs&&x.cs.progress?" · "+esc(x.cs.progress):""}</div>
      <div class="d">${L?`<span>${esc(fmtD(L.created_at))} ${esc(L.by_name)} · ${esc(L.content.slice(0,60))}</span>`:"<span>관리이력 없음</span>"}${x.cs&&x.cs.next_date?`<span>다음 조치 ${esc(x.cs.next_date)}</span>`:""}</div></div>`}).join("")||`<div class="empty" style="padding:8px 0">미수 채권이 없습니다.</div>`}</div>`;
   tb.querySelectorAll("[data-rid]").forEach(el=>el.onclick=()=>{const x=recvItems().find(y=>y.t===el.dataset.rt&&y.id===el.dataset.rid);if(x)recvDlg(x)})}
+
+/* ================= 문자 보내기 (솔라피, Supabase 'send-sms' 기능) ================= */
+let smsTpl=null;
+async function loadSmsTpl(force){if(smsTpl&&!force)return smsTpl;const {data,error}=await sb.from("sms_templates").select("*").order("sort").order("created_at");if(error){ui.noSms=true;smsTpl=[];return smsTpl}ui.noSms=false;smsTpl=data||[];return smsTpl}
+function smsBytes(s){let n=0;for(const ch of String(s||""))n+=ch.charCodeAt(0)>127?2:1;return n}
+function smsFill(t,v){return String(t||"").replace(/\{(업체명|대표자|방문일|시간|미수금|금액|제품|계좌)\}/g,(m,k)=>v[k]!=null&&v[k]!==""?String(v[k]):m)}
+function smsDate(d){if(!d)return"";const [y,m,dd]=d.split("-").map(Number);if(!m)return d;const w="일월화수목금토"[new Date(d).getDay()];return `${m}월 ${dd}일(${w})`}
+/* opts: {c, vars, ref_type, ref_id, tpl(문구 제목)} */
+async function smsDlg(opts){const c=opts.c||{};const v=Object.assign({업체명:c.name||"",대표자:c.ceo||"",계좌:S.bank||""},opts.vars||{});
+  const tpls=await loadSmsTpl();
+  const phones=[...new Set([c.phone,c.phone2].map(x=>String(x||"").trim()).filter(x=>/^0\d/.test(x.replace(/\D/g,""))))];
+  const t0=opts.tpl&&tpls.find(t=>t.title===opts.tpl);
+  openDlg("문자 보내기"+(c.name?" · "+esc(c.name):""),`<div id="smf" style="display:grid;gap:10px">
+    ${ui.noSms?`<p class="warnbox" style="margin:0">문자 문구·기록 칸이 아직 없습니다. Supabase에서 <b>phase1zc.sql</b>을 실행해 주세요.</p>`:""}
+    <div class="f"><span>받는 번호</span><div class="chk">${phones.map((p,i)=>`<label><input type="checkbox" name="to" value="${esc(p)}" ${i===0?"checked":""}>${esc(p)}</label>`).join("")}</div>
+      <input id="smTo2" placeholder="다른 번호 (여러 개는 쉼표로)" aria-label="다른 번호"></div>
+    <label class="f">자주 쓰는 문구<select id="smTpl"><option value="">(직접 입력)</option>${tpls.map(t=>`<option value="${t.id}" ${t0&&t0.id===t.id?"selected":""}>${esc(t.title)}</option>`).join("")}</select></label>
+    <label class="f">내용<textarea id="smText" rows="6" style="min-height:130px">${esc(t0?smsFill(t0.content,v):"")}</textarea></label>
+    <p class="mapt" id="smInfo" style="margin:0"></p>
+    <p class="mapt" style="margin:0">{업체명}·{방문일} 같은 칸은 문구를 고를 때 자동으로 채워집니다. 채워지지 않은 칸은 지우거나 직접 고쳐 주세요.</p></div>`,
+   [["닫기"],["보내기","pri",async()=>{
+     const text=val("smText").trim();if(!text){toast("내용을 입력하세요");return true}
+     if(/\{(업체명|대표자|방문일|시간|미수금|금액|제품|계좌)\}/.test(text)&&!(await askConfirm("채워지지 않은 {칸}이 남아 있습니다. 그대로 보낼까요?")))return true;
+     const to=[...document.querySelectorAll('#smf input[name=to]:checked')].map(x=>x.value).concat(val("smTo2").split(/[,\s]+/)).map(x=>x.replace(/\D/g,"")).filter(Boolean);
+     const uniq=[...new Set(to)];if(!uniq.length){toast("받는 번호를 고르거나 입력하세요");return true}
+     const bad=uniq.filter(x=>!/^0\d{8,10}$/.test(x));if(bad.length){toast("번호를 확인해 주세요: "+bad.join(", "));return true}
+     if(!(await askConfirm(`${uniq.length}명에게 ${smsBytes(text)>90?"장문(LMS)":"단문(SMS)"} 문자를 보낼까요?`)))return true;
+     toast("보내는 중…");
+     const {data,error}=await sb.functions.invoke("send-sms",{body:{messages:uniq.map(p=>({to:p,text,customer_id:c.id||null,ref_type:opts.ref_type||"",ref_id:opts.ref_id||null}))}});
+     if(error){let msg="";try{const b=await error.context.json();msg=b.error||(b.failed||[]).map(f=>f.to+" "+f.error).join(", ")}catch(e){}
+       if(!msg)msg=/Failed to send|404|not found/i.test(error.message||"")?"Supabase에 문자 기능(send-sms)이 아직 설치되지 않았습니다":(error.message||"");toast("보내지 못했습니다: "+msg);return true}
+     if(data&&data.failed&&data.failed.length){toast(`${data.sent}건 보냄, ${data.failed.length}건 실패: ${data.failed.map(f=>f.to+" "+f.error).join(", ")}`);return true}
+     toast(`문자를 보냈습니다 (${uniq.length}건)`);if(ui.ctab==="sms"&&c.id&&ui.sel===c.id)renderCustSms(c)}]]);
+  const ta=document.getElementById("smText"),info=document.getElementById("smInfo");
+  const upd=()=>{const b=smsBytes(ta.value);info.textContent=`${b}바이트 · ${b>90?"장문(LMS)":"단문(SMS)"}${b>2000?" — 2000바이트를 넘어 보낼 수 없습니다":""}`};ta.addEventListener("input",upd);upd();
+  document.getElementById("smTpl").onchange=e=>{const t=tpls.find(x=>x.id===e.target.value);if(t){ta.value=smsFill(t.content,v);upd()}};
+}
+/* 고객 화면 '문자' 탭: 보낸 기록 */
+async function renderCustSms(c){const tb=document.getElementById("tabBody");tb.innerHTML=`<div class="toolbar"><button class="btn pri" type="button" id="smNew">문자 보내기</button></div><div id="smLog" class="mapt" style="padding:0 20px">불러오는 중…</div>`;
+  document.getElementById("smNew").onclick=()=>smsDlg({c});
+  const {data,error}=await sb.from("sms_logs").select("*").eq("customer_id",c.id).order("created_at",{ascending:false}).limit(200);const box=document.getElementById("smLog");if(!box)return;
+  if(error){box.innerHTML="문자 기록 칸이 아직 없습니다. Supabase에서 phase1zc.sql을 실행해 주세요.";return}
+  box.outerHTML=`<div class="wrapx" style="padding:0 20px 20px"><table class="stafft"><thead><tr><th style="width:130px">보낸 시각</th><th style="width:70px">보낸 사람</th><th style="width:120px">받는 번호</th><th>내용</th><th style="width:70px">결과</th></tr></thead><tbody>
+    ${(data||[]).map(l=>`<tr><td>${esc(fmtDT(l.created_at))}</td><td>${esc(l.by_name)}</td><td>${esc(fmtPhone(l.to_phone))}</td><td style="white-space:pre-wrap">${esc(l.content)}</td><td>${l.status==="실패"?`<span class="neg" title="${esc(l.error)}">실패</span>`:esc(l.msg_type||"보냄")}</td></tr>`).join("")||`<tr><td colspan="5" class="mapt">보낸 문자가 없습니다.</td></tr>`}</tbody></table></div>`}
+/* 설정: 자주 쓰는 문구 */
+async function renderSmsTplSet(){const box=document.getElementById("smsSet");if(!box)return;const tpls=await loadSmsTpl(true);
+  if(ui.noSms){box.innerHTML=`<legend>문자 문구</legend><p class="mapt">문자 기능을 쓰려면 Supabase에서 phase1zc.sql을 실행하고, send-sms 기능을 설치해 주세요.</p>`;return}
+  box.innerHTML=`<legend>문자 문구 (자주 쓰는 문구)</legend><p class="mapt" style="margin:0 0 8px">{업체명} {대표자} {방문일} {시간} {제품} {금액} {미수금} {계좌} 를 넣으면 보낼 때 자동으로 채워집니다.</p>
+    <table class="stafft"><thead><tr><th style="width:140px">제목</th><th>내용</th><th style="width:120px"></th></tr></thead><tbody>
+    ${tpls.map(t=>`<tr data-tid="${t.id}"><td><input data-f="title" value="${esc(t.title)}" aria-label="제목"></td><td><textarea data-f="content" rows="2" aria-label="내용">${esc(t.content)}</textarea></td><td><button class="btn sm" type="button" data-ts="${t.id}">저장</button> <button class="btn sm danger" type="button" data-td="${t.id}">삭제</button></td></tr>`).join("")}
+    <tr><td><input id="tNewT" placeholder="새 제목" aria-label="새 제목"></td><td><textarea id="tNewC" rows="2" placeholder="[하이클린] {업체명} 고객님, …" aria-label="새 내용"></textarea></td><td><button class="btn sm pri" type="button" id="tAdd">추가</button></td></tr></tbody></table>`;
+  box.querySelectorAll("[data-ts]").forEach(b=>b.onclick=async()=>{const tr=b.closest("tr");const p={title:tr.querySelector('[data-f=title]').value.trim(),content:tr.querySelector('[data-f=content]').value.trim()};
+    const {error}=await sb.from("sms_templates").update(p).eq("id",b.dataset.ts);toast(error?"저장하지 못했습니다: "+error.message:"저장했습니다")});
+  box.querySelectorAll("[data-td]").forEach(b=>b.onclick=async()=>{if(!(await askConfirm("이 문구를 삭제할까요?")))return;const {error}=await sb.from("sms_templates").delete().eq("id",b.dataset.td);if(error)return toast("삭제하지 못했습니다: "+error.message);renderSmsTplSet()});
+  document.getElementById("tAdd").onclick=async()=>{const title=val("tNewT").trim(),content=val("tNewC").trim();if(!title||!content)return toast("제목과 내용을 입력하세요");
+    const {error}=await sb.from("sms_templates").insert({title,content,sort:tpls.length+1});if(error)return toast("추가하지 못했습니다: "+error.message);renderSmsTplSet()}}
 
 /* ================= 계약 ================= */
 function renderContracts(c){
@@ -2527,7 +2585,7 @@ function jobDlg(j,c,kind,tpl,preset){
    </div></div>`,
    [...(c?[["고객정보","gocust",()=>{openCustPopup(c,c2=>{const el=document.querySelector("#jf .dsum");if(el){const pp=j.product||{};el.outerHTML=custSummary(c2,j.kind==="addon"?null:{product:pp.product,size:pp.size,serial:pp.serial})}j.customer_name=c2.name;j.address=c2.address||j.address;
        document.getElementById("dlgH").textContent=`${nTitle?"신규접수":KLABEL[j.kind]+" "+(isNew?"접수":"작업")} · ${c2.name}`});return true}]]:[]),
-    ...(isNew&&!c&&!tpl?[["새 고객 등록","gocust",()=>{const kv=(document.querySelector('#jf input[name=kind]:checked')||{}).value||j.kind;newCustomer(null,nc=>kv==="ctr"?contractDlg(nc,null):jobDlg(null,nc,kv));return true}]]:[]),["닫기"],...(!isNew&&canNewJob(c)?[["복사","",()=>{jobDlg(null,c,j.kind,j);return true}]]:[]),...(!isNew&&isAdmin()?[["삭제","danger",()=>{delJobs([j.id]);return true}]]:[]),...(isNew&&!c?[]:[["확인서 인쇄","",()=>{printJob(j,c);return true}]]),...(can?[["저장","pri",async()=>{
+    ...(isNew&&!c&&!tpl?[["새 고객 등록","gocust",()=>{const kv=(document.querySelector('#jf input[name=kind]:checked')||{}).value||j.kind;newCustomer(null,nc=>kv==="ctr"?contractDlg(nc,null):jobDlg(null,nc,kv));return true}]]:[]),["닫기"],...(!isNew&&c&&(c.phone||c.phone2)?[["문자","",()=>{smsDlg({c,vars:{방문일:smsDate(j.visit_date),시간:j.visit_time||"",제품:[(j.product||{}).product,(j.product||{}).size].filter(Boolean).join(" "),금액:j.cost?won0(j.cost):""},ref_type:"job",ref_id:j.id,tpl:j.visit_date&&j.status!=="완료"?"방문 안내":j.status==="완료"&&j.kind==="install"?"설치 완료":j.kind==="as"?"A/S 접수":""});return true}]]:[]),...(!isNew&&canNewJob(c)?[["복사","",()=>{jobDlg(null,c,j.kind,j);return true}]]:[]),...(!isNew&&isAdmin()?[["삭제","danger",()=>{delJobs([j.id]);return true}]]:[]),...(isNew&&!c?[]:[["확인서 인쇄","",()=>{printJob(j,c);return true}]]),...(can?[["저장","pri",async()=>{
      const f=fdata("jf");
      if(f.get("kind")==="ctr"){const cc=c||pickable.find(x=>x.id===f.get("custId"));if(!cc)return toast("고객을 검색해서 목록에서 골라 주세요");contractDlg(cc,null);return true}
      if(isNew&&!c){const cc=pickable.find(x=>x.id===f.get("custId"));
@@ -2712,6 +2770,7 @@ function renderDeleteView(){
 /* ================= 설정 (관리자) ================= */
 function renderSettings(){
   view().innerHTML=`<div class="sec"><fieldset><legend>확인서 설정</legend><label class="f">입금계좌 안내 문구<input id="sBank" value="${esc(S.bank)}"></label><div class="actions"><button class="btn pri" id="bSaveSet" type="button">저장</button></div></fieldset></div>`;
+  if(isOffice()){const fs=document.createElement("fieldset");fs.id="smsSet";fs.style.marginTop="16px";view().querySelector(".sec").appendChild(fs);renderSmsTplSet()}
   document.getElementById("bSaveSet").onclick=async()=>{const b=val("sBank").trim();if(!b)return;const {error}=await sb.from("settings").update({bank:b}).eq("id",1);if(error)return toast("저장하지 못했습니다");S.bank=b;toast("저장했습니다")};
 }
 
