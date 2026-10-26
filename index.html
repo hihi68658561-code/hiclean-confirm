@@ -194,7 +194,7 @@ body.resizing,body.resizing *{cursor:col-resize!important;user-select:none}
 .nt-h{all:unset;box-sizing:border-box;width:100%;display:flex;align-items:center;gap:8px;padding:12px 14px;cursor:pointer}.nt-h:focus-visible{outline:2px solid var(--accent);border-radius:8px}
 .nt-b{padding:0 14px 14px;border-top:1px solid var(--line)}.nt-c{white-space:pre-wrap;padding-top:12px;line-height:1.6}.tag.ntpin{background:var(--accent);color:#fff;border-color:var(--accent)}
 .nt-imgs{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:8px;margin-top:12px}.nt-imgs img{width:100%;height:200px;object-fit:cover;border-radius:6px;border:1px solid var(--line);background:var(--line2);display:block}
-.nt-imgs.edit img{height:120px}.nti{display:grid;gap:4px}#nav button.ndot::after{content:"";display:inline-block;width:7px;height:7px;border-radius:50%;background:#e53935;margin-left:4px;vertical-align:top}
+.nt-imgs.edit img{height:120px}.nt-imgs a.bad img{display:none}.nt-imgs a.bad::after{content:"이미지를 불러올 수 없는 링크";font-size:12px;color:var(--mute)}.nt-c a{color:var(--accent);word-break:break-all}.nti{display:grid;gap:4px}#nav button.ndot::after{content:"";display:inline-block;width:7px;height:7px;border-radius:50%;background:#e53935;margin-left:4px;vertical-align:top}
 .smtpls{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:8px}.smtpl{border:1px solid var(--line);background:var(--panel);border-radius:8px;padding:10px 12px;cursor:pointer;display:grid;gap:6px}.smtpl:hover,.smtpl:focus-visible{border-color:var(--accent);outline:none;box-shadow:0 0 0 2px var(--accent-weak)}.smt-h{display:flex;align-items:center;gap:6px}.smt-h b{flex:1}.smt-c{font-size:13px;color:var(--mute);white-space:pre-wrap;display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden}
 .rstages{display:flex;gap:6px;flex-wrap:wrap}.rstages .chip.on{outline:2px solid var(--accent)}
 .ageb{display:grid;gap:4px}.agerow{display:grid;grid-template-columns:80px 1fr 110px 44px;gap:8px;align-items:center;border:0;background:none;padding:4px 6px;border-radius:6px;cursor:pointer;font:inherit;color:inherit;text-align:left}.agerow:hover,.agerow.on{background:var(--accent-weak)}
@@ -2226,6 +2226,10 @@ function noticeSeenKey(){return "hc.notice.seen."+(me&&me.id||"")}
 function noticeUnread(){if(!ui.lastNotice)return false;let s="";try{s=localStorage.getItem(noticeSeenKey())||""}catch(e){}return ui.lastNotice>s}
 async function checkNoticeNew(){try{const {data}=await sb.from("notices").select("created_at").order("created_at",{ascending:false}).limit(1);ui.lastNotice=data&&data[0]?data[0].created_at:"";
   const b=document.querySelector('#nav button[data-v="notice"]');if(b)b.classList.toggle("ndot",noticeUnread())}catch(e){}}
+const NT_URL=/https?:\/\/[^\s<>"']+/g;
+function ntIsImg(u){return /\.(jpe?g|png|gif|webp|bmp|heic)(\?[^\s]*)?$/i.test(u)||/\/\/[^\/]*(pstatic\.net|kakaocdn\.net|googleusercontent\.com)\//i.test(u)}
+function ntContentImgs(s){return (String(s||"").match(NT_URL)||[]).filter(ntIsImg)}
+function ntLinkify(s){return esc(s).replace(/https?:\/\/[^\s<>"']+/g,u=>{const raw=u.replace(/&amp;/g,"&");return `<a href="${esc(raw)}" target="_blank" rel="noopener noreferrer">${u}</a>`})}
 async function renderNoticeView(){const off=isOffice();if(!notices)view().innerHTML=`<p class="mapt" style="padding:20px">불러오는 중…</p>`;await fetchNotices();
   if(notices.length){ui.lastNotice=notices.map(n=>n.created_at).sort().pop();try{localStorage.setItem(noticeSeenKey(),ui.lastNotice)}catch(e){}const b=document.querySelector('#nav button[data-v="notice"]');if(b)b.classList.remove("ndot")}
   if(ui.nopen===undefined)ui.nopen=new Set();
@@ -2233,35 +2237,41 @@ async function renderNoticeView(){const off=isOffice();if(!notices)view().innerH
   view().innerHTML=`<div class="toolbar" style="padding:16px 20px 0"><h2 style="margin:0;font-size:18px">공지사항</h2><span class="mapt">${list.length}건</span><span style="flex:1"></span>${off&&!ui.noNotice?`<button class="btn pri" type="button" id="ntNew">+ 공지 작성</button>`:""}</div>
    ${ui.noNotice?`<div class="sec"><p class="warnbox">공지사항을 쓰려면 Supabase SQL Editor에서 <b>phase1zd.sql</b>을 실행해 주세요.</p></div>`:""}
    <div class="ntlist">${list.map(n=>{const op=ui.nopen.has(n.id);const imgs=Array.isArray(n.images)?n.images:[];return `<article class="nt${n.pinned?" pin":""}${op?" open":""}" data-nid="${n.id}">
-     <button type="button" class="nt-h" data-nt="${n.id}" aria-expanded="${op}">${n.pinned?`<span class="tag ntpin">고정</span>`:""}<b>${esc(n.title)}</b>${imgs.length?`<span class="mapt">사진 ${imgs.length}</span>`:""}<span style="flex:1"></span><span class="mapt">${esc(n.author_name)} · ${esc(fmtDT(n.created_at))}</span></button>
-     ${op?`<div class="nt-b"><div class="nt-c">${esc(n.content)}</div>${imgs.length?`<div class="nt-imgs">${imgs.map(im=>`<a href="#" data-np="${esc(im.path)}" target="_blank" rel="noopener"><img alt="${esc(im.name||"사진")}" data-np="${esc(im.path)}"></a>`).join("")}</div>`:""}
+     <button type="button" class="nt-h" data-nt="${n.id}" aria-expanded="${op}">${n.pinned?`<span class="tag ntpin">고정</span>`:""}<b>${esc(n.title)}</b>${(()=>{const k=imgs.length+ntContentImgs(n.content).filter(u=>!imgs.some(i=>i.url===u)).length;return k?`<span class="mapt">사진 ${k}</span>`:""})()}<span style="flex:1"></span><span class="mapt">${esc(n.author_name)} · ${esc(fmtDT(n.created_at))}</span></button>
+     ${op?`<div class="nt-b"><div class="nt-c">${ntLinkify(n.content)}</div>${(()=>{const all=imgs.concat(ntContentImgs(n.content).filter(u=>!imgs.some(i=>i.url===u)).map(u=>({url:u})));return all.length?`<div class="nt-imgs">${all.map(im=>im.url?`<a href="${esc(im.url)}" target="_blank" rel="noopener noreferrer"><img alt="${esc(im.name||"사진")}" src="${esc(im.url)}" referrerpolicy="no-referrer" onerror="this.closest('a').classList.add('bad')"></a>`:`<a href="#" data-np="${esc(im.path)}" target="_blank" rel="noopener"><img alt="${esc(im.name||"사진")}" data-np="${esc(im.path)}"></a>`).join("")}</div>`:""})()}
        ${off?`<div class="toolbar" style="padding:8px 0 0"><span style="flex:1"></span><button class="btn sm" type="button" data-ne="${n.id}">고치기</button><button class="btn sm danger" type="button" data-nd="${n.id}">삭제</button></div>`:""}</div>`:""}</article>`}).join("")||(ui.noNotice?"":`<p class="mapt">등록된 공지가 없습니다.</p>`)}</div>`;
   view().querySelectorAll("[data-nt]").forEach(b=>b.onclick=()=>{const id=b.dataset.nt;ui.nopen.has(id)?ui.nopen.delete(id):ui.nopen.add(id);renderNoticeView()});
   const nn=document.getElementById("ntNew");if(nn)nn.onclick=()=>noticeDlg(null);
   view().querySelectorAll("[data-ne]").forEach(b=>b.onclick=()=>noticeDlg(notices.find(n=>n.id===b.dataset.ne)));
   view().querySelectorAll("[data-nd]").forEach(b=>b.onclick=async()=>{const n=notices.find(x=>x.id===b.dataset.nd);if(!(await askConfirm(`‘${n.title}’ 공지를 삭제할까요? 첨부한 사진도 함께 지워집니다.`)))return;
-    const ps=(n.images||[]).map(i=>i.path);const {error}=await sb.from("notices").delete().eq("id",n.id);if(error)return toast("삭제하지 못했습니다: "+error.message);if(ps.length)await sb.storage.from("notices").remove(ps);toast("삭제했습니다");renderNoticeView()});
+    const ps=(n.images||[]).filter(i=>i.path).map(i=>i.path);const {error}=await sb.from("notices").delete().eq("id",n.id);if(error)return toast("삭제하지 못했습니다: "+error.message);if(ps.length)await sb.storage.from("notices").remove(ps);toast("삭제했습니다");renderNoticeView()});
   const ps=[...view().querySelectorAll("img[data-np]")].map(i=>i.dataset.np);
   if(ps.length){const m=await signNotice(ps);view().querySelectorAll("[data-np]").forEach(el=>{const u=m[el.dataset.np];if(!u)return;if(el.tagName==="IMG")el.src=u;else el.href=u})}}
-function noticeDlg(n){const isNew=!n;const keep=new Set((n&&n.images||[]).map(i=>i.path));const add=[];
+function noticeDlg(n){const isNew=!n;const keep=new Set((n&&n.images||[]).map(i=>i.path||i.url));const add=[],addU=[];
   openDlg(isNew?"공지 작성":"공지 고치기",`<div id="ntf" style="display:grid;gap:10px">${inp("title","제목",n?n.title:"")}
     <label class="f">내용<textarea name="content" rows="8" style="min-height:180px">${esc(n?n.content:"")}</textarea></label>
     <label class="chip" style="justify-self:start"><input type="checkbox" name="pinned" ${n&&n.pinned?"checked":""}>맨 위에 고정</label>
-    <fieldset class="nfiles"><legend>사진</legend><div class="toolbar" style="padding:0"><label class="btn"><input type="file" id="ntIn" accept="image/*" multiple hidden>사진 추가</label><span class="mapt" id="ntSt">사진은 자동으로 줄여서 올립니다.</span></div><div class="nt-imgs edit" id="ntGrid"></div></fieldset></div>`,
+    <fieldset class="nfiles"><legend>사진</legend><div class="toolbar" style="padding:0"><label class="btn"><input type="file" id="ntIn" accept="image/*" multiple hidden>사진 추가</label><span class="mapt" id="ntSt">사진은 자동으로 줄여서 올립니다.</span></div>
+      <div class="payadd" style="margin-top:8px"><input id="ntUrl" type="url" placeholder="이미지 링크 붙여넣기 (https://…)" aria-label="이미지 링크" style="flex:1;min-width:240px"><button type="button" class="btn" id="ntUrlAdd">링크 추가</button></div>
+      <p class="mapt" style="margin:4px 0 0">인터넷 이미지는 이미지에서 마우스 오른쪽 → ‘이미지 주소 복사’로 링크를 가져오세요. 내용에 적은 이미지 링크도 자동으로 사진으로 보입니다.</p><div class="nt-imgs edit" id="ntGrid"></div></fieldset></div>`,
    [["취소"],["저장","pri",async()=>{const f=fdata("ntf");const title=(f.get("title")||"").trim(),content=(f.get("content")||"").trim();if(!title){toast("제목을 입력하세요");return true}
-     const st=document.getElementById("ntSt");const imgs=(n&&n.images||[]).filter(i=>keep.has(i.path));let fail=0;
+     const st=document.getElementById("ntSt");const imgs=(n&&n.images||[]).filter(i=>keep.has(i.path||i.url)).concat(addU.map(u=>({url:u,name:""})));let fail=0;
      for(let i=0;i<add.length;i++){st.textContent=`사진 올리는 중… ${i+1}/${add.length}`;try{const f0=add[i].file;if(f0.size>15*1024*1024)throw new Error("15MB 초과");const ff=await shrinkForStore(f0);const ext=((ff.name.match(/\.(\w+)$/)||[,""])[1]||"jpg").toLowerCase();
        const path=`${today().slice(0,7)}/${Date.now()}-${Math.random().toString(36).slice(2,7)}.${ext}`;const up=await sb.storage.from("notices").upload(path,ff,{contentType:ff.type||"image/jpeg",upsert:false});if(up.error)throw up.error;imgs.push({path,name:f0.name.slice(0,120)})}catch(e){fail++}}
      const row={title,content,pinned:!!f.get("pinned"),images:imgs};
      const r=isNew?await sb.from("notices").insert(Object.assign(row,{author_name:me.name||""})):await sb.from("notices").update(row).eq("id",n.id);
      if(r.error){toast("저장하지 못했습니다: "+r.error.message);return true}
-     const gone=(n&&n.images||[]).filter(i=>!keep.has(i.path)).map(i=>i.path);if(gone.length)await sb.storage.from("notices").remove(gone);
+     const gone=(n&&n.images||[]).filter(i=>i.path&&!keep.has(i.path)).map(i=>i.path);if(gone.length)await sb.storage.from("notices").remove(gone);
      add.forEach(x=>x.url&&URL.revokeObjectURL(x.url));toast(fail?`저장했습니다 (사진 ${fail}장은 올리지 못했습니다)`:"저장했습니다");renderNoticeView()}]]);
   const grid=document.getElementById("ntGrid");
-  const draw=async()=>{const old=(n&&n.images||[]).filter(i=>keep.has(i.path));const m=old.length?await signNotice(old.map(i=>i.path)):{};
-    grid.innerHTML=old.map(i=>`<div class="nti"><img alt="" src="${esc(m[i.path]||"")}"><button type="button" class="btn sm danger" data-rm="${esc(i.path)}">빼기</button></div>`).join("")+add.map((x,k)=>`<div class="nti"><img alt="" src="${x.url}"><button type="button" class="btn sm danger" data-rn="${k}">빼기</button></div>`).join("");
+  const draw=async()=>{const old=(n&&n.images||[]).filter(i=>keep.has(i.path||i.url));const m=old.some(i=>i.path)?await signNotice(old.filter(i=>i.path).map(i=>i.path)):{};
+    grid.innerHTML=old.map(i=>`<div class="nti"><img alt="" referrerpolicy="no-referrer" src="${esc(i.url||m[i.path]||"")}"><button type="button" class="btn sm danger" data-rm="${esc(i.path||i.url)}">빼기</button></div>`).join("")+add.map((x,k)=>`<div class="nti"><img alt="" src="${x.url}"><button type="button" class="btn sm danger" data-rn="${k}">빼기</button></div>`).join("")
+      +addU.map((u,k)=>`<div class="nti"><img alt="" referrerpolicy="no-referrer" src="${esc(u)}" onerror="this.nextElementSibling.hidden=false"><span class="mapt neg" hidden>이 링크는 이미지를 불러올 수 없습니다</span><button type="button" class="btn sm danger" data-ru="${k}">빼기</button></div>`).join("");
+    grid.querySelectorAll("[data-ru]").forEach(b=>b.onclick=()=>{addU.splice(+b.dataset.ru,1);draw()});
     grid.querySelectorAll("[data-rm]").forEach(b=>b.onclick=()=>{keep.delete(b.dataset.rm);draw()});grid.querySelectorAll("[data-rn]").forEach(b=>b.onclick=()=>{const x=add.splice(+b.dataset.rn,1)[0];if(x&&x.url)URL.revokeObjectURL(x.url);draw()})};
   draw();
+  const ua=document.getElementById("ntUrlAdd"),ui_=document.getElementById("ntUrl");const addUrl=()=>{const u=ui_.value.trim();if(!/^https?:\/\/\S+$/i.test(u))return toast("https:// 로 시작하는 링크를 붙여넣으세요");if(!addU.includes(u))addU.push(u);ui_.value="";draw()};
+  ua.onclick=addUrl;ui_.addEventListener("keydown",e=>{if(e.key==="Enter"&&!e.isComposing){e.preventDefault();e.stopPropagation();addUrl()}});
   const fi=document.getElementById("ntIn");fi.onchange=()=>{[...fi.files].filter(f=>/^image\//.test(f.type)).forEach(file=>add.push({file,url:URL.createObjectURL(file)}));fi.value="";draw()}}
 
 /* ================= 계약 ================= */
