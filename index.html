@@ -1570,7 +1570,9 @@ function schJumpToday(){const tbl=view().querySelector(".wt.sch");if(!tbl)return
     else row.scrollIntoView({block:"start"})})}
 function renderSchedView0(){
   if(!ui.sm)ui.sm=thisMonth();const [st0,en0]=monthRange(ui.sm);const inM=d=>d&&d>=st0&&d<en0;
-  const mj=jobs.filter(j=>inM(schDay(j)));
+  /* 영업: 본인이 3차 담당인 설치·추가설치만 */
+  const mineS=j=>{const k=ctrById(j.contract_id)||custContracts(j.customer_id)[0];return (k&&k.sales3===me.id)||schSales(j)===(me.name||"\u0000")};
+  const mj=jobs.filter(j=>inM(schDay(j))&&(me.role!=="sales"||((j.kind==="install"||j.kind==="addon")&&mineS(j))));
   const mn=notes.filter(n=>inM(n.day));
   /* 기사 계정이 없는 담당(외부업체·이름만 적힌 기사)도 이름별로 일정표를 따로 */
   const keyOfName=n=>{if(SCH_OUT.includes(n))return"_out";const s=staff.find(x=>x.name===n||(x.aliases||[]).includes(n));return s?(SCH_OUT.includes(s.name)?"_out":s.user_id):"n:"+n};
