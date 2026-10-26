@@ -2491,16 +2491,16 @@ function contractDlg(c,k,tpl,opts){ui.payEdit=null;
    <div class="g3">${inp("amount","합계금액 (VAT 포함)",k.amount||"","number",ro)}${inp("cap_company","캐피탈 승인처",cap.company,"text",ro)}${inp("cap_monthly","캐피탈 월할부금(참고)",cap.monthly||"","number",ro)}</div>
    <div class="g3">${inp("cap_months","캐피탈 기간(개월)",cap.months||"","number",ro)}${inp("cms_day","CMS 출금일",cms.day||"","text",ro)}${inp("settle_month","정산년월",k.settle_month,"month",ro)}</div>
    ${ui.noPay?"":`<div class="g3">${inp("approval","승인처 (예: 삼성+현금)",k.approval,"text",ro)}${inp("tax_date","계산서 발급일",(k.tax||{}).date,"date",ro)}${inp("tax_type","발급 구분 (소매매출·카드결제 등)",(k.tax||{}).date?"":(k.tax||{}).type,"text",ro)}</div>
-   <h3 class="ksec">마감</h3>
+   ${me.role==="sales"?"":`<h3 class="ksec">마감</h3>
    <div class="g3">${inp("chk_cust","고객등록",k.chk_cust,"text",ro,'list="chkList"')}${inp("chk_slip","전표마감",k.chk_slip,"text",ro,'list="chkList"')}${inp("chk_sales","매출마감",k.chk_sales,"text",ro,'list="chkList"')}</div>
-   ${hasMonthCol()?`<div class="g3">${inp("chk_month","월마감 (OK면 당월리스트에서 빠지고 전체리스트로)",k.chk_month,"text",ro,'list="chkList"')}<span></span><span></span></div>`:""}
+   ${hasMonthCol()?`<div class="g3">${inp("chk_month","월마감 (OK면 당월리스트에서 빠지고 전체리스트로)",k.chk_month,"text",ro,'list="chkList"')}<span></span><span></span></div>`:""}`}
    <datalist id="chkList">${CHKV.map(x=>`<option value="${esc(x)}">`).join("")}</datalist>`}
    <h3 class="ksec">비고</h3>
    <label class="f"><span class="sr">비고</span><textarea name="memo" ${ro?"readonly":""} aria-label="비고">${esc(k.memo)}</textarea></label>
    <h3 class="ksec">입금 내역</h3>
    <div class="g3">${sel("pay_method","결제방식",["",...PAYM],k.pay_method,ro)}<span></span><span></span></div>
    ${isNew?`<p class="mapt" style="margin:0">입금 기록은 계약을 저장한 뒤 다시 열어서 추가할 수 있습니다.</p>`:`<div id="paySec"></div>`}
-   ${isNew?`<label class="chip"><input type="checkbox" name="mkjob" checked>설치 작업도 함께 만들기 (기사에게 설치 건으로 보임)</label>`:""}
+   ${isNew?`<label class="chip"><input type="checkbox" name="mkjob" checked>설치 작업도 함께 만들기${me.role==="sales"?"":" (기사에게 설치 건으로 보임)"}</label>`:""}
    <datalist id="chList">${["중앙회","인바운드","MOU","보상판매","기존고객","하이클린","소개"].map(x=>`<option value="${x}">`).join("")}</datalist>
    <datalist id="s3List">${staff.filter(s=>s.active&&["admin","office","sales"].includes(s.role)).map(s=>`<option value="${esc(s.name)}">${esc(ROLE[s.role])}</option>`).join("")}</datalist>
    <datalist id="stList">${staff.filter(s=>s.active).map(s=>`<option value="${esc(s.name)}">`).join("")}<option value="무료체험"></datalist>
@@ -2514,7 +2514,7 @@ function contractDlg(c,k,tpl,opts){ui.payEdit=null;
        wash_added:f.get("wash_added")==="1",pay_method:f.get("pay_method"),amt_ultra:n("amt_ultra"),amt_wash:n("amt_wash"),amt_parts:n("amt_parts"),amount:n("amount"),
        capital:Object.assign({},cap,{company:f.get("cap_company").trim(),monthly:n("cap_monthly"),months:n("cap_months")}),cms:Object.assign({},cms,{day:f.get("cms_day").trim()}),
        settle_month:f.get("settle_month")||"",memo:f.get("memo")};
-     if(!ui.noPay){Object.assign(p,{approval:(f.get("approval")||"").trim(),chk_cust:(f.get("chk_cust")||"").trim(),chk_slip:(f.get("chk_slip")||"").trim(),chk_sales:(f.get("chk_sales")||"").trim()});if(hasMonthCol()&&f.get("chk_month")!==null)p.chk_month=(f.get("chk_month")||"").trim();
+     if(!ui.noPay){Object.assign(p,{approval:(f.get("approval")||"").trim()});if(f.get("chk_cust")!==null)Object.assign(p,{chk_cust:(f.get("chk_cust")||"").trim(),chk_slip:(f.get("chk_slip")||"").trim(),chk_sales:(f.get("chk_sales")||"").trim()});if(hasMonthCol()&&f.get("chk_month")!==null)p.chk_month=(f.get("chk_month")||"").trim();
        const td_=f.get("tax_date")||"",tt_=(f.get("tax_type")||"").trim();p.tax=Object.assign({},k.tax||{},td_?{type:(k.tax||{}).type&&(k.tax||{}).date?(k.tax||{}).type:"세금계산서",date:td_}:{type:tt_,date:""})}
      if(!p.amount)p.amount=p.amt_ultra+p.amt_wash+p.amt_parts;
      if(isOffice()){const raw=(f.get("sales3")||"").trim();const sp=splitS3(raw);p.sales3=sp.owner.id;p.sales3_name=[sp.owner.name,sp.coll.name].filter(Boolean).join("/")}else if(isNew){p.sales3=me.id;p.sales3_name=me.name||""}
