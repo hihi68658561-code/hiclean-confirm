@@ -51,6 +51,15 @@ create table if not exists public.wash_moves (
   created_at timestamptz not null default now()
 );
 
+-- 재고관리 설정 (예: 수압식 자동 출고 기준일)
+create table if not exists public.stock_settings (key text primary key, value text not null default '');
+
+alter table public.stock_settings enable row level security;
+drop policy if exists ss_all on public.stock_settings;
+create policy ss_all on public.stock_settings for all to authenticated using ((select public.is_office())) with check ((select public.is_office()));
+revoke all on public.stock_settings from anon;
+grant select, insert, update, delete on public.stock_settings to authenticated;
+
 alter table public.stock_units   enable row level security;
 alter table public.stock_targets enable row level security;
 alter table public.wash_moves    enable row level security;
