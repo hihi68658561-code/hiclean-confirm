@@ -2458,13 +2458,15 @@ function sinkDlg(o,pre){const off=isOffice();const isNew=!o;pre=pre||{};
       if(!p.site_name){toast("설치업장명을 고르거나 입력하세요 (재고면 ‘재고’)");return true}
       if(off){const w=whoIs((f.get("owner_name")||"").trim());Object.assign(p,{owner:w.id,owner_name:w.name,order_date:f.get("order_date")||today(),status:f.get("status")||"신규접수",in_date:f.get("in_date")||null,out_date:f.get("out_date")||null})}
       else if(isNew)Object.assign(p,{owner:me.id,owner_name:me.name||"",order_date:today(),status:"신규접수"});
-      const r=isNew?await sb.from("sink_orders").insert(p).select().single():await sb.from("sink_orders").update(p).eq("id",o.id).select().single();
+      p.spec_text=its.map(it=>skSpec(it)+(Number(it.qty||1)>1?` ×${it.qty}`:"")+(it.note?` (${it.note})`:"")).join(", ");
+      const go=pp=>isNew?sb.from("sink_orders").insert(pp).select().single():sb.from("sink_orders").update(pp).eq("id",o.id).select().single();
+      let r=await go(p);if(r.error&&/spec_text/.test(r.error.message)){const {spec_text,...p2}=p;r=await go(p2)}
       if(r.error){toast(/sink_orders/.test(r.error.message)&&/exist|find/.test(r.error.message)?"Supabase에서 phase1ze.sql을 먼저 실행해 주세요.":"저장하지 못했습니다: "+r.error.message);return true}
       if(off){const ln=its.map((it,i)=>{const row=document.querySelector(`#skItems [data-i="${items.indexOf(it)}"]`);const g=n=>Number(((row&&row.querySelector(`[data-p="${n}"]`))||{}).value||0)||0;return{price:g("price"),deduct:g("deduct")}});
         const e2=await sb.from("sink_prices").upsert({order_id:r.data.id,lines:ln,updated_at:new Date().toISOString()});if(e2.error)toast("금액은 저장하지 못했습니다: "+e2.error.message)}
       /* 계약의 설치 작업 '싱크대 발주' 칸 맞추기 */
       if(p.contract_id){const ij=installOf(ctrById(p.contract_id)||{});const st=(r.data.status==="신규접수")?"발주대기":["주문완료","입고완료","출고완료"].includes(r.data.status)?"발주완료":"";
-        if(ij&&st&&["","해당없음","발주대기","발주완료"].includes(ij.sink_status||"")&&ij.sink_status!==st)await sb.from("jobs").update({sink_status:st}).eq("id",ij.id)}
+        if(ij&&r.data.status!=="취소"){const up={sink_memo:p.spec_text};if(st&&["","해당없음","발주대기","발주완료"].includes(ij.sink_status||""))up.sink_status=st;if(up.sink_memo!==(ij.sink_memo||"")||up.sink_status&&up.sink_status!==ij.sink_status)await sb.from("jobs").update(up).eq("id",ij.id)}}
       toast(isNew?"발주를 접수했습니다":"저장했습니다");reload(["jobs"],true);if(ui.view==="sink")renderSinkView()}]]:[])]);
   /* 업장 선택 */
   const drawCust=()=>{const box=document.getElementById("skCust");
@@ -2902,7 +2904,7 @@ function jobDlg(j,c,kind,tpl,preset){
    </div></div>`,
    [...(c?[["고객정보","gocust",()=>{openCustPopup(c,c2=>{const el=document.querySelector("#jf .dsum");if(el){const pp=j.product||{};el.outerHTML=custSummary(c2,j.kind==="addon"?null:{product:pp.product,size:pp.size,serial:pp.serial})}j.customer_name=c2.name;j.address=c2.address||j.address;
        document.getElementById("dlgH").textContent=`${nTitle?"신규접수":KLABEL[j.kind]+" "+(isNew?"접수":"작업")} · ${c2.name}`});return true}]]:[]),
-    ...(isNew&&!c&&!tpl?[["새 고객 등록","gocust",()=>{const kv=(document.querySelector('#jf input[name=kind]:checked')||{}).value||j.kind;newCustomer(null,nc=>kv==="ctr"?contractDlg(nc,null):jobDlg(null,nc,kv));return true}]]:[]),["닫기"],...(!isNew&&c&&(c.phone||c.phone2)?[["문자","",()=>{smsDlg({c,vars:{방문일:smsDate(j.visit_date),시간:j.visit_time||"",제품:[(j.product||{}).product,(j.product||{}).size].filter(Boolean).join(" "),금액:j.cost?won0(j.cost):""},ref_type:"job",ref_id:j.id,tpl:j.visit_date&&j.status!=="완료"?"방문 안내":j.status==="완료"&&j.kind==="install"?"설치 완료":j.kind==="as"?"A/S 접수":""});return true}]]:[]),...(!isNew&&canNewJob(c)?[["복사","",()=>{jobDlg(null,c,j.kind,j);return true}]]:[]),...(!isNew&&isAdmin()?[["삭제","danger",()=>{delJobs([j.id]);return true}]]:[]),...(isNew&&!c?[]:[["확인서 인쇄","",()=>{printJob(j,c);return true}]]),...(can?[["저장","pri",async()=>{
+    ...(isNew&&!c&&!tpl?[["새 고객 등록","gocust",()=>{const kv=(document.querySelector('#jf input[name=kind]:checked')||{}).value||j.kind;newCustomer(null,nc=>kv==="ctr"?contractDlg(nc,null):jobDlg(null,nc,kv));return true}]]:[]),["닫기"],...(!isNew&&j.kind==="install"&&j.contract_id&&me.role!=="tech"?[["싱크대 발주","",async()=>{if(!skOrders)await fetchSink();const ex=(skOrders||[]).find(o=>o.contract_id===j.contract_id&&o.status!=="취소");sinkDlg(ex||null,ex?null:{c,k:ctrById(j.contract_id)});return true}]]:[]),...(!isNew&&c&&(c.phone||c.phone2)?[["문자","",()=>{smsDlg({c,vars:{방문일:smsDate(j.visit_date),시간:j.visit_time||"",제품:[(j.product||{}).product,(j.product||{}).size].filter(Boolean).join(" "),금액:j.cost?won0(j.cost):""},ref_type:"job",ref_id:j.id,tpl:j.visit_date&&j.status!=="완료"?"방문 안내":j.status==="완료"&&j.kind==="install"?"설치 완료":j.kind==="as"?"A/S 접수":""});return true}]]:[]),...(!isNew&&canNewJob(c)?[["복사","",()=>{jobDlg(null,c,j.kind,j);return true}]]:[]),...(!isNew&&isAdmin()?[["삭제","danger",()=>{delJobs([j.id]);return true}]]:[]),...(isNew&&!c?[]:[["확인서 인쇄","",()=>{printJob(j,c);return true}]]),...(can?[["저장","pri",async()=>{
      const f=fdata("jf");
      if(f.get("kind")==="ctr"){const cc=c||pickable.find(x=>x.id===f.get("custId"));if(!cc)return toast("고객을 검색해서 목록에서 골라 주세요");contractDlg(cc,null);return true}
      if(isNew&&!c){const cc=pickable.find(x=>x.id===f.get("custId"));
