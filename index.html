@@ -201,7 +201,7 @@ body.resizing,body.resizing *{cursor:col-resize!important;user-select:none}
 .hlist{display:grid;gap:2px}.hrow{all:unset;box-sizing:border-box;display:flex;align-items:center;gap:8px;padding:8px 6px;border-radius:6px;cursor:pointer;border-bottom:1px solid var(--line2);min-width:0}.hrow:hover,.hrow:focus-visible{background:var(--accent-weak)}.hrow.static{cursor:default}.hrow.static:hover{background:none}
 .htime{min-width:64px;font-variant-numeric:tabular-nums;color:var(--mute);font-size:13px}.hname{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex:1;min-width:0}.hmsg{flex:2;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .hrecv{display:grid;grid-template-columns:minmax(180px,240px) 1fr;gap:10px;align-items:start}@media (max-width:1000px){.htop{grid-template-columns:1fr}}@media (max-width:760px){.hrecv{grid-template-columns:1fr}.home{padding:12px 16px 24px}.hgrid{grid-template-columns:1fr}}
-.wt.sk td{vertical-align:middle}.wt.sk tr.alt td{background:#F3F7FC}.wt.sk tr.cx td{color:#999;text-decoration:line-through}.wt.sk td.skded{color:#1d4ed8}.wt.sk tbody tr{cursor:pointer}.wt.sk tbody tr:hover td{background:var(--accent-weak)}
+.wt.sk td{vertical-align:middle}.wt.sk .skchk{width:34px;text-align:center}.wt.sk tr.alt td{background:#F3F7FC}.wt.sk tr.cx td{color:#999;text-decoration:line-through}.wt.sk td.skded{color:#1d4ed8}.wt.sk tbody tr{cursor:pointer}.wt.sk tbody tr:hover td{background:var(--accent-weak)}
 .tag.sk-신규접수{background:#fff;color:#1d4ed8;border-color:#1d4ed8}.tag.sk-주문완료{background:#FFF3C4;color:#8a5a00;border-color:#FFF3C4}.tag.sk-입고완료{background:#DCEBFF;color:#1d4ed8;border-color:#DCEBFF}.tag.sk-출고완료{background:#00CC66;color:#1b1b1b;border-color:#00CC66}.tag.sk-재고등록{background:#efe2ff;color:#6b21a8;border-color:#efe2ff}.tag.sk-취소{background:#c62828;color:#fff;border-color:#c62828}
 .skit{border:1px solid var(--line);border-radius:8px;padding:8px 10px;display:grid;gap:6px}.skit-h{display:flex;align-items:center;justify-content:space-between}.skg{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:6px}.skg .s2{grid-column:span 2}.skg input{width:100%;min-width:0}.skg.sp{grid-template-columns:1fr 1fr 2fr;align-items:end}
 @media (max-width:760px){.skg{grid-template-columns:repeat(3,minmax(0,1fr))}.skg .s2{grid-column:span 3}.skg.sp{grid-template-columns:1fr 1fr}}
@@ -2366,6 +2366,7 @@ function exportView(){const v=ui.view;const sel=XSEL[v];if(!sel)return;toast("�
   setTimeout(()=>{let tbl;ui.xAll=true;try{render();tbl=view().querySelector(sel);if(!tbl)return toast("내려받을 표가 없습니다");tbl=tbl.cloneNode(true)}finally{ui.xAll=false}
     try{tbl.querySelectorAll(".fbtn,.rz,button,svg").forEach(x=>{if(x.tagName==="BUTTON"&&x.closest("td")&&x.textContent.trim()&&!x.classList.contains("fbtn"))x.replaceWith(document.createTextNode(x.textContent));else x.remove()});
       /* 맨 앞 선택(체크) 칸은 제목·본문·합계 줄 모두에서 같이 빼서 칸이 밀리지 않게 */
+      tbl.querySelectorAll(".skchk").forEach(c=>c.remove());tbl.querySelectorAll("tfoot th[colspan='8']").forEach(c=>c.colSpan=7);
       const fr=tbl.querySelector("tbody tr");if(fr&&fr.cells[0]&&fr.cells[0].querySelector('input[type=checkbox]'))tbl.querySelectorAll("tr").forEach(r=>{if(r.cells[0]&&(r.cells.length>1))r.deleteCell(0)});
       tbl.querySelectorAll("input,select,textarea").forEach(x=>x.remove());
       tbl.querySelectorAll("th").forEach(c=>{c.textContent=c.textContent.replace(/[▼▲]/g,"").trim()});
@@ -2373,7 +2374,7 @@ function exportView(){const v=ui.view;const sel=XSEL[v];if(!sel)return;toast("�
       for(let R=rg.s.r;R<=rg.e.r;R++)for(let C=rg.s.c;C<=rg.e.c;C++){const a=XLSX.utils.encode_cell({r:R,c:C}),cell=ws[a];if(!cell)continue;let s=String(cell.v??"").trim();
         /* 금액(쉼표 있는 숫자)·0·순번만 숫자로. 기준·접수월(2610)·시리얼 같은 숫자는 글자 그대로 */
         const hd=String((ws[XLSX.utils.encode_cell({r:rg.s.r,c:C})]||{}).v||"");
-        if(R>rg.s.r&&typeof cell.v==="string"&&(/^-?\d{1,3}(,\d{3})+$/.test(s)||s==="0"||(hd==="순번"&&/^\d+$/.test(s)))){cell.t="n";cell.v=Number(s.replace(/,/g,""));cell.z=hd==="순번"?"0":"#,##0"}
+        if(R>rg.s.r&&typeof cell.v==="string"&&(/^-?\d{1,3}(,\d{3})+$/.test(s)||s==="0"||((hd==="순번"||hd==="수량")&&/^\d+$/.test(s)))){cell.t="n";cell.v=Number(s.replace(/,/g,""));cell.z=hd==="순번"||hd==="수량"?"0":"#,##0"}
         else if(typeof cell.v==="string"){cell.t="s"}
         wid[C]=Math.max(wid[C]||4,Math.min(40,[...s].reduce((n,ch)=>n+(ch.charCodeAt(0)>127?2:1),0)+2))}
       ws["!cols"]=wid.map(w=>({wch:w}));const wb=XLSX.utils.book_new();const nm=XNAME[v]||"목록";XLSX.utils.book_append_sheet(wb,ws,nm.slice(0,31).replace(/[\\/?*\[\]:]/g,""));
@@ -2392,7 +2393,8 @@ function skSpec(it){const nm=String(it.name||"").replace(/^\d+\.\s*/,"");const s
   return [nm,it.opt1,it.opt2&&it.opt2!=="해당없음"?it.opt2:"",it.hole&&it.hole!=="해당없음"?it.hole:"",it.wheel&&it.wheel!=="해당없음"?"바퀴 "+it.wheel:""].filter(Boolean).join(" / ")+(sz?` [${sz}]`:"")}
 function skLine(o,i){const L=((skPrices[o.id]||{}).lines||[])[i]||{};const it=(o.items||[])[i]||{};const q=Number(it.qty||1)||1;const pr=Number(L.price||0);const sup=pr*q,vat=Math.round(sup/10);return{price:pr,sup,vat,tot:sup+vat,deduct:Number(L.deduct||0)}}
 async function renderSinkView(){const off=isOffice();if(!skOrders)view().innerHTML=`<p class="mapt" style="padding:20px">불러오는 중…</p>`;await fetchSink();
-  ["skq","skst","skown"].forEach(k=>{if(ui[k]===undefined)ui[k]=""});if(ui.skm===undefined)ui.skm="";
+  ["skq","skst","skown"].forEach(k=>{if(ui[k]===undefined)ui[k]=""});if(ui.skm===undefined)ui.skm="";if(!ui.sksel)ui.sksel=new Set();
+  const canDel=o=>off||(o.owner===me.id&&o.status==="신규접수");[...ui.sksel].forEach(id=>{if(!skOrders.some(o=>o.id===id))ui.sksel.delete(id)});
   const qq=ui.skq.trim().toLowerCase();
   let list=skOrders.filter(o=>(!ui.skst||o.status===ui.skst)&&(!ui.skown||o.owner_name===ui.skown)&&(!ui.skm||String(o.order_date||"").startsWith(ui.skm))
     &&(!qq||[o.site_name,o.owner_name,o.memo,...(o.items||[]).map(skSpec)].join(" ").toLowerCase().includes(qq)));
@@ -2401,7 +2403,7 @@ async function renderSinkView(){const off=isOffice();if(!skOrders)view().innerHT
   const rows=list.map((o,oi)=>{const its=(o.items||[]).length?o.items:[{}];const n=its.length;
     return its.map((it,i)=>{const L=skLine(o,i);if(o.status!=="취소"){tot.sup+=L.sup;tot.vat+=L.vat;tot.tot+=L.tot;tot.deduct+=L.deduct}
       const head=i===0;const rs=n>1?` rowspan="${n}"`:"";
-      return `<tr data-sk="${o.id}" class="skr${oi%2?" alt":""}${o.status==="취소"?" cx":""}">${head?`<td${rs}>${esc(ymd2(o.order_date))}</td><td${rs}><span class="tag sk-${esc(o.status)}">${esc(o.status)}</span></td><td${rs}>${esc(o.owner_name)}</td><td${rs}><b>${esc(o.site_name||"")}</b></td>`:""}
+      return `<tr data-sk="${o.id}" class="skr${oi%2?" alt":""}${o.status==="취소"?" cx":""}">${head?`<td${rs} class="skchk">${canDel(o)?`<input type="checkbox" class="sksel" data-id="${o.id}" ${ui.sksel.has(o.id)?"checked":""} aria-label="선택">`:""}</td><td${rs}>${esc(ymd2(o.order_date))}</td><td${rs}><span class="tag sk-${esc(o.status)}">${esc(o.status)}</span></td><td${rs}>${esc(o.owner_name)}</td><td${rs}><b>${esc(o.site_name||"")}</b></td>`:""}
         <td class="skspec">${esc(skSpec(it))}${it.note?` <small class="mapt">(${esc(it.note)})</small>`:""}</td><td class="num">${esc(it.qty||1)}</td>
         ${head?`<td${rs}>${esc(ymd2(o.due_date))}</td>`:""}
         ${off?`<td class="num">${L.price?won0(L.price):""}</td><td class="num">${L.sup?won0(L.sup):""}</td><td class="num">${L.vat?won0(L.vat):""}</td><td class="num">${L.tot?won0(L.tot):""}</td>`:""}
@@ -2413,16 +2415,21 @@ async function renderSinkView(){const off=isOffice();if(!skOrders)view().innerHT
      <input id="skM" type="month" value="${esc(ui.skm)}" aria-label="발주 월" style="padding:5px 8px;border:1px solid var(--line);border-radius:6px;background:var(--field)">
      ${off?`<select id="skOwn" aria-label="담당자"><option value="">담당자 전체</option>${owners.map(x=>`<option ${ui.skown===x?"selected":""}>${esc(x)}</option>`).join("")}</select>`:""}
      <div class="rstages"><button type="button" class="chip ${ui.skst?"":"on"}" data-sks="">전체 ${skOrders.length}</button>${SK_ST.map(s=>`<button type="button" class="chip ${ui.skst===s?"on":""}" data-sks="${s}"><span class="tag sk-${s}">${s}</span> ${cnt(s)}</button>`).join("")}</div>
-     <span class="mapt">${list.length}건</span></div>
-   <div class="wrapx vis" style="padding-top:6px"><div class="wtbox"><table class="wt sk"><thead><tr><th>발주일자</th><th>진행사항</th><th>담당자</th><th>업체명(상호)</th><th>품명 및 규격</th><th>수량</th><th>입고예정</th>${off?"<th>단가</th><th>공급가액</th><th>부가세</th><th>합계금액</th>":""}<th>입고일자</th><th>출고일자</th><th>비고</th>${off?"<th>변경 공제가</th>":""}</tr></thead>
-     <tbody>${rows||`<tr><td colspan="${off?15:10}" class="mapt">발주가 없습니다.</td></tr>`}</tbody>
-     ${off&&list.length?`<tfoot><tr><th colspan="7">합계</th><th></th><th class="num">${won0(tot.sup)}</th><th class="num">${won0(tot.vat)}</th><th class="num">${won0(tot.tot)}</th><th colspan="3"></th><th class="num">${won0(tot.deduct)}</th></tr></tfoot>`:""}</table></div></div>`;
+     <span class="mapt">${list.length}건</span><span style="flex:1"></span><button class="btn danger" type="button" id="skDel" ${ui.sksel.size?"":"disabled"}>선택 삭제 (${ui.sksel.size})</button></div>
+   <div class="wrapx vis" style="padding-top:6px"><div class="wtbox"><table class="wt sk"><thead><tr><th class="skchk"><input type="checkbox" id="skAll" aria-label="전체 선택"></th><th>발주일자</th><th>진행사항</th><th>담당자</th><th>업체명(상호)</th><th>품명 및 규격</th><th>수량</th><th>입고예정</th>${off?"<th>단가</th><th>공급가액</th><th>부가세</th><th>합계금액</th>":""}<th>입고일자</th><th>출고일자</th><th>비고</th>${off?"<th>변경 공제가</th>":""}</tr></thead>
+     <tbody>${rows||`<tr><td colspan="${off?16:11}" class="mapt">발주가 없습니다.</td></tr>`}</tbody>
+     ${off&&list.length?`<tfoot><tr><th colspan="8">합계</th><th></th><th class="num">${won0(tot.sup)}</th><th class="num">${won0(tot.vat)}</th><th class="num">${won0(tot.tot)}</th><th colspan="3"></th><th class="num">${won0(tot.deduct)}</th></tr></tfoot>`:""}</table></div></div>`;
   const re=()=>renderSinkView();
   const q=document.getElementById("skQ");q.oninput=()=>{ui.skq=q.value;clearTimeout(q._t);q._t=setTimeout(()=>{re().then(()=>{const n=document.getElementById("skQ");n.focus();n.setSelectionRange(n.value.length,n.value.length)})},250)};
   document.getElementById("skM").onchange=e=>{ui.skm=e.target.value;re()};const so=document.getElementById("skOwn");if(so)so.onchange=e=>{ui.skown=e.target.value;re()};
   view().querySelectorAll("[data-sks]").forEach(b=>b.onclick=()=>{ui.skst=b.dataset.sks;re()});
   const nb=document.getElementById("skNew");if(nb)nb.onclick=()=>sinkDlg(null);
-  view().querySelectorAll("tr[data-sk]").forEach(tr=>tr.onclick=()=>sinkDlg(skOrders.find(o=>o.id===tr.dataset.sk)));
+  view().querySelectorAll("tr[data-sk]").forEach(tr=>tr.onclick=e=>{if(e.target.closest(".skchk"))return;sinkDlg(skOrders.find(o=>o.id===tr.dataset.sk))});
+  const upd=()=>{const b=document.getElementById("skDel");b.disabled=!ui.sksel.size;b.textContent=`선택 삭제 (${ui.sksel.size})`};
+  view().querySelectorAll(".sksel").forEach(c=>c.onchange=()=>{c.checked?ui.sksel.add(c.dataset.id):ui.sksel.delete(c.dataset.id);upd()});
+  document.getElementById("skAll").onchange=e=>{view().querySelectorAll(".sksel").forEach(c=>{c.checked=e.target.checked;c.checked?ui.sksel.add(c.dataset.id):ui.sksel.delete(c.dataset.id)});upd()};
+  document.getElementById("skDel").onclick=async()=>{const ids=[...ui.sksel];if(!ids.length)return;if(!(await askConfirm(`선택한 발주 ${ids.length}건을 삭제할까요? 금액 기록도 함께 지워집니다.`)))return;
+    const {error}=await sb.from("sink_orders").delete().in("id",ids);if(error)return toast("삭제하지 못했습니다: "+error.message);ui.sksel=new Set();toast(`${ids.length}건을 삭제했습니다`);renderSinkView()};
   addXlsBtn()}
 /* 발주서 창 (신규·수정). pre: {c, k} 계약에서 열 때 */
 function sinkDlg(o,pre){const off=isOffice();const isNew=!o;pre=pre||{};
