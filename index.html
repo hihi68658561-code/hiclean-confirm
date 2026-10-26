@@ -654,7 +654,8 @@ function restoreScroll(s){if(!s||s.v!==ui.view)return;const els=[...document.que
 function render(){if(ui._fresh){ui._fresh=false;render0();window.scrollTo(0,0);return}const _sv=snapScroll();try{render0()}finally{restoreScroll(_sv)}}
 function render0(){
   ui.dirty=false;
-  const tabs=[["home","홈"],["cust","고객"]];if(me.role!=="tech")tabs.push(["leads","DB관리"]);tabs.push(["work","당월 설치·A/S 전체리스트"]);if(me.role!=="tech")tabs.push(["ctrm","당월리스트"],["allm","전체리스트"],["asm","A/S관리"],["recv","미수·채권관리"]);tabs.push(["sched","담당자별 일정표"]);if(me.role!=="tech")tabs.push(["sms","문자"]);tabs.push(["notice","공지사항"]);if(isAdmin())tabs.push(["staff","직원"],["settings","설정"]);
+  if(me.role==="sales"&&(ui.view==="work"||ui.view==="asm"))ui.view="home";
+  const tabs=[["home","홈"],["cust","고객"]];if(me.role!=="tech")tabs.push(["leads","DB관리"]);if(me.role!=="sales")tabs.push(["work","당월 설치·A/S 전체리스트"]);if(me.role!=="tech")tabs.push(["ctrm","당월리스트"],["allm","전체리스트"],...(me.role==="sales"?[]:[["asm","A/S관리"]]),["recv","미수·채권관리"]);tabs.push(["sched","담당자별 일정표"]);if(me.role!=="tech")tabs.push(["sms","문자"]);tabs.push(["notice","공지사항"]);if(isAdmin())tabs.push(["staff","직원"],["settings","설정"]);
   document.getElementById("nav").innerHTML=tabs.map(([k,l])=>`<button type="button" class="${ui.view===k?"on":""}${k==="notice"&&ui.view!=="notice"&&noticeUnread()?" ndot":""}" data-v="${k}">${l}</button>`).join("");
   document.querySelectorAll("#nav button").forEach(b=>b.onclick=()=>{ui.view=b.dataset.v;ui.jsel=new Set();ui._fresh=true;render()});
   if(ui.view==="install"||ui.view==="as")ui.view="work";
@@ -1248,7 +1249,9 @@ function delContracts(all){const ids=all.filter(id=>!id.startsWith("a:")),jids=a
       if(jids.length){const {error}=await sb.from("jobs").delete().in("id",jids);if(error)return toast("추가설치는 삭제하지 못했습니다: "+error.message)}
       all.forEach(id=>ui.csel.delete(id));toast(`계약 ${n}건${jids.length?` · 추가설치 ${jids.length}건`:""} 삭제했습니다`);reload(["contracts","payments","jobs","customers"])}]])}
 /* ================= 전체리스트 (모든 계약, 당월리스트와 같은 표) ================= */
-TCFG.all={cols:()=>CCOLS.map(c=>c[0]==="idate"?["idate","설치일",c[2]]:c),sel:".wt.ca",lead:()=>1};
+/* 영업 계정은 전체리스트에서 마감(고객등록·전표·매출·월마감) 칸을 보지 않음 */
+const CHKCOLS=["chk_cust","chk_slip","chk_sales","chk_month"];
+TCFG.all={cols:()=>CCOLS.filter(c=>!(me&&me.role==="sales"&&CHKCOLS.includes(c[0]))).map(c=>c[0]==="idate"?["idate","설치일",c[2]]:c),sel:".wt.ca",lead:()=>1};
 function renderAllView(){const _sv=snapScroll();renderAllView0();restoreScroll(_sv)}
 function renderAllView0(){
   if(ui.aq2===undefined)ui.aq2="";if(!ui.allN)ui.allN=300;
@@ -1257,7 +1260,7 @@ function renderAllView0(){
   let list=rows.filter(x=>!qq||[x.c.name,x.c.search_text,x.c.ceo,x.c.phone,x.c.phone2,x.c.address,x.k.serial,x.k.memo,x.k.approval,staffName(x.k.sales3),x.k.sales3_name].join(" ").toLowerCase().includes(qq));
   sortCtrList(list);
   list=cfApply("all",list,(c,x)=>cfText(ctrCell(c,x.k,x.c,x.s,x.b)));
-  const cols=getCols("all");const shown=list.slice(0,ui.xAll?1e9:ui.allN);
+  const cols=getCols("all").filter(k=>!(me.role==="sales"&&CHKCOLS.includes(k)));const shown=list.slice(0,ui.xAll?1e9:ui.allN);
   view().innerHTML=`<div class="toolbar"><h2 style="margin:0;font-size:18px">전체리스트</h2><span class="mapt">월마감(OK)된 계약</span>${hasMonthCol()?"":`<span class="warnbox" style="margin:0">월마감을 쓰려면 Supabase에서 phase1x.sql을 실행해 주세요.</span>`}</div>
    <div class="toolbar"><input id="caQ" type="search" placeholder="업체명(상호)·대표자·전화·주소·시리얼·담당 검색" value="${esc(ui.aq2)}">
      <span class="mapt" id="caCnt">${list.length}건${list.length>shown.length?` 중 ${shown.length}건 표시`:""}</span>
@@ -2313,7 +2316,7 @@ function renderHomeView(){const td=today(),tm=addDays(td,1),ym=thisMonth(),[m0,m
   const leadDue=tech||ui.noLeads?[]:leads.filter(l=>leadOpen(l)&&l.next_date&&l.next_date<=td);
   const rv=tech||ui.noRecv?[]:recvItems();const rOpen=rv.filter(x=>x.open&&x.stage!=="대손처리");
   const rDue=rOpen.filter(x=>x.cs&&x.cs.next_date&&x.cs.next_date<=td),rBroke=rOpen.filter(x=>x.cs&&x.cs.promise_date&&x.cs.promise_date<td);
-  const card=(go,label,val,sub,cls="")=>`<div class="kpi kc ${cls}" role="button" tabindex="0" data-hgo="${go}"><span>${label}</span><b>${val}</b>${sub?`<small>${sub}</small>`:""}</div>`;
+  const card=(go,label,val,sub,cls="")=>me.role==="sales"&&(go==="work"||go==="asm")?`<div class="kpi ${cls}"><span>${label}</span><b>${val}</b>${sub?`<small>${sub}</small>`:""}</div>`:`<div class="kpi kc ${cls}" role="button" tabindex="0" data-hgo="${go}"><span>${label}</span><b>${val}</b>${sub?`<small>${sub}</small>`:""}</div>`;
   const w=["일","월","화","수","목","금","토"][new Date(td+"T00:00:00").getDay()];
   let h=`<div class="home"><div class="hhead"><h2>${esc(me.name||"")}님, 안녕하세요</h2><span class="mapt">${td.slice(0,4)}년 ${+td.slice(5,7)}월 ${+td.slice(8,10)}일 (${w})</span></div>`;
   /* 할 일 */
