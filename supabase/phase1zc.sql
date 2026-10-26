@@ -20,9 +20,12 @@ alter table public.sms_logs enable row level security;
 drop policy if exists sms_select on public.sms_logs;
 create policy sms_select on public.sms_logs for select to authenticated
   using ((select public.is_office()) or created_by = (select auth.uid()) or customer_id in (select public.my_customer_ids()));
--- 기록은 문자 보내기 기능(서버)만 남깁니다. 화면에서 직접 쓰거나 지울 수 없음
+-- 기록은 문자 보내기 기능이 보낸 직원 이름으로 남깁니다. 고치거나 지울 수 없음
+drop policy if exists sms_insert on public.sms_logs;
+create policy sms_insert on public.sms_logs for insert to authenticated
+  with check ((select public.is_staff()) and created_by = (select auth.uid()));
 revoke all on public.sms_logs from anon;
-grant select on public.sms_logs to authenticated;
+grant select, insert on public.sms_logs to authenticated;
 
 create table if not exists public.sms_templates (
   id         uuid primary key default gen_random_uuid(),

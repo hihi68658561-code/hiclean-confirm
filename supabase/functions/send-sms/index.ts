@@ -29,9 +29,14 @@ Deno.serve(async (req) => {
   const FROM = (Deno.env.get("SOLAPI_SENDER") || "").replace(/\D/g, "");
   if (!KEY || !SECRET || !FROM) return json({ error: "문자 설정(SOLAPI_API_KEY·SOLAPI_API_SECRET·SOLAPI_SENDER)이 없습니다" }, 500);
 
-  const admin = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!, { auth: { persistSession: false } });
-  // 보낸 사람 확인: 로그인한 직원만
+  // 로그인한 직원의 권한으로만 동작 (비밀 키를 쓰지 않음). 프로그램이 보낸 공개 키(apikey)와 로그인 토큰 사용
   const token = (req.headers.get("Authorization") || "").replace(/^Bearer\s+/i, "");
+  const apikey = req.headers.get("apikey") || Deno.env.get("SUPABASE_ANON_KEY") || "";
+  const admin = createClient(Deno.env.get("SUPABASE_URL")!, apikey, {
+    auth: { persistSession: false, autoRefreshToken: false },
+    global: { headers: { Authorization: `Bearer ${token}` } },
+  });
+  // 보낸 사람 확인: 로그인한 직원만
   const { data: u } = await admin.auth.getUser(token);
   if (!u?.user) return json({ error: "로그인이 필요합니다" }, 401);
   const { data: st } = await admin.from("staff").select("name,role,active").eq("user_id", u.user.id).maybeSingle();
@@ -74,7 +79,8 @@ Deno.serve(async (req) => {
     status: failed[m.to] ? "실패" : "접수", error: failed[m.to] || "", group_id: groupId,
     by_name: st.name || "", created_by: u.user.id,
   }));
-  await admin.from("sms_logs").insert(rows);
+  const { error: logErr } = await admin.from("sms_logs").insert(rows);
+  if (logErr) console.error("sms_logs insert", logErr.message);
   const nf = rows.filter((r) => r.status === "실패").length;
   return json({ ok: nf === 0, sent: rows.length - nf, failed: rows.filter((r) => r.status === "실패").map((r) => ({ to: r.to_phone, error: r.error })) }, res.ok ? 200 : 502);
 });
