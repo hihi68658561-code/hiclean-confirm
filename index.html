@@ -1909,7 +1909,8 @@ function recvItems(){const out=[];const byRef=new Map(rcases.filter(c=>c.ref_id)
     const open=s.unpaid>0&&(k.stage==="미수"||s.n>0);if(!open&&!cs)return;
     const ij=installOf(k);const idate=(ij&&(ij.done_date||ij.visit_date))||k.contract_date||"";
     out.push({t:"ctr",id:k.id,k,ij,c:custById(k.customer_id)||{},amount:Number(k.amount||0),card:s.card,cash:s.other,paid:s.paid,unpaid:Math.max(0,s.unpaid),last:s.last,idate,cs,open})});
-  jobs.forEach(j=>{if(j.kind!=="as"&&j.kind!=="move"&&j.kind!=="addon")return;const cs=byRef.get("as|"+j.id)||null;const open=j.pay_status==="미수"&&j.status!=="취소"&&Number(j.cost||0)>0;if(!open&&!cs)return;
+  /* A/S·이전설치 미수는 A/S관리에서 관리 → 채권 목록에는 추가설치만 */
+  jobs.forEach(j=>{if(j.kind!=="addon")return;const cs=byRef.get("as|"+j.id)||null;const open=j.pay_status==="미수"&&j.status!=="취소"&&Number(j.cost||0)>0;if(!open&&!cs)return;
     const p=open?0:Number(j.cost||0);out.push({t:"as",id:j.id,j,c:custById(j.customer_id)||{},amount:Number(j.cost||0),card:j.pay_method==="카드"?p:0,cash:j.pay_method==="카드"?0:p,paid:p,unpaid:open?Number(j.cost||0):0,last:j.pay_date||"",idate:j.done_date||j.visit_date||j.request_date||"",cs,open})});
   rcases.filter(c=>c.ref_type==="etc").forEach(cs=>{const L=ledgerOf(cs);const add=L.reduce((a,x)=>a+Number(x.add||0),0)||Number(cs.amount||0);const paid=L.reduce((a,x)=>a+Number(x.pay||0),0);
     const last=L.filter(x=>Number(x.pay||0)>0).map(x=>x.d).filter(Boolean).sort().pop()||"";const c=(cs.customer_id&&custById(cs.customer_id))||{name:cs.title};
