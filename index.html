@@ -1540,7 +1540,8 @@ function schRegion(a){const w=String(a||"").trim().split(/\s+/);if(!w[0])return"
   if(f==="서울")return /구$/.test(w[1]||"")?w[1]:"서울";
   if(METRO.includes(f))return f;
   const s=w[1]||"";if(/(시|군)$/.test(s))return s.length>2?s.replace(/(시|군)$/,""):s;return region(a)||f}
-function schSales(j){const k=ctrById(j.contract_id)||custContracts(j.customer_id)[0];const c=custById(j.customer_id);return (k&&s3Text(k))||(c&&(staffName(c.owner)||c.owner_name))||""}
+function schSales(j){const k=ctrById(j.contract_id)||custContracts(j.customer_id)[0];const c=custById(j.customer_id);/* 3차 담당자만 (‘3차/수금담당’에서 수금담당은 뺌) */
+  return String((k&&s3Text(k))||(c&&(staffName(c.owner)||c.owner_name))||"").split("/")[0].trim()}
 function schHideKey(){return "hc.sch.hide."+(me&&me.id||"")}
 function schHidden(){try{return new Set(JSON.parse(localStorage.getItem(schHideKey())||"[]"))}catch(e){return new Set()}}
 function schSetHidden(s){try{localStorage.setItem(schHideKey(),JSON.stringify([...s]))}catch(e){}}
