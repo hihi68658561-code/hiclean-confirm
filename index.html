@@ -264,6 +264,9 @@ header.top{position:relative}.tmore{display:none}.tacts{display:contents}
 @media (max-width:760px){header.top h1{order:1}.tmore{display:inline-flex;order:2;margin-left:auto}header.top .sp{display:none}header.top .nav{order:3;width:100%}
   .tacts{display:none;order:4;position:absolute;right:max(16px,env(safe-area-inset-right,0px));top:52px;z-index:50;background:var(--panel);border:1px solid var(--line);border-radius:10px;box-shadow:0 8px 24px rgba(0,0,0,.15);padding:8px;flex-direction:column;align-items:stretch;gap:4px;min-width:180px}
   .tacts.open{display:flex}.tacts .mode{padding:6px 10px;border-bottom:1px solid var(--line);margin-bottom:4px}.tacts .btn{justify-content:flex-start;text-align:left}}
+@media (max-width:760px){.body:has(> main > .cempty) > main{order:-1}.body:has(> main > .cempty) > aside{max-height:none}
+  .cempty{padding:10px 16px 0}.cempty h2{font-size:16px;margin:0 0 2px}.cempty p{font-size:12px;margin:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  aside .search{flex-direction:row;flex-wrap:wrap;gap:6px;padding:8px 12px}aside .search #q,aside .search .row{flex:1 1 100%}aside .search select{flex:1 1 0;min-width:0;padding:6px 4px;font-size:13px}}
 @media (max-width:760px){.g3{grid-template-columns:1fr 1fr}.toolbar,.cards,.wrapx{padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}}
 /* ================= A4 양식 ================= */
 .sheet{width:210mm;min-height:297mm;padding:9mm 9mm 8mm;font-family:"Malgun Gothic","맑은 고딕","Apple SD Gothic Neo","Noto Sans KR",sans-serif;color:#111;font-size:9.6pt;line-height:1.25;background:#fff;-webkit-print-color-adjust:exact;print-color-adjust:exact;display:flex;flex-direction:column}
@@ -677,7 +680,7 @@ function renderCustView(){
   const grf=document.getElementById("grf");if(grf)grf.onchange=e=>{ui.grade=e.target.value;renderCustList()};
   document.getElementById("ctf").onchange=e=>{ui.ctype=e.target.value;renderCustList()};
   const nb=document.getElementById("bNewC");if(nb)nb.onclick=()=>newCustomer(null,async c=>{render();if(isOffice()&&await askConfirm("고객을 등록했습니다. 계약도 바로 등록하시겠습니까?"))contractDlg(c,null);else document.getElementById("dlg").close()});
-  document.getElementById("clist").onclick=e=>{const it=e.target.closest(".citem");if(it){ui.sel=it.dataset.id;ui.ctab="info";ui.draft=null;document.querySelectorAll("#clist .citem.sel").forEach(x=>x.classList.remove("sel"));it.classList.add("sel");renderCustMain()}};
+  document.getElementById("clist").onclick=e=>{const it=e.target.closest(".citem");if(it){ui.sel=it.dataset.id;ui.ctab="info";ui.draft=null;document.querySelectorAll("#clist .citem.sel").forEach(x=>x.classList.remove("sel"));it.classList.add("sel");renderCustMain();if(window.innerWidth<760){const m=document.getElementById("main");if(m)m.scrollIntoView({behavior:"smooth",block:"start"})}}};
   renderCustList();renderCustMain();
 }
 function custSearchText(c){const ks=custContracts(c.id);return [c.name,c.biz_name,c.search_text,c.ceo,c.phone,c.phone2,c.address,c.biz_no,c.owner_name,staffName(c.owner),...ks.map(k=>k.serial+" "+k.product)].join(" ").toLowerCase().replace(/-/g,"")}
@@ -697,7 +700,7 @@ function renderCustList(){
 }
 function renderCustMain(){
   const m=document.getElementById("main");const c=custById(ui.sel);
-  if(!c){m.innerHTML=`<div class="empty"><h2>고객을 고르세요</h2><p>${me.role==="sales"?"본인이 담당하거나 수금을 배정받은 고객만 보입니다.":me.role==="tech"?"배정받은 작업의 고객만 보입니다. 위쪽 ‘작업현황’ 메뉴에서 설치·A/S 목록을 볼 수 있습니다.":"왼쪽에서 업체명(상호), 전화번호, 시리얼, 담당자로 검색하세요."}</p></div>`;return}
+  if(!c){m.innerHTML=`<div class="empty cempty"><h2>고객 검색</h2><p>${me.role==="sales"?"본인이 담당하거나 수금을 배정받은 고객만 보입니다.":me.role==="tech"?"배정받은 작업의 고객만 보입니다.":"업체명(상호), 전화번호, 시리얼, 담당자로 검색하세요."}</p></div>`;return}
   const ks=custContracts(c.id),js=custJobs(c.id);
   const tabs=[["info","고객정보"]];if(me.role!=="tech")tabs.push(["ctr",`계약 (${ks.length})`]);tabs.push(["install",`설치·철거 (${js.filter(j=>j.kind!=="as").length})`],["as",`A/S (${js.filter(j=>j.kind==="as").length})`],["files",`사진·서류 (${custFiles(c).filter(f=>!(me.role==="tech"&&f.kind==="계약서")).length})`],["conf","확인서"]);
   if(me.role!=="tech"&&!ui.noLeads)tabs.splice(1,0,["lead",`DB 상담 (${custLeads(c).length})`]);
