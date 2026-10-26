@@ -1007,7 +1007,7 @@ function installOf(k){if(k.__job)return k.__job;if(!instIdx)buildInstIdx();retur
 const CCOLS=[
  ["basis","기준",1],["ctype","구분",1],["stage","진행단계",1],["trial","무료체험 종료일",1],["name","업체명(상호)",1],["ceo","대표자",1],["phone","전화번호",1],["addr","상점주소",0],
  ["cdate","계약일자",1],["idate","예정일",1],["iwday","요일",1],["itime","시간",1],["channel","영업 경로",0],["referrer","소개",0],["s1","1차",0],["s2","2차",0],["s3","3차(담당)",1],["doc","계약서",0],["tech","설치기사",0],
- ["product","제품",1],["size","사이즈",1],["serial","시리얼",1],["wash","수압식",0],["sink","싱크준비",1],["sinkm","싱크대 메모",1],["parts","부자재",0],["amount","합계금액",1],["card","카드",1],["cash","현금+캐피탈",1],["paid","입금합계",0],["unpaid","미수금",1],["last","최종결제일",1],
+ ["product","제품",1],["size","사이즈",1],["serial","시리얼",1],["wash","수압식",0],["sink","싱크준비",1],["sinkm","싱크대 품명 및 규격",1],["parts","부자재",0],["amount","합계금액",1],["card","카드",1],["cash","현금+캐피탈",1],["paid","입금합계",0],["unpaid","미수금",1],["last","최종결제일",1],
  ["approval","승인처",1],["tax","계산서 발급",0],["chk_cust","고객등록",1],["chk_slip","전표마감",1],["chk_sales","매출마감",1],["chk_month","월마감",1],["memo","비고",1]];
 const MONEYC=new Set(["amount","card","cash","paid","unpaid"]);
 /* 표 열 설정(넣고 빼기·순서·너비) — 계약관리(ctr)·작업현황(work) 공용, 브라우저별로 기억 */
@@ -2606,7 +2606,7 @@ function contractDlg(c,k,tpl,opts){ui.payEdit=null;
    <div class="g3">${inp("sales1","1차 선행자",k.sales1,"text",ro,'list="stList"')}${inp("sales2","2차 상담자",k.sales2,"text",ro,'list="stList"')}${isOffice()?inp("sales3","3차 계약자(담당자)",s3Text(k)||"","text",false,'list="s3List" placeholder="이름 입력 또는 목록에서 선택"'):inp("_s3","3차 계약자",s3Text(k),"text",true)}</div>
    <h3 class="ksec">제품내역</h3>
    <div class="g3">${inp("product","제품",k.product,"text",ro,'list="pdList"')}${inp("size","사이즈",k.size,"text",ro)}${inp("serial","시리얼",k.serial,"text",ro)}</div>
-   <div class="g3"><label class="f">수압식 추가 구매<select name="wash_added" ${ro?"disabled":""}><option value="0">아니오</option><option value="1" ${k.wash_added?"selected":""}>예</option></select></label>${sel("sink_status","싱크대 발주",["",...SINKS],(srcJ||{}).sink_status||"",sinkRo)}${inp("sink_memo","싱크대 메모(크기 등)",(srcJ||{}).sink_memo,"text",sinkRo)}</div>
+   <div class="g3"><label class="f">수압식 추가 구매<select name="wash_added" ${ro?"disabled":""}><option value="0">아니오</option><option value="1" ${k.wash_added?"selected":""}>예</option></select></label>${sel("sink_status","싱크대 발주",["",...SINKS],(srcJ||{}).sink_status||"",sinkRo)}${inp("sink_memo","싱크대 품명 및 규격",(srcJ||{}).sink_memo,"text",sinkRo)}</div>
    <div class="g3"><div style="grid-column:span 2">${inp("parts","제공 부자재",(srcJ||{}).parts,"text",sinkRo)}</div><span></span></div>
    ${!isNew&&!ij?`<p class="mapt" style="margin:-4px 0 0">이 계약에 연결된 설치 작업이 없어 싱크대·부자재는 입력할 수 없습니다.</p>`:""}
    <h3 class="ksec">계약금액(부가세포함)</h3>
@@ -2759,7 +2759,7 @@ function monthBuckets(list,ym){
 }
 function whoOf(j){const tn=(j.techs||[]).map(staffName).filter(Boolean);const extra=String(j.tech_names||"").split(/[\s,/]+/).filter(t=>t&&!tn.includes(t)&&!staff.some(x=>tn.includes(x.name)&&(x.aliases||[]).includes(t))).join(" ");return [tn.join(", "),extra].filter(Boolean).join(" · ")}
 const WCOLS=[["rmon","접수월",1],["kind","구분",1],["name","업체명(상호)",1],["ceo","대표자",0],["phone","전화번호",1],["region","지역",1],["addr","상세주소",1],["cdate","계약/접수",1],["rdate","접수일",0],["visit","예정일",1],["wday","요일",1],["time","시간",1],
- ["product","제품",1],["size","규격",1],["serial","시리얼",1],["wash","수압식",1],["sink","싱크대",1],["sinkm","싱크대 메모",1],["parts","제공 부자재",0],["symptom","접수내용",1],["result","처리내용",0],["sales","영업담당",1],["tech","배정",1],["status","처리현황",1],["done","완료일",0],["photo","사진",0]];
+ ["product","제품",1],["size","규격",1],["serial","시리얼",1],["wash","수압식",1],["sink","싱크대",1],["sinkm","싱크대 품명 및 규격",1],["parts","제공 부자재",0],["symptom","접수내용",1],["result","처리내용",0],["sales","영업담당",1],["tech","배정",1],["status","처리현황",1],["done","완료일",0],["photo","사진",0]];
 /* 설치 접수내용 = 계약 비고 (+ 작업에 적은 요청 사항) */
 function jobNote(j,k){if(j.kind!=="install")return j.symptom||"";const kk=(k&&k.id?k:ctrById(j.contract_id))||{};return [kk.memo,j.symptom].map(x=>String(x||"").trim()).filter(Boolean).filter((x,i,a)=>a.indexOf(x)===i).join(" / ")}
 function wCell(col,j,c,k,td){const p=asLike(j)?asProd(j):(j.product||{});const rd=rdOf(j);const vd=j.visit_date;const openJ=!["완료","취소"].includes(j.status);
@@ -2904,7 +2904,7 @@ function jobDlg(j,c,kind,tpl,preset){
      <datalist id="cardList">${["농협카드","비씨카드","국민카드","신한카드","삼성카드","현대카드","롯데카드","하나카드","우리카드","네이버페이"].map(x=>`<option value="${x}">`).join("")}</datalist></fieldset>
    <div class="g3" id="addonBox" ${j.kind==="addon"?"":"hidden"}>${inp("add_item","추가 품목 (예: 싱크대·수압식·부자재)",addonItem(j).product,"text",!(off||isNew),'list="addList"')}${inp("add_size","규격·수량",addonItem(j).size,"text",!(off||isNew))}<span></span></div>
    <datalist id="addList">${["싱크대","수압식 세척기","부자재","수전","선반","배수구"].map(x=>`<option value="${x}">`).join("")}</datalist>
-   <div class="g3" id="sinkBox" ${asLike(j)?"hidden":""}>${sel("sink_status","싱크대 발주",["",...SINKS],j.sink_status,!can)}${inp("sink_memo","싱크대 메모(크기 등)",j.sink_memo,"text",!can)}${inp("parts","제공 부자재",j.parts,"text",!can)}</div>
+   <div class="g3" id="sinkBox" ${asLike(j)?"hidden":""}>${sel("sink_status","싱크대 발주",["",...SINKS],j.sink_status,!can)}${inp("sink_memo","싱크대 품명 및 규격",j.sink_memo,"text",!can)}${inp("parts","제공 부자재",j.parts,"text",!can)}</div>
    ${ui.noFiles?"":isNew?newCustFilesBox("jp",JOBPHOTO[j.kind]||"기타","사진 (선택)"):`<div id="jobFiles"></div>`}
    </div></div>`,
    [...(c?[["고객정보","gocust",()=>{openCustPopup(c,c2=>{const el=document.querySelector("#jf .dsum");if(el){const pp=j.product||{};el.outerHTML=custSummary(c2,j.kind==="addon"?null:{product:pp.product,size:pp.size,serial:pp.serial})}j.customer_name=c2.name;j.address=c2.address||j.address;
