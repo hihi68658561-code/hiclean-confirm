@@ -402,7 +402,7 @@ const CFIELDS=[
   ["설치장소","상점주소(설치장소)"],["모델명","제품"],["사이즈","사이즈"],["옵션","옵션(무턱·좌배수)"],["SN","시리얼"],["구매일자","계약일자"],["설치일자","설치일자"],
   ["담당자","담당자(3차 계약자)"],["설치기사","설치기사(설치1)"],["메모","비고"]
 ];
-const STAGES=["미정","보류","확정","철거","취소","완료","미수"];
+const STAGES=["미정","보류","확정","취소","완료","미수"];
 const CTYPES=["구매","철거","무료체험","무상증정","무상임대","경품","양도"];
 function modelText(c){c=c||{};return [c.모델명,c.사이즈,c.옵션?"("+c.옵션+")":""].filter(Boolean).join(" ")}
 const SYN={
@@ -1013,7 +1013,7 @@ function payStat(k){if(k.__job){const j=k.__job;const c_=Number(j.cost||0);const
   const ps=paysOf(k);let card=0,other=0,last="";ps.forEach(p=>{const a=Number(p.amount||0);if(p.method==="카드")card+=a;else other+=a;if(p.pay_date&&p.pay_date>last)last=p.pay_date});
   const paid=card+other;return{card,other,paid,last,unpaid:Number(k.amount||0)-paid,n:ps.length}}
 function monthRange(ym){const [y,m]=ym.split("-").map(Number);return[ym+"-01",(m===12?(y+1)+"-01":y+"-"+String(m+1).padStart(2,"0"))+"-01"]}
-const CROWS=[["done","설치완료",k=>k.stage==="완료"],["open","미완료",k=>k.stage==="미정"||k.stage==="확정"],["hold","보류",k=>k.stage==="보류"],["cancel","취소",k=>k.stage==="취소"],["unpaid","미수",k=>k.stage==="미수"],["remove","철거",k=>k.stage==="철거"]];
+const CROWS=[["done","설치완료",k=>k.stage==="완료"],["open","미완료",k=>k.stage==="미정"||k.stage==="확정"],["hold","보류",k=>k.stage==="보류"],["cancel","취소",k=>k.stage==="취소"],["unpaid","미수",k=>k.stage==="미수"]];
 /* 계약별 설치 작업 찾기: 미리 만든 색인 사용 (작업 전체를 매번 훑지 않음) */
 let instIdx=null;
 function buildInstIdx(){instIdx={byCtr:new Map(),byCust:new Map()};for(const x of jobs){if(x.kind!=="install"||x.status==="취소")continue;
@@ -3023,7 +3023,7 @@ function sortPicker(onDone){let cur=getSort().map(x=>({...x}));
   openDlg("정렬 설정",`<p class="mapt">1순위가 같으면 2순위, 2순위도 같으면 3순위로 정렬합니다. 열 제목을 눌러도 바로 정렬됩니다(한 번 더 누르면 반대로).<br>목록은 항상 <b>당월 건 → 이달 결제된 예전 건 → 미수 건</b>으로 묶이고, 고른 정렬은 각 묶음 안에서 적용됩니다.</p><div id="spList" style="display:grid;gap:8px"></div>`,
     [["접수한 순서 (기본)","",()=>{cur=DEFSORT.map(x=>({...x}));draw();return true}],["설치일자·시간 순","",()=>{cur=INSTSORT.map(x=>({...x}));draw();return true}],["취소"],["적용","pri",()=>{cur=cur.filter(x=>x&&x.c);setSort(cur.length&&JSON.stringify(cur)!==JSON.stringify(DEFSORT)?cur:null);onDone()}]]);draw()}
 function hasTrialCol(){return contracts.some(k=>"trial_end" in k)}
-function trialCell(k){const d=k.trial_end;if(!d)return"";const td=today();const open=!["완료","취소","철거"].includes(k.stage);const days=Math.round((new Date(d)-new Date(td))/864e5);
+function trialCell(k){const d=k.trial_end;if(!d)return"";const td=today();const open=!["완료","취소","철거"].includes(k.stage)&&k.contract_type!=="철거";const days=Math.round((new Date(d)-new Date(td))/864e5);
   const cls=open&&days<0?"late":open&&days<=3?"soon":"";return `<span class="trial ${cls}" title="${open?(days<0?-days+"일 지남":days===0?"오늘 종료":days+"일 남음"):""}">${esc(ymd2(d))}</span>`}
 function contractDlg(c,k,tpl,opts){ui.payEdit=null;
   const isNew=!k;const pickM=!!(opts&&opts.pick&&isNew&&!c);const intakeM=pickM||!!(opts&&opts.intake&&isNew&&!tpl);const pool=pickM?customers.filter(x=>isOffice()||x.owner===me.id):[];
