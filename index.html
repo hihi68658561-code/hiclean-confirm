@@ -204,6 +204,7 @@ body.resizing,body.resizing *{cursor:col-resize!important;user-select:none}
 .wt.sk td.skest{color:#888;font-style:italic}.wt.sim td{font-size:12px}.wt.sim tr.siok td{background:#e8f7ee}.wt.sim tr.sis td{background:#f3e8ff}.wt.sim select{max-width:340px;font-size:12px}dialog.wide{max-width:min(1150px,96vw);width:96vw}.wt.spl input{width:100%;min-width:60px;padding:4px 6px;border:1px solid var(--line);border-radius:4px;background:var(--field)}.wt.spl td{padding:3px 4px}
 .csf{display:grid;gap:6px}.csr{display:grid;grid-template-columns:86px 1fr;align-items:center;gap:8px;font-size:13px;color:var(--muted,#555)}.csr:focus-within>span:first-child{color:var(--accent,#1d4ed8);font-weight:600}.csi{position:relative;display:block}.csi svg{position:absolute;left:9px;top:50%;transform:translateY(-50%);color:#98a2b3;pointer-events:none}.csi input{width:100%;padding:7px 8px 7px 30px;box-sizing:border-box}
 .rlrow{display:grid;grid-template-columns:150px 120px 1fr 84px;gap:8px;align-items:end;width:100%}.rlrow .f{margin:0}.rlrow input,.rlrow select{width:100%;box-sizing:border-box;height:38px}.rlrow .btn{height:38px;width:100%}.rlcin{display:flex;gap:6px}.rlcin select{flex:0 0 110px}.rlcin input{flex:1;min-width:0}@media (max-width:640px){.rlrow{grid-template-columns:1fr 1fr}.rlrow .rlc,.rlrow .btn{grid-column:1/-1}}
+.detq{display:flex;align-items:center;gap:6px}.detq input{width:70px;text-align:center}.detq .btn{min-width:34px}
 .wt.skst,.wt.sk2{width:auto;min-width:min(100%,720px)}.wt.sk2 tbody tr{cursor:pointer}.wt.sk2 tbody tr:hover td{background:var(--accent-weak)}.wt.sk2 tr.cx0 td{color:#999}.skstk{margin-top:6px;padding-top:6px;border-top:1px dashed var(--line)}.skstk select{max-width:100%}
 .wt.sk td{vertical-align:middle}.wt.sk .skchk{width:34px;text-align:center}.wt.sk tr.alt td{background:#F3F7FC}.wt.sk tr.cx td{color:#999;text-decoration:line-through}.wt.sk td.skded{color:#1d4ed8}.wt.sk tbody tr{cursor:pointer}.wt.sk tbody tr:hover td{background:var(--accent-weak)}
 .tag.sk-신규접수{background:#fff;color:#1d4ed8;border-color:#1d4ed8}.tag.sk-주문완료{background:#FFF3C4;color:#8a5a00;border-color:#FFF3C4}.tag.sk-입고완료{background:#DCEBFF;color:#1d4ed8;border-color:#DCEBFF}.tag.sk-출고완료{background:#00CC66;color:#1b1b1b;border-color:#00CC66}.tag.sk-재고등록{background:#efe2ff;color:#6b21a8;border-color:#efe2ff}.tag.sk-취소{background:#c62828;color:#fff;border-color:#c62828}
@@ -1362,6 +1363,8 @@ function renderPaySec(k){
 /* ================= A/S관리 (엑셀 A/S 관리대장 양식 · 계약관리와 같은 틀) ================= */
 function asLike(j){return j.kind==="as"||j.kind==="move"}
 function hasAsx(){return jobs.some(j=>"trip_fee" in j)}
+function hasDet(){return jobs.some(j=>"det_qty" in j)}
+const DET_PRICE=38500,AS_TRIP_DEFAULT=50000;
 const AS_ACTS=["방문조치","택배수리","입고수리","원격·전화안내","부품발송"];
 const ASTAT=[["open","미처리",j=>j.status==="접수"||j.status==="배정"],["hold","보류",j=>j.status==="보류"],["done","완료",j=>j.status==="완료"&&j.pay_status!=="미수"],["unpaid","미수",j=>j.pay_status==="미수"&&j.status!=="취소"],["cancel","취소",j=>j.status==="취소"]];
 const APT=["유상","무상",""];const aptLab=t=>t||"미정";
@@ -3376,8 +3379,9 @@ function jobDlg(j,c,kind,tpl,preset){
      <datalist id="actList">${AS_ACTS.map(x=>`<option value="${esc(x)}">`).join("")}</datalist><datalist id="pdList2">${[...new Set(contracts.map(x=>x.product).filter(Boolean))].map(x=>`<option value="${esc(x)}">`).join("")}</datalist></fieldset>
    <fieldset id="payBox" style="padding:10px 12px" ${asLike(j)||j.kind==="addon"?"":"hidden"}><legend>비용·결제</legend>
      <div class="g3">${sel("paid_type","유상/무상",[["","(선택)"],["유상","유상"],["무상","무상"]],j.paid_type||"",!can)}${asx?inp("trip_fee","출장비",j.trip_fee||"","number",!can)+inp("part_fee","부품비",j.part_fee||"","number",!can):"<span></span><span></span>"}</div>
-     <div class="g3">${inp("cost","청구금액 (총합계)",j.cost||"","number",!can)}${sel("pay_status","납부 여부",[["","(선택)"],["완료","완료"],["미수","미수"]],j.pay_status||"",!can)}${sel("pay_method","청구방법",[["","(선택)"],["카드","카드"],["현금","현금"]],j.pay_method==="입금"?"현금":(j.pay_method||""),!can)}</div>
-     <div class="g3">${inp("pay_date","입금일",j.pay_date,"date",!can)}${inp("pay_name","카드사 / 입금자명",j.pay_name,"text",!can,'list="cardList"')}${asx?inp("tax_date","세금계산서 발행일자",j.tax_date,"date",!off):"<span></span>"}</div>
+     <div class="g3">${hasDet()?`<label class="f">세제 구매 (1통 ${won0(DET_PRICE)}원)<span class="detq"><button type="button" class="btn sm" data-dq="-1" ${can?"":"disabled"} aria-label="세제 한 통 빼기">−</button><input name="det_qty" type="number" min="0" inputmode="numeric" value="${j.det_qty||0}" ${can?"":"readonly"} aria-label="세제 수량"><span>통</span><button type="button" class="btn sm" data-dq="1" ${can?"":"disabled"} aria-label="세제 한 통 더하기">+</button></span></label>${inp("det_fee","세제 금액",j.det_fee||"","number",!can)}`:"<span></span><span></span>"}${inp("cost","청구금액 (총합계)",j.cost||"","number",!can)}</div>
+     <div class="g3">${sel("pay_status","납부 여부",[["","(선택)"],["완료","완료"],["미수","미수"]],j.pay_status||"",!can)}${sel("pay_method","청구방법",[["","(선택)"],["카드","카드"],["현금","현금"]],j.pay_method==="입금"?"현금":(j.pay_method||""),!can)}${inp("pay_date","입금일",j.pay_date,"date",!can)}</div>
+     <div class="g3">${inp("pay_name","카드사 / 입금자명",j.pay_name,"text",!can,'list="cardList"')}<span></span><span></span></div>
      <label class="f">입금 메모<input name="pay_memo" value="${esc(j.pay_memo||"")}" ${can?"":"readonly"} placeholder="예: 10/14 이애경 명의로 입금, 2건 합산"></label>
      <label class="chip" style="justify-self:start"><input type="checkbox" name="closed" ${j.closed?"checked":""} ${off?"":"disabled"}>매출마감 ${off?"":"(사무실에서 처리)"}</label>
      <datalist id="cardList">${["농협카드","비씨카드","국민카드","신한카드","삼성카드","현대카드","롯데카드","하나카드","우리카드","네이버페이"].map(x=>`<option value="${x}">`).join("")}</datalist></fieldset>
@@ -3408,10 +3412,11 @@ function jobDlg(j,c,kind,tpl,preset){
          if(!pr.product&&!pr.size&&!pr.serial){const k0=ctrById(j.contract_id)||custContracts(j.customer_id)[0];if(k0)Object.assign(pr,{product:k0.product||"",size:k0.size||"",serial:k0.serial||""})}
          if(f.get("as_used")){delete pr.install_date;pr.install_note="중고구매"}else{if(/중고/.test(pr.install_note||""))delete pr.install_note;if(iv&&iv!==base){pr.install_date=iv;delete pr.install_note}else delete pr.install_date}pt.product=pr}
        if(asx){const nn=x=>Number(f.get(x)||0)||0;Object.assign(pt,{action:(f.get("action")||"").trim(),trip_fee:nn("trip_fee"),part_fee:nn("part_fee"),distance:f.get("distance")===""||f.get("distance")==null?null:nn("distance"),satisfaction:f.get("satisfaction")||""});
-         if(off)pt.tax_date=f.get("tax_date")||null;if(!pt.cost&&pt.paid_type!=="무상"){pt.cost=pt.trip_fee+pt.part_fee;if(pt.cost&&!pt.paid_type)pt.paid_type="유상"}}
+         if(off&&f.has("tax_date"))pt.tax_date=f.get("tax_date")||null;if(hasDet()&&f.has("det_qty")){pt.det_qty=nn("det_qty");pt.det_fee=nn("det_fee")}
+         if(!pt.cost&&pt.paid_type!=="무상"){pt.cost=pt.trip_fee+pt.part_fee+(pt.det_fee||0);if(pt.cost&&!pt.paid_type)pt.paid_type="유상"}}
      }else{pt.sink_status=f.get("sink_status")||"";pt.sink_memo=f.get("sink_memo")||"";pt.parts=f.get("parts")||"";
        if(j.kind==="addon"){Object.assign(pt,{paid_type:f.get("paid_type")||"",cost:Number(f.get("cost")||0)||0,pay_status:f.get("pay_status")||"",pay_method:f.get("pay_method")||"",pay_date:f.get("pay_date")||null,pay_name:(f.get("pay_name")||"").trim(),pay_memo:(f.get("pay_memo")||"").trim()});
-         if(asx){const nn=x=>Number(f.get(x)||0)||0;pt.trip_fee=nn("trip_fee");pt.part_fee=nn("part_fee");if(off)pt.tax_date=f.get("tax_date")||null;if(!pt.cost&&pt.paid_type!=="무상")pt.cost=pt.trip_fee+pt.part_fee}
+         if(asx){const nn=x=>Number(f.get(x)||0)||0;pt.trip_fee=nn("trip_fee");pt.part_fee=nn("part_fee");if(off&&f.has("tax_date"))pt.tax_date=f.get("tax_date")||null;if(hasDet()&&f.has("det_qty")){pt.det_qty=nn("det_qty");pt.det_fee=nn("det_fee")}if(!pt.cost&&pt.paid_type!=="무상")pt.cost=pt.trip_fee+pt.part_fee+(pt.det_fee||0)}
          if(pt.paid_type==="무상"){pt.cost=0;pt.pay_status="";pt.pay_method=""}else{if(pt.cost&&!pt.paid_type)pt.paid_type="유상";if(pt.pay_method&&!pt.pay_status&&pt.cost)pt.pay_status="완료";if(pt.pay_status==="완료"&&!pt.pay_date)pt.pay_date=today()}
          if(off)pt.closed=!!f.get("closed")}}
      if(off||isNew){Object.assign(pt,{request_date:f.get("request_date")||today(),visit_date:f.get("visit_date")||null,visit_time:fmtTime(f.get("visit_time")),symptom:f.get("symptom")||""})}
@@ -3431,8 +3436,15 @@ function jobDlg(j,c,kind,tpl,preset){
   (()=>{const jf=document.getElementById("jf");const u=jf&&jf.querySelector('[name="as_used"]'),d=jf&&jf.querySelector('[name="as_idate"]');if(!u||!d||u.disabled)return;
     u.addEventListener("change",()=>{if(u.checked){d.dataset.prev=d.value;d.value="";d.readOnly=true}else{d.readOnly=false;if(d.dataset.prev)d.value=d.dataset.prev}})})();
   /* 출장비+부품비 → 청구금액 자동 합계 */
-  (()=>{const jf=document.getElementById("jf");if(!jf)return;const q=n=>jf.querySelector(`[name="${n}"]`);const a=q("trip_fee"),b=q("part_fee"),tot=q("cost");if(!a||!b||!tot||tot.readOnly)return;
-    const go=()=>{const s=(Number(a.value||0)||0)+(Number(b.value||0)||0);tot.value=s||"";tot.classList.add("autocalc");setTimeout(()=>tot.classList.remove("autocalc"),600)};a.addEventListener("input",go);b.addEventListener("input",go);tot.title="출장비+부품비 자동 합계 (직접 고칠 수도 있음)"})();
+  (()=>{const jf=document.getElementById("jf");if(!jf)return;const q=n=>jf.querySelector(`[name="${n}"]`);const a=q("trip_fee"),b=q("part_fee"),tot=q("cost"),dq=q("det_qty"),df=q("det_fee"),pt=q("paid_type");if(!a||!b||!tot||tot.readOnly)return;
+    const n=el=>el?Number(el.value||0)||0:0;
+    const go=()=>{const s=n(a)+n(b)+n(df);tot.value=s||"";tot.classList.add("autocalc");setTimeout(()=>tot.classList.remove("autocalc"),600)};a.addEventListener("input",go);b.addEventListener("input",go);
+    /* 세제: 수량 × 1통 단가 → 세제 금액 → 청구금액 */
+    if(dq&&df){const dg=()=>{df.value=n(dq)>0?n(dq)*DET_PRICE:"";go()};dq.addEventListener("input",dg);df.addEventListener("input",go);
+      jf.querySelectorAll("[data-dq]").forEach(bt=>bt.onclick=()=>{dq.value=Math.max(0,n(dq)+Number(bt.dataset.dq));dg()})}
+    /* 유상이면 출장비 기본 50,000원 (직접 고칠 수 있음) */
+    const tripDef=()=>{if(pt&&pt.value==="유상"&&!a.value){a.value=AS_TRIP_DEFAULT;go()}};if(pt)pt.addEventListener("change",tripDef);if(!n(tot))tripDef();
+    tot.title="출장비+부품비+세제 금액 자동 합계 (직접 고칠 수도 있음)"})();
   /* 시간 칸: 입력을 마치면 오전·오후 붙여서 보기 좋게 */
   document.querySelectorAll('#jf [name="visit_time"],#jf [name="end_time"]').forEach(el=>{if(!el.readOnly)el.addEventListener("blur",()=>{el.value=fmtTime(el.value)})});
   /* 완료일을 넣으면 상태를 '완료'로 자동 전환 */
@@ -3780,7 +3792,7 @@ function hbar(box){
 }
 function fdata(id){const root=document.getElementById(id);const els=[...root.querySelectorAll("[name]")];
   const one=n=>{const e=els.filter(x=>x.name===n);if(!e.length)return null;const x=e[0];if(x.type==="radio"){const r=e.find(y=>y.checked);return r?r.value:null}if(x.type==="checkbox")return x.checked?(x.value||"on"):null;return x.value};
-  return{get:one,getAll:n=>els.filter(x=>x.name===n&&x.type==="checkbox"&&x.checked).map(x=>x.value)}}
+  return{get:one,has:n=>els.some(x=>x.name===n),getAll:n=>els.filter(x=>x.name===n&&x.type==="checkbox"&&x.checked).map(x=>x.value)}}
 function val(id){const el=document.getElementById(id);return el?el.value:""}
 function openDlg(h,b,btns){
   const d=document.getElementById("dlg");d.classList.remove("wide");document.getElementById("dlgH").innerHTML=h;document.getElementById("dlgB").innerHTML=b;
