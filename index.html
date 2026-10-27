@@ -203,6 +203,7 @@ body.resizing,body.resizing *{cursor:col-resize!important;user-select:none}
 .hrecv{display:grid;grid-template-columns:minmax(180px,240px) 1fr;gap:10px;align-items:start}@media (max-width:1000px){.htop{grid-template-columns:1fr}}@media (max-width:760px){.hrecv{grid-template-columns:1fr}.home{padding:12px 16px 24px}.hgrid{grid-template-columns:1fr}}
 .wt.sk td.skest{color:#888;font-style:italic}.wt.sim td{font-size:12px}.wt.sim tr.siok td{background:#e8f7ee}.wt.sim tr.sis td{background:#f3e8ff}.wt.sim select{max-width:340px;font-size:12px}dialog.wide{max-width:min(1150px,96vw);width:96vw}.wt.spl input{width:100%;min-width:60px;padding:4px 6px;border:1px solid var(--line);border-radius:4px;background:var(--field)}.wt.spl td{padding:3px 4px}
 .csf{display:grid;gap:6px}.csr{display:grid;grid-template-columns:86px 1fr;align-items:center;gap:8px;font-size:13px;color:var(--muted,#555)}.csr:focus-within>span:first-child{color:var(--accent,#1d4ed8);font-weight:600}.csi{position:relative;display:block}.csi svg{position:absolute;left:9px;top:50%;transform:translateY(-50%);color:#98a2b3;pointer-events:none}.csi input{width:100%;padding:7px 8px 7px 30px;box-sizing:border-box}
+.rlrow{display:grid;grid-template-columns:150px 120px 1fr 84px;gap:8px;align-items:end;width:100%}.rlrow .f{margin:0}.rlrow input,.rlrow select{width:100%;box-sizing:border-box;height:38px}.rlrow .btn{height:38px;width:100%}.rlcin{display:flex;gap:6px}.rlcin select{flex:0 0 110px}.rlcin input{flex:1;min-width:0}@media (max-width:640px){.rlrow{grid-template-columns:1fr 1fr}.rlrow .rlc,.rlrow .btn{grid-column:1/-1}}
 .wt.skst,.wt.sk2{width:auto;min-width:min(100%,720px)}.wt.sk2 tbody tr{cursor:pointer}.wt.sk2 tbody tr:hover td{background:var(--accent-weak)}.wt.sk2 tr.cx0 td{color:#999}.skstk{margin-top:6px;padding-top:6px;border-top:1px dashed var(--line)}.skstk select{max-width:100%}
 .wt.sk td{vertical-align:middle}.wt.sk .skchk{width:34px;text-align:center}.wt.sk tr.alt td{background:#F3F7FC}.wt.sk tr.cx td{color:#999;text-decoration:line-through}.wt.sk td.skded{color:#1d4ed8}.wt.sk tbody tr{cursor:pointer}.wt.sk tbody tr:hover td{background:var(--accent-weak)}
 .tag.sk-신규접수{background:#fff;color:#1d4ed8;border-color:#1d4ed8}.tag.sk-주문완료{background:#FFF3C4;color:#8a5a00;border-color:#FFF3C4}.tag.sk-입고완료{background:#DCEBFF;color:#1d4ed8;border-color:#DCEBFF}.tag.sk-출고완료{background:#00CC66;color:#1b1b1b;border-color:#00CC66}.tag.sk-재고등록{background:#efe2ff;color:#6b21a8;border-color:#efe2ff}.tag.sk-취소{background:#c62828;color:#fff;border-color:#c62828}
@@ -1938,7 +1939,7 @@ const RSTAGE_OLD={"정상관리":"정상","독촉중":"정상","분할약정":"�
 function normStage(cs){if(!cs)return"정상";let s=RSTAGE_OLD[cs.stage]||cs.stage||"정상";if(s==="정상"&&(cs.grade==="관리"||cs.grade==="불량"))s=cs.grade;if(s==="정상"&&cs.grade==="악성")s="불량";return s}
 function addMonths(d,n){const x=new Date(d);if(isNaN(x))return"";x.setMonth(x.getMonth()+n);return x.toISOString().slice(0,10)}
 const RHARD=["법적조치","추심이관","대손처리"];
-const RMETH=["전화","문자","방문","내용증명","법적조치","이관","기타"];
+const RMETH=["전화","문자","방문","내용증명","법적조치","이관","직접입력"];
 const RKINDS=["매출채권","가불금","대여금"];
 const RGRADES=["정상","관리","불량","악성"];
 const RPROG=["미수","장기미수","무료체험","추심","개인채권","가불금","CMS-05일","CMS-10일","CMS-15일","CMS-20일","CMS-25일","CMS-30일","카드-05일","입금-05일"];
@@ -1994,7 +1995,7 @@ function recvCell(col,x){const c=x.c,cs=x.cs||{},L=x.logs[0],td=today(),k=x.k||{
     case"amount":return `<td class="num">${won0(x.amount)}</td>`;case"card":return `<td class="num">${x.card?won0(x.card):""}</td>`;case"cash":return `<td class="num">${x.cash?won0(x.cash):""}</td>`;
     case"paid":return `<td class="num">${x.paid?won0(x.paid):""}</td>`;case"unpaid":return `<td class="num ${x.unpaid>0?"neg":""}"><b>${won0(x.unpaid)}</b></td>`;case"csum":return `<td class="num">${won0(x.csum)}</td>`;
     case"days":return `<td class="num">${x.days==null?"":x.days+"일"}</td>`;case"pdays":return `<td class="num">${x.pdays==null?"":x.pdays+"일"}</td>`;
-    case"llog":return `<td class="wrap memo" title="${esc(L?L.content:"")}"><div class="clamp">${L?`${esc(fmtD(L.created_at).slice(5).replace("-","/"))} ${esc(L.content)}`:""}</div></td>`;
+    case"llog":return `<td class="wrap memo" title="${esc(L?`[${fmtD(L.created_at).slice(2).replace(/-/g,".")}${L.by_name?" "+L.by_name:""}] ${L.content}`:"")}"><div class="clamp">${L?`[${esc(fmtD(L.created_at).slice(2).replace(/-/g,"."))}${L.by_name?" "+esc(L.by_name):""}] ${esc(L.content)}`:""}</div></td>`;
     case"idate":return `<td>${esc(ymd2(x.idate))}</td>`;
     case"washx":return `<td>${x.t==="ctr"&&k.wash_added?"수압식":""}</td>`;
     case"kind":return `<td>${esc(x.kind)}</td>`;
@@ -2098,9 +2099,11 @@ function recvDlg(x){const cs=x.cs||{stage:"정상관리",transfer:{}};const off=
    ${x.t==="ctr"?`<details><summary class="mapt" style="cursor:pointer">입금 추가·수정</summary><div id="paySec"></div></details>`:x.t==="as"?`<p class="mapt" style="margin:0">A/S 입금은 A/S 창에서 납부 여부를 ‘완료’로 바꾸면 회수완료가 됩니다. <button type="button" class="btn sm" id="rOpenJob">A/S 창 열기</button></p>`
      :off?`<div class="payadd"><input type="date" id="lgD" value="${today()}" aria-label="날짜"><input id="lgT" placeholder="내역 (예: 현금 입금)" aria-label="내역"><input type="number" id="lgA" placeholder="채권발생" aria-label="채권발생"><input type="number" id="lgP" placeholder="입금액" aria-label="입금액"><button type="button" class="btn" id="lgAdd">내역 추가</button></div>`:""}
    <h3 class="ksec">3. 채권관리이력</h3>
-   <div class="payadd"><select id="rlM" aria-label="방법">${RMETH.map(m=>`<option>${m}</option>`).join("")}</select><input id="rlC" placeholder="내용 (예: 7/20까지 카드결제 예정)" aria-label="관리 내용" style="flex:1;min-width:260px">
-     <input type="date" id="rlN" aria-label="다음 조치일" title="다음 조치일"><button type="button" class="btn pri" id="rlAdd">기록 추가</button></div>
-   <p class="mapt" style="margin:0">기록은 바로 저장되고 날짜·담당자(작성자)가 자동으로 남습니다. 날짜 칸은 ‘다음 조치일’입니다.</p>
+   <div class="rlrow"><label class="f">날짜<input type="date" id="rlD" value="${today()}"></label>
+     <label class="f">담당자<select id="rlW">${[...new Set([me.name||"",...staff.filter(s=>s.active&&s.role!=="tech").map(s=>s.name)].filter(Boolean))].map(n=>`<option ${n===me.name?"selected":""}>${esc(n)}</option>`).join("")}</select></label>
+     <label class="f rlc">내용<span class="rlcin"><select id="rlM" aria-label="방법">${RMETH.map(m=>`<option>${m}</option>`).join("")}</select><input id="rlC" placeholder="예: 7/20까지 카드결제 예정" aria-label="관리 내용"></span></label>
+     <button type="button" class="btn pri" id="rlAdd">추가</button></div>
+   <p class="mapt" style="margin:0">추가하면 바로 저장됩니다. 다음 조치일은 아래 ‘채권관리단계’에서 정하세요.</p>
    <div id="rLogs"></div>
    <h3 class="ksec">채권관리단계 <span class="tag rs-${esc(x.stage)}">${esc(x.stage)}</span>${x.auto?` <small class="mapt">(자동: ${esc(x.auto)})</small>`:""}</h3>
    <div class="g3"><label class="f">채권관리단계 (직접 지정)<select name="stage" ${off?"":"disabled"}>${RSTAGES.map(s=>`<option ${s===x.mstage?"selected":""} ${canStage(s)||s===x.mstage?"":"disabled"}>${s}</option>`).join("")}</select></label>
@@ -2136,10 +2139,12 @@ function recvDlg(x){const cs=x.cs||{stage:"정상관리",transfer:{}};const off=
       const {error}=await sb.from("recv_logs").update({content:v,edited_by_name:me.name||"",edited_at:new Date().toISOString()}).eq("id",l.id);if(error)return toast("수정하지 못했습니다: "+error.message);
       Object.assign(l,{content:v,edited_by_name:me.name||"",edited_at:new Date().toISOString()});drawLogs()})};
   drawLogs();
-  document.getElementById("rlAdd").onclick=async()=>{const content=val("rlC").trim();if(!content)return toast("내용을 입력하세요");const m=val("rlM"),nd=val("rlN")||null;
-    try{const c0=await recvEnsureCase(x);const r=await sb.from("recv_logs").insert({case_id:c0.id,customer_id:x.c.id||null,method:m,content,next_date:nd,by_name:me.name||""}).select().single();if(r.error)throw r.error;rlogs.push(r.data);
+  document.getElementById("rlM").onchange=()=>{const c=document.getElementById("rlC");c.placeholder=val("rlM")==="직접입력"?"내용을 직접 입력하세요":"예: 7/20까지 카드결제 예정";c.focus()};
+  document.getElementById("rlAdd").onclick=async()=>{const content=val("rlC").trim();if(!content)return toast("내용을 입력하세요");const m=val("rlM"),nd=null,ld=val("rlD")||today(),who=val("rlW")||me.name||"";
+    /* 고른 날짜로 기록 (시각은 지금) */const at=ld===today()?new Date().toISOString():new Date(ld+"T"+new Date().toTimeString().slice(0,8)).toISOString();
+    try{const c0=await recvEnsureCase(x);const r=await sb.from("recv_logs").insert({case_id:c0.id,customer_id:x.c.id||null,method:m,content,next_date:nd,by_name:who,created_at:at}).select().single();if(r.error)throw r.error;rlogs.push(r.data);
       const up={};if(nd)up.next_date=nd;if(Object.keys(up).length){await sb.from("recv_cases").update(up).eq("id",c0.id);Object.assign(c0,up);if(up.next_date){const ne=document.querySelector('#rf [name="next_date"]');if(ne)ne.value=nd}if(up.stage){x.stage=up.stage;const s=document.querySelector('#rf [name="stage"]');if(s)s.value=up.stage}}
-      document.getElementById("rlC").value="";document.getElementById("rlN").value="";drawLogs();toast("기록했습니다");reload(["recv","rlogs"],true)}
+      document.getElementById("rlC").value="";drawLogs();toast("기록했습니다");reload(["recv","rlogs"],true)}
     catch(e){toast(/recv_/.test(e.message||"")?"미수·채권관리 칸이 아직 없습니다. Supabase에서 phase1z.sql을 실행해 주세요.":"기록하지 못했습니다: "+(e.message||""))}};
   document.getElementById("rlC").addEventListener("keydown",e=>{if(e.key==="Enter"&&!e.isComposing){e.preventDefault();e.stopPropagation();document.getElementById("rlAdd").click()}});
   const drawFiles=()=>{const g=document.getElementById("rfGrid");if(!g)return;const list=custFiles(x.c).filter(f=>f.kind==="채권");
