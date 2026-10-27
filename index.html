@@ -612,7 +612,8 @@ async function fetchAll(table,select="*"){
 const COLS={};
 async function colsOf(tb){if(COLS[tb])return COLS[tb];const {data,error}=await sb.from(tb).select("*").limit(1);if(error)throw error;
   COLS[tb]=data&&data[0]?Object.keys(data[0]).filter(k=>k!=="import_raw").join(","):"*";return COLS[tb]}
-async function fetchCtr(){return fetchAll("contracts",await colsOf("contracts"))}
+/* 엑셀 이관 때의 업체명도 함께 받아 둠 (다른 이름의 고객으로 묶인 경우에도 검색되게) */
+async function fetchCtr(){const cols=await colsOf("contracts");if(cols!=="*"&&!ui.noXname){try{return await fetchAll("contracts",cols+",xname:import_raw->>업체명")}catch(e){ui.noXname=true}}return fetchAll("contracts",cols)}
 /* 바뀐 것만 받아오기: updated_at 이후 행 + 개수 확인(지워진 행 있으면 전체 다시) */
 function maxUpd(arr){let m="";for(const r of arr)if(r.updated_at&&r.updated_at>m)m=r.updated_at;return m}
 async function incFetch(tb,cur,full,withCount){const since=maxUpd(cur);if(!cur.length||!since)return{rows:await full(),changed:true};
@@ -704,7 +705,7 @@ function renderCustView(){
   document.getElementById("clist").onclick=e=>{const it=e.target.closest(".citem");if(it){ui.sel=it.dataset.id;ui.ctab="info";ui.draft=null;document.querySelectorAll("#clist .citem.sel").forEach(x=>x.classList.remove("sel"));it.classList.add("sel");renderCustMain();if(window.innerWidth<760){const m=document.getElementById("main");if(m)m.scrollIntoView({behavior:"smooth",block:"start"})}}};
   renderCustList();renderCustMain();
 }
-function custSearchText(c){const ks=custContracts(c.id);return [c.name,c.biz_name,c.search_text,c.ceo,c.phone,c.phone2,c.address,c.biz_no,c.owner_name,staffName(c.owner),...ks.map(k=>k.serial+" "+k.product)].join(" ").toLowerCase().replace(/[-\s]/g,"")}
+function custSearchText(c){const ks=custContracts(c.id);return [c.name,c.biz_name,c.search_text,c.ceo,c.phone,c.phone2,c.address,c.biz_no,c.owner_name,staffName(c.owner),...ks.map(k=>k.serial+" "+k.product+" "+(k.xname||""))].join(" ").toLowerCase().replace(/[-\s]/g,"")}
 function renderCustList(){
   const q=ui.q.trim().toLowerCase().replace(/[-\s]/g,"");
   const gOk=c=>{if(!ui.grade)return true;const g=gradeOf(c);return g&&(ui.grade==="any"||g.g===ui.grade)};
@@ -713,7 +714,7 @@ function renderCustList(){
   document.getElementById("cnt").textContent=`고객 ${customers.length}곳${q||ui.stage||ui.ctype||ui.grade?` · 표시 ${list.length}`:""}`;
   const shown=list.slice(0,300);
   document.getElementById("clist").innerHTML=shown.map(({c,k})=>`<div class="citem${ui.sel===c.id?" sel":""}" data-id="${c.id}" tabindex="0">
-    <span class="n">${esc(c.name)}${gradeBadge(c)}${q&&c.search_text&&String(c.search_text).toLowerCase().replace(/[-\s]/g,"").includes(q)?` <small class="mapt">(${esc(c.search_text)})</small>`:""}</span>
+    <span class="n">${esc(c.name)}${gradeBadge(c)}${q&&c.search_text&&String(c.search_text).toLowerCase().replace(/[-\s]/g,"").includes(q)?` <small class="mapt">(${esc(c.search_text)})</small>`:""}${(()=>{if(!q||String(c.name||"").toLowerCase().replace(/[-\s]/g,"").includes(q))return"";const bare=v=>String(v||"").replace(/\s*\([^)]*\)\s*$/,"").toLowerCase().replace(/[-\s]/g,"");const x=custContracts(c.id).find(k=>k.xname&&String(k.xname).toLowerCase().replace(/[-\s]/g,"").includes(q)&&bare(k.xname)!==bare(c.name));return x?` <small class="mapt" title="엑셀 이관 때 이 고객으로 묶인 계약">(엑셀: ${esc(x.xname)})</small>`:""})()}</span>
     <span class="s"><span>${esc(c.phone||c.phone2)}</span>${k?`<span>${esc([k.product,k.size].filter(Boolean).join(" "))}${k.serial?" · "+esc(k.serial):""}</span>`:""}<span>담당 ${esc(staffName(c.owner)||c.owner_name||"-")}</span></span>
     <span class="s">${k?`${k.contract_type&&k.contract_type!=="구매"?`<span class="tag ct-${esc(k.contract_type)}">${esc(k.contract_type)}</span>`:""}<span class="tag st-${esc(k.stage)}">${esc(k.stage)}</span>`:""}${c.collector||c.collector_name?`<span class="tag">수금 ${esc(staffName(c.collector)||c.collector_name||"")}</span>`:""}</span></div>`).join("")
     +(list.length>shown.length?`<div class="empty" style="padding:14px">${list.length-shown.length}곳 더 있습니다. 검색으로 좁혀 주세요.</div>`:"")
