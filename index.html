@@ -1964,7 +1964,8 @@ function recvItems(){const out=[];const byRef=new Map(rcases.filter(c=>c.ref_id)
     if(!x.open)x.stage=ms==="대손처리"?"대손처리":"회수완료";
     else if(RHARD.includes(ms))x.stage=ms;
     else if(ms==="정상"&&x.idate&&x.idate.slice(0,7)===td0.slice(0,7)){x.stage="당월매출";x.auto="당월 설치"}
-    else{let s=ms;const L3=["정상","관리","불량"];const up=(v,why)=>{if(L3.indexOf(v)>L3.indexOf(s)){s=v;x.auto=why}};
+    /* 자동 단계(약속일 경과→관리, 설치 3개월→불량)는 '정상'일 때만. 관리·불량으로 직접 정하면 그대로 */
+    else{let s=ms;const L3=["정상","관리","불량"];const up=(v,why)=>{if(ms==="정상"&&L3.indexOf(v)>L3.indexOf(s)){s=v;x.auto=why}};
       if(x.cs&&x.cs.promise_date&&x.cs.promise_date<td0)up("관리","약속일 경과");
       if(x.idate&&addMonths(x.idate,3)<=td0)up("불량","설치 3개월 이상");x.stage=s}
     x.csum=tot[x.c.id||("t:"+x.c.name)]||0;x.kind=(x.cs&&x.cs.kind)||"매출채권";{/* 담당자 = 3차 담당자만 (‘3차/수금담당’에서 수금담당은 뺌). 직접 등록 채권은 입력한 담당자 */
