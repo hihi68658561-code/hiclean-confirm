@@ -704,20 +704,20 @@ function renderCustView(){
   document.getElementById("clist").onclick=e=>{const it=e.target.closest(".citem");if(it){ui.sel=it.dataset.id;ui.ctab="info";ui.draft=null;document.querySelectorAll("#clist .citem.sel").forEach(x=>x.classList.remove("sel"));it.classList.add("sel");renderCustMain();if(window.innerWidth<760){const m=document.getElementById("main");if(m)m.scrollIntoView({behavior:"smooth",block:"start"})}}};
   renderCustList();renderCustMain();
 }
-function custSearchText(c){const ks=custContracts(c.id);return [c.name,c.biz_name,c.search_text,c.ceo,c.phone,c.phone2,c.address,c.biz_no,c.owner_name,staffName(c.owner),...ks.map(k=>k.serial+" "+k.product)].join(" ").toLowerCase().replace(/-/g,"")}
+function custSearchText(c){const ks=custContracts(c.id);return [c.name,c.biz_name,c.search_text,c.ceo,c.phone,c.phone2,c.address,c.biz_no,c.owner_name,staffName(c.owner),...ks.map(k=>k.serial+" "+k.product)].join(" ").toLowerCase().replace(/[-\s]/g,"")}
 function renderCustList(){
-  const q=ui.q.trim().toLowerCase().replace(/-/g,"");
+  const q=ui.q.trim().toLowerCase().replace(/[-\s]/g,"");
   const gOk=c=>{if(!ui.grade)return true;const g=gradeOf(c);return g&&(ui.grade==="any"||g.g===ui.grade)};
   const list=customers.filter(c=>gOk(c)&&(!ui.stage||custContracts(c.id).some(k=>k.stage===ui.stage))&&(!ui.ctype||custContracts(c.id).some(k=>(k.contract_type||"구매")===ui.ctype))&&(!q||custSearchText(c).includes(q)))
     .map(c=>({c,k:custContracts(c.id)[0]})).sort((a,b)=>((b.k&&b.k.contract_date)||b.c.created_at||"").localeCompare((a.k&&a.k.contract_date)||a.c.created_at||""));
   document.getElementById("cnt").textContent=`고객 ${customers.length}곳${q||ui.stage||ui.ctype||ui.grade?` · 표시 ${list.length}`:""}`;
   const shown=list.slice(0,300);
   document.getElementById("clist").innerHTML=shown.map(({c,k})=>`<div class="citem${ui.sel===c.id?" sel":""}" data-id="${c.id}" tabindex="0">
-    <span class="n">${esc(c.name)}${gradeBadge(c)}${q&&c.search_text&&String(c.search_text).toLowerCase().replace(/-/g,"").includes(q)?` <small class="mapt">(${esc(c.search_text)})</small>`:""}</span>
+    <span class="n">${esc(c.name)}${gradeBadge(c)}${q&&c.search_text&&String(c.search_text).toLowerCase().replace(/[-\s]/g,"").includes(q)?` <small class="mapt">(${esc(c.search_text)})</small>`:""}</span>
     <span class="s"><span>${esc(c.phone||c.phone2)}</span>${k?`<span>${esc([k.product,k.size].filter(Boolean).join(" "))}${k.serial?" · "+esc(k.serial):""}</span>`:""}<span>담당 ${esc(staffName(c.owner)||c.owner_name||"-")}</span></span>
     <span class="s">${k?`${k.contract_type&&k.contract_type!=="구매"?`<span class="tag ct-${esc(k.contract_type)}">${esc(k.contract_type)}</span>`:""}<span class="tag st-${esc(k.stage)}">${esc(k.stage)}</span>`:""}${c.collector||c.collector_name?`<span class="tag">수금 ${esc(staffName(c.collector)||c.collector_name||"")}</span>`:""}</span></div>`).join("")
     +(list.length>shown.length?`<div class="empty" style="padding:14px">${list.length-shown.length}곳 더 있습니다. 검색으로 좁혀 주세요.</div>`:"")
-    ||`<div class="empty" style="padding:16px">${customers.length?"검색 결과가 없습니다.":(isOffice()?"‘엑셀 이관’으로 기존 고객관리 엑셀을 올려 주세요.":"볼 수 있는 고객이 없습니다.")}</div>`;
+    ||`<div class="empty" style="padding:16px">${customers.length?(ui.stage||ui.ctype||ui.grade?"검색 결과가 없습니다. 위의 구분·진행단계·관리등급 선택을 ‘전체’로 바꿔 보세요.":"검색 결과가 없습니다."):(isOffice()?"‘엑셀 이관’으로 기존 고객관리 엑셀을 올려 주세요.":"볼 수 있는 고객이 없습니다.")}</div>`;
 }
 function renderCustMain(){
   const m=document.getElementById("main");const c=custById(ui.sel);
@@ -3424,7 +3424,7 @@ function jobDlg(j,c,kind,tpl,preset){
 }
 function bindCustPicker(pool){
   const q=document.getElementById("jcQ"),res=document.getElementById("jcRes"),selBox=document.getElementById("jcSel"),hid=document.getElementById("jcId"),hint=document.getElementById("jcHint");
-  const show=()=>{const t=q.value.trim().toLowerCase().replace(/-/g,"");
+  const show=()=>{const t=q.value.trim().toLowerCase().replace(/[-\s]/g,"");
     if(t.length<2){res.innerHTML="";return}
     const hits=pool.filter(x=>custSearchText(x).includes(t)).slice(0,8);
     res.innerHTML=hits.map(x=>{const k=custContracts(x.id)[0];return `<button type="button" data-id="${x.id}"><b>${esc(x.name)}</b><small>${esc([x.ceo,x.phone||x.phone2,x.address].filter(Boolean).join(" · "))}</small>${k||instTxt(x)?`<small>${esc([k&&k.product,k&&k.size,k&&k.serial&&"SN "+k.serial].filter(Boolean).join(" "))}${instTxt(x)?`${k?" · ":""}<b class="instd">${esc(instTxt(x))}</b>`:""}</small>`:""}</button>`}).join("")||`<p class="mapt">찾는 고객이 없습니다.</p>`;
