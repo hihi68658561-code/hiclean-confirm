@@ -1229,7 +1229,7 @@ function renderCtrView0(){
      <span class="mapt">${ui.ckpi&&KPI[ui.ckpi]?esc(KPI[ui.ckpi][0])+" · ":""}${ui.crow?esc(CROWS.find(y=>y[0]===ui.crow)[1])+" · ":""}${ui.cct?esc(ui.cct)+" · ":""}${list.length}건</span>
      <span style="flex:1"></span>${isOffice()&&hasMonthCol()?`<button class="btn" type="button" id="cMonth" disabled>월마감 (0)</button>`:""}${isOffice()?`<label class="chip"><input type="checkbox" id="cSelAll">전체 선택</label>`:""}${isAdmin()?`<button class="btn danger" type="button" id="cDel" disabled>선택 삭제 (0)</button>`:""}${cfClearBtn("ctr")}<button class="btn" type="button" id="cSort">정렬</button><button class="btn" type="button" id="cCols">입력화면설정</button>${isOffice()||me.role==="sales"?`<button class="btn pri" type="button" id="cNewK">+ 신규접수</button>`:""}</div>
    <div class="wrapx vis" style="padding-top:10px"><div class="wtbox"><table class="wt ct"><thead><tr>${isOffice()?"<th></th>":""}<th>순번</th>${colHead(cols,"ctr",MONEYC)}</tr></thead><tbody>
-    ${shown.map((x,i)=>`<tr data-ck="${x.k.id}" class="rs-${esc(x.k.stage)}">${isOffice()?`<td><input type="checkbox" class="csel" data-id="${x.k.id}" ${ui.csel.has(x.k.id)?"checked":""} aria-label="선택"></td>`:""}<td>${i+1}</td>${cols.map(c=>ctrCell(c,x.k,x.c,x.s,x.b)).join("")}</tr>`).join("")||`<tr><td colspan="${cols.length+2}" class="mapt" style="cursor:default">해당하는 계약이 없습니다.</td></tr>`}</tbody>
+    ${shown.map((x,i)=>`<tr data-ck="${x.k.id}" class="rs-${esc(ctrRowCls(x.k))}">${isOffice()?`<td><input type="checkbox" class="csel" data-id="${x.k.id}" ${ui.csel.has(x.k.id)?"checked":""} aria-label="선택"></td>`:""}<td>${i+1}</td>${cols.map(c=>ctrCell(c,x.k,x.c,x.s,x.b)).join("")}</tr>`).join("")||`<tr><td colspan="${cols.length+2}" class="mapt" style="cursor:default">해당하는 계약이 없습니다.</td></tr>`}</tbody>
     ${shown.length?`<tfoot><tr>${isOffice()?"<th></th>":""}<th></th>${cols.map(c=>`<th class="${MONEYC.has(c)?"num":""}">${MONEYC.has(c)?won0(tot[c]):c===cols[0]?"합계":""}</th>`).join("")}</tr></tfoot>`:""}</table></div>
     ${list.length>500?`<p class="mapt">앞의 500건만 보입니다. 검색으로 좁혀 주세요.</p>`:""}</div>`;
   applyColW(cols);bindColResize(cols);
@@ -1288,7 +1288,7 @@ function renderAllView0(){
      <span class="mapt" id="caCnt">${list.length}건${list.length>shown.length?` 중 ${shown.length}건 표시`:""}</span>
      <span style="flex:1"></span>${isAdmin()&&hasMonthCol()?`<button class="btn" type="button" id="caBulk">나머지 계약 일괄 월마감</button>`:""}${cfClearBtn("all")}<button class="btn" type="button" id="caSort">정렬</button><button class="btn" type="button" id="caCols">입력화면설정</button>${isOffice()||me.role==="sales"?`<button class="btn pri" type="button" id="caNewK">+ 신규접수</button>`:""}</div>
    <div class="wrapx vis" style="padding-top:10px"><div class="wtbox"><table class="wt ca"><thead><tr><th>순번</th>${colHead(cols,"all",MONEYC)}</tr></thead><tbody>
-    ${shown.map((x,i)=>`<tr data-ck="${x.k.id}" class="rs-${esc(x.k.stage)}"><td>${i+1}</td>${cols.map(c=>ctrCell(c,x.k,x.c,x.s,x.b)).join("")}</tr>`).join("")||`<tr><td colspan="${cols.length+1}" class="mapt" style="cursor:default">월마감된 계약이 없습니다. 당월리스트에서 월마감 칸을 OK로 바꾸면 여기로 옮겨집니다.</td></tr>`}</tbody></table></div>
+    ${shown.map((x,i)=>`<tr data-ck="${x.k.id}" class="rs-${esc(ctrRowCls(x.k))}"><td>${i+1}</td>${cols.map(c=>ctrCell(c,x.k,x.c,x.s,x.b)).join("")}</tr>`).join("")||`<tr><td colspan="${cols.length+1}" class="mapt" style="cursor:default">월마감된 계약이 없습니다. 당월리스트에서 월마감 칸을 OK로 바꾸면 여기로 옮겨집니다.</td></tr>`}</tbody></table></div>
     ${list.length>shown.length?`<p style="text-align:center"><button class="btn" type="button" id="caMore">다음 300건 더 보기</button> <span class="mapt">찾는 건이 있으면 검색이 가장 빠릅니다.</span></p>`:""}</div>`;
   applyColW(cols,null,"all");bindColResize(cols,"all");
   view().querySelectorAll(".wtbox").forEach(hbar);
@@ -1298,7 +1298,7 @@ function renderAllView0(){
   const bk=document.getElementById("caBulk");if(bk)bk.onclick=bulkMonthClose;
   /* 더 보기: 표를 다시 그리지 않고 아래에 이어 붙임 */
   const mo=document.getElementById("caMore");if(mo)mo.onclick=()=>{const tb=view().querySelector(".wt.ca tbody");const from=ui.allN,to=Math.min(list.length,from+300);
-    tb.insertAdjacentHTML("beforeend",list.slice(from,to).map((x,i)=>`<tr data-ck="${x.k.id}" class="rs-${esc(x.k.stage)}"><td>${from+i+1}</td>${cols.map(c=>ctrCell(c,x.k,x.c,x.s,x.b)).join("")}</tr>`).join(""));
+    tb.insertAdjacentHTML("beforeend",list.slice(from,to).map((x,i)=>`<tr data-ck="${x.k.id}" class="rs-${esc(ctrRowCls(x.k))}"><td>${from+i+1}</td>${cols.map(c=>ctrCell(c,x.k,x.c,x.s,x.b)).join("")}</tr>`).join(""));
     ui.allN=to;bindRows();const cnt=view().querySelector("#caCnt");if(cnt)cnt.textContent=`${list.length}건${list.length>to?` 중 ${to}건 표시`:""}`;if(to>=list.length)mo.parentElement.remove()};
   view().querySelectorAll(".wt.ca thead th[data-ck]").forEach(th=>{th.classList.add("sortable");const S=getSort();if(S[0]&&S[0].c===th.dataset.ck)th.dataset.sort=S[0].d===1?"asc":"desc";
     th.onclick=e=>{if(e.target.closest(".rz")||e.target.closest(".fbtn"))return;const c=th.dataset.ck;const S=getSort();const d=S[0]&&S[0].c===c?-S[0].d:1;setSort([{c,d},...S.filter(x=>x.c!==c).slice(0,2)]);re()}});
@@ -3023,6 +3023,8 @@ function sortPicker(onDone){let cur=getSort().map(x=>({...x}));
   openDlg("정렬 설정",`<p class="mapt">1순위가 같으면 2순위, 2순위도 같으면 3순위로 정렬합니다. 열 제목을 눌러도 바로 정렬됩니다(한 번 더 누르면 반대로).<br>목록은 항상 <b>당월 건 → 이달 결제된 예전 건 → 미수 건</b>으로 묶이고, 고른 정렬은 각 묶음 안에서 적용됩니다.</p><div id="spList" style="display:grid;gap:8px"></div>`,
     [["접수한 순서 (기본)","",()=>{cur=DEFSORT.map(x=>({...x}));draw();return true}],["설치일자·시간 순","",()=>{cur=INSTSORT.map(x=>({...x}));draw();return true}],["취소"],["적용","pri",()=>{cur=cur.filter(x=>x&&x.c);setSort(cur.length&&JSON.stringify(cur)!==JSON.stringify(DEFSORT)?cur:null);onDone()}]]);draw()}
 function hasTrialCol(){return contracts.some(k=>"trial_end" in k)}
+/* 철거 계약이 완료되면 회색 줄 */
+function ctrRowCls(k){return k.contract_type==="철거"&&k.stage==="완료"?"철거":k.stage}
 function trialCell(k){const d=k.trial_end;if(!d)return"";const td=today();const open=!["완료","취소","철거"].includes(k.stage)&&k.contract_type!=="철거";const days=Math.round((new Date(d)-new Date(td))/864e5);
   const cls=open&&days<0?"late":open&&days<=3?"soon":"";return `<span class="trial ${cls}" title="${open?(days<0?-days+"일 지남":days===0?"오늘 종료":days+"일 남음"):""}">${esc(ymd2(d))}</span>`}
 function contractDlg(c,k,tpl,opts){ui.payEdit=null;
