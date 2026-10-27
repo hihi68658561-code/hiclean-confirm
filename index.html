@@ -2996,7 +2996,7 @@ function gradeBadge(c){const g=gradeOf(c);return g?` <span class="gbadge ${g.g==
 function baseDate(k){if(k.__job){const j=k.__job;return j.done_date||j.visit_date||j.request_date||""}const ij=installOf(k);return (ij&&(ij.done_date||ij.visit_date))||k.contract_date||""}
 /* 계약관리 정렬: 기본은 설치일자·시간 빠른 순. 정렬 설정·열 제목 클릭으로 바꿈 (브라우저별 기억) */
 /* 시간 표시: 9:50 → 오전 9:50, 14:00 → 오후 2:00. 오전·오후 없이 1~6시는 오후로 봄(작업 시간 기준). 글자(통화 등)는 그대로 */
-function fmtTime(s){s=String(s||"").trim();if(!s)return"";if(/오전|오후|AM|PM/i.test(s))return s.replace(/\bAM\b/i,"오전").replace(/\bPM\b/i,"오후");
+function fmtTime(s){s=String(s||"").trim().replace(/(\d{1,2}:\d{2}):\d{2}(\.\d+)?/,"$1");if(!s)return"";if(/오전|오후|AM|PM/i.test(s))return s.replace(/\bAM\b/i,"오전").replace(/\bPM\b/i,"오후");
   const m=s.match(/^(\d{1,2})(?:\s*[:시.]\s*(\d{1,2})\s*분?)?$/)||s.match(/^(\d{1,2})(\d{2})$/);if(!m)return s;let h=+m[1],mi=m[2]==null?0:+m[2];if(h>23||mi>59)return s;
   const pm=h>=12||(h>=1&&h<=6);const h12=h%12===0?12:h%12;return `${pm?"오후":"오전"} ${h12}:${String(mi).padStart(2,"0")}`}
 function timeKey(s){const m=String(s||"").match(/(오전|오후|AM|PM|am|pm)?\s*(\d{1,2})(?::|시\s*)?(\d{2})?/);if(!m)return"99:99";let h=+m[2];const mi=m[3]||"00";if(/오후|PM|pm/.test(m[1]||"")&&h<12)h+=12;if(/오전|AM|am/.test(m[1]||"")&&h===12)h=0;return String(h).padStart(2,"0")+":"+mi}
@@ -3046,7 +3046,7 @@ function contractDlg(c,k,tpl,opts){ui.payEdit=null;
    <div class="g3">${inp("contract_date","계약일자",k.contract_date,"date",ro)}${sel("contract_type","구분",CTYPES,k.contract_type||"구매",ro)}${sel("stage","진행단계",STAGES,STAGES.includes(k.stage)?k.stage:"확정",ro)}</div>
    <div class="g3">${sel("contract_doc","계약서",DOCS.map(d=>[d,d==="사진"?"사진 수령(○)":d==="원본"?"원본 수령(●)":d]),k.contract_doc,ro)}${inp("trial_end","무료체험 종료일",k.trial_end,"date",ro)}${inp("free_trial","무료체험 메모",k.free_trial,"text",ro)}</div>
    <h3 class="ksec">영업 및 설치 담당자</h3>
-   <div class="g3">${inp("channel","영업 경로",k.channel,"text",ro,'list="chList"')}${inp("referrer","소개",k.referrer,"text",ro)}${(()=>{const who=ij?whoOf(ij):"";const v=ij?(who?who+(ij.visit_date?` (${ij.visit_date.slice(5).replace("-","/")}${ij.visit_time?" "+ij.visit_time:""})`:""):"미배정"):(isNew?"계약 저장 후 설치 작업에서 배정":"설치 작업 없음");return `<label class="f" title="설치 작업에서 배정한 기사가 표시됩니다">설치 담당자<input value="${esc(v)}" readonly tabindex="-1" class="rofield"></label>`})()}</div>
+   <div class="g3">${inp("channel","영업 경로",k.channel,"text",ro,'list="chList"')}${inp("referrer","소개",k.referrer,"text",ro)}${(()=>{const who=ij?whoOf(ij):"";const v=ij?(who?who+(ij.visit_date?` (${ij.visit_date.slice(2).replace(/-/g,".")}${ij.visit_time?" "+fmtTime(ij.visit_time):""})`:""):"미배정"):(isNew?"계약 저장 후 설치 작업에서 배정":"설치 작업 없음");return `<label class="f" title="설치 작업에서 배정한 기사가 표시됩니다">설치 담당자<input value="${esc(v)}" readonly tabindex="-1" class="rofield"></label>`})()}</div>
    <div class="g3">${inp("sales1","1차 선행자",k.sales1,"text",ro,'list="stList"')}${inp("sales2","2차 상담자",k.sales2,"text",ro,'list="stList"')}${isOffice()?inp("sales3","3차 계약자(담당자)",s3Text(k)||"","text",false,'list="s3List" placeholder="이름 입력 또는 목록에서 선택"'):inp("_s3","3차 계약자",s3Text(k),"text",true)}</div>
    <h3 class="ksec">제품내역</h3>
    <div class="g3">${inp("product","제품",k.product,"text",ro,'list="pdList"')}${inp("size","사이즈",k.size,"text",ro)}${inp("serial","시리얼",k.serial,"text",ro)}</div>
