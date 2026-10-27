@@ -3016,20 +3016,23 @@ function fmtTime(s){s=String(s||"").trim().replace(/(\d{1,2}:\d{2}):\d{2}(\.\d+)
 function timeKey(s){const m=String(s||"").match(/(오전|오후|AM|PM|am|pm)?\s*(\d{1,2})(?::|시\s*)?(\d{2})?/);if(!m)return"99:99";let h=+m[2];const mi=m[3]||"00";if(/오후|PM|pm/.test(m[1]||"")&&h<12)h+=12;if(/오전|AM|am/.test(m[1]||"")&&h===12)h=0;return String(h).padStart(2,"0")+":"+mi}
 function instKey(k){const ij=installOf(k);const d=ij&&(ij.done_date||ij.visit_date);return d?d+" "+timeKey(ij.visit_time):""}
 /* 기본 정렬: 1) 예정일·시간 빠른 순 2) 계약일자 3) 구분 */
+const STORD=["미정","확정","완료","미수","보류","취소","철거예정","철거완료"];
 const DEFSORT=[{c:"idate",d:1},{c:"cdate",d:1},{c:"ctype",d:1}];
 const INSTSORT=[{c:"idate",d:1},{c:"cdate",d:1}];
-function sortKey(){return "hc.sort.ctr2."+(me&&me.id||"")}
+function sortKey(){return "hc.sort.ctr3."+(me&&me.id||"")}
 function getSort(){try{const v=JSON.parse(localStorage.getItem(sortKey())||"null");if(Array.isArray(v)&&v.length)return v}catch(e){}return DEFSORT}
 function setSort(v){try{v?localStorage.setItem(sortKey(),JSON.stringify(v)):localStorage.removeItem(sortKey())}catch(e){}}
 function sortVal(col,x){const k=x.k,c=x.c,s=x.s;
   switch(col){case"reg":return k.created_at||"";case"idate":case"itime":{const j=x.a||installOf(k);const d=j&&(j.visit_date||j.done_date);return d?d+" "+timeKey(j.visit_time):""}case"iwday":{const ij=installOf(k);const d=ij&&(ij.visit_date||ij.done_date);return d?new Date(d+"T00:00:00").getDay():""}case"basis":return baseDate(k);case"cdate":return k.contract_date||"";case"last":return s.last||"";case"trial":return k.trial_end||"";
     case"amount":return Number(k.amount||0);case"card":return s.card;case"cash":return s.other;case"paid":return s.paid;case"unpaid":return s.n||k.stage==="미수"?s.unpaid:-1e15;
-    case"stage":return STAGES.indexOf(k.stage);case"ctype":return CTYPES.indexOf(k.contract_type||"구매");case"name":return c.name||"";}
+    case"stage":return STORD.indexOf(k.stage);case"ctype":return CTYPES.indexOf(k.contract_type||"구매");case"name":return c.name||"";}
   return ctrCell(col,k,c,s,x.b).replace(/<[^>]*>/g,"").replace(/&amp;/g,"&").trim()}
 function sortCtrList(list){const S=getSort();const cache=new Map();const v=(x,col)=>{const key=col;let m=cache.get(x);if(!m){m={};cache.set(x,m)}if(!(key in m))m[key]=sortVal(col,x);return m[key]};
   /* 묶음 순서: 당월 설치 → 당월 추가설치(당월 맨 끝) → 이달 결제된 예전 건 → 미수·기타 */
   const grp=true;const bo=x=>!x.b?0:x.a?0.5:x.b.includes("설치")?0:x.b.includes("결제")?1:2;
-  list.sort((a,b)=>{if(grp&&bo(a)!==bo(b))return bo(a)-bo(b);for(const {c,d} of S){const A=v(a,c),B=v(b,c);const ea=A===""||A==null,eb=B===""||B==null;if(ea&&eb)continue;if(ea)return 1;if(eb)return -1;
+  /* 각 묶음 안에서 보류·취소 → 철거예정 → 철거완료는 맨 뒤로 */
+  const sb_=x=>{const t=x.a?"":x.k.stage;return t==="보류"||t==="취소"?1:t==="철거예정"?2:t==="철거완료"||t==="철거"?3:0};
+  list.sort((a,b)=>{if(grp&&bo(a)!==bo(b))return bo(a)-bo(b);if(sb_(a)!==sb_(b))return sb_(a)-sb_(b);for(const {c,d} of S){const A=v(a,c),B=v(b,c);const ea=A===""||A==null,eb=B===""||B==null;if(ea&&eb)continue;if(ea)return 1;if(eb)return -1;
     const r=typeof A==="number"&&typeof B==="number"?A-B:KO.compare(String(A),String(B));if(r)return r*d}return regCmp(a.k,b.k)})}
 function sortPicker(onDone){let cur=getSort().map(x=>({...x}));
   const opts=v=>`<option value="">(없음)</option><option value="reg" ${v==="reg"?"selected":""}>접수한 순서 (등록순)</option>`+CCOLS.map(c=>`<option value="${c[0]}" ${c[0]===v?"selected":""}>${esc(c[1])}</option>`).join("");
