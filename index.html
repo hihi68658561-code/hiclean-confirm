@@ -351,7 +351,7 @@ header.top{position:relative}.tmore{display:none}.tacts{display:contents}
 .tag.st-철거{background:#868e96;color:#fff;border-color:#868e96}
 .tag.ct-구매{background:#fff;color:#343a40;border-color:#adb5bd}.tag.ct-양도{background:#fff;color:#0f766e;border-color:#14b8a6}.tag.ct-추가설치{background:#FFC000;color:#1b1b1b;border-color:#FFC000}
 .tag.st-접수{background:#FFF3C4;color:#8a5a00;border-color:#FFF3C4}.tag.st-배정{background:#DCEBFF;color:#1d4ed8;border-color:#DCEBFF}
-.tag.ct-무료체험,.tag.ct-무상임대,.tag.ct-경품,.tag.ct-무상증정{background:#fff;color:#7e22ce;border-color:#9933FF}
+.tag.ct-무료체험,.tag.ct-무상임대,.tag.ct-경품,.tag.ct-무상증정{background:#fff;color:#7e22ce;border-color:#9933FF}.tag.ct-철거{background:#fff;color:#b45309;border-color:#d97706}
 .badge.install{background:#00CC66;color:#1b1b1b;border-color:#00CC66}.badge.as{background:#9933FF;color:#fff;border-color:#9933FF}.badge.addon{background:#FFC000;color:#1b1b1b;border-color:#FFC000}.badge.remove{background:#FF0000;color:#1b1b1b;border-color:#FF0000}.badge.move{background:#FFFF00;color:#c00000;border-color:#e6d800}
 .wt td.k-install,.sumt .k-install{background:#00CC66;color:#1b1b1b}.wt td.k-as,.sumt .k-as{background:#9933FF;color:#fff}.wt td.k-addon,.sumt .k-addon{background:#FFC000;color:#1b1b1b}.wt td.k-remove,.sumt .k-remove{background:#FF0000;color:#1b1b1b}.wt td.k-move,.sumt .k-move{background:#FFFF00;color:#c00000}
 </style>
@@ -403,7 +403,7 @@ const CFIELDS=[
   ["담당자","담당자(3차 계약자)"],["설치기사","설치기사(설치1)"],["메모","비고"]
 ];
 const STAGES=["미정","보류","확정","철거","취소","완료","미수"];
-const CTYPES=["구매","무료체험","무상증정","무상임대","경품","양도"];
+const CTYPES=["구매","무료체험","무상증정","무상임대","경품","양도","철거"];
 function modelText(c){c=c||{};return [c.모델명,c.사이즈,c.옵션?"("+c.옵션+")":""].filter(Boolean).join(" ")}
 const SYN={
   진행단계:["진행단계","진행상태","상태"],
