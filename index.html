@@ -350,7 +350,7 @@ header.top{position:relative}.tmore{display:none}.tacts{display:contents}
 .badge.s-취소,.tag.st-취소{background:#e53935;color:#fff;border-color:#e53935;text-decoration:none}
 .badge.s-미수,.tag.st-미수{background:#fff;color:#c62828;border-color:#c62828}
 .badge.s-보류,.tag.st-보류{background:#e9ecef;color:#495057;border-color:#adb5bd;border-style:dashed}
-.tag.st-철거{background:#868e96;color:#fff;border-color:#868e96}
+.tag.st-철거,.tag.st-철거완료{background:#868e96;color:#fff;border-color:#868e96}.tag.st-철거예정{background:#fff;color:#495057;border-color:#868e96}
 .tag.ct-구매{background:#fff;color:#343a40;border-color:#adb5bd}.tag.ct-양도{background:#fff;color:#0f766e;border-color:#14b8a6}.tag.ct-추가설치{background:#FFC000;color:#1b1b1b;border-color:#FFC000}
 .tag.st-접수{background:#FFF3C4;color:#8a5a00;border-color:#FFF3C4}.tag.st-배정{background:#DCEBFF;color:#1d4ed8;border-color:#DCEBFF}
 .tag.ct-무료체험,.tag.ct-무상임대,.tag.ct-경품,.tag.ct-무상증정{background:#fff;color:#7e22ce;border-color:#9933FF}.tag.ct-철거{background:#fff;color:#b45309;border-color:#d97706}
@@ -404,8 +404,8 @@ const CFIELDS=[
   ["설치장소","상점주소(설치장소)"],["모델명","제품"],["사이즈","사이즈"],["옵션","옵션(무턱·좌배수)"],["SN","시리얼"],["구매일자","계약일자"],["설치일자","설치일자"],
   ["담당자","담당자(3차 계약자)"],["설치기사","설치기사(설치1)"],["메모","비고"]
 ];
-const STAGES=["미정","보류","확정","취소","완료","미수"];
-const CTYPES=["구매","철거","무료체험","무상증정","무상임대","경품","양도"];
+const STAGES=["미정","보류","확정","취소","완료","미수","철거예정","철거완료"];
+const CTYPES=["구매","무료체험","무상증정","무상임대","경품","양도"];
 function modelText(c){c=c||{};return [c.모델명,c.사이즈,c.옵션?"("+c.옵션+")":""].filter(Boolean).join(" ")}
 const SYN={
   진행단계:["진행단계","진행상태","상태"],
@@ -1025,7 +1025,7 @@ function payStat(k){if(k.__job){const j=k.__job;const c_=Number(j.cost||0);const
   const ps=paysOf(k);let card=0,other=0,last="";ps.forEach(p=>{const a=Number(p.amount||0);if(p.method==="카드")card+=a;else other+=a;if(p.pay_date&&p.pay_date>last)last=p.pay_date});
   const paid=card+other;return{card,other,paid,last,unpaid:Number(k.amount||0)-paid,n:ps.length}}
 function monthRange(ym){const [y,m]=ym.split("-").map(Number);return[ym+"-01",(m===12?(y+1)+"-01":y+"-"+String(m+1).padStart(2,"0"))+"-01"]}
-const CROWS=[["done","설치완료",k=>k.stage==="완료"],["open","미완료",k=>k.stage==="미정"||k.stage==="확정"],["hold","보류",k=>k.stage==="보류"],["cancel","취소",k=>k.stage==="취소"],["unpaid","미수",k=>k.stage==="미수"]];
+const CROWS=[["done","설치완료",k=>k.stage==="완료"],["open","미완료",k=>k.stage==="미정"||k.stage==="확정"],["hold","보류",k=>k.stage==="보류"],["cancel","취소",k=>k.stage==="취소"],["unpaid","미수",k=>k.stage==="미수"],["remove","철거",k=>["철거예정","철거완료","철거"].includes(k.stage)]];
 /* 계약별 설치 작업 찾기: 미리 만든 색인 사용 (작업 전체를 매번 훑지 않음) */
 let instIdx=null;
 function buildInstIdx(){instIdx={byCtr:new Map(),byCust:new Map()};for(const x of jobs){if(x.kind!=="install"||x.status==="취소")continue;
@@ -1193,16 +1193,16 @@ function ctrCell(col,k,c,st,basis){
 function renderCtrView(){const _sv=snapScroll();renderCtrView0();restoreScroll(_sv)}
 function renderCtrView0(){
   if(!ui.cm)ui.cm=thisMonth();if(ui.crow===undefined)ui.crow="";if(ui.cct===undefined)ui.cct="";if(ui.cq===undefined)ui.cq="";
-  const [st0,en0]=monthRange(ui.cm);const inM=d=>d&&d>=st0&&d<en0;
+  const all=!!ui.cmAll;const [st0,en0]=monthRange(ui.cm);const inM=d=>all?!!d:(d&&d>=st0&&d<en0);
   const rows=[];
-  contracts.forEach(k=>{const s=payStat(k);const b=[];
+  contracts.forEach(k=>{const s=payStat(k);const b=[];if(all){if(!monthClosed(k))rows.push({k,c:custById(k.customer_id)||{},s,b:["전체"]});return}
     if(inM(baseDate(k)))b.push("설치");
     if(inM(s.last))b.push("결제");
     if(k.stage==="미수"&&(!baseDate(k)||baseDate(k)<en0)&&!b.length)b.push("미수");
     /* 이번 달 화면: 날짜가 없거나 다음 달 이후로 잡힌 계약, 지난달 것 중 월마감 안 된 계약도 보이게 (어느 목록에도 안 나오는 일 방지) */
     if(!b.length&&ui.cm===thisMonth()&&k.stage!=="취소"){const bd=baseDate(k);b.push(!bd?"날짜 없음":bd>=en0?"예정":"이월")}
     if(b.length&&!monthClosed(k))rows.push({k,c:custById(k.customer_id)||{},s,b})});
-  jobs.forEach(j=>{if(j.kind!=="addon")return;const k=addonRow(j);if(inM(baseDate(k))&&!monthClosed(k))rows.push({k,c:custById(j.customer_id)||{},s:payStat(k),b:["설치"],a:j})});
+  jobs.forEach(j=>{if(j.kind!=="addon")return;const k=addonRow(j);if((all||inM(baseDate(k)))&&!monthClosed(k))rows.push({k,c:custById(j.customer_id)||{},s:payStat(k),b:["설치"],a:j})});
   // 금액 요약
   const mC=contracts.filter(k=>inM(k.contract_date)&&k.stage!=="취소"&&k.contract_type!=="양도");
   const mP=payments.filter(p=>inM(p.pay_date));const mCard=mP.filter(p=>p.method==="카드").reduce((a,p)=>a+Number(p.amount||0),0),mOther=mP.filter(p=>p.method!=="카드").reduce((a,p)=>a+Number(p.amount||0),0);
@@ -1230,11 +1230,11 @@ function renderCtrView0(){
   const tot={amount:0,card:0,cash:0,paid:0,unpaid:0};shown.forEach(x=>{tot.amount+=Number(x.k.amount||0);tot.card+=x.s.card;tot.cash+=x.s.other;tot.paid+=x.s.paid;if(x.s.n||x.k.stage==="미수")tot.unpaid+=x.s.unpaid});
   view().innerHTML=`${ui.noPay?`<div class="sec" style="max-width:none"><p class="warnbox">입금 내역 칸이 아직 없습니다. Supabase SQL Editor에서 <b>phase1h.sql</b>을 실행하면 입금·미수금·마감 체크를 쓸 수 있습니다.</p></div>`:""}
    <div class="sumwrap"><div style="display:grid;gap:8px;align-content:start"><div style="display:flex;gap:8px;align-items:center"><h2 style="margin:0;font-size:18px">당월리스트</h2>
-      <input id="cM" type="month" value="${esc(ui.cm)}" aria-label="기준 월" style="padding:5px 8px;border:1px solid var(--line);border-radius:6px;background:var(--field)">${ui.cm!==thisMonth()?`<button class="btn sm" type="button" id="cNow">이번 달</button>`:""}</div>
-      <div class="kpis"><div class="kpi kc ${ui.ckpi==="ctr"?"on":""}" data-kpi="ctr" role="button" tabindex="0"><span>당월 계약</span><b>${mC.length}건 · ${won0(mC.reduce((a,k)=>a+Number(k.amount||0),0))}원</b></div>
-       <div class="kpi kc ${ui.ckpi==="pay"?"on":""}" data-kpi="pay" role="button" tabindex="0"><span>당월 입금</span><b>${won0(mCard+mOther)}원</b><small>카드 ${won0(mCard)} · 현금+캐피탈 ${won0(mOther)}</small></div>
+      <input id="cM" type="month" value="${esc(ui.cm)}" aria-label="기준 월" style="padding:5px 8px;border:1px solid var(--line);border-radius:6px;background:var(--field)"><button class="btn sm${all?" pri":""}" type="button" id="cAllM" title="월마감 안 된 계약 전체">전체</button>${ui.cm!==thisMonth()||all?`<button class="btn sm" type="button" id="cNow">이번 달</button>`:""}</div>
+      <div class="kpis"><div class="kpi kc ${ui.ckpi==="ctr"?"on":""}" data-kpi="ctr" role="button" tabindex="0"><span>${all?"전체":"당월"} 계약</span><b>${mC.length}건 · ${won0(mC.reduce((a,k)=>a+Number(k.amount||0),0))}원</b></div>
+       <div class="kpi kc ${ui.ckpi==="pay"?"on":""}" data-kpi="pay" role="button" tabindex="0"><span>${all?"전체":"당월"} 입금</span><b>${won0(mCard+mOther)}원</b><small>카드 ${won0(mCard)} · 현금+캐피탈 ${won0(mOther)}</small></div>
        <div class="kpi bad kc ${ui.ckpi==="unpaid"?"on":""}" data-kpi="unpaid" role="button" tabindex="0"><span>미수금 (미수 ${un.length}건)</span><b>${won0(unSum)}원</b></div></div>
-      <p class="mapt" style="margin:0">이달 설치한 건(설치 전이면 계약일 기준), 이달 최종결제된 건, 그리고 해결되지 않은 미수 건이 함께 나옵니다.<br>숫자를 누르면 아래 목록이 그 건들로 바뀝니다.</p></div>
+      <p class="mapt" style="margin:0">${all?"월마감되지 않은 계약이 기간 상관없이 모두 나옵니다.":"이달 설치한 건(설치 전이면 계약일 기준), 이달 최종결제된 건, 그리고 해결되지 않은 미수 건이 함께 나옵니다."}<br>숫자를 누르면 아래 목록이 그 건들로 바뀝니다.</p></div>
      <div class="sumbox">${sumT}</div></div>
    <div class="toolbar"><input id="cQ" type="search" placeholder="업체명(상호)·대표자·전화·시리얼·담당 검색" value="${esc(ui.cq)}">
      <div class="nav" role="group"><button type="button" id="cAll" class="${ui.crow||ui.cct||ui.ckpi?"":"on"}">전체</button></div>
@@ -1248,8 +1248,9 @@ function renderCtrView0(){
   view().querySelectorAll(".wtbox").forEach(hbar);
   const re=()=>renderCtrView();
   view().querySelectorAll(".sumt td.cl").forEach(td=>td.onclick=()=>{ui.crow=td.dataset.r;ui.cct=td.dataset.t;re()});
-  document.getElementById("cM").onchange=e=>{if(e.target.value){ui.cm=e.target.value;re()}};
-  const cn=document.getElementById("cNow");if(cn)cn.onclick=()=>{ui.cm=thisMonth();re()};
+  document.getElementById("cM").onchange=e=>{if(e.target.value){ui.cm=e.target.value;ui.cmAll=false;re()}};
+  const cn=document.getElementById("cNow");if(cn)cn.onclick=()=>{ui.cm=thisMonth();ui.cmAll=false;re()};
+  document.getElementById("cAllM").onclick=()=>{ui.cmAll=!ui.cmAll;re()};
   const ca=document.getElementById("cAll");if(ca)ca.onclick=()=>{ui.crow="";ui.cct="";ui.ckpi="";re()};
   view().querySelectorAll("[data-kpi]").forEach(el=>{const go=()=>{ui.ckpi=ui.ckpi===el.dataset.kpi?"":el.dataset.kpi;ui.crow="";ui.cct="";re()};el.onclick=go;el.onkeydown=e=>{if(e.key==="Enter"||e.key===" "){e.preventDefault();go()}}});
   document.getElementById("cCols").onclick=()=>colPicker(re);
@@ -3040,8 +3041,8 @@ function sortPicker(onDone){let cur=getSort().map(x=>({...x}));
     [["접수한 순서 (기본)","",()=>{cur=DEFSORT.map(x=>({...x}));draw();return true}],["설치일자·시간 순","",()=>{cur=INSTSORT.map(x=>({...x}));draw();return true}],["취소"],["적용","pri",()=>{cur=cur.filter(x=>x&&x.c);setSort(cur.length&&JSON.stringify(cur)!==JSON.stringify(DEFSORT)?cur:null);onDone()}]]);draw()}
 function hasTrialCol(){return contracts.some(k=>"trial_end" in k)}
 /* 철거 계약이 완료되면 회색 줄 */
-function ctrRowCls(k){return k.contract_type==="철거"&&k.stage==="완료"?"철거":k.stage}
-function trialCell(k){const d=k.trial_end;if(!d)return"";const td=today();const open=!["완료","취소","철거"].includes(k.stage)&&k.contract_type!=="철거";const days=Math.round((new Date(d)-new Date(td))/864e5);
+function ctrRowCls(k){return k.stage==="철거완료"||k.stage==="철거"||(k.contract_type==="철거"&&k.stage==="완료")?"철거":k.stage}
+function trialCell(k){const d=k.trial_end;if(!d)return"";const td=today();const open=!["완료","취소","철거","철거예정","철거완료"].includes(k.stage)&&k.contract_type!=="철거";const days=Math.round((new Date(d)-new Date(td))/864e5);
   const cls=open&&days<0?"late":open&&days<=3?"soon":"";return `<span class="trial ${cls}" title="${open?(days<0?-days+"일 지남":days===0?"오늘 종료":days+"일 남음"):""}">${esc(ymd2(d))}</span>`}
 function contractDlg(c,k,tpl,opts){ui.payEdit=null;
   const isNew=!k;const pickM=!!(opts&&opts.pick&&isNew&&!c);const intakeM=pickM||!!(opts&&opts.intake&&isNew&&!tpl);const pool=pickM?customers.filter(x=>isOffice()||x.owner===me.id):[];
