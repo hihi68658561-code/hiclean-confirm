@@ -1261,7 +1261,7 @@ function renderCtrView0(){
       if(!(await askConfirm(`선택한 ${ids.length}건을 월마감하시겠습니까?`)))return;
       for(let i=0;i<ids.length;i+=200){const {error}=await sb.from("contracts").update({chk_month:"OK"}).in("id",ids.slice(i,i+200));if(error)return toast("월마감하지 못했습니다: "+error.message)}
       ui.csel.clear();toast(`${ids.length}건을 월마감했습니다 · 전체리스트로 옮겼습니다`);reload(["contracts"])}}
-  const cq=document.getElementById("cQ");cq.oninput=e=>{ui.cq=e.target.value;clearTimeout(cq._t);cq._t=setTimeout(()=>{re();const n=document.getElementById("cQ");n.focus();n.setSelectionRange(n.value.length,n.value.length)},250)};
+  const cq=document.getElementById("cQ");cq.oninput=e=>{ui.cq=e.target.value;clearTimeout(cq._t);cq._t=imeT(cq,()=>{re();const n=document.getElementById("cQ");n.focus();n.setSelectionRange(n.value.length,n.value.length)},250)};
   view().querySelectorAll("tr[data-ck]").forEach(tr=>tr.onclick=e=>{const tdc=e.target.closest("td");if(tdc&&tdc.querySelector(".csel")){const x=tdc.querySelector(".csel");if(e.target!==x)x.click();return}
     if(tr.dataset.ck.startsWith("a:")){const j=jobs.find(x=>x.id===tr.dataset.ck.slice(2));if(j)jobDlg(j,custById(j.customer_id),j.kind);return}
     const cell=e.target.closest("td[data-chk]");const k=ctrById(tr.dataset.ck);if(!k)return;
@@ -1314,7 +1314,7 @@ function renderAllView0(){
   view().querySelectorAll(".wt.ca thead th[data-ck]").forEach(th=>{th.classList.add("sortable");const S=getSort();if(S[0]&&S[0].c===th.dataset.ck)th.dataset.sort=S[0].d===1?"asc":"desc";
     th.onclick=e=>{if(e.target.closest(".rz")||e.target.closest(".fbtn"))return;const c=th.dataset.ck;const S=getSort();const d=S[0]&&S[0].c===c?-S[0].d:1;setSort([{c,d},...S.filter(x=>x.c!==c).slice(0,2)]);re()}});
   const nk_=document.getElementById("caNewK");if(nk_)nk_.onclick=()=>jobDlg(null,null,"ctr");
-  const q=document.getElementById("caQ");q.oninput=e=>{ui.aq2=e.target.value;ui.allN=300;clearTimeout(q._t);q._t=setTimeout(()=>{re();const n=document.getElementById("caQ");n.focus();n.setSelectionRange(n.value.length,n.value.length)},250)};
+  const q=document.getElementById("caQ");q.oninput=e=>{ui.aq2=e.target.value;ui.allN=300;clearTimeout(q._t);q._t=imeT(q,()=>{re();const n=document.getElementById("caQ");n.focus();n.setSelectionRange(n.value.length,n.value.length)},250)};
   function bindRows(){view().querySelectorAll(".wt.ca tr[data-ck]").forEach(tr=>tr.onclick=e=>{
     if(tr.dataset.ck.startsWith("a:")){const j=jobs.find(x=>x.id===tr.dataset.ck.slice(2));if(j)jobDlg(j,custById(j.customer_id),j.kind);return}
     const cell=e.target.closest("td[data-chk]");const k=ctrById(tr.dataset.ck);if(!k)return;
@@ -1512,7 +1512,7 @@ function renderAsView0(){
   if(isAdmin())bindRowSel(ui.asel,"asel","aSelAll","aDel",ids=>delJobs(ids,()=>ids.forEach(id=>ui.asel.delete(id))));
   view().querySelectorAll(".wt.am thead th[data-ck]").forEach(th=>{th.classList.add("sortable");const S=asGetSort();if(S[0]&&S[0].c===th.dataset.ck)th.dataset.sort=S[0].d===1?"asc":"desc";
     th.onclick=e=>{if(e.target.closest(".rz")||e.target.closest(".fbtn"))return;const c=th.dataset.ck;const S=asGetSort();const d=S[0]&&S[0].c===c?-S[0].d:1;asSetSort([{c,d},...S.filter(x=>x.c!==c).slice(0,2)]);re()}});
-  const q=document.getElementById("aQ");q.oninput=e=>{ui.aq=e.target.value;clearTimeout(q._t);q._t=setTimeout(()=>{re();const n=document.getElementById("aQ");n.focus();n.setSelectionRange(n.value.length,n.value.length)},250)};
+  const q=document.getElementById("aQ");q.oninput=e=>{ui.aq=e.target.value;clearTimeout(q._t);q._t=imeT(q,()=>{re();const n=document.getElementById("aQ");n.focus();n.setSelectionRange(n.value.length,n.value.length)},250)};
   view().querySelectorAll("tr[data-aj]").forEach(tr=>tr.onclick=e=>{const tdc=e.target.closest("td");if(tdc&&tdc.querySelector(".asel")){const x=tdc.querySelector(".asel");if(e.target!==x)x.click();return}const j=jobs.find(x=>x.id===tr.dataset.aj);if(!j)return;
     const cell=e.target.closest("td[data-aclose]");
     if(cell&&isOffice()){const v=!j.closed;sb.from("jobs").update({closed:v}).eq("id",j.id).then(({error})=>{if(error)return toast("저장하지 못했습니다: "+error.message);j.closed=v;re()});return}
@@ -1817,7 +1817,7 @@ function renderLeadView0(){
   const mo=document.getElementById("lMore");if(mo)mo.onclick=()=>{ui.lN=(ui.lN||500)+500;re()};
   view().querySelectorAll(".wt.ld thead th[data-ck]").forEach(th=>{th.classList.add("sortable");const S=leadGetSort();if(S.c===th.dataset.ck)th.dataset.sort=S.d===1?"asc":"desc";
     th.onclick=e=>{if(e.target.closest(".rz")||e.target.closest(".fbtn"))return;const c=th.dataset.ck;const S=leadGetSort();leadSetSort({c,d:S.c===c?-S.d:1});re()}});
-  const q=document.getElementById("lQ");q.oninput=e=>{ui.lq=e.target.value;clearTimeout(q._t);q._t=setTimeout(()=>{re();const n=document.getElementById("lQ");n.focus();n.setSelectionRange(n.value.length,n.value.length)},250)};
+  const q=document.getElementById("lQ");q.oninput=e=>{ui.lq=e.target.value;clearTimeout(q._t);q._t=imeT(q,()=>{re();const n=document.getElementById("lQ");n.focus();n.setSelectionRange(n.value.length,n.value.length)},250)};
   if(isAdmin())bindRowSel(ui.lsel,"lsel","lSelAll","lDel",ids=>openDlg(`상담 ${ids.length}건 삭제`,`<p><b>되돌릴 수 없습니다.</b> 연결된 고객·계약은 그대로 남습니다.</p>`,[["취소"],["삭제","danger",async()=>{const {error}=await sb.from("leads").delete().in("id",ids);if(error)return toast("삭제하지 못했습니다: "+error.message);ids.forEach(id=>ui.lsel.delete(id));toast(`${ids.length}건 삭제했습니다`);reload(["leads"])}]]));
   view().querySelectorAll("[data-gocust]").forEach(a=>a.onclick=e=>{e.preventDefault();e.stopPropagation();goCust(custById(a.dataset.gocust))});
   view().querySelectorAll("tr[data-lid]").forEach(tr=>tr.onclick=e=>{const tdc=e.target.closest("td");if(tdc&&tdc.querySelector(".lsel")){const x=tdc.querySelector(".lsel");if(e.target!==x)x.click();return}
@@ -2069,7 +2069,7 @@ case"next":return (x.cs&&x.cs.next_date)||"";case"idate":case"ym":return x.idate
   const rn=document.getElementById("rNew");if(rn)rn.onclick=()=>recvNewDlg();
   view().querySelectorAll(".wt.rv thead th[data-ck]").forEach(th=>{th.classList.add("sortable");if(S.c===th.dataset.ck)th.dataset.sort=S.d===1?"asc":"desc";
     th.onclick=e=>{if(e.target.closest(".rz")||e.target.closest(".fbtn"))return;const c=th.dataset.ck;try{localStorage.setItem("hc.sort.recv2."+(me&&me.id||""),JSON.stringify({c,d:S.c===c?-S.d:(["days","pdays","unpaid","csum","amount"].includes(c)?-1:1)}))}catch(e){}re()}});
-  const q=document.getElementById("rQ");q.oninput=e=>{ui.rq=e.target.value;clearTimeout(q._t);q._t=setTimeout(()=>{re();const n=document.getElementById("rQ");n.focus();n.setSelectionRange(n.value.length,n.value.length)},250)};
+  const q=document.getElementById("rQ");q.oninput=e=>{ui.rq=e.target.value;clearTimeout(q._t);q._t=imeT(q,()=>{re();const n=document.getElementById("rQ");n.focus();n.setSelectionRange(n.value.length,n.value.length)},250)};
   view().querySelectorAll("tr[data-rid]").forEach(tr=>tr.onclick=()=>{const x=recvItems().find(y=>y.t===tr.dataset.rt&&y.id===tr.dataset.rid);if(x)recvDlg(x)});
 }
 async function recvEnsureCase(x){if(x.cs)return x.cs;const row={ref_type:x.t,ref_id:x.id,customer_id:x.c.id||null};
@@ -2459,7 +2459,7 @@ async function renderSinkView(){const off=isOffice();if(!skOrders)view().innerHT
      <tbody>${rows||`<tr><td colspan="${off?16:11}" class="mapt">발주가 없습니다.</td></tr>`}</tbody>
      ${off&&list.length?`<tfoot><tr><th colspan="8">합계</th><th></th><th class="num">${won0(tot.sup)}</th><th class="num">${won0(tot.vat)}</th><th class="num">${won0(tot.tot)}</th><th colspan="3"></th><th class="num">${won0(tot.deduct)}</th></tr></tfoot>`:""}</table></div></div>`;
   const re=()=>renderSinkView();
-  const q=document.getElementById("skQ");q.oninput=()=>{ui.skq=q.value;clearTimeout(q._t);q._t=setTimeout(()=>{re().then(()=>{const n=document.getElementById("skQ");n.focus();n.setSelectionRange(n.value.length,n.value.length)})},250)};
+  const q=document.getElementById("skQ");q.oninput=()=>{ui.skq=q.value;clearTimeout(q._t);q._t=imeT(q,()=>{re().then(()=>{const n=document.getElementById("skQ");n.focus();n.setSelectionRange(n.value.length,n.value.length)})},250)};
   document.getElementById("skM").onchange=e=>{ui.skm=e.target.value;re()};const so=document.getElementById("skOwn");if(so)so.onchange=e=>{ui.skown=e.target.value;re()};
   view().querySelectorAll("[data-sks]").forEach(b=>b.onclick=()=>{ui.skst=b.dataset.sks;re()});
   const nb=document.getElementById("skNew");if(nb)nb.onclick=()=>sinkDlg(null);bindSkTabs();const si=document.getElementById("skIn");if(si)si.onclick=()=>sinkInDlg();
@@ -2506,7 +2506,7 @@ function renderSinkStock(){const st=skStockItems();const live=st.filter(x=>x.rem
    ${wait.length?`<h3 class="ksec">출고대기 (입고완료된 고객 발주)</h3><div class="wtbox"><table class="wt sk2"><thead><tr><th>입고일자</th><th>업체명(상호)</th><th>담당자</th><th>품명 및 규격</th><th class="num">수량</th></tr></thead><tbody>${wait.filter(mt).map(x=>`<tr data-sko="${x.o.id}"><td>${esc(ymd2(x.o.in_date))}</td><td><b>${esc(x.o.site_name)}</b></td><td>${esc(x.o.owner_name)}</td><td>${esc(skSpec(x.it))}</td><td class="num">${x.q}</td></tr>`).join("")}</tbody></table></div>`:""}
    ${uses.length?`<h3 class="ksec">재고 사용 내역</h3><div class="wtbox"><table class="wt sk2"><thead><tr><th>발주일자</th><th>업체명(상호)</th><th>담당자</th><th>품명 및 규격</th><th class="num">수량</th><th>진행사항</th><th>쓴 재고</th></tr></thead><tbody>${uses.filter(mt).sort((a,b)=>String(b.o.order_date||"").localeCompare(String(a.o.order_date||""))).map(x=>`<tr data-sko="${x.o.id}"><td>${esc(ymd2(x.o.order_date))}</td><td><b>${esc(x.o.site_name)}</b></td><td>${esc(x.o.owner_name)}</td><td>${esc(skSpec(x.it))}</td><td class="num">${x.q}</td><td><span class="tag sk-${esc(x.o.status)}">${esc(x.o.status)}</span></td><td>${x.so?esc(ymd2(x.so.in_date||x.so.order_date))+" 입고분":`<span class="mapt">(지워진 재고)</span>`}</td></tr>`).join("")}</tbody></table></div>`:""}</div>`;
   bindSkTabs();
-  const q=document.getElementById("skStQ");q.oninput=()=>{ui.skstq=q.value;clearTimeout(q._t);q._t=setTimeout(()=>{renderSinkStock();const n=document.getElementById("skStQ");n.focus();n.setSelectionRange(n.value.length,n.value.length)},250)};
+  const q=document.getElementById("skStQ");q.oninput=()=>{ui.skstq=q.value;clearTimeout(q._t);q._t=imeT(q,()=>{renderSinkStock();const n=document.getElementById("skStQ");n.focus();n.setSelectionRange(n.value.length,n.value.length)},250)};
   document.getElementById("skNewSt").onclick=()=>sinkDlg(null,{site:"재고"});
   view().querySelectorAll("[data-skuse]").forEach(b=>b.onclick=e=>{e.stopPropagation();sinkDlg(null,{stock:b.dataset.skuse})});
   view().querySelectorAll("tr[data-sko]").forEach(tr=>tr.onclick=()=>sinkDlg(skOrders.find(o=>o.id===tr.dataset.sko)));
@@ -2580,7 +2580,7 @@ function renderSinkPrice(){const rows=skPList||[];if(ui.skpq===undefined)ui.skpq
     row.querySelector("[data-pldel]").onclick=()=>{if(row.dataset.pl)gone.add(row.dataset.pl);dirty.delete(row);row.remove()}};
   tb.querySelectorAll("tr[data-pl]").forEach(wire);
   document.getElementById("spAdd").onclick=()=>{const e=tb.querySelector("tr.empty");if(e)e.remove();tb.insertAdjacentHTML("afterbegin",tr({}));const row=tb.firstElementChild;wire(row);dirty.add(row);row.querySelector("input").focus()};
-  const q=document.getElementById("spQ");q.oninput=()=>{ui.skpq=q.value;clearTimeout(q._t);q._t=setTimeout(()=>{renderSinkPrice();const n=document.getElementById("spQ");n.focus();n.setSelectionRange(n.value.length,n.value.length)},250)};
+  const q=document.getElementById("spQ");q.oninput=()=>{ui.skpq=q.value;clearTimeout(q._t);q._t=imeT(q,()=>{renderSinkPrice();const n=document.getElementById("spQ");n.focus();n.setSelectionRange(n.value.length,n.value.length)},250)};
   document.getElementById("spSave").onclick=async()=>{const ups=[],ins=[];
     for(const row of dirty){if(!row.isConnected)continue;const g=f=>(row.querySelector(`[data-f="${f}"]`)||{}).value||"";const r={name:g("name").trim(),opt1:g("opt1").trim(),opt2:g("opt2").trim(),w_max:skNum(g("w_max")),d:skNum(g("d")),price:skNum(g("price"))||0,deduct:skNum(g("deduct"))||0,memo:g("memo").trim()};
       if(!r.name){if(!r.price)continue;return toast("품명을 입력하세요")}if(row.dataset.pl)ups.push({...r,id:row.dataset.pl});else ins.push(r)}
@@ -2818,7 +2818,7 @@ function bindStockUnits(){const re=()=>renderStockView();cfBind("stk",re);
     const f=ui.sfil;ui.sfil=f&&f.m===nf.m&&f.s===nf.s&&f.t===nf.t&&f.lip===nf.lip&&f.dr===nf.dr?null:nf;ui.sst="in";re().then(()=>{const t=view().querySelector(".wt.su");if(t)t.scrollIntoView({behavior:"smooth",block:"start"})})});
   view().querySelectorAll("[data-tg]").forEach(td=>td.onclick=async()=>{const [model,size,ty]=td.dataset.tg.split("|");const v=prompt(`${(STK_MODELS[model]||{}).name||model} ${size}${ty} 적정 재고 (대)`,td.textContent.trim()||"0");if(v==null)return;
     const qty=Math.max(0,parseInt(v,10)||0);const {error}=await sb.from("stock_targets").upsert({model,size:+size,ty,qty});if(error)return toast("저장하지 못했습니다: "+error.message);re()});
-  const q=document.getElementById("sQ");if(q)q.oninput=()=>{ui.sq=q.value;clearTimeout(q._t);q._t=setTimeout(()=>re().then(()=>{const n=document.getElementById("sQ");if(n){n.focus();n.setSelectionRange(n.value.length,n.value.length)}}),250)};
+  const q=document.getElementById("sQ");if(q)q.oninput=()=>{ui.sq=q.value;clearTimeout(q._t);q._t=imeT(q,()=>re().then(()=>{const n=document.getElementById("sQ");if(n){n.focus();n.setSelectionRange(n.value.length,n.value.length)}}),250)};
   view().querySelectorAll("[data-sst]").forEach(b=>b.onclick=()=>{ui.sst=b.dataset.sst;re()});
   const fx=document.getElementById("sFx");if(fx)fx.onclick=()=>{ui.sfil=null;re()};
   const nb=document.getElementById("sNew");if(nb)nb.onclick=()=>stockUnitDlg(null,false);const nu=document.getElementById("sNewU");if(nu)nu.onclick=()=>stockUnitDlg(null,true);
@@ -2914,7 +2914,7 @@ function stockWashHtml(){if(ui.wq===undefined)ui.wq="";const ins=washMoves.filte
       ${ins.map(m=>`<tr data-wm="${m.id}"><td>${m.kind==="조정"?`<span class="tag sk-재고등록">재고조정</span> `:""}${esc(ymd2(m.move_date))}</td><td class="num">${m.qty}</td><td>${esc(m.memo||m.product||"")}</td></tr>`).join("")||`<tr><td colspan="3" class="mapt">입고 기록이 없습니다.</td></tr>`}</tbody></table></div></div>
     <div><h3 class="ksec" style="margin:0 0 6px">출고 <span class="mapt">${outSum}대</span></h3><div class="wtbox"><table class="wt wm"><thead><tr><th>설치일자</th><th>업체명</th><th>전화번호</th><th>주소</th><th>제품명</th><th>수량</th><th>구분</th></tr></thead><tbody>
       ${outL.slice(0,ui.xAll?1e9:500).map(m=>`<tr ${m.auto?`data-wk="${m.k.id}"`:`data-wm="${m.id}"`}><td>${esc(ymd2(m.move_date))}</td><td><b>${esc(m.site_name)}</b></td><td>${esc(m.phone)}</td><td class="wrap memo"><div class="clamp">${esc(m.address)}</div></td><td>${esc(m.product)}</td><td class="num">${m.qty}</td><td>${m.auto?`<span class="mapt">계약</span>`:"직접"}</td></tr>`).join("")||`<tr><td colspan="7" class="mapt">출고 기록이 없습니다.</td></tr>`}</tbody></table></div></div></div>`}
-function bindStockWash(){const q=document.getElementById("wQ");q.oninput=()=>{ui.wq=q.value;clearTimeout(q._t);q._t=setTimeout(()=>renderStockView().then(()=>{const n=document.getElementById("wQ");n.focus();n.setSelectionRange(n.value.length,n.value.length)}),250)};
+function bindStockWash(){const q=document.getElementById("wQ");q.oninput=()=>{ui.wq=q.value;clearTimeout(q._t);q._t=imeT(q,()=>renderStockView().then(()=>{const n=document.getElementById("wQ");n.focus();n.setSelectionRange(n.value.length,n.value.length)}),250)};
   view().querySelectorAll("[data-wadd]").forEach(b=>b.onclick=()=>washDlg(null,b.dataset.wadd));
   view().querySelectorAll("tr[data-wm]").forEach(tr=>tr.onclick=()=>washDlg(washMoves.find(m=>m.id===tr.dataset.wm)));
   view().querySelectorAll("tr[data-wk]").forEach(tr=>tr.onclick=()=>{const k=ctrById(tr.dataset.wk);if(k)contractDlg(custById(k.customer_id),k)});
@@ -3178,7 +3178,7 @@ function renderJobsView(kind){
   view().querySelectorAll("[data-jv]").forEach(b=>b.onclick=()=>{ui.jview=b.dataset.jv;re()});
   document.getElementById("jScope").onchange=e=>{ui.jscope=e.target.value;re()};
   document.getElementById("jSt").onchange=e=>{ui.jst=e.target.value;re()};
-  const jq=document.getElementById("jQ");jq.oninput=e=>{ui.jq=e.target.value;clearTimeout(jq._t);jq._t=setTimeout(()=>{re();const n=document.getElementById("jQ");n.focus();n.setSelectionRange(n.value.length,n.value.length)},250)};
+  const jq=document.getElementById("jQ");jq.oninput=e=>{ui.jq=e.target.value;clearTimeout(jq._t);jq._t=imeT(jq,()=>{re();const n=document.getElementById("jQ");n.focus();n.setSelectionRange(n.value.length,n.value.length)},250)};
   bindJobCards(view());
   const nb=document.getElementById("bNewJ");if(nb)nb.onclick=()=>jobDlg(null,null,kind);
   const ja=document.getElementById("jAll");if(ja)ja.onchange=()=>{document.querySelectorAll(".jsel").forEach(x=>{x.checked=ja.checked;ja.checked?ui.jsel.add(x.dataset.js):ui.jsel.delete(x.dataset.js)});updJSel()};
@@ -3294,7 +3294,7 @@ function renderWorkView0(){
   document.getElementById("wM").onchange=e=>{if(e.target.value){ui.wm=e.target.value;re()}};
   const wn=document.getElementById("wNow");if(wn)wn.onclick=()=>{ui.wm=thisMonth();re()};
   const jsc=document.getElementById("jScope");if(jsc)jsc.onchange=e=>{ui.jscope=e.target.value;re()};
-  const jq=document.getElementById("jQ");jq.oninput=e=>{ui.jq=e.target.value;clearTimeout(jq._t);jq._t=setTimeout(()=>{re();const n=document.getElementById("jQ");n.focus();n.setSelectionRange(n.value.length,n.value.length)},250)};
+  const jq=document.getElementById("jQ");jq.oninput=e=>{ui.jq=e.target.value;clearTimeout(jq._t);jq._t=imeT(jq,()=>{re();const n=document.getElementById("jQ");n.focus();n.setSelectionRange(n.value.length,n.value.length)},250)};
   bindJobCards(view());
   const nb=document.getElementById("bNewJ");if(nb)nb.onclick=()=>jobDlg(null,null,ui.wkind||"as");
   const ja=document.getElementById("jAll");if(ja)ja.onchange=()=>{document.querySelectorAll(".jsel").forEach(x=>{x.checked=ja.checked;ja.checked?ui.jsel.add(x.dataset.js):ui.jsel.delete(x.dataset.js)});updJSel()};
@@ -3537,7 +3537,7 @@ function renderDeleteView(){
     ${shown.map(r=>`<tr><td><input type="checkbox" data-d="${r.id}" ${ui.dsel.has(r.id)?"checked":""} aria-label="선택"></td><td class="money">${esc(r.date)}</td><td>${esc(r.title)}</td><td>${esc(r.sub)}</td></tr>`).join("")||`<tr><td colspan="4" class="mapt">기록이 없습니다.</td></tr>`}
     </tbody></table>${rows.length>shown.length?`<p class="mapt">${rows.length-shown.length}건 더 있습니다. 검색으로 좁혀 주세요.</p>`:""}</div>`;
   view().querySelectorAll("[data-dk]").forEach(b=>b.onclick=()=>{ui.dkind=b.dataset.dk;ui.dsel=new Set();renderDeleteView()});
-  const dq=document.getElementById("dQ");dq.oninput=e=>{ui.dq=e.target.value;clearTimeout(dq._t);dq._t=setTimeout(()=>{renderDeleteView();const n=document.getElementById("dQ");n.focus();n.setSelectionRange(n.value.length,n.value.length)},250)};
+  const dq=document.getElementById("dQ");dq.oninput=e=>{ui.dq=e.target.value;clearTimeout(dq._t);dq._t=imeT(dq,()=>{renderDeleteView();const n=document.getElementById("dQ");n.focus();n.setSelectionRange(n.value.length,n.value.length)},250)};
   view().querySelectorAll("[data-d]").forEach(x=>x.onchange=()=>{x.checked?ui.dsel.add(x.dataset.d):ui.dsel.delete(x.dataset.d);renderDeleteView()});
   document.getElementById("dAll").onchange=e=>{shown.forEach(r=>e.target.checked?ui.dsel.add(r.id):ui.dsel.delete(r.id));renderDeleteView()};
   document.getElementById("bDel").onclick=()=>{const n=ui.dsel.size;const names=shown.filter(r=>ui.dsel.has(r.id)).slice(0,5).map(r=>esc(r.title)).join(", ");
@@ -3764,12 +3764,16 @@ function openDlg(h,b,btns){
   if(!d.open)d.showModal();
 }
 let tt;function toast(m){const t=document.getElementById("toast");t.textContent=m;t.classList.add("on");clearTimeout(tt);tt=setTimeout(()=>t.classList.remove("on"),3000);return true}
+function imeT(el,fn,ms){return setTimeout(()=>{if(!el._ime)fn()},ms)}
 /* 한글 입력 중(조합 중)에 목록을 다시 그리면 검색칸이 새로 만들어져 '밤밤실장', '바ㅁ밤' 처럼 글자가 꼬임.
    조합 중에는 검색칸의 입력 이벤트를 막고, 글자가 완성된 뒤(compositionend)에 한 번만 검색합니다. */
 (()=>{const SEL="#cQ,#caQ,#aQ,#lQ,#rQ,#skQ,#skStQ,#spQ,#sQ,#wQ,#jQ,#dQ";
-  document.addEventListener("compositionstart",e=>{const t=e.target;if(t&&t.matches&&t.matches(SEL))clearTimeout(t._t)},true);
-  document.addEventListener("input",e=>{const t=e.target;if(e.isComposing&&t&&t.matches&&t.matches(SEL))e.stopPropagation()},true);
-  document.addEventListener("compositionend",e=>{const t=e.target;if(t&&t.matches&&t.matches(SEL))setTimeout(()=>{if(t.isConnected)t.dispatchEvent(new Event("input",{bubbles:true}))},0)},true)})();
+  const ok=t=>t&&t.matches&&t.matches(SEL);
+  /* 다음 글자를 치면 '앞 글자 완성(compositionend) → 새 글자 시작(compositionstart)'이 바로 이어지므로, 조합 중인지 표시해 두고 그때는 검색하지 않음 */
+  document.addEventListener("compositionstart",e=>{const t=e.target;if(ok(t)){t._ime=true;clearTimeout(t._t);clearTimeout(t._imeT)}},true);
+  document.addEventListener("input",e=>{const t=e.target;if(ok(t)&&(e.isComposing||t._ime))e.stopPropagation()},true);
+  document.addEventListener("compositionend",e=>{const t=e.target;if(!ok(t))return;t._ime=false;clearTimeout(t._imeT);
+    t._imeT=setTimeout(()=>{if(t.isConnected&&!t._ime)t.dispatchEvent(new Event("input",{bubbles:true}))},30)},true)})();
 init();
 </script>
 </body>
