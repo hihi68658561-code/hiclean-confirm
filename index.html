@@ -1192,7 +1192,7 @@ function ctrCell(col,k,c,st,basis){
 }
 function renderCtrView(){const _sv=snapScroll();renderCtrView0();restoreScroll(_sv)}
 function renderCtrView0(){
-  if(!ui.cm)ui.cm=thisMonth();if(ui.crow===undefined)ui.crow="";if(ui.cct===undefined)ui.cct="";if(ui.cq===undefined)ui.cq="";
+  ui.cm=thisMonth();ui.cmAll=false;if(ui.crow===undefined)ui.crow="";if(ui.cct===undefined)ui.cct="";if(ui.cq===undefined)ui.cq="";
   const all=!!ui.cmAll;const [st0,en0]=monthRange(ui.cm);const inM=d=>all?!!d:(d&&d>=st0&&d<en0);
   const rows=[];
   contracts.forEach(k=>{const s=payStat(k);const b=[];if(all){if(!monthClosed(k))rows.push({k,c:custById(k.customer_id)||{},s,b:["전체"]});return}
@@ -1230,7 +1230,7 @@ function renderCtrView0(){
   const tot={amount:0,card:0,cash:0,paid:0,unpaid:0};shown.forEach(x=>{tot.amount+=Number(x.k.amount||0);tot.card+=x.s.card;tot.cash+=x.s.other;tot.paid+=x.s.paid;if(x.s.n||x.k.stage==="미수")tot.unpaid+=x.s.unpaid});
   view().innerHTML=`${ui.noPay?`<div class="sec" style="max-width:none"><p class="warnbox">입금 내역 칸이 아직 없습니다. Supabase SQL Editor에서 <b>phase1h.sql</b>을 실행하면 입금·미수금·마감 체크를 쓸 수 있습니다.</p></div>`:""}
    <div class="sumwrap"><div style="display:grid;gap:8px;align-content:start"><div style="display:flex;gap:8px;align-items:center"><h2 style="margin:0;font-size:18px">당월리스트</h2>
-      <input id="cM" type="month" value="${esc(ui.cm)}" aria-label="기준 월" style="padding:5px 8px;border:1px solid var(--line);border-radius:6px;background:var(--field)"><button class="btn sm${all?" pri":""}" type="button" id="cAllM" title="월마감 안 된 계약 전체">전체</button>${ui.cm!==thisMonth()||all?`<button class="btn sm" type="button" id="cNow">이번 달</button>`:""}</div>
+      </div>
       <div class="kpis"><div class="kpi kc ${ui.ckpi==="ctr"?"on":""}" data-kpi="ctr" role="button" tabindex="0"><span>${all?"전체":"당월"} 계약</span><b>${mC.length}건 · ${won0(mC.reduce((a,k)=>a+Number(k.amount||0),0))}원</b></div>
        <div class="kpi kc ${ui.ckpi==="pay"?"on":""}" data-kpi="pay" role="button" tabindex="0"><span>${all?"전체":"당월"} 입금</span><b>${won0(mCard+mOther)}원</b><small>카드 ${won0(mCard)} · 현금+캐피탈 ${won0(mOther)}</small></div>
        <div class="kpi bad kc ${ui.ckpi==="unpaid"?"on":""}" data-kpi="unpaid" role="button" tabindex="0"><span>미수금 (미수 ${un.length}건)</span><b>${won0(unSum)}원</b></div></div>
@@ -1248,9 +1248,7 @@ function renderCtrView0(){
   view().querySelectorAll(".wtbox").forEach(hbar);
   const re=()=>renderCtrView();
   view().querySelectorAll(".sumt td.cl").forEach(td=>td.onclick=()=>{ui.crow=td.dataset.r;ui.cct=td.dataset.t;re()});
-  document.getElementById("cM").onchange=e=>{if(e.target.value){ui.cm=e.target.value;ui.cmAll=false;re()}};
-  const cn=document.getElementById("cNow");if(cn)cn.onclick=()=>{ui.cm=thisMonth();ui.cmAll=false;re()};
-  document.getElementById("cAllM").onclick=()=>{ui.cmAll=!ui.cmAll;re()};
+
   const ca=document.getElementById("cAll");if(ca)ca.onclick=()=>{ui.crow="";ui.cct="";ui.ckpi="";re()};
   view().querySelectorAll("[data-kpi]").forEach(el=>{const go=()=>{ui.ckpi=ui.ckpi===el.dataset.kpi?"":el.dataset.kpi;ui.crow="";ui.cct="";re()};el.onclick=go;el.onkeydown=e=>{if(e.key==="Enter"||e.key===" "){e.preventDefault();go()}}});
   document.getElementById("cCols").onclick=()=>colPicker(re);
