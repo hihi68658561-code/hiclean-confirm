@@ -1986,7 +1986,7 @@ function recvCell(col,x){const c=x.c,cs=x.cs||{},L=x.logs[0],td=today(),k=x.k||{
     case"ym":{const d=x.idate;return `<td>${d?esc(d.slice(2,4)+d.slice(5,7)):""}</td>`}
     case"progress":return `<td>${esc(cs.progress||(x.t==="ctr"&&k.stage==="미수"?"미수":""))}</td>`;
     case"grade":return `<td>${cs.grade?`<span class="tag rg-${esc(cs.grade)}">${esc(cs.grade)}</span>`:""}</td>`;
-    case"cust":return `<td class="rc-${esc(x.stage)}" title="${esc(c.name||"")}"><b>${esc(c.name||"")}</b>${c.id?gradeBadge(c):""}${x.t==="etc"?` <small class="mapt">(직접 등록)</small>`:""}</td>`;
+    case"cust":return `<td class="rc-${esc(x.stage)}" title="${esc(c.name||"")}"><b>${esc(c.name||"")}</b>${c.id?gradeBadge(c):""}</td>`;
     case"ceo":return `<td>${esc(c.ceo||"")}</td>`;case"phone":return `<td>${esc(c.phone||c.phone2||"")}</td>`;
     case"addr":return `<td class="wrap memo"><div class="clamp">${esc(c.address||"")}</div></td>`;
     case"ultra":return `<td class="num">${x.t==="ctr"&&k.amt_ultra?won0(k.amt_ultra):""}</td>`;case"wash":return `<td class="num">${x.t==="ctr"&&k.amt_wash?won0(k.amt_wash):""}</td>`;
@@ -2158,12 +2158,17 @@ function recvDlg(x){const cs=x.cs||{stage:"정상관리",transfer:{}};const off=
 function recvNewDlg(){openDlg("채권 직접 등록",`<div id="rnf" style="display:grid;gap:10px"><p class="mapt" style="margin:0">가불금·대여금처럼 계약이 없는 채권을 등록합니다. 계약·A/S 미수는 자동으로 목록에 나오므로 여기서 등록하지 않아도 됩니다.</p>
    <div class="g3">${sel("kind","채권종류",RKINDS,"가불금")}${inp("title","대상 (업체명·사람)","","text",false,'list="rCustL"')}${inp("issue_date","발생일",today(),"date")}</div>
    <div class="g3">${inp("amount","채권금액","","number")}${inp("owner_name","담당자",me.name||"","text",false,'list="rOwn2"')}${inp("progress","진행단계","","text",false,'list="rProg2"')}</div>
+   <div class="g3"><label class="f">채권관리단계<select name="stage">${RSTAGES.map(s=>`<option ${s==="정상"?"selected":""} ${!RHARD.includes(s)||isAdmin()?"":"disabled"}>${s}</option>`).join("")}</select></label>${inp("next_date","다음 조치일","","date")}<label class="f">입금 약속 (날짜 · 금액)<span style="display:flex;gap:6px"><input type="date" name="promise_date" aria-label="약속일"><input type="number" name="promise_amount" placeholder="금액" aria-label="약속 금액"></span></label></div>
+   <label class="f">관리 메모 (선택 · 채권관리이력에 첫 기록으로 남음)<input name="memo0" placeholder="예: 10/30까지 입금 약속"></label>
    <datalist id="rOwn2">${staff.filter(s=>s.active&&s.role!=="tech").map(s=>`<option value="${esc(s.name)}">`).join("")}</datalist><datalist id="rProg2">${RPROG.map(v=>`<option value="${v}">`).join("")}</datalist>
    <datalist id="rCustL">${staff.filter(s=>s.active).map(s=>`<option value="${esc(s.name)}">`).join("")}</datalist></div>`,
   [["취소"],["등록","pri",async()=>{const f=fdata("rnf");const title=(f.get("title")||"").trim(),amount=Number(f.get("amount")||0)||0,d=f.get("issue_date")||today();if(!title||!amount){toast("대상과 채권금액을 입력하세요");return true}
     const w=whoIs((f.get("owner_name")||"").trim());const cu=customers.find(c=>nk(c.name)===nk(title));
-    const row={ref_type:"etc",ref_id:null,customer_id:cu?cu.id:null,kind:f.get("kind"),title,amount,issue_date:d,owner:w.id,owner_name:w.name,progress:(f.get("progress")||"").trim(),ledger:[{d,t:"채권발생",add:amount,pay:0}]};
-    const {error}=await sb.from("recv_cases").insert(row);if(error)return toast(/kind|ledger|ref_type/.test(error.message)?"Supabase에서 phase1za.sql을 먼저 실행해 주세요.":"등록하지 못했습니다: "+error.message);toast("채권을 등록했습니다");reload(["recv"])}]])}
+    const row={ref_type:"etc",ref_id:null,customer_id:cu?cu.id:null,kind:f.get("kind"),title,amount,issue_date:d,owner:w.id,owner_name:w.name,progress:(f.get("progress")||"").trim(),ledger:[{d,t:"채권발생",add:amount,pay:0}],
+      stage:f.get("stage")||"정상",next_date:f.get("next_date")||null,promise_date:f.get("promise_date")||null,promise_amount:Number(f.get("promise_amount")||0)||0};
+    const {data:nc,error}=await sb.from("recv_cases").insert(row).select().single();if(error)return toast(/kind|ledger|ref_type/.test(error.message)?"Supabase에서 phase1za.sql을 먼저 실행해 주세요.":/stage_check/.test(error.message)?"새 채권관리단계를 쓰려면 Supabase에서 phase1zb.sql을 실행해 주세요.":"등록하지 못했습니다: "+error.message);
+    const m0=(f.get("memo0")||"").trim();if(m0&&nc)await sb.from("recv_logs").insert({case_id:nc.id,customer_id:cu?cu.id:null,method:"직접입력",content:m0,by_name:me.name||""});
+    toast("채권을 등록했습니다");reload(["recv","rlogs"])}]])}
 /* '미수채권현황' 엑셀 가져오기 (채권리스트 시트) */
 function parseRecvSheet(rows,hr){const H=rows[hr].map(h=>nk(h));const at=(pre,k=0)=>{let c=-1;const p=nk(pre);for(let i=0;i<H.length;i++)if(H[i].startsWith(p)&&++c===k)return i;return -1};
   const I={own:at("담당자"),ym:at("설치연월"),prog:at("진행단계"),grade:at("채권분류"),name:at("업체명"),ceo:at("대표자"),phone:at("휴대번호")>=0?at("휴대번호"):at("전화번호"),addr:at("상점주소"),
