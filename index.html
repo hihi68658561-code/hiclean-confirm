@@ -2100,7 +2100,7 @@ function recvDlg(x){const cs=x.cs||{stage:"정상관리",transfer:{}};const off=
      :off?`<div class="payadd"><input type="date" id="lgD" value="${today()}" aria-label="날짜"><input id="lgT" placeholder="내역 (예: 현금 입금)" aria-label="내역"><input type="number" id="lgA" placeholder="채권발생" aria-label="채권발생"><input type="number" id="lgP" placeholder="입금액" aria-label="입금액"><button type="button" class="btn" id="lgAdd">내역 추가</button></div>`:""}
    <h3 class="ksec">3. 채권관리이력</h3>
    <div class="rlrow"><label class="f">날짜<input type="date" id="rlD" value="${today()}"></label>
-     <label class="f">담당자<select id="rlW">${[...new Set([me.name||"",...staff.filter(s=>s.active&&s.role!=="tech").map(s=>s.name)].filter(Boolean))].map(n=>`<option ${n===me.name?"selected":""}>${esc(n)}</option>`).join("")}</select></label>
+     <label class="f">담당자<input id="rlW" list="rlWL" value="${esc(me.name||"")}" placeholder="이름 입력·선택" autocomplete="off" onfocus="this.select()"><datalist id="rlWL">${[...new Set(staff.filter(s=>s.active&&s.role!=="tech").map(s=>s.name).filter(Boolean))].map(n=>`<option value="${esc(n)}">`).join("")}</datalist></label>
      <label class="f rlc">내용<span class="rlcin"><select id="rlM" aria-label="방법">${RMETH.map(m=>`<option>${m}</option>`).join("")}</select><input id="rlC" placeholder="예: 7/20까지 카드결제 예정" aria-label="관리 내용"></span></label>
      <button type="button" class="btn pri" id="rlAdd">추가</button></div>
    <p class="mapt" style="margin:0">추가하면 바로 저장됩니다. 다음 조치일은 아래 ‘채권관리단계’에서 정하세요.</p>
@@ -2140,7 +2140,7 @@ function recvDlg(x){const cs=x.cs||{stage:"정상관리",transfer:{}};const off=
       Object.assign(l,{content:v,edited_by_name:me.name||"",edited_at:new Date().toISOString()});drawLogs()})};
   drawLogs();
   document.getElementById("rlM").onchange=()=>{const c=document.getElementById("rlC");c.placeholder=val("rlM")==="직접입력"?"내용을 직접 입력하세요":"예: 7/20까지 카드결제 예정";c.focus()};
-  document.getElementById("rlAdd").onclick=async()=>{const content=val("rlC").trim();if(!content)return toast("내용을 입력하세요");const m=val("rlM"),nd=null,ld=val("rlD")||today(),who=val("rlW")||me.name||"";
+  document.getElementById("rlAdd").onclick=async()=>{const content=val("rlC").trim();if(!content)return toast("내용을 입력하세요");const m=val("rlM"),nd=null,ld=val("rlD")||today(),who=val("rlW").trim()||me.name||"";
     /* 고른 날짜로 기록 (시각은 지금) */const at=ld===today()?new Date().toISOString():new Date(ld+"T"+new Date().toTimeString().slice(0,8)).toISOString();
     try{const c0=await recvEnsureCase(x);const r=await sb.from("recv_logs").insert({case_id:c0.id,customer_id:x.c.id||null,method:m,content,next_date:nd,by_name:who,created_at:at}).select().single();if(r.error)throw r.error;rlogs.push(r.data);
       const up={};if(nd)up.next_date=nd;if(Object.keys(up).length){await sb.from("recv_cases").update(up).eq("id",c0.id);Object.assign(c0,up);if(up.next_date){const ne=document.querySelector('#rf [name="next_date"]');if(ne)ne.value=nd}if(up.stage){x.stage=up.stage;const s=document.querySelector('#rf [name="stage"]');if(s)s.value=up.stage}}
