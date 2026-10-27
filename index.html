@@ -1537,11 +1537,7 @@ function planAsImport(rows){
     if(!c){const bn=byName[nk(name)]||[];if(bn.length===1)c=bn[0];else if(bn.length>1)c=bn.find(x=>dg(x.phone)===ph)||bn[0]}
     if(!c){const key=nk(name)+"|"+ph;c=made[key];if(!c){c={id:crypto.randomUUID(),name,phone:t("전화번호"),address:t("주소"),__new:true};made[key]=c;newCust.push(c)}}else matched++;
     const rd=toDate(g("접수일자"))||null,sym=t("접수내용");
-    const sg=c.id+"|"+(rd||"")+"|"+nk(sym);
-    if(sig.has(sg)){skipped++;/* 이미 있는 A/S: 엑셀 처리현황이 완료·취소·보류면 그 상태로 맞춤 */
-      const ej=sigJ.get(sg);const es=stOf(t("처리현황"))||(t("마감")?"완료":"");
-      if(ej&&es&&ej.status!==es&&!updJob.some(u=>u.id===ej.id)){const vd0=toDate(g("예정일"))||ej.visit_date||null;updJob.push({id:ej.id,name,patch:{status:es,...(es==="완료"&&!ej.done_date?{done_date:vd0||ej.request_date||today()}:{})}})}
-      return}sig.add(sg);
+    const sg=c.id+"|"+(rd||"")+"|"+nk(sym);const dup=sig.has(sg);if(!dup)sig.add(sg);
     const k=c.__new?null:(custContracts(c.id).find(x=>t("시리얼")&&nk(x.serial)===nk(t("시리얼")))||custContracts(c.id)[0]||null);
     const idRaw=g("설치일");const idate=toDate(idRaw);
     const prod={product:t("제품"),size:t("규격"),serial:t("시리얼")};if(!prod.product&&!prod.size&&!prod.serial&&k)Object.assign(prod,{product:k.product||"",size:k.size||"",serial:k.serial||""});
@@ -1559,12 +1555,19 @@ function planAsImport(rows){
       techs:s&&s.id?[s.id]:[],tech_names:s&&s.id?"":who,symptom:sym,result:t("내용"),cost:pt==="무상"?0:cost,parts:t("교체부품"),done_date:status==="완료"?(vd||pd||rd):null,
       paid_type:pt,pay_status,pay_method:pt==="무상"?"":pm,pay_date:pd,pay_name:t("입금자명"),pay_memo:bad.length?"엑셀 확인 필요: "+bad.join(", "):"",closed:!!t("마감"),sink_status:"",sink_memo:""};
     if(asx)Object.assign(row,{action:t("조치방법")||t("조치내용"),trip_fee:money(g("출장비")),part_fee:money(g("부품비")),distance:money(g("거리"))||null,satisfaction:t("만족도"),tax_date:toDate(g("세금계산서발행일자"))||null});
+    if(dup){skipped++;/* 이미 있는 A/S: 엑셀 처리현황(완료·취소·보류)으로 맞추고, 비어 있는 금액·입금 칸은 엑셀 값으로 채움 (프로그램에서 입력한 값은 그대로) */
+      const ej=sigJ.get(sg);if(!ej||updJob.some(u=>u.id===ej.id))return;const patch={};const es=stOf(stx)||(t("마감")?"완료":"");
+      if(es&&ej.status!==es){patch.status=es;if(es==="완료"&&!ej.done_date)patch.done_date=row.done_date||ej.visit_date||ej.request_date||today()}
+      const emp=v=>v==null||v===""||v===0||(Array.isArray(v)&&!v.length);
+      ["cost","paid_type","pay_status","pay_method","pay_date","pay_name","parts","result","action","trip_fee","part_fee","distance","satisfaction","tax_date"].forEach(f=>{if(f in row&&!emp(row[f])&&(f in ej)&&emp(ej[f]))patch[f]=row[f]});
+      if(row.closed&&!ej.closed)patch.closed=true;
+      if(Object.keys(patch).length)updJob.push({id:ej.id,name,patch});return}
     newJob.push(row)});
   newCust.forEach(c=>delete c.__new);
   return{newCust,newJob,skipped,matched,warn,asx,updJob}}
 function asImportDlg(fname,rows){const plan=planAsImport(rows);
   openDlg("A/S 엑셀 가져오기",`<p><b>${esc(fname)}</b> · ${rows.length}줄</p>
-   <table class="stafft"><tbody><tr><td>새 A/S 접수</td><td>${plan.newJob.length}건</td></tr><tr><td>기존 고객과 연결</td><td>${plan.matched}줄</td></tr><tr><td>새로 등록될 고객</td><td>${plan.newCust.length}곳${plan.newCust.length?` <small class="mapt">(${esc(plan.newCust.slice(0,6).map(c=>c.name).join(", "))}${plan.newCust.length>6?" 외":""})</small>`:""}</td></tr><tr><td>이미 있는 A/S (건너뜀)</td><td>${plan.skipped}건${plan.updJob.length?` <small class="mapt">(이 중 ${plan.updJob.length}건은 엑셀 처리현황대로 완료·취소·보류로 바꿈)</small>`:""}</td></tr></tbody></table>
+   <table class="stafft"><tbody><tr><td>새 A/S 접수</td><td>${plan.newJob.length}건</td></tr><tr><td>기존 고객과 연결</td><td>${plan.matched}줄</td></tr><tr><td>새로 등록될 고객</td><td>${plan.newCust.length}곳${plan.newCust.length?` <small class="mapt">(${esc(plan.newCust.slice(0,6).map(c=>c.name).join(", "))}${plan.newCust.length>6?" 외":""})</small>`:""}</td></tr><tr><td>이미 있는 A/S (건너뜀)</td><td>${plan.skipped}건${plan.updJob.length?` <small class="mapt">(이 중 ${plan.updJob.length}건은 엑셀 처리현황·금액·입금 칸으로 갱신)</small>`:""}</td></tr></tbody></table>
    ${plan.warn.length?`<p class="warnbox">날짜로 읽을 수 없는 칸이 있어 비워 둡니다. 원래 글자는 입금 메모에 남깁니다.<br>${plan.warn.slice(0,5).map(esc).join("<br>")}${plan.warn.length>5?"<br>…":""}</p>`:""}
    ${plan.asx?"":`<p class="warnbox">조치방법·출장비·부품비·거리·만족도·세금계산서 칸은 phase1q.sql 실행 전이라 옮기지 않습니다.</p>`}
    <p class="mapt">업체명(상호)·전화번호가 같은 고객에 연결합니다. 같은 고객·접수일자·접수내용인 A/S는 이미 있는 것으로 보고 건너뜁니다.</p>`,
@@ -1572,7 +1575,7 @@ function asImportDlg(fname,rows){const plan=planAsImport(rows);
      const put=async(tb,rs)=>{for(let i=0;i<rs.length;i+=300){toast(`가져오는 중… ${tb==="customers"?"고객":"A/S"} ${Math.min(i+300,rs.length)}/${rs.length}`);const {error}=await sb.from(tb).insert(rs.slice(i,i+300));if(error)throw error}};
      await put("customers",plan.newCust);await put("jobs",plan.newJob);
      for(let i=0;i<plan.updJob.length;i++){const u=plan.updJob[i];if(i%20===0)toast(`처리현황 맞추는 중… ${i+1}/${plan.updJob.length}`);const {error}=await sb.from("jobs").update(u.patch).eq("id",u.id);if(error)throw error}
-     toast(`가져오기 완료: A/S ${plan.newJob.length}건 · 새 고객 ${plan.newCust.length}곳${plan.updJob.length?` · 처리현황 갱신 ${plan.updJob.length}건`:""}`);await loadAll()}catch(e){toast("가져오는 중 멈췄습니다: "+(e.message||""));await loadAll()}}]])}
+     toast(`가져오기 완료: A/S ${plan.newJob.length}건 · 새 고객 ${plan.newCust.length}곳${plan.updJob.length?` · 기존 A/S 갱신 ${plan.updJob.length}건`:""}`);await loadAll()}catch(e){toast("가져오는 중 멈췄습니다: "+(e.message||""));await loadAll()}}]])}
 
 /* ================= 일정표 (설치팀 업무일정표: 날짜 × 기사) ================= */
 let notes=[];
