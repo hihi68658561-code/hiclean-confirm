@@ -695,14 +695,13 @@ function lastStage(id){const k=custContracts(id)[0];return k?k.stage:""}
 function renderCustView(){
   view().innerHTML=`<div class="body"><aside><div class="search">
     <div class="csf" role="search">${CSF.map(([k,l,ph])=>`<label class="csr"><span>${l}</span><span class="csi"><svg viewBox="0 0 24 24" width="14" height="14" aria-hidden="true"><circle cx="11" cy="11" r="7" fill="none" stroke="currentColor" stroke-width="2"/><path d="M20 20l-4-4" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg><input data-cs="${k}" type="search" placeholder="${ph}" value="${esc((ui.cs||{})[k]||"")}" autocomplete="off"></span></label>`).join("")}</div>
-    <div class="row"><span id="cnt"></span><span style="flex:1"></span><button class="btn sm" type="button" id="csClr">초기화</button><button class="btn pri sm" type="button" id="csGo" title="검색 (Enter 또는 F8)">검색(F8)</button></div>
+    <div class="row"><span id="cnt"></span><span style="flex:1"></span><button class="btn sm" type="button" id="csClr">초기화</button><button class="btn pri sm" type="button" id="csGo" title="검색 (Enter)">검색</button></div>
     ${isOffice()||me.role==="sales"?`<div class="row" style="justify-content:flex-end"><button class="btn sm" id="bNewC">+ 새 고객</button></div>`:""}</div>
     <div class="clist" id="clist"></div></aside><main id="main"></main></div>`;
   ui.stage=ui.ctype=ui.grade="";
   const go=()=>{ui.cs={};document.querySelectorAll("[data-cs]").forEach(i=>{ui.cs[i.dataset.cs]=i.value});renderCustList()};
   document.querySelectorAll("[data-cs]").forEach(i=>i.addEventListener("keydown",e=>{if(e.key==="Enter"){e.preventDefault();go()}}));
   document.getElementById("csGo").onclick=go;document.getElementById("csClr").onclick=()=>{document.querySelectorAll("[data-cs]").forEach(i=>i.value="");go()};
-  if(!window._csF8){window._csF8=true;document.addEventListener("keydown",e=>{if(e.key==="F8"&&ui.view==="cust"&&!document.getElementById("dlg").open){const b=document.getElementById("csGo");if(b){e.preventDefault();b.click()}}})}
   const nb=document.getElementById("bNewC");if(nb)nb.onclick=()=>newCustomer(null,async c=>{render();if(isOffice()&&await askConfirm("고객을 등록했습니다. 계약도 바로 등록하시겠습니까?"))contractDlg(c,null);else document.getElementById("dlg").close()});
   document.getElementById("clist").onclick=e=>{const it=e.target.closest(".citem");if(it){ui.sel=it.dataset.id;ui.ctab="info";ui.draft=null;document.querySelectorAll("#clist .citem.sel").forEach(x=>x.classList.remove("sel"));it.classList.add("sel");renderCustMain();if(window.innerWidth<760){const m=document.getElementById("main");if(m)m.scrollIntoView({behavior:"smooth",block:"start"})}}};
   renderCustList();renderCustMain();
@@ -733,7 +732,7 @@ function renderCustList(){
 }
 function renderCustMain(){
   const m=document.getElementById("main");const c=custById(ui.sel);
-  if(!c){m.innerHTML=`<div class="empty cempty"><h2>고객 검색</h2><p>${me.role==="sales"?"본인이 담당하거나 수금을 배정받은 고객만 보입니다.":me.role==="tech"?"배정받은 작업의 고객만 보입니다.":"업체명(상호)·전화번호, 시리얼, 주소, 담당자 칸에 입력하고 검색(Enter·F8)을 누르세요."}</p></div>`;return}
+  if(!c){m.innerHTML=`<div class="empty cempty"><h2>고객 검색</h2><p>${me.role==="sales"?"본인이 담당하거나 수금을 배정받은 고객만 보입니다.":me.role==="tech"?"배정받은 작업의 고객만 보입니다.":"업체명(상호)·전화번호, 시리얼, 주소, 담당자 칸에 입력하고 검색(또는 Enter)을 누르세요."}</p></div>`;return}
   const ks=custContracts(c.id),js=custJobs(c.id);
   const tabs=[["info","고객정보"]];if(me.role!=="tech")tabs.push(["ctr",`계약 (${ks.length})`]);tabs.push(["install",`설치·철거 (${js.filter(j=>j.kind!=="as").length})`],["as",`A/S (${js.filter(j=>j.kind==="as").length})`],["files",`사진·서류 (${custFiles(c).filter(f=>!(me.role==="tech"&&f.kind==="계약서")).length})`],["conf","확인서"]);
   if(me.role!=="tech"&&!ui.noLeads)tabs.splice(1,0,["lead",`DB 상담 (${custLeads(c).length})`]);
@@ -3765,6 +3764,12 @@ function openDlg(h,b,btns){
   if(!d.open)d.showModal();
 }
 let tt;function toast(m){const t=document.getElementById("toast");t.textContent=m;t.classList.add("on");clearTimeout(tt);tt=setTimeout(()=>t.classList.remove("on"),3000);return true}
+/* 한글 입력 중(조합 중)에 목록을 다시 그리면 검색칸이 새로 만들어져 '밤밤실장', '바ㅁ밤' 처럼 글자가 꼬임.
+   조합 중에는 검색칸의 입력 이벤트를 막고, 글자가 완성된 뒤(compositionend)에 한 번만 검색합니다. */
+(()=>{const SEL="#cQ,#caQ,#aQ,#lQ,#rQ,#skQ,#skStQ,#spQ,#sQ,#wQ,#jQ,#dQ";
+  document.addEventListener("compositionstart",e=>{const t=e.target;if(t&&t.matches&&t.matches(SEL))clearTimeout(t._t)},true);
+  document.addEventListener("input",e=>{const t=e.target;if(e.isComposing&&t&&t.matches&&t.matches(SEL))e.stopPropagation()},true);
+  document.addEventListener("compositionend",e=>{const t=e.target;if(t&&t.matches&&t.matches(SEL))setTimeout(()=>{if(t.isConnected)t.dispatchEvent(new Event("input",{bubbles:true}))},0)},true)})();
 init();
 </script>
 </body>
