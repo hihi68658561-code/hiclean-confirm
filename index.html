@@ -2885,7 +2885,14 @@ function stockUnitDlg(u,asUsed){const isNew=!u;const cm=stkCtrMap();const s=u?st
     <div class="g3">${inp("out_date","출고일자 (직접 처리)",u.out_date||"","date")}<div class="f" style="grid-column:span 2"><span>설치업장</span><input name="site_name" value="${esc(u.site_name||"")}" list="stCu" placeholder="업체명(상호)"></div></div>
     <datalist id="stCu">${customers.slice(0,3000).map(c=>`<option value="${esc(c.name)}">`).join("")}</datalist>
     <p class="mapt" style="margin:0">계약에 이 번호(No.)를 시리얼로 넣고 설치가 완료되면 자동으로 출고됩니다. 계약 없이 나간 제품만 출고일자를 직접 넣으세요.</p></div>`,
-   [["닫기"],...(!isNew?[["삭제","danger",async()=>{if(!(await askConfirm("이 제품 기록을 삭제할까요?")))return true;const {error}=await sb.from("stock_units").delete().eq("id",u.id);if(error){toast("삭제하지 못했습니다: "+error.message);return true}toast("삭제했습니다");renderStockView()}]]:[]),
+   [...(()=>{/* 이 제품과 연결된 고객·계약: 자동 출고된 계약 → 같은 번호(시리얼) 계약 → 설치업장 이름 */
+      if(isNew)return[];const no=String(Number(String(u.no||"").replace(/\D/g,"")||"0"));let k=s.k||(no!=="0"&&(cm.get(no)||[])[0])||null;
+      let c=k?custById(k.customer_id):(s.cid&&custById(s.cid))||(u.customer_id&&custById(u.customer_id))||null;
+      if(!c&&(s.site||u.site_name)){const nm=nk(s.site||u.site_name);c=customers.find(x=>nk(x.name)===nm)||customers.find(x=>x.name&&nk(x.name).length>=2&&nm.endsWith(nk(x.name)))||null}
+      if(c&&!k)k=custContracts(c.id)[0]||null;const out=[];
+      if(c)out.push(["고객정보","gocust",()=>{openCustPopup(c,()=>{});return true}]);
+      if(c&&k)out.push(["계약정보","gocust",()=>{contractDlg(c,k);return true}]);return out})(),
+    ["닫기"],...(!isNew?[["삭제","danger",async()=>{if(!(await askConfirm("이 제품 기록을 삭제할까요?")))return true;const {error}=await sb.from("stock_units").delete().eq("id",u.id);if(error){toast("삭제하지 못했습니다: "+error.message);return true}toast("삭제했습니다");renderStockView()}]]:[]),
     ...(!isNew&&s.st==="out"?[["중고로 재입고","",async()=>{const g=prompt("중고 등급 (예: A++, B+, B)",u.grade||"B");if(g==null)return true;const why=prompt("입고 사유 (예: 철거 회수, 보상판매 입고)",u.remark||"")??"";
       const {error}=await sb.from("stock_units").update({used:true,grade:g.trim(),remark:why.trim(),in_date:today(),out_date:null,site_name:"",customer_id:null,status:""}).eq("id",u.id);if(error){toast("저장하지 못했습니다: "+error.message);return true}toast("중고로 다시 입고했습니다");renderStockView()}]]:[]),
     ["저장","pri",async()=>{const f=fdata("suf");const n=k=>{const v=f.get(k);return v===""||v==null?null:Number(v)};
