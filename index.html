@@ -3271,8 +3271,11 @@ function updJSel(){const b=document.getElementById("bJDel");if(b){b.disabled=!ui
   const a=document.getElementById("jAll");if(a){const all=[...document.querySelectorAll(".jsel")];a.checked=all.length>0&&all.every(x=>x.checked)}}
 function delJobs(ids,after){const n=ids.length;const names=[...new Set(ids.map(id=>(jobs.find(j=>j.id===id)||{}).customer_name).filter(Boolean))].slice(0,5).join(", ");
   openDlg(`${n}건 삭제`,`<p>${esc(names)}${n>5?" 등":""} ${n}건을 삭제합니다.</p><p><b>되돌릴 수 없습니다.</b></p>`,
-   [["취소"],["삭제","danger",async()=>{for(let i=0;i<ids.length;i+=200){const {error}=await sb.from("jobs").delete().in("id",ids.slice(i,i+200));if(error)return toast("삭제하지 못했습니다: "+error.message)}
-     ids.forEach(id=>ui.jsel.delete(id));toast(`${n}건 삭제했습니다`);if(after)after();reload(["jobs"])}]])}
+   [["취소"],["삭제","danger",async()=>{let done=0;for(let i=0;i<ids.length;i+=200){const {data,error}=await sb.from("jobs").delete().in("id",ids.slice(i,i+200)).select("id");if(error)return toast("삭제하지 못했습니다: "+error.message);done+=(data||[]).length}
+     ids.forEach(id=>ui.jsel.delete(id));
+     /* 권한이 없으면 오류 없이 0건이 지워지므로 실제 지워진 건수를 확인 */
+     if(done<n)toast(done?`${done}건만 삭제했습니다. 나머지 ${n-done}건은 지울 권한이 없거나 이미 없는 건입니다.`:`삭제되지 않았습니다. 작업 삭제는 ‘관리자’ 권한이 필요합니다 (직원 화면에서 권한 확인).`);else toast(`${n}건 삭제했습니다`);
+     if(after)after();reload(["jobs"])}]])}
 const KLABEL={install:"설치",as:"A/S",remove:"철거",addon:"추가설치",move:"이전설치",etc:"기타"};
 /* 작업 구분 이름 (기타는 직접 적은 이름) */
 function kl(j){return j&&j.kind==="etc"?(String(j.kind_label||"").trim()||"기타"):KLABEL[j&&j.kind]||""}
