@@ -2831,7 +2831,7 @@ function stockListHtml(units,usedOnly){if(!ui.sst)ui.sst="in";if(ui.sq===undefin
   if(ui.sst==="x"&&false)ui.sst="in";const stOk=(x,s)=>s==="all"||(s==="x"?(x.s.st==="x"&&x.s.label==="생산예정"):s==="used"?(x.u.used&&x.s.st==="in"):x.s.st===s);
   let list=units.filter(x=>(!usedOnly||x.u.used)&&stOk(x,ui.sst)
     &&(!f||(f.spec?(x.u.used&&stkSpec(x.u)===f.spec):(x.u.model===f.m&&x.u.size===f.s&&x.u.ty===f.t&&(f.lip==null||x.u.lip===f.lip)&&(f.dr==null||x.u.drain===f.dr)&&!x.u.used)))
-    &&(!qq||[x.u.serial,x.u.no,x.u.remark,x.s.site,stkSpec(x.u),x.u.grade].join(" ").toLowerCase().includes(qq)));
+    &&(!qq||[x.u.serial,x.u.no,x.u.remark,stkSiteLabel(x.s,x.u),stkSpec(x.u),x.u.grade].join(" ").toLowerCase().includes(qq)));
   list.sort((a,b)=>{const na=Number(a.u.no),nb=Number(b.u.no),fa=isFinite(na)&&String(a.u.no??"").trim()!=="",fb=isFinite(nb)&&String(b.u.no??"").trim()!=="";if(fa&&fb&&na!==nb)return na-nb;if(fa!==fb)return fa?-1:1;return String(a.u.no??"").localeCompare(String(b.u.no??""),"ko",{numeric:true})});
   list=cfApply("stk",list,stkTxt);
   const cntSt=s=>units.filter(x=>(!usedOnly||x.u.used)&&stOk(x,s)).length;
@@ -2846,7 +2846,7 @@ function stockListHtml(units,usedOnly){if(!ui.sst)ui.sst="in";if(ui.sq===undefin
      <tr>${(()=>{const F=cfF("stk");return STKCF.map(([k,l])=>`<th class="hg-p" data-ck="${k}">${l}<span class="fbtn${F[k]?" on":""}" data-fc="${k}" role="button" title="${l} 필터" aria-label="${l} 필터">▼</span></th>`).join("")})()}</tr></thead><tbody>
     ${shown.map(x=>{const u=x.u,s=x.s;return `<tr data-su="${u.id}" class="${s.st==="out"?"sout":s.st==="x"?(s.label==="생산예정"?"splan":"sx"):""}"><td>${u.mfg_y??""}</td><td>${u.mfg_m??""}</td><td>${u.mfg_d??""}</td><td>${esc(u.model)}</td><td>${u.ch??""}</td><td>${u.size??""}</td><td>${esc(u.ty)}</td><td>${u.lip??""}</td><td>${esc(u.drain)}</td><td>${esc(u.no)}</td>
       <td class="sq ${s.st==="in"?"q1":s.st==="x"?(s.label==="생산예정"?"qp":"qx"):""}" title="${s.st==="in"?"재고":s.st==="out"?"출고":esc(s.label)}">${s.st==="in"?1:s.st==="out"?0:s.label==="생산예정"?"예정":esc(s.label)}</td>
-      <td>${esc(ymd2(s.date||""))}</td><td>${esc(s.site||u.site_name||"")}${s.st==="out"&&s.auto?` <small class="mapt">(계약)</small>`:""}</td>
+      <td>${esc(ymd2(s.date||""))}</td><td>${esc(stkSiteLabel(s,u))}${s.st==="out"&&s.auto?` <small class="mapt">(계약)</small>`:""}</td>
       <td class="wrap memo"><div class="clamp">${esc(u.remark)}</div></td><td class="mono sser">${esc(u.serial||stkSerial(u))}</td><td>${u.used?"중고":""}</td><td>${esc(u.grade)}</td></tr>`}).join("")||`<tr><td colspan="17" class="mapt">해당하는 제품이 없습니다.</td></tr>`}</tbody></table></div></div>`}
 function bindStockUnits(){const re=()=>renderStockView();cfBind("stk",re);
   view().querySelectorAll("[data-sf]").forEach(td=>td.onclick=()=>{const [m,s,t,lip,dr]=td.dataset.sf.split("|");const nf={m,s:+s,t,lip:lip===""?undefined:+lip,dr:dr||undefined};
@@ -2899,7 +2899,7 @@ function stockUnitDlg(u,asUsed){const isNew=!u;const cm=stkCtrMap();const s=u?st
     ["저장","pri",async()=>{const f=fdata("suf");const n=k=>{const v=f.get(k);return v===""||v==null?null:Number(v)};
       const p={mfg_y:n("mfg_y"),mfg_m:n("mfg_m"),mfg_d:n("mfg_d"),model:f.get("model"),ch:n("ch"),size:n("size"),ty:f.get("ty"),lip:n("lip"),drain:f.get("drain"),no:(f.get("no")||"").trim(),
         in_date:f.get("in_date")||null,status:f.get("status")||"",used:!!f.get("used"),grade:(f.get("grade")||"").trim(),remark:(f.get("remark")||"").trim(),out_date:f.get("out_date")||null,site_name:(f.get("site_name")||"").trim()};
-      const pc=f.get("site_cid")&&custById(f.get("site_cid"));const cu=pc&&pc.name===p.site_name?pc:(p.site_name&&customers.find(c=>c.name===p.site_name));p.customer_id=cu?cu.id:null;
+      const pc=f.get("site_cid")&&custById(f.get("site_cid"));const cu=pc&&(pc.name===p.site_name||p.site_name.endsWith(" "+pc.name))?pc:(p.site_name&&(customers.find(c=>c.name===p.site_name)||customers.find(c=>p.site_name.endsWith(" "+c.name)&&cityOf(c.address)===p.site_name.slice(0,p.site_name.length-c.name.length-1))));p.customer_id=cu?cu.id:null;
       if(!p.no){toast("No.를 입력하세요");return true}
       const typed=(f.get("serial")||"").trim();
       if(isNew){const c=Math.min(200,Math.max(1,parseInt(f.get("cnt"),10)||1));const base=Number(p.no.replace(/\D/g,""))||0;const w=Math.max(5,p.no.length);const rows=[];
@@ -2921,7 +2921,7 @@ function stockUnitDlg(u,asUsed){const isNew=!u;const cm=stkCtrMap();const s=u?st
    const show=()=>{const t=si.value.trim().toLowerCase().replace(/[-\s]/g,"");hid.value="";box.querySelector('[name=site_kid]').value="";hint.textContent="";if(t.length<2){res.innerHTML="";return}
      const hits=[];pool.filter(c=>custSearchText(c).includes(t)).slice(0,8).forEach(c=>custContracts(c.id).filter(k=>k.stage!=="취소").forEach(k=>hits.push([c,k])));
      res.innerHTML=hits.slice(0,12).map(([c,k],i)=>{const ij=installOf(k);const d=ij&&(ij.done_date||ij.visit_date);return `<button type="button" data-hi="${i}"><b>${esc(c.name)}</b><small>${esc([k.contract_date&&"계약 "+k.contract_date,k.product,k.size,k.serial&&"SN "+k.serial].filter(Boolean).join(" · "))}${d?` · <b class="instd">설치 ${esc(d)}</b>`:""}</small><small>${esc([c.phone||c.phone2,c.address].filter(Boolean).join(" · "))}</small></button>`}).join("")||`<p class="mapt">찾는 계약 고객이 없습니다. 그대로 두면 적은 이름으로 저장됩니다.</p>`;
-     res.querySelectorAll("[data-hi]").forEach(b=>b.onclick=()=>{const [c,k]=hits[+b.dataset.hi];si.value=c.name;hid.value=c.id;box.querySelector('[name=site_kid]').value=k.id;res.innerHTML="";
+     res.querySelectorAll("[data-hi]").forEach(b=>b.onclick=()=>{const [c,k]=hits[+b.dataset.hi];{const rg=cityOf(c.address);si.value=rg&&!c.name.startsWith(rg)?rg+" "+c.name:c.name}hid.value=c.id;box.querySelector('[name=site_kid]').value=k.id;res.innerHTML="";
        const ij=installOf(k);const d=ij&&(ij.done_date||ij.visit_date);const od=box.querySelector('[name=out_date]');if(od&&!od.value)od.value=d||today();
        hint.textContent=`연결: ${c.name} · ${[k.contract_date&&"계약 "+k.contract_date,k.product,k.size,k.serial&&"SN "+k.serial].filter(Boolean).join(" · ")}`})};
    if(si){si.addEventListener("input",show);si.addEventListener("keydown",e=>{if(e.key==="Enter"){e.preventDefault();const b=res.querySelector("[data-hi]");if(b)b.click()}})}}
@@ -3254,6 +3254,12 @@ function renderJobsView(kind){
 /* ================= 작업현황 (설치·A/S·철거·추가설치 한 화면) ================= */
 const RG={"서울특별시":"서울","서울시":"서울","부산광역시":"부산","부산시":"부산","대구광역시":"대구","대구시":"대구","인천광역시":"인천","인천시":"인천","광주광역시":"광주","대전광역시":"대전","대전시":"대전","울산광역시":"울산","울산시":"울산","세종특별자치시":"세종","세종시":"세종","경기도":"경기","강원도":"강원","강원특별자치도":"강원","충청북도":"충북","충청남도":"충남","전라북도":"전북","전북특별자치도":"전북","전라남도":"전남","경상북도":"경북","경상남도":"경남","제주특별자치도":"제주","제주도":"제주"};
 const RSHORT=["서울","부산","대구","인천","광주","대전","울산","세종","경기","강원","충북","충남","전북","전남","경북","경남","제주"];
+/* 주소 → 시·군 이름 (경북 구미시 … → 구미, 서울 … → 서울) */
+function cityOf(a){const t=String(a||"").trim().split(/\s+/);const m=(t[0]||"").match(/^(서울|부산|대구|인천|광주|대전|울산|세종)/);if(m)return m[1];
+  const x=t.slice(1,3).find(w=>/[시군]$/.test(w)&&w.length>=2);return x?(x.length>2?x.replace(/[시군]$/,""):x):""}
+/* 재고 설치업장 표시: '지역 상호' */
+function stkSiteLabel(s,u){const name=String(s.site||u.site_name||"").trim();if(!name)return"";const c=(s.cid&&custById(s.cid))||(u.customer_id&&custById(u.customer_id))||customers.find(x=>x.name===name);
+  const rg=c?cityOf(c.address):"";return rg&&!name.startsWith(rg)?rg+" "+name:name}
 function region(a){const t=String(a||"").trim().split(/\s+/)[0]||"";if(RG[t])return RG[t];const s=t.slice(0,2);return RSHORT.includes(s)?s:""}
 const WDAY="일월화수목금토";
 function wday(d){if(!d)return"";const x=new Date(d+"T00:00:00");return isNaN(x)?"":WDAY[x.getDay()]}
