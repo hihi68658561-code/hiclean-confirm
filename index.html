@@ -137,7 +137,7 @@ dialog .df{padding:12px 18px;border-top:1px solid var(--line2);display:flex;just
 .fgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:10px;padding:14px 20px;border:2px dashed transparent;border-radius:10px;margin:0 8px}
 .fgrid.sm{grid-template-columns:repeat(auto-fill,minmax(96px,1fr));padding:8px 0;margin:0}
 .fgrid.drop{border-color:var(--accent);background:var(--accent-weak)}
-.fth{position:relative;display:grid;grid-template-rows:1fr auto;border:1px solid var(--line);border-radius:8px;background:var(--panel);padding:0;overflow:hidden;cursor:pointer;aspect-ratio:3/4;text-align:left;font:inherit;color:inherit}
+.fth .fsel{position:absolute;top:6px;left:6px;z-index:2;width:18px;height:18px;cursor:pointer}#lbKind{padding:3px 6px;border-radius:6px;border:1px solid var(--line);font-size:12.5px}.fth{position:relative;display:grid;grid-template-rows:1fr auto;border:1px solid var(--line);border-radius:8px;background:var(--panel);padding:0;overflow:hidden;cursor:pointer;aspect-ratio:3/4;text-align:left;font:inherit;color:inherit}
 .fth:hover,.fth:focus-visible{border-color:var(--accent);box-shadow:0 0 0 2px var(--accent-weak)}
 .fth img{width:100%;height:100%;object-fit:cover;min-height:0;background:var(--line2)}
 .fpdf{display:grid;place-items:center;background:var(--line2);color:var(--mute);font-weight:700;font-size:18px;min-height:0;height:100%}
@@ -389,7 +389,7 @@ header.top{position:relative}.tmore{display:none}.tacts{display:contents}
 </form></div>
 <div id="printRoot"></div>
 <dialog id="cfm" aria-labelledby="cfmMsg"><div class="cfmb"><p id="cfmMsg"></p><div class="cfmf"><button type="button" class="btn" id="cfmNo">취소</button><button type="button" class="btn pri" id="cfmYes">확인</button></div></div></dialog>
-<dialog id="lbx" aria-label="사진 크게 보기"><div class="lbwrap"><div class="lbtop"><span class="lbcap"></span><span style="flex:1"></span><button type="button" class="btn sm" id="lbOpen">원본 열기</button><button type="button" class="btn sm danger" id="lbDel">삭제</button><button type="button" class="btn sm" id="lbClose">닫기</button></div>
+<dialog id="lbx" aria-label="사진 크게 보기"><div class="lbwrap"><div class="lbtop"><span class="lbcap"></span><span style="flex:1"></span><button type="button" class="btn sm" id="lbOpen">원본 열기</button><select id="lbKind" aria-label="분류 이동" title="분류 이동"></select><button type="button" class="btn sm danger" id="lbDel">삭제</button><button type="button" class="btn sm" id="lbClose">닫기</button></div>
 <div class="lbmid"><button type="button" class="lbnav" id="lbPrev" aria-label="이전">‹</button><div class="lbimg"></div><button type="button" class="lbnav" id="lbNext" aria-label="다음">›</button></div></div></dialog>
 <dialog id="cdlg" aria-labelledby="cdlgH"><div class="dh" id="cdlgH"></div><div class="db"><form id="cpf" style="display:grid;gap:10px"></form></div><div class="df"><button type="button" class="btn close" id="cdlgNo">닫기</button><button type="button" class="btn pri" id="cdlgOk">저장</button></div></dialog>
 <dialog id="dlg"><form method="dialog" id="dlgForm"><div class="dh" id="dlgH"></div><div class="db" id="dlgB"></div><div class="df" id="dlgF"></div></form></dialog>
@@ -961,18 +961,32 @@ function fileErrHint(fail){const m=fail.join(" ");return /job_id|kind_check/i.te
 function renderCustFiles(c){
   const tb=document.getElementById("tabBody");const all=custFiles(c);const fk=ui.fkind||"";
   const ko=k=>{const i=FKINDS.findIndex(x=>x[0]===k);return i<0?99:i};
+  const fEd=isOffice()&&!ui.noFiles;const movable=f=>!!f.id&&!String(f.id).startsWith("biz:")&&!f.pseudo;
+  if(!ui.fsel||ui.fselC!==c.id){ui.fsel=new Set();ui.fselC=c.id}
   const list=all.filter(f=>!fk||f.kind===fk).map((f,i)=>[f,i]).sort((a,b)=>ko(a[0].kind)-ko(b[0].kind)||a[1]-b[1]).map(x=>x[0]);const cnt=k=>all.filter(f=>f.kind===k).length;
   tb.innerHTML=`${ui.noFiles?`<div class="sec" style="max-width:none"><p class="warnbox">사진·서류 칸이 아직 없습니다. Supabase에서 <b>phase1i.sql</b>, <b>phase1j.sql</b>을 실행해 주세요.</p></div>`:""}
    <div class="toolbar"><div class="nav" role="group" aria-label="종류">${[["","전체 ("+all.length+")"],...FKINDS.map(k=>[k[0],k[0]+" ("+cnt(k[0])+")"])].filter(x=>!(me.role==="tech"&&x[0]==="계약서")).map(([k,l])=>`<button type="button" data-fk="${esc(k)}" class="${fk===k?"on":""}">${esc(l)}</button>`).join("")}</div>
      <span style="flex:1"></span>${ui.noFiles?"":`<select id="fKind" aria-label="올릴 종류">${upKinds().map(k=>`<option ${k===(fk||ui.fupKind||"설치사진")?"selected":""}>${k}</option>`).join("")}</select>
      <label class="btn pri"><input type="file" id="fIn" accept="image/*,application/pdf" multiple hidden>사진·서류 올리기</label>`}<span class="mapt" id="fSt"></span></div>
-   <div class="fgrid" id="fGrid">${list.map((f,i)=>`<button type="button" class="fth" data-fi="${i}" aria-label="${esc(f.kind)} ${esc(f.name)} 크게 보기">
-      ${isPdf(f)?`<span class="fpdf">PDF</span>`:`<img alt="" loading="lazy" data-p="${esc(f.path)}">`}<span class="fcap"><b>${esc(f.kind)}</b>${esc(f.job_id?jobLabel(f.job_id):(f.created_at?f.created_at.slice(0,10):""))}</span></button>`).join("")
+   ${fEd&&list.some(movable)?`<div class="toolbar fselbar" style="padding-top:0"><label class="chip"><input type="checkbox" id="fAll">전체 선택</label><span class="mapt" id="fSelN">사진을 체크해서 분류를 옮기거나 삭제할 수 있습니다</span><span style="flex:1"></span>
+     <select id="fMvK" aria-label="옮길 분류">${upKinds().map(k=>`<option>${k}</option>`).join("")}</select><button type="button" class="btn" id="fMv" disabled>분류 이동</button><button type="button" class="btn danger" id="fDel" disabled>삭제</button></div>`:""}
+   <div class="fgrid" id="fGrid">${list.map((f,i)=>`<div role="button" tabindex="0" class="fth" data-fi="${i}" aria-label="${esc(f.kind)} ${esc(f.name)} 크게 보기">
+      ${fEd&&movable(f)?`<input type="checkbox" class="fsel" data-fs="${esc(f.id)}" ${ui.fsel.has(f.id)?"checked":""} aria-label="선택">`:""}${isPdf(f)?`<span class="fpdf">PDF</span>`:`<img alt="" loading="lazy" data-p="${esc(f.path)}">`}<span class="fcap"><b>${esc(f.kind)}</b>${esc(f.job_id?jobLabel(f.job_id):(f.created_at?f.created_at.slice(0,10):""))}</span></div>`).join("")
      ||`<div class="empty" style="padding:24px 0;grid-column:1/-1">${fk?esc(fk)+" ":""}사진·서류가 없습니다.${ui.noFiles?"":" 여기에 파일을 끌어다 놓거나 ‘사진·서류 올리기’를 누르세요."}</div>`}</div>`;
   tb.querySelectorAll("[data-fk]").forEach(b=>b.onclick=()=>{ui.fkind=b.dataset.fk;renderCustFiles(c)});
   const paths=list.filter(f=>!isPdf(f)).map(f=>f.path);
   if(paths.length)signUrls(paths).then(m=>tb.querySelectorAll("img[data-p]").forEach(im=>{const u=m[im.dataset.p];if(u)im.src=u;else im.replaceWith(Object.assign(document.createElement("span"),{className:"fpdf",textContent:"열 수 없음"}))}));
-  tb.querySelectorAll("[data-fi]").forEach(b=>b.onclick=()=>openViewer(list,+b.dataset.fi,c));
+  tb.querySelectorAll("[data-fi]").forEach(b=>{b.onclick=e=>{if(e.target.closest(".fsel"))return;openViewer(list,+b.dataset.fi,c)};b.onkeydown=e=>{if((e.key==="Enter"||e.key===" ")&&e.target===b){e.preventDefault();openViewer(list,+b.dataset.fi,c)}}});
+  /* 선택해서 분류 이동·삭제 */
+  [...ui.fsel].forEach(id=>{if(!list.some(f=>f.id===id))ui.fsel.delete(id)});
+  const updSel=()=>{const n=ui.fsel.size;const a=document.getElementById("fMv"),d=document.getElementById("fDel"),t=document.getElementById("fSelN"),al=document.getElementById("fAll");if(a)a.disabled=!n;if(d)d.disabled=!n;if(t)t.textContent=n?`${n}개 선택`:"사진을 체크해서 분류를 옮기거나 삭제할 수 있습니다";if(al){const cb=[...tb.querySelectorAll(".fsel")];al.checked=cb.length>0&&cb.every(x=>x.checked)}};
+  tb.querySelectorAll(".fsel").forEach(x=>x.onchange=()=>{x.checked?ui.fsel.add(x.dataset.fs):ui.fsel.delete(x.dataset.fs);updSel()});
+  {const al=document.getElementById("fAll");if(al)al.onchange=()=>{tb.querySelectorAll(".fsel").forEach(x=>{x.checked=al.checked;al.checked?ui.fsel.add(x.dataset.fs):ui.fsel.delete(x.dataset.fs)});updSel()}}
+  {const mv=document.getElementById("fMv");if(mv)mv.onclick=async()=>{const k=document.getElementById("fMvK").value;const ids=[...ui.fsel];if(!ids.length)return;
+    const {error}=await sb.from("customer_files").update({kind:k}).in("id",ids);if(error)return toast("옮기지 못했습니다: "+error.message+fileErrHint([error.message]));ui.fsel=new Set();toast(`${ids.length}개를 ‘${k}’(으)로 옮겼습니다`);await reload(["files"],true);renderCustFiles(c)}}
+  {const dl=document.getElementById("fDel");if(dl)dl.onclick=async()=>{const fs=list.filter(f=>ui.fsel.has(f.id));if(!fs.length)return;if(!(await askConfirm(`선택한 ${fs.length}개를 삭제할까요? 되돌릴 수 없습니다.`)))return;
+    await sb.storage.from("bizdocs").remove(fs.map(f=>f.path));const {error}=await sb.from("customer_files").delete().in("id",fs.map(f=>f.id));if(error)return toast("삭제하지 못했습니다: "+error.message);ui.fsel=new Set();toast(`${fs.length}개를 삭제했습니다`);await reload(["files"],true);renderCustFiles(c)}}
+  updSel();
   const st=document.getElementById("fSt");
   const go=async fl=>{if(!fl.length)return;const kind=document.getElementById("fKind").value;ui.fupKind=kind;
     const r=await uploadCustFiles(c.id,[...fl],kind,m=>st.textContent=m);st.textContent="";
@@ -982,12 +996,16 @@ function renderCustFiles(c){
 }
 /* 크게 보기 */
 function openViewer(list,i,c,after){
-  const d=document.getElementById("lbx");let cur=i;
+  const d=document.getElementById("lbx");let cur=i;let moved=false;
+  d.onclose=async()=>{if(!moved)return;moved=false;await reload(["files"],true);if(after)after();else if(ui.ctab==="files"&&c)renderCustFiles(c)};
   const draw=async()=>{const f=list[cur];const m=await signUrls([f.path]);const u=m[f.path];
     d.querySelector(".lbimg").innerHTML=!u?`<p class="mapt">파일을 열 수 없습니다.</p>`:isPdf(f)?`<div class="fpdf big">PDF</div><p><a class="btn pri" href="${esc(u)}" target="_blank" rel="noopener">PDF 열기</a></p>`:`<img alt="${esc(f.kind)}" src="${esc(u)}">`;
     d.querySelector(".lbcap").textContent=`${f.kind}${f.job_id?" ("+jobLabel(f.job_id)+")":""} · ${f.name||""}${f.created_at?" · "+f.created_at.slice(0,10):""}  (${cur+1}/${list.length})`;
     d.querySelector("#lbOpen").onclick=()=>{if(u)window.open(u,"_blank","noopener")};
     const del=d.querySelector("#lbDel");del.hidden=!isOffice()||!!f.pseudo;
+    const ks=d.querySelector("#lbKind");const mv=isOffice()&&!f.pseudo&&f.id&&!String(f.id).startsWith("biz:");ks.hidden=!mv;
+    if(mv){ks.innerHTML=upKinds().map(k=>`<option ${k===f.kind?"selected":""}>${esc(k)}</option>`).join("");ks.onchange=async()=>{const k=ks.value;if(k===f.kind)return;
+      const {error}=await sb.from("customer_files").update({kind:k}).eq("id",f.id);if(error){toast("옮기지 못했습니다: "+error.message);ks.value=f.kind;return}f.kind=k;moved=true;toast(`‘${k}’(으)로 옮겼습니다`);draw()}}
     d.querySelector("#lbPrev").disabled=cur===0;d.querySelector("#lbNext").disabled=cur===list.length-1};
   d.querySelector("#lbPrev").onclick=()=>{if(cur>0){cur--;draw()}};d.querySelector("#lbNext").onclick=()=>{if(cur<list.length-1){cur++;draw()}};
   d.querySelector("#lbClose").onclick=()=>d.close();
