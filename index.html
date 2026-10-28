@@ -3332,7 +3332,13 @@ function renderWorkView0(){
   let list=rowPool.filter(j=>(!ui.wkind||j.kind===ui.wkind)&&payOk(j)
      &&(!qq||[j.customer_name,j.address,j.tech_names,j.symptom,(j.product||{}).serial,(ctrById(j.contract_id)||{}).serial,whoOf(j),(custById(j.customer_id)||{}).phone,(custById(j.customer_id)||{}).search_text].join(" ").toLowerCase().includes(qq)));
   const far="9999-12-31";
-  if(["open","carry","new","hold"].includes(ui.wrow)&&!ui.jpay)list.sort((a,b)=>(a.visit_date||far).localeCompare(b.visit_date||far)||rdOf(a).localeCompare(rdOf(b))||regCmp(a,b));
+  /* 기본 정렬: 일정 잡힌 건(예정일·시간 빠른 순 → 설치·추가설치·철거·A/S 순) 위, 일정 없는 건(구분 순 → 접수일 빠른 순) 아래 */
+  const KO_=k=>({install:0,addon:1,remove:2,as:3,move:4})[k]??5;
+  /* 접수일 = 목록의 '계약/접수' 칸과 같은 날짜 (설치는 계약일) */
+  const rdS=j=>{if(j.kind==="install"){const kk=ctrById(j.contract_id)||custContracts(j.customer_id)[0];if(kk&&kk.contract_date)return kk.contract_date}return rdOf(j)};
+  if(["open","carry","new","hold"].includes(ui.wrow)&&!ui.jpay)list.sort((a,b)=>{const sa=a.visit_date?0:1,sb=b.visit_date?0:1;if(sa!==sb)return sa-sb;
+    if(!sa)return a.visit_date.localeCompare(b.visit_date)||timeKey(a.visit_time).localeCompare(timeKey(b.visit_time))||KO_(a.kind)-KO_(b.kind)||rdS(a).localeCompare(rdS(b))||regCmp(a,b);
+    return KO_(a.kind)-KO_(b.kind)||rdS(a).localeCompare(rdS(b))||regCmp(a,b)});
   else if(ui.wrow==="done")list.sort((a,b)=>doneOf(b).localeCompare(doneOf(a))||regCmp(a,b));
   else list.sort((a,b)=>rdOf(b).localeCompare(rdOf(a))||regCmp(a,b));
   {const td0=today();list=cfApply("work",list,(c,j)=>cfText(wCell(c,j,custById(j.customer_id)||{},ctrById(j.contract_id)||custContracts(j.customer_id)[0]||{},td0)))}
