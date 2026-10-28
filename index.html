@@ -1497,10 +1497,10 @@ function renderAsView0(){
    <div class="toolbar"><input id="aQ" type="search" placeholder="업체명(상호)·전화·시리얼·접수내용·담당자 검색" value="${esc(ui.aq)}">
      <div class="nav" role="group"><button type="button" id="aAll" class="${label?"":"on"}">전체</button></div>
      <span class="mapt">${label?esc(label)+" · ":""}${list.length}건</span>
-     <span style="flex:1"></span>${isAdmin()?`<label class="chip"><input type="checkbox" id="aSelAll">전체 선택</label><button class="btn danger" type="button" id="aDel" disabled>선택 삭제 (0)</button>`:""}${cfClearBtn("as")}<button class="btn" type="button" id="aSort">정렬</button><button class="btn" type="button" id="aCols">입력화면설정</button>${isOffice()?`<button class="btn" type="button" id="aImp">엑셀 가져오기</button>`:""}${canNewJob(null)?`<button class="btn pri" type="button" id="aNew">+ 신규접수</button>`:""}</div>
-   <div class="wrapx vis" style="padding-top:10px"><div class="wtbox"><table class="wt am"><thead><tr>${isAdmin()?"<th></th>":""}<th>순번</th>${colHead(cols,"as",AMONEY)}</tr></thead><tbody>
-    ${shown.map((x,i)=>`<tr data-aj="${x.j.id}" class="rs-${esc(asRowCls(x.j))}">${isAdmin()?`<td><input type="checkbox" class="asel" data-id="${x.j.id}" ${ui.asel.has(x.j.id)?"checked":""} aria-label="선택"></td>`:""}<td>${i+1}</td>${cols.map(c=>asCell(c,x.j,x.c,x.m)).join("")}</tr>`).join("")||`<tr><td colspan="${cols.length+2}" class="mapt" style="cursor:default">해당하는 A/S가 없습니다.</td></tr>`}</tbody>
-    ${shown.length?`<tfoot><tr>${isAdmin()?"<th></th>":""}<th></th>${cols.map(c=>`<th class="${AMONEY.has(c)?"num":""}">${AMONEY.has(c)?won0(tot[c]):c===cols[0]?"합계":""}</th>`).join("")}</tr></tfoot>`:""}</table></div>
+     <span style="flex:1"></span>${isOffice()?`<label class="chip"><input type="checkbox" id="aSelAll">전체 선택</label>`:""}${isAdmin()?`<button class="btn danger" type="button" id="aDel" disabled>선택 삭제 (0)</button>`:""}${cfClearBtn("as")}<button class="btn" type="button" id="aSort">정렬</button><button class="btn" type="button" id="aCols">입력화면설정</button>${isOffice()?`<button class="btn" type="button" id="aImp">엑셀 가져오기</button>`:""}${canNewJob(null)?`<button class="btn pri" type="button" id="aNew">+ 신규접수</button>`:""}</div>
+   <div class="wrapx vis" style="padding-top:10px"><div class="wtbox"><table class="wt am"><thead><tr>${isOffice()?"<th></th>":""}<th>순번</th>${colHead(cols,"as",AMONEY)}</tr></thead><tbody>
+    ${shown.map((x,i)=>`<tr data-aj="${x.j.id}" class="rs-${esc(asRowCls(x.j))}">${isOffice()?`<td><input type="checkbox" class="asel" data-id="${x.j.id}" ${ui.asel.has(x.j.id)?"checked":""} aria-label="선택"></td>`:""}<td>${i+1}</td>${cols.map(c=>asCell(c,x.j,x.c,x.m)).join("")}</tr>`).join("")||`<tr><td colspan="${cols.length+2}" class="mapt" style="cursor:default">해당하는 A/S가 없습니다.</td></tr>`}</tbody>
+    ${shown.length?`<tfoot><tr>${isOffice()?"<th></th>":""}<th></th>${cols.map(c=>`<th class="${AMONEY.has(c)?"num":""}">${AMONEY.has(c)?won0(tot[c]):c===cols[0]?"합계":""}</th>`).join("")}</tr></tfoot>`:""}</table></div>
     ${list.length>500?`<p class="mapt">앞의 500건만 보입니다. 검색으로 좁혀 주세요.</p>`:""}</div>`;
   applyColW(cols,null,"as");bindColResize(cols,"as");
   view().querySelectorAll(".wtbox").forEach(hbar);
@@ -1514,7 +1514,7 @@ function renderAsView0(){
   document.getElementById("aSort").onclick=()=>asSortPicker(re);cfBind("as",re);
   const ai=document.getElementById("aImp");if(ai)ai.onclick=()=>document.getElementById("fileIn").click();
   const nw=document.getElementById("aNew");if(nw)nw.onclick=()=>jobDlg(null,null,"as");
-  if(isAdmin())bindRowSel(ui.asel,"asel","aSelAll","aDel",ids=>delJobs(ids,()=>ids.forEach(id=>ui.asel.delete(id))));
+  if(isOffice())bindRowSel(ui.asel,"asel","aSelAll","aDel",ids=>delJobs(ids,()=>ids.forEach(id=>ui.asel.delete(id))));
   view().querySelectorAll(".wt.am thead th[data-ck]").forEach(th=>{th.classList.add("sortable");const S=asGetSort();if(S[0]&&S[0].c===th.dataset.ck)th.dataset.sort=S[0].d===1?"asc":"desc";
     th.onclick=e=>{if(e.target.closest(".rz")||e.target.closest(".fbtn"))return;const c=th.dataset.ck;const S=asGetSort();const d=S[0]&&S[0].c===c?-S[0].d:1;asSetSort([{c,d},...S.filter(x=>x.c!==c).slice(0,2)]);re()}});
   const q=document.getElementById("aQ");q.oninput=e=>{ui.aq=e.target.value;clearTimeout(q._t);q._t=imeT(q,()=>{re();const n=document.getElementById("aQ");n.focus();n.setSelectionRange(n.value.length,n.value.length)},250)};
@@ -2426,9 +2426,10 @@ function addXlsBtn(){const v=ui.view;if(!XSEL[v]||!isOffice()||!window.XLSX)retu
   let tb=null,el=tbl.closest(".wrapx")||tbl.closest(".wtbox");while(el&&!tb){let s=el.previousElementSibling;while(s&&!tb){if(s.classList&&s.classList.contains("toolbar"))tb=s;s=s.previousElementSibling}el=el.parentElement;if(el===view())break}
   tb=tb||view().querySelector(".toolbar");if(!tb)return;const b=document.createElement("button");b.type="button";b.className="btn";b.id="xlsDown";b.textContent="엑셀 다운로드";b.onclick=()=>exportView();tb.appendChild(b);addPrintBtn(tb)}
 /* 당월 설치·A/S, 당월리스트: 체크한 건의 확인서를 한 번에 인쇄 */
-function addPrintBtn(tb){const v=ui.view;if(v!=="work"&&v!=="ctrm")return;if(document.getElementById("prtSel"))return;const b=document.createElement("button");b.type="button";b.className="btn";b.id="prtSel";b.textContent="인쇄";b.title="체크한 건의 설치·A/S 확인서 인쇄";
+function addPrintBtn(tb){const v=ui.view;if(v!=="work"&&v!=="ctrm"&&v!=="asm")return;if(document.getElementById("prtSel"))return;const b=document.createElement("button");b.type="button";b.className="btn";b.id="prtSel";b.textContent="인쇄";b.title="체크한 건의 설치·A/S 확인서 인쇄";
   b.onclick=()=>{let list=[];
-    if(v==="work")list=[...ui.jsel].map(id=>jobs.find(j=>j.id===id)).filter(Boolean).map(j=>[j,custById(j.customer_id)]);
+    if(v==="asm")list=[...(ui.asel||[])].map(id=>jobs.find(j=>j.id===id)).filter(Boolean).map(j=>[j,custById(j.customer_id)]);
+    else if(v==="work")list=[...ui.jsel].map(id=>jobs.find(j=>j.id===id)).filter(Boolean).map(j=>[j,custById(j.customer_id)]);
     else list=[...(ui.csel||[])].map(id=>{const aj=jobs.find(j=>j.id===id&&j.kind==="addon");if(aj)return[aj,custById(aj.customer_id)];const k=ctrById(id);if(!k)return null;const c=custById(k.customer_id);
       const ij=installOf(k)||{kind:"install",customer_id:k.customer_id,contract_id:k.id,customer_name:c?c.name:"",address:c?c.address:"",product:{product:k.product,size:k.size,serial:k.serial,options:k.options}};return[ij,c]}).filter(Boolean);
     printJobs(list)};tb.appendChild(b)}
