@@ -3246,8 +3246,8 @@ function monthBuckets(list,ym){
     out[carry?"carry":"new"].push(j);
     if(j.status==="완료"&&doneOf(j)<en)out.done.push(j);
     else if(j.status==="취소"&&updOf(j)<en)out.cancel.push(j);
+    else if(j.status==="보류")out.hold.push(j);/* 보류는 미완료에서 빼고 보류 줄에만 */
     else out.open.push(j);
-    if(j.status==="보류")out.hold.push(j);
   });
   return out;
 }
