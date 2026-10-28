@@ -2882,7 +2882,7 @@ function stockUnitDlg(u,asUsed){const isNew=!u;const cm=stkCtrMap();const s=u?st
     <datalist id="stSz">${STK_SIZES.map(x=>`<option value="${x}">`).join("")}</datalist>
     <h3 class="ksec">관리</h3>
     <div class="g3">${inp("in_date","입고일",u.in_date||"","date")}${sel("status","상태",[["","정상 (재고)"],["생산예정","생산예정"],["중고확인","중고전환 확인 대기"],...(u.status&&!["생산예정","중고확인"].includes(u.status)?[[u.status,u.status]]:[])],stkUC(u)?"중고확인":(u.status||""))}<span class="mapt" style="align-self:end">‘중고전환 확인 대기’는 재고에서 빠지고, 중고에 체크하고 저장하면 중고 재고가 됩니다.</span></div>
-    <div class="g3"><label class="f">구분<span class="chk" style="padding:0"><label style="padding:6px 10px"><input type="checkbox" name="used" ${u.used?"checked":""}>중고</label></span></label>${inp("grade","중고 등급",u.grade,"text",false,'list="stGr" placeholder="A++ · B+ · B"')}<span></span></div>
+    <div class="g3"><div class="f"><span>구분</span><label class="chip" style="justify-self:start;white-space:nowrap;height:38px;box-sizing:border-box;display:inline-flex;align-items:center;gap:6px"><input type="checkbox" name="used" ${u.used?"checked":""}>중고</label></div>${inp("grade","중고 등급",u.grade,"text",false,'list="stGr" placeholder="A++ · B+ · B"')}<span></span></div>
     <datalist id="stGr">${["A++","A+","A","B+","B","C"].map(x=>`<option value="${x}">`).join("")}</datalist>
     <label class="f">Remark (입고 사유 등)<input name="remark" value="${esc(u.remark)}" placeholder="예: 보상판매 입고, 장기 재고"></label>
     <h3 class="ksec">출고</h3>
