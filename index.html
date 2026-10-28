@@ -932,14 +932,14 @@ function bindBizUpload(id,onRead){
 }
 
 /* ================= 고객 사진·서류 ================= */
-const FKINDS=[["계약서","ctr"],["사업자등록증","biz"],["설치사진","inst"],["철거사진","rm"],["A/S사진","as"],["채권","debt"],["기타","etc"]];
-const JOBPHOTO={install:"설치사진",addon:"설치사진",move:"설치사진",remove:"철거사진",as:"A/S사진"};
+const FKINDS=[["계약서","ctr"],["사업자등록증","biz"],["설치사진","inst"],["A/S사진","as"],["채권","debt"],["기타","etc"]];
+const JOBPHOTO={install:"설치사진",addon:"설치사진",move:"설치사진",remove:"설치사진",as:"A/S사진"};
 function jobFiles(j){return files.filter(f=>f.job_id===j.id).sort((a,b)=>(b.created_at||"").localeCompare(a.created_at||""))}
 function jobLabel(id){const j=jobs.find(x=>x.id===id);return j?`${kl(j)||""} ${(j.visit_date||j.request_date||"").slice(5).replace("-","/")}`:""}
 const FCODE=Object.fromEntries(FKINDS);
 let fileIdx={};
 function buildFileIdx(){fileIdx={};files.forEach(f=>(fileIdx[f.customer_id]=fileIdx[f.customer_id]||[]).push(f));Object.values(fileIdx).forEach(a=>a.sort((x,y)=>(y.created_at||"").localeCompare(x.created_at||"")))}
-function custFiles(c){const a=(fileIdx[c.id]||[]).slice();if(c.biz_doc&&!a.some(f=>f.path===c.biz_doc))a.push({id:"biz:"+c.id,customer_id:c.id,path:c.biz_doc,kind:"사업자등록증",name:"사업자등록증",mime:/\.pdf$/i.test(c.biz_doc)?"application/pdf":"image/jpeg",created_at:"",pseudo:true});return a}
+function custFiles(c){/* 예전 ‘철거사진’은 설치사진으로 보이게 */const a=(fileIdx[c.id]||[]).map(f=>f.kind==="철거사진"?{...f,kind:"설치사진"}:f);if(c.biz_doc&&!a.some(f=>f.path===c.biz_doc))a.push({id:"biz:"+c.id,customer_id:c.id,path:c.biz_doc,kind:"사업자등록증",name:"사업자등록증",mime:/\.pdf$/i.test(c.biz_doc)?"application/pdf":"image/jpeg",created_at:"",pseudo:true});return a}
 function upKinds(){return FKINDS.map(k=>k[0]).filter(k=>!(me.role==="tech"&&(k==="계약서"||k==="채권")))}
 const isPdf=f=>/pdf/i.test(f.mime||"")||/\.pdf$/i.test(f.path||"");
 const _surl={};
