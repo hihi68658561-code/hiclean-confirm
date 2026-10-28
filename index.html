@@ -3288,7 +3288,9 @@ const WCOLS=[["rmon","접수월",1],["kind","구분",1],["name","업체명(상�
  ["product","제품",1],["size","규격",1],["serial","시리얼",1],["wash","수압식",1],["sink","싱크대",1],["sinkm","싱크대 품명 및 규격",1],["parts","제공 부자재",0],["symptom","접수내용",1],["result","처리내용",0],["sales","영업담당",1],["tech","배정",1],["status","처리현황",1],["done","완료일",0],["photo","사진",0]];
 /* 설치 접수내용 = 계약 비고 (+ 작업에 적은 요청 사항) */
 function jobNote(j,k){if(j.kind!=="install")return j.symptom||"";const kk=(k&&k.id?k:ctrById(j.contract_id))||{};return [kk.memo,j.symptom].map(x=>String(x||"").trim()).filter(Boolean).filter((x,i,a)=>a.indexOf(x)===i).join(" / ")}
-function wCell(col,j,c,k,td){const p=asLike(j)?asProd(j):(j.product||{});const rd=rdOf(j);const vd=j.visit_date;const openJ=!["완료","취소"].includes(j.status);
+function wCell(col,j,c,k,td){let p=asLike(j)?asProd(j):(j.product||{});
+  /* 설치·철거 작업은 연결 계약의 제품·사이즈·시리얼을 우선 (계약에서 시리얼을 고치면 바로 보이게) */
+  if(j.kind==="install"||j.kind==="remove"){const kk=j.contract_id&&ctrById(j.contract_id);if(kk)p={...p,product:kk.product||p.product,size:kk.size||p.size,serial:kk.serial||p.serial}}const rd=rdOf(j);const vd=j.visit_date;const openJ=!["완료","취소"].includes(j.status);
   switch(col){
     case"rmon":return `<td>${esc(rd.slice(2,4)+rd.slice(5,7))}</td>`;
     case"kind":return `<td class="kc k-${j.kind}">${KLABEL[j.kind]||j.kind}</td>`;
@@ -3328,7 +3330,7 @@ function renderWorkView0(){
   const rowPool=(ui.jpay==="open"||ui.jpay==="cancel"||ui.wrow==="all")?scoped:B[ui.wrow]||[];
   const qq=ui.jq.toLowerCase();
   let list=rowPool.filter(j=>(!ui.wkind||j.kind===ui.wkind)&&payOk(j)
-     &&(!qq||[j.customer_name,j.address,j.tech_names,j.symptom,(j.product||{}).serial,whoOf(j),(custById(j.customer_id)||{}).phone,(custById(j.customer_id)||{}).search_text].join(" ").toLowerCase().includes(qq)));
+     &&(!qq||[j.customer_name,j.address,j.tech_names,j.symptom,(j.product||{}).serial,(ctrById(j.contract_id)||{}).serial,whoOf(j),(custById(j.customer_id)||{}).phone,(custById(j.customer_id)||{}).search_text].join(" ").toLowerCase().includes(qq)));
   const far="9999-12-31";
   if(["open","carry","new","hold"].includes(ui.wrow)&&!ui.jpay)list.sort((a,b)=>(a.visit_date||far).localeCompare(b.visit_date||far)||rdOf(a).localeCompare(rdOf(b))||regCmp(a,b));
   else if(ui.wrow==="done")list.sort((a,b)=>doneOf(b).localeCompare(doneOf(a))||regCmp(a,b));
