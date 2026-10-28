@@ -3142,6 +3142,12 @@ function sortPicker(onDone){let cur=getSort().map(x=>({...x}));
     [["접수한 순서 (기본)","",()=>{cur=DEFSORT.map(x=>({...x}));draw();return true}],["설치일자·시간 순","",()=>{cur=INSTSORT.map(x=>({...x}));draw();return true}],["취소"],["적용","pri",()=>{cur=cur.filter(x=>x&&x.c);setSort(cur.length&&JSON.stringify(cur)!==JSON.stringify(DEFSORT)?cur:null);onDone()}]]);draw()}
 function hasTrialCol(){return contracts.some(k=>"trial_end" in k)}
 /* 철거 계약이 완료되면 회색 줄 */
+/* 계약 창: 고객정보 옆 '설치·A/S' — 이 계약의 설치 작업과 이 고객의 A/S 등을 열기 */
+function ctrJobBtn(c,k,isNew){if(isNew||!c||!k||!k.id)return[];
+  const js=jobs.filter(j=>j.contract_id===k.id||(j.customer_id===c.id&&asLike(j))).sort((a,b)=>(a.kind==="install"?0:1)-(b.kind==="install"?0:1)||String(b.visit_date||b.request_date||"").localeCompare(String(a.visit_date||a.request_date||"")));
+  if(!js.length)return[];
+  return[["설치·A/S","gocust",()=>{if(js.length===1){jobDlg(js[0],c,js[0].kind);return true}
+    openDlg(`설치·A/S · ${esc(c.name)}`,`<div class="cards">${js.map(j=>jobCard(j,false)).join("")}</div>`,[["계약정보","gocust",()=>{contractDlg(c,k);return true}],["닫기"]]);bindJobCards(document.getElementById("dlgB"));return true}]]}
 function ctrRowCls(k){return k.stage==="철거완료"||k.stage==="철거"||(k.contract_type==="철거"&&k.stage==="완료")?"철거":k.stage}
 function trialCell(k){const d=k.trial_end;if(!d)return"";const td=today();const open=!["완료","취소","철거","철거예정","철거완료"].includes(k.stage)&&k.contract_type!=="철거";const days=Math.round((new Date(d)-new Date(td))/864e5);
   const cls=open&&days<0?"late":open&&days<=3?"soon":"";return `<span class="trial ${cls}" title="${open?(days<0?-days+"일 지남":days===0?"오늘 종료":days+"일 남음"):""}">${esc(ymd2(d))}</span>`}
@@ -3189,7 +3195,7 @@ function contractDlg(c,k,tpl,opts){ui.payEdit=null;
    <datalist id="s3List">${staff.filter(s=>s.active&&["admin","office","sales"].includes(s.role)).map(s=>`<option value="${esc(s.name)}">${esc(ROLE[s.role])}</option>`).join("")}</datalist>
    <datalist id="stList">${staff.filter(s=>s.active).map(s=>`<option value="${esc(s.name)}">`).join("")}<option value="무료체험"></datalist>
    <datalist id="pdList">${[...new Set(contracts.map(x=>x.product).filter(Boolean))].map(x=>`<option value="${esc(x)}">`).join("")}</datalist></div>`,
-   ro?[["고객정보","gocust",()=>{openCustPopup(c,refreshK);return true}],["닫기"]]:[pickM?["새 고객 등록","gocust",()=>{newCustomer(null,nc=>contractDlg(nc,null));return true}]:["고객정보","gocust",()=>{if(!c)return toast("고객을 먼저 고르세요");openCustPopup(c,refreshK);return true}],...(!isNew&&canNewJob(c)?[["접수","",()=>{ctrIntake(c,k);return true}]]:[]),...(!isNew&&me.role!=="tech"?[["싱크대 발주","",()=>{sinkDlg(null,{c,k});return true}]]:[]),["취소"],...(!isNew?[["복사","",()=>{contractDlg(c,null,k);return true}]]:[]),...(!isNew&&isOffice()?[["양도","",()=>{transferDlg(c,k);return true}]]:[]),...(!isNew&&isAdmin()?[["삭제","danger",async()=>{await undoTransfers([k.id]);const {error}=await sb.from("contracts").delete().eq("id",k.id);toast(error?"삭제하지 못했습니다":"삭제했습니다");reload(["contracts","customers"])}]]:[]),["저장","pri",async()=>{
+   ro?[["고객정보","gocust",()=>{openCustPopup(c,refreshK);return true}],...ctrJobBtn(c,k,isNew),["닫기"]]:[pickM?["새 고객 등록","gocust",()=>{newCustomer(null,nc=>contractDlg(nc,null));return true}]:["고객정보","gocust",()=>{if(!c)return toast("고객을 먼저 고르세요");openCustPopup(c,refreshK);return true}],...ctrJobBtn(c,k,isNew),...(!isNew&&canNewJob(c)?[["접수","",()=>{ctrIntake(c,k);return true}]]:[]),...(!isNew&&me.role!=="tech"?[["싱크대 발주","",()=>{sinkDlg(null,{c,k});return true}]]:[]),["취소"],...(!isNew?[["복사","",()=>{contractDlg(c,null,k);return true}]]:[]),...(!isNew&&isOffice()?[["양도","",()=>{transferDlg(c,k);return true}]]:[]),...(!isNew&&isAdmin()?[["삭제","danger",async()=>{await undoTransfers([k.id]);const {error}=await sb.from("contracts").delete().eq("id",k.id);toast(error?"삭제하지 못했습니다":"삭제했습니다");reload(["contracts","customers"])}]]:[]),["저장","pri",async()=>{
      if(pickM&&!c){const cc=pool.find(x=>x.id===(document.getElementById("jcId")||{}).value);if(!cc)return toast("고객을 검색해서 목록에서 골라 주세요");c=cc}
      if(isNew){const gg=gradeOf(c);if(gg&&gg.g==="블랙"&&!(await askConfirm(`블랙(거래 중지) 고객입니다.${gg.reason?" ("+gg.reason+")":""} 계속 등록할까요?`)))return true}
      const f=fdata("kf");const n=x=>Number(f.get(x)||0)||0;
