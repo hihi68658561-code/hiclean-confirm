@@ -3520,7 +3520,9 @@ function jobDlg(j,c,kind,tpl,preset){
     const tripDef=()=>{if(pt&&pt.value==="유상"&&!a.value){a.value=AS_TRIP_DEFAULT;go()}};if(pt)pt.addEventListener("change",tripDef);if(!n(tot))tripDef();
     tot.title="출장비+부품비+세제 금액 자동 합계 (직접 고칠 수도 있음)"})();
   /* 시간 칸: 입력을 마치면 오전·오후 붙여서 보기 좋게 */
-  document.querySelectorAll('#jf [name="visit_time"],#jf [name="end_time"]').forEach(el=>{if(!el.readOnly)el.addEventListener("blur",()=>{el.value=fmtTime(el.value)})});
+  document.querySelectorAll('#jf [name="visit_time"],#jf [name="end_time"]').forEach(el=>{if(el.readOnly)return;el.addEventListener("blur",()=>{el.value=fmtTime(el.value)});
+    /* 누르면 전체 선택 → 바로 새로 입력 (클릭으로 선택이 풀리지 않게 첫 mouseup은 막음) */
+    let fresh=false;el.addEventListener("focus",()=>{fresh=true;el.select()});el.addEventListener("mouseup",e=>{if(fresh){e.preventDefault();el.select()}fresh=false})});
   /* 완료일을 넣으면 상태를 '완료'로 자동 전환 */
   (()=>{const jf=document.getElementById("jf");const dd=jf&&jf.querySelector('[name="done_date"]'),st=jf&&jf.querySelector('[name="status"]');
     if(dd&&st&&!dd.readOnly)dd.addEventListener("change",()=>{if(dd.value&&st.value!=="완료"&&st.value!=="취소"){st.value="완료";st.classList.add("autocalc");setTimeout(()=>st.classList.remove("autocalc"),700)}})})();
