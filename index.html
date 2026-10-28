@@ -878,15 +878,16 @@ function parseBizReg(raw){
   const lines=String(raw||"").split(/\n+/).map(x=>x.replace(/[|｜]/g," ").replace(/\s+/g," ").trim()).filter(Boolean);
   const all=lines.join("\n");const out={};
   const dg=all.replace(/[oOㅇ]/g,"0").replace(/[lI|]/g,"1");const SEP="\\s*[-–—~.ㅡ一_=－\\s]\\s*";
-  const nm=dg.match(/등\s*록\s*번\s*호\D{0,8}(\d{3})\D{0,4}(\d{2})\D{0,4}(\d{5})(?!\d)/)||dg.match(new RegExp("(?<!\\d)(\\d{3})"+SEP+"(\\d{2})"+SEP+"(\\d{5})(?!\\d)"));
+  const nm=dg.match(/(?:등\s*록|고\s*유)\s*번\s*호\D{0,8}(\d{3})\D{0,4}(\d{2})\D{0,4}(\d{5})(?!\d)/)||dg.match(new RegExp("(?<!\\d)(\\d{3})"+SEP+"(\\d{2})"+SEP+"(\\d{5})(?!\\d)"));
   if(nm)out.biz=`${nm[1]}-${nm[2]}-${nm[3]}`;
   const FZ={"상":"[상삼샹]","호":"[호효흐]","성":"[성섬셩]","명":"[명멍맹멍]","대":"[대데]","표":"[표포]","자":"[자저]","소":"[소쇼]","재":"[재제]","지":"[지치]","업":"[업엄]","개":"[개게]","연":"[연언]","월":"[월윌]","일":"[일잃]","법":"[법볍]","인":"[인민]"};
   const after=(labels,stops)=>{for(const lb of labels){const re=new RegExp(lb.split("").map(ch=>FZ[ch]||ch.replace(/[()]/g,"\\$&")).join("\\s*")+"\\s*[:;：.,ㆍ·]?\\s*(.*)");for(let i=0;i<lines.length;i++){const m=lines[i].match(re);if(m&&m[1]!==undefined){let v=m[1];
     if(!v.replace(/[\s:;：.,ㆍ·]/g,"")&&lines[i+1]&&!/[:：]/.test(lines[i+1]))v=lines[i+1];
     for(const st of stops||[]){const k=v.search(new RegExp(L(st)));if(k>=0)v=v.slice(0,k)}v=v.replace(/^[\s:;：.]+|[\s:;：.]+$/g,"");if(v)return{v,i}}}}return null};
-  const STOP=["생년월일","개업연월일","법인등록번호","사업장","성명","대표자","등록번호"];
-  const sh=after(["법인명(단체명)","법인명","상호"],STOP);if(sh)out.name=sh.v.replace(/^\(?단체명\)?\s*/,"");
-  const ce=after(["대표자","성명"],["생년월일","주민등록번호","개업"]);if(ce){const n=ce.v.replace(/[^가-힣\s]/g,"").trim();const z=n.replace(/\s/g,"");out.ceo=z.length<=5?z:n.split(" ")[0]}
+  const STOP=["생년월일","개업연월일","법인등록번호","사업장","성명","대표자","등록번호","고유번호"];
+  /* 고유번호증(비영리 단체)은 '단체명'·'대표자 성명'·'소재지' */
+  const sh=after(["법인명(단체명)","법인명","상호","단체명"],STOP);if(sh)out.name=sh.v.replace(/^\(?단체명\)?\s*/,"");
+  const ce=after(["대표자성명","대표자","성명"],["생년월일","주민등록번호","개업"]);if(ce){const n=ce.v.replace(/^[\s:;：.]*성\s*명\s*[:;：.]?/,"").replace(/[^가-힣\s]/g,"").trim();const z=n.replace(/\s/g,"");out.ceo=z.length<=5?z:n.split(" ")[0]}
   const od=all.match(new RegExp(L("개업연월일")+"\\D{0,6}(\\d{4})\\s*[년.\\-/]\\s*(\\d{1,2})\\s*[월.\\-/]\\s*(\\d{1,2})"));if(od)out.open=`${od[1]}-${od[2].padStart(2,"0")}-${od[3].padStart(2,"0")}`;
   const ad=after(["사업장소재지","사업장 소재지","소재지"],["본점소재지","사업의종류","업태"]);
   if(ad){let v=ad.v;const nx=lines[ad.i+1]||"";const lab=new RegExp("("+["본점","사업의","업태","종목","발급","공동","생년","전자","개업"].map(L).join("|")+")");
