@@ -2882,8 +2882,8 @@ function stockUnitDlg(u,asUsed){const isNew=!u;const cm=stkCtrMap();const s=u?st
     <label class="f">Remark (입고 사유 등)<input name="remark" value="${esc(u.remark)}" placeholder="예: 보상판매 입고, 장기 재고"></label>
     <h3 class="ksec">출고</h3>
     ${s.st==="out"&&s.auto?`<p class="mapt" style="margin:0">계약과 자동 연결됨: <b>${esc(s.site)}</b> · 설치 ${esc(s.date)} (계약 시리얼 ${esc(s.k.serial)})</p>`:""}
-    <div class="g3">${inp("out_date","출고일자 (직접 처리)",u.out_date||"","date")}<div class="f" style="grid-column:span 2"><span>설치업장</span><input name="site_name" value="${esc(u.site_name||"")}" list="stCu" placeholder="업체명(상호)"></div></div>
-    <datalist id="stCu">${customers.slice(0,3000).map(c=>`<option value="${esc(c.name)}">`).join("")}</datalist>
+    <div class="g3">${inp("out_date","출고일자 (직접 처리)",u.out_date||"","date")}<div class="f" style="grid-column:span 2"><span>설치업장 (계약 고객 조회)</span><input name="site_name" id="stSite" value="${esc(u.site_name||"")}" autocomplete="off" placeholder="업체명(상호)·전화번호로 계약 찾기"><input type="hidden" name="site_cid" value="${esc(u.customer_id||"")}"><div id="stRes" class="pickres"></div><small class="mapt" id="stHint"></small></div></div>
+    
     <p class="mapt" style="margin:0">계약에 이 번호(No.)를 시리얼로 넣고 설치가 완료되면 자동으로 출고됩니다. 계약 없이 나간 제품만 출고일자를 직접 넣으세요.</p></div>`,
    [...(()=>{/* 이 제품과 연결된 고객·계약: 자동 출고된 계약 → 같은 번호(시리얼) 계약 → 설치업장 이름 */
       if(isNew)return[];const no=String(Number(String(u.no||"").replace(/\D/g,"")||"0"));let k=s.k||(no!=="0"&&(cm.get(no)||[])[0])||null;
@@ -2893,12 +2893,12 @@ function stockUnitDlg(u,asUsed){const isNew=!u;const cm=stkCtrMap();const s=u?st
       if(c)out.push(["고객정보","gocust",()=>{openCustPopup(c,()=>{});return true}]);
       if(c&&k)out.push(["계약정보","gocust",()=>{contractDlg(c,k);return true}]);return out})(),
     ["닫기"],...(!isNew?[["삭제","danger",async()=>{if(!(await askConfirm("이 제품 기록을 삭제할까요?")))return true;const {error}=await sb.from("stock_units").delete().eq("id",u.id);if(error){toast("삭제하지 못했습니다: "+error.message);return true}toast("삭제했습니다");renderStockView()}]]:[]),
-    ...(!isNew&&s.st==="out"?[["중고로 재입고","",async()=>{const g=prompt("중고 등급 (예: A++, B+, B)",u.grade||"B");if(g==null)return true;const why=prompt("입고 사유 (예: 철거 회수, 보상판매 입고)",u.remark||"")??"";
+    ...(!isNew&&s.st==="out"?[["재입고","",async()=>{const g=prompt("중고 등급 (예: A++, B+, B)",u.grade||"B");if(g==null)return true;const why=prompt("입고 사유 (예: 철거 회수, 보상판매 입고)",u.remark||"")??"";
       const {error}=await sb.from("stock_units").update({used:true,grade:g.trim(),remark:why.trim(),in_date:today(),out_date:null,site_name:"",customer_id:null,status:""}).eq("id",u.id);if(error){toast("저장하지 못했습니다: "+error.message);return true}toast("중고로 다시 입고했습니다");renderStockView()}]]:[]),
     ["저장","pri",async()=>{const f=fdata("suf");const n=k=>{const v=f.get(k);return v===""||v==null?null:Number(v)};
       const p={mfg_y:n("mfg_y"),mfg_m:n("mfg_m"),mfg_d:n("mfg_d"),model:f.get("model"),ch:n("ch"),size:n("size"),ty:f.get("ty"),lip:n("lip"),drain:f.get("drain"),no:(f.get("no")||"").trim(),
         in_date:f.get("in_date")||null,status:f.get("status")||"",used:!!f.get("used"),grade:(f.get("grade")||"").trim(),remark:(f.get("remark")||"").trim(),out_date:f.get("out_date")||null,site_name:(f.get("site_name")||"").trim()};
-      const cu=p.site_name&&customers.find(c=>c.name===p.site_name);p.customer_id=cu?cu.id:null;
+      const pc=f.get("site_cid")&&custById(f.get("site_cid"));const cu=pc&&pc.name===p.site_name?pc:(p.site_name&&customers.find(c=>c.name===p.site_name));p.customer_id=cu?cu.id:null;
       if(!p.no){toast("No.를 입력하세요");return true}
       const typed=(f.get("serial")||"").trim();
       if(isNew){const c=Math.min(200,Math.max(1,parseInt(f.get("cnt"),10)||1));const base=Number(p.no.replace(/\D/g,""))||0;const w=Math.max(5,p.no.length);const rows=[];
@@ -2911,6 +2911,16 @@ function stockUnitDlg(u,asUsed){const isNew=!u;const cm=stkCtrMap();const s=u?st
   const box=document.getElementById("suf");const sr=box.querySelector('[name="serial"]');let touched=false;sr.addEventListener("input",()=>touched=true);
   box.querySelectorAll('[name=mfg_y],[name=mfg_m],[name=model],[name=ch],[name=size],[name=ty],[name=lip],[name=drain],[name=no]').forEach(el=>el.addEventListener("input",()=>{if(touched)return;const g=k=>box.querySelector(`[name="${k}"]`).value;
     sr.value=stkSerial({mfg_y:g("mfg_y"),mfg_m:g("mfg_m"),model:g("model"),ch:g("ch"),size:Number(g("size")),ty:g("ty"),lip:g("lip"),drain:g("drain"),no:g("no")})}));
+  /* 설치업장: 계약 고객을 찾아 고르면 업장명·고객 연결, 출고일자가 비어 있으면 설치일(없으면 오늘) */
+  {const si=box.querySelector("#stSite"),res=box.querySelector("#stRes"),hid=box.querySelector('[name=site_cid]'),hint=box.querySelector("#stHint");
+   const pool=customers.filter(c=>custContracts(c.id).length);
+   const show=()=>{const t=si.value.trim().toLowerCase().replace(/[-\s]/g,"");hid.value="";hint.textContent="";if(t.length<2){res.innerHTML="";return}
+     const hits=[];pool.filter(c=>custSearchText(c).includes(t)).slice(0,8).forEach(c=>custContracts(c.id).filter(k=>k.stage!=="취소").forEach(k=>hits.push([c,k])));
+     res.innerHTML=hits.slice(0,12).map(([c,k],i)=>{const ij=installOf(k);const d=ij&&(ij.done_date||ij.visit_date);return `<button type="button" data-hi="${i}"><b>${esc(c.name)}</b><small>${esc([k.contract_date&&"계약 "+k.contract_date,k.product,k.size,k.serial&&"SN "+k.serial].filter(Boolean).join(" · "))}${d?` · <b class="instd">설치 ${esc(d)}</b>`:""}</small><small>${esc([c.phone||c.phone2,c.address].filter(Boolean).join(" · "))}</small></button>`}).join("")||`<p class="mapt">찾는 계약 고객이 없습니다. 그대로 두면 적은 이름으로 저장됩니다.</p>`;
+     res.querySelectorAll("[data-hi]").forEach(b=>b.onclick=()=>{const [c,k]=hits[+b.dataset.hi];si.value=c.name;hid.value=c.id;res.innerHTML="";
+       const ij=installOf(k);const d=ij&&(ij.done_date||ij.visit_date);const od=box.querySelector('[name=out_date]');if(od&&!od.value)od.value=d||today();
+       hint.textContent=`연결: ${c.name} · ${[k.contract_date&&"계약 "+k.contract_date,k.product,k.size,k.serial&&"SN "+k.serial].filter(Boolean).join(" · ")}`})};
+   if(si){si.addEventListener("input",show);si.addEventListener("keydown",e=>{if(e.key==="Enter"){e.preventDefault();const b=res.querySelector("[data-hi]");if(b)b.click()}})}}
   /* 입고일을 넣으면: 상태 = 정상(재고), 제조 '일'에 그 날짜 (년·월이 비어 있으면 같이) */
   const idt=box.querySelector('[name=in_date]');if(idt)idt.addEventListener("change",()=>{const v=idt.value;if(!/^\d{4}-\d{2}-\d{2}$/.test(v))return;
     const st=box.querySelector('[name=status]');if(st&&!st.disabled)st.value="";
