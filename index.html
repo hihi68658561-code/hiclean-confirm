@@ -1632,7 +1632,11 @@ function renderSchedView0(){
   const off=isOffice();
   const entries=(g,d)=>{const js=g.id==="_ext"?ext.filter(j=>schDay(j)===d):mj.filter(j=>schDay(j)===d&&gk(j).includes(g.id));
     const ns=g.id==="_out"||g.id.startsWith("n:")?[]:mn.filter(n=>n.day===d&&n.user_id===g.id);
-    return [...ns.map(n=>({n,t:timeKey(n.time_text)})).sort((a,b)=>a.t.localeCompare(b.t)),...js.map(j=>({j,t:timeKey(j.visit_time)})).sort((a,b)=>a.t.localeCompare(b.t))]};
+    /* 메모: 시간이 없으면 맨 위, 시간이 있으면 작업과 함께 시간 순 (‘오전’만 → 맨 위쪽, ‘오후’만 → 맨 아래) */
+    const nk_=t=>{t=String(t||"").trim();if(!t)return"";if(/\d/.test(t))return timeKey(t);if(/오전|AM/i.test(t))return"00:00";if(/오후|PM/i.test(t))return"99:98";return""};
+    const top=ns.filter(n=>!nk_(n.time_text)).map(n=>({n,t:""}));
+    const mixed=[...ns.filter(n=>nk_(n.time_text)).map(n=>({n,t:nk_(n.time_text)})),...js.map(j=>({j,t:timeKey(j.visit_time)}))].sort((a,b)=>a.t.localeCompare(b.t)||(a.n?1:0)-(b.n?1:0));
+    return [...top,...mixed]};
   const [y,m]=ui.sm.split("-").map(Number);const last=new Date(y,m,0).getDate();const td=today();
   const days=[];for(let i=1;i<=last;i++)days.push(ui.sm+"-"+String(i).padStart(2,"0"));
   const cell7=(g,d,e)=>{
