@@ -205,6 +205,7 @@ body.resizing,body.resizing *{cursor:col-resize!important;user-select:none}
 .csf{display:grid;gap:6px}.csr{display:grid;grid-template-columns:86px 1fr;align-items:center;gap:8px;font-size:13px;color:var(--muted,#555)}.csr:focus-within>span:first-child{color:var(--accent,#1d4ed8);font-weight:600}.csi{position:relative;display:block}.csi svg{position:absolute;left:9px;top:50%;transform:translateY(-50%);color:#98a2b3;pointer-events:none}.csi input{width:100%;padding:7px 8px 7px 30px;box-sizing:border-box}
 .rlrow{display:grid;grid-template-columns:150px 120px 1fr 84px;gap:8px;align-items:end;width:100%}.rlrow .f{margin:0}.rlrow input,.rlrow select{width:100%;box-sizing:border-box;height:38px}.rlrow .btn{height:38px;width:100%}.rlcin{display:flex;gap:6px}.rlcin select{flex:0 0 110px}.rlcin input{flex:1;min-width:0}@media (max-width:640px){.rlrow{grid-template-columns:1fr 1fr}.rlrow .rlc,.rlrow .btn{grid-column:1/-1}}
 .detq{display:flex;align-items:center;gap:6px}.detq input{width:70px;text-align:center}.detq .btn{min-width:34px}
+.btn.close{background:#f97316;border-color:#f97316;color:#fff}.btn.close:hover{background:#ea580c;border-color:#ea580c}
 .wt.skst,.wt.sk2{width:auto;min-width:min(100%,720px)}.wt.sk2 tbody tr{cursor:pointer}.wt.sk2 tbody tr:hover td{background:var(--accent-weak)}.wt.sk2 tr.cx0 td{color:#999}.skstk{margin-top:6px;padding-top:6px;border-top:1px dashed var(--line)}.skstk select{max-width:100%}
 .wt.sk td{vertical-align:middle}.wt.sk .skchk{width:34px;text-align:center}.wt.sk tr.alt td{background:#F3F7FC}.wt.sk tr.cx td{color:#999;text-decoration:line-through}.wt.sk td.skded{color:#1d4ed8}.wt.sk tbody tr{cursor:pointer}.wt.sk tbody tr:hover td{background:var(--accent-weak)}
 .tag.sk-신규접수{background:#fff;color:#1d4ed8;border-color:#1d4ed8}.tag.sk-주문완료{background:#FFF3C4;color:#8a5a00;border-color:#FFF3C4}.tag.sk-입고완료{background:#DCEBFF;color:#1d4ed8;border-color:#DCEBFF}.tag.sk-출고완료{background:#00CC66;color:#1b1b1b;border-color:#00CC66}.tag.sk-재고등록{background:#efe2ff;color:#6b21a8;border-color:#efe2ff}.tag.sk-취소{background:#c62828;color:#fff;border-color:#c62828}
@@ -340,7 +341,8 @@ header.top{position:relative}.tmore{display:none}.tacts{display:contents}
   html,body{background:#fff}
   .app,dialog,.toast,.login{display:none!important}
   #printRoot{display:block}
-  #printRoot .sheet{height:297mm;min-height:0;overflow:hidden}
+  #printRoot .sheet{height:297mm;min-height:0;overflow:hidden;break-after:page;page-break-after:always}
+  #printRoot .sheet:last-child{break-after:auto;page-break-after:auto}
 }
 
 /* ===== 아이콘(배지) 통일: 같은 크기, 상태·구분별 색 ===== */
@@ -389,7 +391,7 @@ header.top{position:relative}.tmore{display:none}.tacts{display:contents}
 <dialog id="cfm" aria-labelledby="cfmMsg"><div class="cfmb"><p id="cfmMsg"></p><div class="cfmf"><button type="button" class="btn" id="cfmNo">취소</button><button type="button" class="btn pri" id="cfmYes">확인</button></div></div></dialog>
 <dialog id="lbx" aria-label="사진 크게 보기"><div class="lbwrap"><div class="lbtop"><span class="lbcap"></span><span style="flex:1"></span><button type="button" class="btn sm" id="lbOpen">원본 열기</button><button type="button" class="btn sm danger" id="lbDel">삭제</button><button type="button" class="btn sm" id="lbClose">닫기</button></div>
 <div class="lbmid"><button type="button" class="lbnav" id="lbPrev" aria-label="이전">‹</button><div class="lbimg"></div><button type="button" class="lbnav" id="lbNext" aria-label="다음">›</button></div></div></dialog>
-<dialog id="cdlg" aria-labelledby="cdlgH"><div class="dh" id="cdlgH"></div><div class="db"><form id="cpf" style="display:grid;gap:10px"></form></div><div class="df"><button type="button" class="btn" id="cdlgNo">닫기</button><button type="button" class="btn pri" id="cdlgOk">저장</button></div></dialog>
+<dialog id="cdlg" aria-labelledby="cdlgH"><div class="dh" id="cdlgH"></div><div class="db"><form id="cpf" style="display:grid;gap:10px"></form></div><div class="df"><button type="button" class="btn close" id="cdlgNo">닫기</button><button type="button" class="btn pri" id="cdlgOk">저장</button></div></dialog>
 <dialog id="dlg"><form method="dialog" id="dlgForm"><div class="dh" id="dlgH"></div><div class="db" id="dlgB"></div><div class="df" id="dlgF"></div></form></dialog>
 <div class="toast" id="toast" role="status"></div>
 
@@ -2422,7 +2424,14 @@ const XSEL={sink:".wt.sk",leads:".wt.ld",work:".wt.wk",ctrm:".wt.ct",allm:".wt.c
 const XNAME={sink:"싱크대 발주",leads:"DB관리",work:"당월 설치·AS 전체리스트",ctrm:"당월리스트",allm:"전체리스트",asm:"AS관리",recv:"미수·채권관리",sched:"담당자별 일정표"};
 function addXlsBtn(){const v=ui.view;if(!XSEL[v]||!isOffice()||!window.XLSX)return;const tbl=view().querySelector(XSEL[v]);if(!tbl||document.getElementById("xlsDown"))return;
   let tb=null,el=tbl.closest(".wrapx")||tbl.closest(".wtbox");while(el&&!tb){let s=el.previousElementSibling;while(s&&!tb){if(s.classList&&s.classList.contains("toolbar"))tb=s;s=s.previousElementSibling}el=el.parentElement;if(el===view())break}
-  tb=tb||view().querySelector(".toolbar");if(!tb)return;const b=document.createElement("button");b.type="button";b.className="btn";b.id="xlsDown";b.textContent="엑셀 다운로드";b.onclick=()=>exportView();tb.appendChild(b)}
+  tb=tb||view().querySelector(".toolbar");if(!tb)return;const b=document.createElement("button");b.type="button";b.className="btn";b.id="xlsDown";b.textContent="엑셀 다운로드";b.onclick=()=>exportView();tb.appendChild(b);addPrintBtn(tb)}
+/* 당월 설치·A/S, 당월리스트: 체크한 건의 확인서를 한 번에 인쇄 */
+function addPrintBtn(tb){const v=ui.view;if(v!=="work"&&v!=="ctrm")return;if(document.getElementById("prtSel"))return;const b=document.createElement("button");b.type="button";b.className="btn";b.id="prtSel";b.textContent="인쇄";b.title="체크한 건의 설치·A/S 확인서 인쇄";
+  b.onclick=()=>{let list=[];
+    if(v==="work")list=[...ui.jsel].map(id=>jobs.find(j=>j.id===id)).filter(Boolean).map(j=>[j,custById(j.customer_id)]);
+    else list=[...(ui.csel||[])].map(id=>{const aj=jobs.find(j=>j.id===id&&j.kind==="addon");if(aj)return[aj,custById(aj.customer_id)];const k=ctrById(id);if(!k)return null;const c=custById(k.customer_id);
+      const ij=installOf(k)||{kind:"install",customer_id:k.customer_id,contract_id:k.id,customer_name:c?c.name:"",address:c?c.address:"",product:{product:k.product,size:k.size,serial:k.serial,options:k.options}};return[ij,c]}).filter(Boolean);
+    printJobs(list)};tb.appendChild(b)}
 function exportView(){const v=ui.view;const sel=XSEL[v];if(!sel)return;toast("엑셀 파일을 만드는 중…");
   setTimeout(()=>{let tbl;ui.xAll=true;try{render();tbl=view().querySelector(sel);if(!tbl)return toast("내려받을 표가 없습니다");tbl=tbl.cloneNode(true)}finally{ui.xAll=false}
     try{tbl.querySelectorAll(".fbtn,.rz,button,svg").forEach(x=>{if(x.tagName==="BUTTON"&&x.closest("td")&&x.textContent.trim()&&!x.classList.contains("fbtn"))x.replaceWith(document.createTextNode(x.textContent));else x.remove()});
@@ -3295,12 +3304,12 @@ function renderWorkView0(){
   const rowLabel=(WROWS.find(r=>r[0]===ui.wrow)||[0,"전체 기록"])[1];
   const sumT=`<table class="sumt" aria-label="${esc(ui.wm)} 작업 집계"><thead><tr><th></th>${KINDS.map(k=>`<th class="k-${k}">${KLABEL[k]}</th>`).join("")}<th>합계</th></tr></thead><tbody>
     ${WROWS.map(([r,l])=>`<tr class="${r==="open"?"open":""}"><th>${l}</th>${[...KINDS,""].map(k=>`<td class="cl ${ui.wrow===r&&ui.wkind===k&&!ui.jpay?"on":""}" data-r="${r}" data-k="${k}" title="${l}${k?" · "+KLABEL[k]:""} 목록 보기">${cnt(r,k)}</td>`).join("")}</tr>`).join("")}</tbody></table>`;
-  const admin=isAdmin();
+  const admin=isAdmin(),selOK=isOffice();
   const wcols=getCols("work");
   const tbl=()=>{const rows=list.slice(0,500);const td=today();
-    return `<div class="wrapx vis" style="padding-top:12px"><div class="wtbox"><table class="wt wk"><thead><tr>${admin?`<th></th>`:""}<th>순번</th>${colHead(wcols,"work")}</tr></thead><tbody>
+    return `<div class="wrapx vis" style="padding-top:12px"><div class="wtbox"><table class="wt wk"><thead><tr>${selOK?`<th></th>`:""}<th>순번</th>${colHead(wcols,"work")}</tr></thead><tbody>
      ${rows.map((j,i)=>{const c=custById(j.customer_id)||{};const k=ctrById(j.contract_id)||custContracts(j.customer_id)[0]||{};
-       return `<tr data-j="${j.id}">${admin?`<td><input type="checkbox" class="jsel" data-js="${j.id}" ${ui.jsel.has(j.id)?"checked":""} aria-label="선택"></td>`:""}<td>${i+1}</td>${wcols.map(col=>wCell(col,j,c,k,td)).join("")}</tr>`}).join("")||`<tr><td colspan="${wcols.length+2}" class="mapt" style="cursor:default">해당하는 작업이 없습니다.</td></tr>`}</tbody></table></div>
+       return `<tr data-j="${j.id}">${selOK?`<td><input type="checkbox" class="jsel" data-js="${j.id}" ${ui.jsel.has(j.id)?"checked":""} aria-label="선택"></td>`:""}<td>${i+1}</td>${wcols.map(col=>wCell(col,j,c,k,td)).join("")}</tr>`}).join("")||`<tr><td colspan="${wcols.length+2}" class="mapt" style="cursor:default">해당하는 작업이 없습니다.</td></tr>`}</tbody></table></div>
      ${list.length>500?`<p class="mapt">앞의 500건만 보입니다. 검색이나 구분으로 좁혀 주세요.</p>`:""}</div>`};
   view().innerHTML=`<div class="sumwrap"><div style="display:grid;gap:6px"><div style="display:flex;gap:8px;align-items:center"><h2 style="margin:0;font-size:18px">당월 설치·A/S 전체리스트</h2>
       <input id="wM" type="month" value="${esc(ui.wm)}" aria-label="기준 월" style="padding:5px 8px;border:1px solid var(--line);border-radius:6px;background:var(--field)">${ui.wm!==thisMonth()?`<button class="btn sm" type="button" id="wNow">이번 달</button>`:""}</div>
@@ -3311,7 +3320,7 @@ function renderWorkView0(){
     ${me.role==="tech"?`<select id="jScope" aria-label="범위"><option value="mine" ${ui.jscope==="mine"?"selected":""}>내 배정 건</option><option value="all" ${ui.jscope==="all"?"selected":""}>전체</option></select>
     <div class="nav" role="group" aria-label="보기"><button type="button" data-wv="table" class="${ui.wview==="table"?"on":""}">표</button><button type="button" data-wv="card" class="${ui.wview==="card"?"on":""}">카드</button></div>`:""}
     <span style="flex:1"></span>
-    ${admin?`<label class="chip"><input type="checkbox" id="jAll">전체 선택</label><button class="btn danger" type="button" id="bJDel" disabled>선택 삭제 (0)</button>`:""}
+    ${selOK?`<label class="chip"><input type="checkbox" id="jAll">전체 선택</label>`:""}${admin?`<button class="btn danger" type="button" id="bJDel" disabled>선택 삭제 (0)</button>`:""}
     ${ui.wview==="table"?cfClearBtn("work"):""}${ui.wview==="table"?`<button class="btn" type="button" id="wCols">입력화면설정</button>`:""}${canNewJob(null)?`<button class="btn pri" id="bNewJ">+ 신규접수</button>`:""}</div>
     ${ui.wview==="pay"?payTable(list.filter(j=>j.kind==="as")):ui.wview==="card"?`<div class="cards">${list.slice(0,300).map(j=>jobCard(j,admin)).join("")||`<div class="empty" style="padding:8px 0">해당하는 작업이 없습니다.</div>`}</div>`:tbl()}`;
   if(ui.wview==="table"){applyColW(wcols,null,"work");bindColResize(wcols,"work")}
@@ -3394,7 +3403,8 @@ function jobDlg(j,c,kind,tpl,preset){
    </div></div>`,
    [...(c?[["고객정보","gocust",()=>{openCustPopup(c,c2=>{const el=document.querySelector("#jf .dsum");if(el){const pp=j.product||{};el.outerHTML=custSummary(c2,j.kind==="addon"?null:{product:pp.product,size:pp.size,serial:pp.serial})}j.customer_name=c2.name;j.address=c2.address||j.address;
        document.getElementById("dlgH").textContent=`${nTitle?"신규접수":KLABEL[j.kind]+" "+(isNew?"접수":"작업")} · ${c2.name}`});return true}]]:[]),
-    ...(isNew&&!c&&!tpl?[["새 고객 등록","gocust",()=>{const kv=(document.querySelector('#jf input[name=kind]:checked')||{}).value||j.kind;newCustomer(null,nc=>kv==="ctr"?contractDlg(nc,null):jobDlg(null,nc,kv));return true}]]:[]),["닫기"],...(!isNew&&j.kind==="install"&&j.contract_id&&me.role!=="tech"?[["싱크대 발주","",async()=>{if(!skOrders)await fetchSink();const ex=(skOrders||[]).find(o=>o.contract_id===j.contract_id&&o.status!=="취소");sinkDlg(ex||null,ex?null:{c,k:ctrById(j.contract_id)});return true}]]:[]),...(!isNew&&c&&(c.phone||c.phone2)?[["문자","",()=>{smsDlg({c,vars:{방문일:smsDate(j.visit_date),시간:j.visit_time||"",제품:[(j.product||{}).product,(j.product||{}).size].filter(Boolean).join(" "),금액:j.cost?won0(j.cost):""},ref_type:"job",ref_id:j.id,tpl:j.visit_date&&j.status!=="완료"?"방문 안내":j.status==="완료"&&j.kind==="install"?"설치 완료":j.kind==="as"?"A/S 접수":""});return true}]]:[]),...(!isNew&&canNewJob(c)?[["복사","",()=>{jobDlg(null,c,j.kind,j);return true}]]:[]),...(!isNew&&isAdmin()?[["삭제","danger",()=>{delJobs([j.id]);return true}]]:[]),...(isNew&&!c?[]:[["확인서 인쇄","",()=>{printJob(j,c);return true}]]),...(can?[["저장","pri",async()=>{
+    ...(!isNew&&c&&me.role!=="tech"&&(ctrById(j.contract_id)||custContracts(c.id)[0])?[["계약정보","gocust",()=>{contractDlg(c,ctrById(j.contract_id)||custContracts(c.id)[0]);return true}]]:[]),
+    ...(isNew&&!c&&!tpl?[["새 고객 등록","gocust",()=>{const kv=(document.querySelector('#jf input[name=kind]:checked')||{}).value||j.kind;newCustomer(null,nc=>kv==="ctr"?contractDlg(nc,null):jobDlg(null,nc,kv));return true}]]:[]),["닫기"],...(!isNew&&j.kind==="install"&&j.contract_id&&me.role!=="tech"?[["싱크대 발주","",async()=>{if(!skOrders)await fetchSink();const ex=(skOrders||[]).find(o=>o.contract_id===j.contract_id&&o.status!=="취소");sinkDlg(ex||null,ex?null:{c,k:ctrById(j.contract_id)});return true}]]:[]),...(!isNew&&c&&(c.phone||c.phone2)?[["문자","",()=>{smsDlg({c,vars:{방문일:smsDate(j.visit_date),시간:j.visit_time||"",제품:[(j.product||{}).product,(j.product||{}).size].filter(Boolean).join(" "),금액:j.cost?won0(j.cost):""},ref_type:"job",ref_id:j.id,tpl:j.visit_date&&j.status!=="완료"?"방문 안내":j.status==="완료"&&j.kind==="install"?"설치 완료":j.kind==="as"?"A/S 접수":""});return true}]]:[]),...(!isNew&&canNewJob(c)?[["복사","",()=>{jobDlg(null,c,j.kind,j);return true}]]:[]),...(!isNew&&isAdmin()?[["삭제","danger",()=>{delJobs([j.id]);return true}]]:[]),...(can?[["저장","pri",async()=>{
      const f=fdata("jf");
      if(f.get("kind")==="ctr"){const cc=c||pickable.find(x=>x.id===f.get("custId"));if(!cc)return toast("고객을 검색해서 목록에서 골라 주세요");contractDlg(cc,null);return true}
      if(isNew&&!c){const cc=pickable.find(x=>x.id===f.get("custId"));
@@ -3486,11 +3496,14 @@ function bindCustPicker(pool){
   setTimeout(()=>q.focus(),50);
 }
 /* 작업에서 확인서 인쇄: 1번 고객정보와 업장명만 */
-function printJob(j,c){
+function printJob(j,c){doPrint(jobSheet(j,c))}
+/* 여러 건 확인서 한 번에 인쇄 (한 장에 한 건) */
+function printJobs(list){const hs=list.filter(Boolean).map(([j,c])=>jobSheet(j,c));if(!hs.length)return toast("인쇄할 건을 체크하세요");doPrint(hs.join(""))}
+function jobSheet(j,c){
   const p=j.product||{};const k=ctrById(j.contract_id);
   const cu={상호:(c&&c.name)||j.customer_name,사업장명:(c&&c.biz_name)||"",고객명:(c&&c.ceo)||"",전화:(c&&(c.phone||c.phone2))||"",사업자번호:(c&&c.biz_no)||"",설치장소:(c&&c.address)||j.address,모델명:p.product,사이즈:p.size,옵션:p.options,SN:p.serial,구매일자:k?k.contract_date:"",설치일자:j.kind==="install"?(j.done_date||j.visit_date||""):installDate(j.customer_id)};
   const r={접수일자:j.request_date,불편사항:j.symptom,신청일자:k?k.contract_date:"",설치일자:j.done_date||j.visit_date||"",업장명:cu.사업장명||cu.상호};
-  doPrint(j.kind==="as"?sheetAS(r,cu):sheetIS(r,cu));
+  return j.kind==="as"?sheetAS(r,cu):sheetIS(r,cu);
 }
 function instTxt(c){const i=jobs.filter(x=>x.customer_id===c.id&&x.kind==="install"&&x.status!=="취소").sort((a,b)=>((b.done_date||b.visit_date||"")).localeCompare(a.done_date||a.visit_date||""))[0];
   if(!i)return"";if(i.status==="완료")return "설치 "+(i.done_date||i.visit_date||"");return i.visit_date?"설치예정 "+i.visit_date:"설치 미정"}
@@ -3799,6 +3812,8 @@ function val(id){const el=document.getElementById(id);return el?el.value:""}
 function openDlg(h,b,btns){
   const d=document.getElementById("dlg");d.classList.remove("wide");document.getElementById("dlgH").innerHTML=h;document.getElementById("dlgB").innerHTML=b;
   const f=document.getElementById("dlgF");f.innerHTML="";
+  /* 창 닫는 버튼('취소'·'닫기')은 '닫기'로 통일, 주황색, 저장(주 버튼) 바로 왼쪽에 */
+  {const cl=btns.filter(b=>!b[2]&&(b[0]==="취소"||b[0]==="닫기"));if(cl.length){btns=btns.filter(b=>!cl.includes(b));const pi=btns.map(b=>/\bpri\b/.test(b[1]||"")).lastIndexOf(true);btns.splice(pi<0?btns.length:pi,0,["닫기","close"])}}
   btns.forEach(([t,cls,fn])=>{const x=document.createElement("button");x.className="btn "+(cls||"");x.textContent=t;x.onclick=async ev=>{ev.preventDefault();if(fn){const keep=await fn();if(keep===true)return}d.close()};f.appendChild(x)});
   if(!d.open)d.showModal();
 }
