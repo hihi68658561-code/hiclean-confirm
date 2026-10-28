@@ -1970,7 +1970,7 @@ let rcases=[],rlogs=[];
 async function fetchRCases(){if(me&&me.role==="tech")return[];try{const r=await fetchAll("recv_cases");ui.noRecv=false;return r}catch(e){ui.noRecv=true;return[]}}
 async function fetchRLogs(){if(me&&me.role==="tech")return[];try{return await fetchAll("recv_logs")}catch(e){return[]}}
 function hasRecvX(){return rcases.length===0||rcases.some(c=>"kind" in c)}
-/* 채권관리단계: 0 당월매출(자동) · 1 정상 · 2 관리(약속일 1일 경과 자동) · 3 불량(설치 3개월 이상 자동) · 4 법적조치 · 5 추심이관 */
+/* 채권관리단계: 0 당월매출(자동) · 1 정상 · 2 관리(약속일 1일 경과 자동) · 3 불량(직접 지정) · 4 법적조치 · 5 추심이관 */
 const RSTAGES=["정상","관리","불량","법적조치","추심이관","대손처리"];
 const RSHOW=["당월매출","정상","관리","불량","법적조치","추심이관"];
 const RSTAGE_OLD={"정상관리":"정상","독촉중":"정상","분할약정":"정상","내용증명":"법적조치"};
@@ -2003,10 +2003,10 @@ function recvItems(){const out=[];const byRef=new Map(rcases.filter(c=>c.ref_id)
     if(!x.open)x.stage=ms==="대손처리"?"대손처리":"회수완료";
     else if(RHARD.includes(ms))x.stage=ms;
     else if(ms==="정상"&&x.idate&&x.idate.slice(0,7)===td0.slice(0,7)){x.stage="당월매출";x.auto="당월 설치"}
-    /* 자동 단계(약속일 경과→관리, 설치 3개월→불량)는 '정상'일 때만. 관리·불량으로 직접 정하면 그대로 */
+    /* 자동 단계(약속일 경과→관리)는 '정상'일 때만. 관리·불량으로 직접 정하면 그대로 */
     else{let s=ms;const L3=["정상","관리","불량"];const up=(v,why)=>{if(ms==="정상"&&L3.indexOf(v)>L3.indexOf(s)){s=v;x.auto=why}};
       if(x.cs&&x.cs.promise_date&&x.cs.promise_date<td0)up("관리","약속일 경과");
-      if(x.idate&&addMonths(x.idate,3)<=td0)up("불량","설치 3개월 이상");x.stage=s}
+      x.stage=s}/* 불량은 직접 지정 (설치 3개월 자동 불량 없앰) */
     x.csum=tot[x.c.id||("t:"+x.c.name)]||0;x.kind=(x.cs&&x.cs.kind)||"매출채권";{/* 담당자 = 3차 담당자만 (‘3차/수금담당’에서 수금담당은 뺌). 직접 등록 채권은 입력한 담당자 */
       const first=v=>String(v||"").split("/")[0].trim();const kk=x.t==="ctr"?x.k:x.t==="as"?(ctrById(x.j.contract_id)||custContracts(x.j.customer_id)[0]):null;
       x.owner=x.t==="etc"?first((x.cs&&(staffName(x.cs.owner)||x.cs.owner_name))||""):(first(kk?s3Text(kk):"")||first(staffName(x.c.owner)||x.c.owner_name)||first(x.cs&&(staffName(x.cs.owner)||x.cs.owner_name)));
@@ -2089,7 +2089,7 @@ case"next":return (x.cs&&x.cs.next_date)||"";case"idate":case"ym":return x.idate
        <div class="kpi bad kc ${ui.rkpi==="broke"?"on":""}" data-rkpi="broke" role="button" tabindex="0"><span>약속일 지난 건</span><b>${broke.length}건</b></div></div>
       <div class="rstages">${stages.map(s=>`<button type="button" class="chip ${ui.rstage===s.s?"on":""}" data-rst="${esc(s.s)}"><span class="tag rs-${esc(s.s)}">${esc(s.s)}</span> ${s.n}건</button>`).join("")}</div>
       <div class="ageb">${ages.map(a=>`<button type="button" class="agerow ${ui.rage===a.k?"on":""}" data-age="${a.k}"><span>${a.l}</span><span class="agebar"><i style="width:${Math.round(a.amt*100/maxA)}%" class="${a.k}"></i></span><span class="num">${won0(a.amt)}</span><small class="mapt">${a.n}건</small></button>`).join("")}</div>
-      <p class="mapt" style="margin:0">채권연령은 설치일 기준입니다(설치 전이면 계약일). 당월 설치는 ‘당월매출’, 약속일이 1일 지나면 ‘관리’, 설치 3개월이 지나면 ‘불량’으로 자동 표시됩니다. 미수금이 0원이 되면 회수완료가 됩니다.</p></div>
+      <p class="mapt" style="margin:0">채권연령은 설치일 기준입니다(설치 전이면 계약일). 당월 설치는 ‘당월매출’, 약속일이 1일 지나면 ‘관리’로 자동 표시됩니다. 불량·법적조치 등은 직접 지정하세요. 미수금이 0원이 되면 회수완료가 됩니다.</p></div>
      <div class="sumbox">${ownT}</div></div>
    <div class="toolbar"><input id="rQ" type="search" placeholder="업체명(상호)·담당자·진행단계·전화·관리이력 검색" value="${esc(ui.rq)}">
      <div class="nav" role="group"><button type="button" id="rAll" class="${label?"":"on"}">전체</button></div><span class="mapt">${label?esc(label)+" · ":""}${list.length}건</span>
