@@ -3882,6 +3882,8 @@ function openDlg(h,b,btns){
   if(!d.open)d.showModal();
 }
 let tt;function toast(m){const t=document.getElementById("toast");t.textContent=m;t.classList.add("on");clearTimeout(tt);tt=setTimeout(()=>t.classList.remove("on"),3000);return true}
+/* 날짜·월 칸은 어디를 눌러도 달력이 열리게 */
+document.addEventListener("click",e=>{const t=e.target;if(t&&t.tagName==="INPUT"&&(t.type==="date"||t.type==="month"||t.type==="datetime-local")&&!t.readOnly&&!t.disabled&&typeof t.showPicker==="function"){try{t.showPicker()}catch(_){}}},true);
 function imeT(el,fn,ms){return setTimeout(()=>{if(!el._ime)fn()},ms)}
 /* 한글 입력 중(조합 중)에 목록을 다시 그리면 검색칸이 새로 만들어져 '밤밤실장', '바ㅁ밤' 처럼 글자가 꼬임.
    조합 중에는 검색칸의 입력 이벤트를 막고, 글자가 완성된 뒤(compositionend)에 한 번만 검색합니다. */
