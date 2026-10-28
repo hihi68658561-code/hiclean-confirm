@@ -2096,14 +2096,16 @@ async function recvAutoBlack(x,stage){if(!RHARD.includes(stage)||ui.noGrades||!x
   await sb.from("customer_grades").upsert({customer_id:x.c.id,grade:"블랙",reason:`채권 ${stage} (${today()})`,set_at:new Date().toISOString(),set_by:me.id})}
 /* 입금내역 (채권발생·입금·남은 미수금) */
 function recvLedgerRows(x){const rows=[];
-  if(x.t==="ctr"){rows.push({d:x.idate,t:x.ij&&x.ij.done_date?"설치완료":"계약",add:x.amount,pay:0});paysOf(x.k).forEach(p=>rows.push({d:p.pay_date||"",t:[p.method,p.payer,p.memo].filter(Boolean).join(" · "),add:0,pay:Number(p.amount||0)}))}
+  if(x.t==="ctr"){rows.push({d:x.idate,t:x.ij&&x.ij.done_date?"설치완료":"계약",add:x.amount,pay:0});paysOf(x.k).forEach(p=>rows.push({d:p.pay_date||"",t:[p.method,p.payer,p.memo].filter(Boolean).join(" · "),add:0,pay:Number(p.amount||0),pid:p.id}))}
   else if(x.t==="as"){rows.push({d:x.idate,t:(KLABEL[x.j.kind]||"A/S")+" 청구",add:x.amount,pay:0});if(x.paid)rows.push({d:x.last,t:x.j.pay_method||"입금",add:0,pay:x.paid})}
-  else ledgerOf(x.cs).forEach(l=>rows.push({d:l.d||"",t:l.t||"",add:Number(l.add||0),pay:Number(l.pay||0)}));
+  else ledgerOf(x.cs).forEach((l,li)=>rows.push({d:l.d||"",t:l.t||"",add:Number(l.add||0),pay:Number(l.pay||0),li}));
   rows.sort((a,b)=>(a.add&&!b.add?-1:0)||String(a.d||"").localeCompare(String(b.d||"")));let bal=0;rows.forEach(r=>{bal+=r.add-r.pay;r.bal=bal});return rows}
 function recvDlg(x){const cs=x.cs||{stage:"정상관리",transfer:{}};const off=isOffice(),adm=isAdmin();const tr=cs.transfer||{};const ext=hasRecvX();
   const canStage=s=>off&&(!RHARD.includes(s)||adm);
   const title=(x.t==="ctr"?"계약":x.t==="etc"?x.kind:KLABEL[x.j.kind]||"A/S")+" 채권 · "+(x.c.name||"");
-  const L=recvLedgerRows(x);
+  const L=recvLedgerRows(x);const lgKey=i=>(x.cs&&x.cs.id||"")+":"+i;
+  /* 입금내역 수정: 계약은 입금 기록(아래 '입금 추가'에서 그 줄 수정), 직접 등록 채권은 그 자리에서 */
+  const ledEd=(x.t==="ctr"&&x.k&&(()=>{const c0=custById(x.k.customer_id);return c0&&canEditCust(c0)})()&&!ui.noPay)||(x.t==="etc"&&off);
   openDlg(esc(title),`<div id="rf" style="display:grid;gap:10px">
    <p class="mapt dsum" style="margin:0"><b>${esc(x.c.name||"")}</b>${x.c.id?gradeBadge(x.c):""}${x.c.phone?" · "+esc(x.c.phone):""}${x.c.address?" · "+esc(x.c.address):""}</p>
    <h3 class="ksec">1. 채권금액</h3>
@@ -2111,9 +2113,10 @@ function recvDlg(x){const cs=x.cs||{stage:"정상관리",transfer:{}};const off=
    ${ext?`<div class="g3">${off&&x.t==="etc"?inp("owner_name","담당자",x.owner,"text",false,'list="rOwn"'):inp("_o","담당자 (3차/수금)",x.ownerFull||x.owner,"text",true)}${inp("progress","진행단계",cs.progress||"","text",!off,'list="rProg" placeholder="미수·추심·CMS-15일"')}${sel("kind","채권종류",RKINDS,x.kind,!off||x.t!=="etc")}</div>
    <datalist id="rOwn">${staff.filter(s=>s.active&&s.role!=="tech").map(s=>`<option value="${esc(s.name)}">`).join("")}<option value="SCI"></datalist><datalist id="rProg">${RPROG.map(v=>`<option value="${v}">`).join("")}</datalist>`:""}
    <h3 class="ksec">2. 입금내역</h3>
-   <table class="stafft"><thead><tr><th>날짜</th><th>내역</th><th class="num">채권발생</th><th class="num">입금액</th><th class="num">미수금</th>${x.t==="etc"&&off?"<th></th>":""}</tr></thead><tbody>
-    ${L.map((r,i)=>`<tr><td>${esc(r.d||"")}</td><td>${esc(r.t)}</td><td class="num">${r.add?won0(r.add):""}</td><td class="num">${r.pay?won0(r.pay):""}</td><td class="num">${won0(r.bal)}</td>${x.t==="etc"&&off?`<td><button type="button" class="btn sm danger" data-lgx="${i}">삭제</button></td>`:""}</tr>`).join("")||`<tr><td colspan="5" class="mapt">내역이 없습니다.</td></tr>`}</tbody></table>
-   ${x.t==="ctr"?`<details><summary class="mapt" style="cursor:pointer">입금 추가·수정</summary><div id="paySec"></div></details>`:x.t==="as"?`<p class="mapt" style="margin:0">A/S 입금은 A/S 창에서 납부 여부를 ‘완료’로 바꾸면 회수완료가 됩니다. <button type="button" class="btn sm" id="rOpenJob">A/S 창 열기</button></p>`
+   <table class="stafft"><thead><tr><th>날짜</th><th>내역</th><th class="num">채권발생</th><th class="num">입금액</th><th class="num">미수금</th>${ledEd?"<th></th>":""}</tr></thead><tbody>
+    ${L.map((r,i)=>ui.lgEdit===lgKey(i)&&x.t==="etc"&&off?`<tr class="pedit"><td><input type="date" id="leD" value="${esc(r.d||"")}"></td><td><input id="leT" value="${esc(r.t)}"></td><td><input type="number" id="leA" value="${r.add||""}" style="text-align:right"></td><td><input type="number" id="leP" value="${r.pay||""}" style="text-align:right"></td><td></td><td style="white-space:nowrap"><button type="button" class="btn sm pri" id="leSave">저장</button> <button type="button" class="btn sm" id="leNo">닫기</button></td></tr>`
+      :`<tr><td>${esc(r.d||"")}</td><td>${esc(r.t)}</td><td class="num">${r.add?won0(r.add):""}</td><td class="num">${r.pay?won0(r.pay):""}</td><td class="num">${won0(r.bal)}</td>${ledEd?`<td style="white-space:nowrap">${x.t==="ctr"?(r.pid?`<button type="button" class="btn sm" data-lpe="${r.pid}">수정</button>`:""):`<button type="button" class="btn sm" data-lge="${i}">수정</button> <button type="button" class="btn sm danger" data-lgx="${i}">삭제</button>`}</td>`:""}</tr>`).join("")||`<tr><td colspan="5" class="mapt">내역이 없습니다.</td></tr>`}</tbody></table>
+   ${x.t==="ctr"?`<details id="payDet"><summary class="mapt" style="cursor:pointer">입금 추가</summary><div id="paySec"></div></details>`:x.t==="as"?`<p class="mapt" style="margin:0">A/S 입금은 A/S 창에서 납부 여부를 ‘완료’로 바꾸면 회수완료가 됩니다. <button type="button" class="btn sm" id="rOpenJob">A/S 창 열기</button></p>`
      :off?`<div class="payadd"><input type="date" id="lgD" value="${today()}" aria-label="날짜"><input id="lgT" placeholder="내역 (예: 현금 입금)" aria-label="내역"><input type="number" id="lgA" placeholder="채권발생" aria-label="채권발생"><input type="number" id="lgP" placeholder="입금액" aria-label="입금액"><button type="button" class="btn" id="lgAdd">내역 추가</button></div>`:""}
    <h3 class="ksec">3. 채권관리이력</h3>
    <div class="rlrow"><label class="f">날짜<input type="date" id="rlD" value="${today()}"></label>
@@ -2148,13 +2151,22 @@ function recvDlg(x){const cs=x.cs||{stage:"정상관리",transfer:{}};const off=
   /* 직접 등록 채권의 입금내역 */
   const saveLedger=async nl=>{const {error}=await sb.from("recv_cases").update({ledger:nl}).eq("id",x.cs.id);if(error)return toast("저장하지 못했습니다: "+error.message);x.cs.ledger=nl;await reload(["recv"],true);const nx=recvItems().find(y=>y.t==="etc"&&y.id===x.id);if(nx)recvDlg(nx)};
   const la=document.getElementById("lgAdd");if(la)la.onclick=()=>{const a=Number(val("lgA")||0),p=Number(val("lgP")||0);if(!a&&!p)return toast("채권발생 또는 입금액을 넣으세요");saveLedger([...ledgerOf(x.cs),{d:val("lgD")||today(),t:val("lgT").trim()||(p?"입금":"채권발생"),add:a,pay:p}])};
+  document.querySelectorAll("[data-lpe]").forEach(b=>b.onclick=()=>{const det=document.getElementById("payDet");if(det)det.open=true;ui.payEdit=b.dataset.lpe;renderPaySec(x.k);
+    const row=document.querySelector(`#paySec [data-pe="${b.dataset.lpe}"]`);if(row){row.scrollIntoView({behavior:"smooth",block:"center"});const f=row.querySelector("input");if(f)f.focus()}});
+  document.querySelectorAll("[data-lge]").forEach(b=>b.onclick=()=>{ui.lgEdit=lgKey(+b.dataset.lge);recvDlg(x)});
+  {const no=document.getElementById("leNo");if(no)no.onclick=()=>{ui.lgEdit=null;recvDlg(x)};const sv=document.getElementById("leSave");if(sv)sv.onclick=()=>{const r=L[+String(ui.lgEdit).split(":").pop()];const lg=ledgerOf(x.cs);if(!r||r.li==null||!lg[r.li])return;
+    lg[r.li]={...lg[r.li],d:val("leD")||"",t:val("leT").trim(),add:Number(val("leA")||0)||0,pay:Number(val("leP")||0)||0};ui.lgEdit=null;saveLedger(lg)}}
   document.querySelectorAll("[data-lgx]").forEach(b=>b.onclick=async()=>{if(!(await askConfirm("이 내역을 삭제할까요?")))return;const lg=ledgerOf(x.cs);const r=L[+b.dataset.lgx];const i=lg.findIndex(l=>l.d===r.d&&(l.t||"")===r.t&&Number(l.add||0)===r.add&&Number(l.pay||0)===r.pay);if(i>=0){lg.splice(i,1);saveLedger(lg)}});
   const drawLogs=()=>{const box=document.getElementById("rLogs");const ls=x.cs?rlogs.filter(l=>l.case_id===x.cs.id).sort((a,b)=>String(b.created_at).localeCompare(String(a.created_at))):[];
     box.innerHTML=ls.length?`<table class="stafft"><thead><tr><th style="width:120px">날짜</th><th style="width:70px">담당자</th><th style="width:70px">방법</th><th>내용</th><th style="width:90px">다음 조치일</th>${off?"<th style='width:50px'></th>":""}</tr></thead><tbody>
-      ${ls.map(l=>`<tr><td>${esc(fmtDT(l.created_at))}</td><td>${esc(l.by_name)}</td><td><b>${esc(l.method)}</b></td><td style="white-space:pre-wrap">${esc(l.content)}${l.edited_at?` <small class="mapt">· ${esc(l.edited_by_name)} 수정 ${esc(fmtDT(l.edited_at))}</small>`:""}</td><td>${esc(l.next_date||"")}</td>${off?`<td><button type="button" class="btn sm" data-rle="${l.id}">수정</button></td>`:""}</tr>`).join("")}</tbody></table>`:`<p class="mapt" style="margin:0">아직 관리이력이 없습니다.</p>`;
-    box.querySelectorAll("[data-rle]").forEach(b=>b.onclick=async()=>{const l=rlogs.find(y=>y.id===b.dataset.rle);const v=prompt("관리 내용 수정 (수정한 사람·시각이 함께 남습니다)",l.content);if(v==null||v===l.content)return;
-      const {error}=await sb.from("recv_logs").update({content:v,edited_by_name:me.name||"",edited_at:new Date().toISOString()}).eq("id",l.id);if(error)return toast("수정하지 못했습니다: "+error.message);
-      Object.assign(l,{content:v,edited_by_name:me.name||"",edited_at:new Date().toISOString()});drawLogs()})};
+      ${ls.map(l=>ui.rlEdit===l.id&&off?`<tr class="pedit"><td><input type="date" id="reD" value="${esc(fmtD(l.created_at))}"></td><td><input id="reW" value="${esc(l.by_name||"")}" list="rlWL"></td><td><select id="reM">${[...new Set([...RMETH,l.method].filter(Boolean))].map(m=>`<option ${m===l.method?"selected":""}>${esc(m)}</option>`).join("")}</select></td><td><textarea id="reC" rows="3" style="width:100%">${esc(l.content)}</textarea></td><td><input type="date" id="reN" value="${esc(l.next_date||"")}"></td><td style="white-space:nowrap"><button type="button" class="btn sm pri" id="reSave">저장</button><br><button type="button" class="btn sm" id="reNo" style="margin-top:4px">닫기</button></td></tr>`
+      :`<tr><td>${esc(fmtDT(l.created_at))}</td><td>${esc(l.by_name)}</td><td><b>${esc(l.method)}</b></td><td style="white-space:pre-wrap">${esc(l.content)}${l.edited_at?` <small class="mapt">· ${esc(l.edited_by_name)} 수정 ${esc(fmtDT(l.edited_at))}</small>`:""}</td><td>${esc(l.next_date||"")}</td>${off?`<td><button type="button" class="btn sm" data-rle="${l.id}">수정</button></td>`:""}</tr>`).join("")}</tbody></table>`:`<p class="mapt" style="margin:0">아직 관리이력이 없습니다.</p>`;
+    box.querySelectorAll("[data-rle]").forEach(b=>b.onclick=()=>{ui.rlEdit=b.dataset.rle;drawLogs()});
+    const no=document.getElementById("reNo");if(no)no.onclick=()=>{ui.rlEdit=null;drawLogs()};
+    const sv=document.getElementById("reSave");if(sv)sv.onclick=async()=>{const l=rlogs.find(y=>y.id===ui.rlEdit);if(!l)return;const content=val("reC").trim();if(!content)return toast("내용을 입력하세요");
+      const d=val("reD");const t0=String(l.created_at||"");const at=d&&d!==fmtD(l.created_at)?new Date(d+"T"+(t0?new Date(t0).toTimeString().slice(0,8):"09:00:00")).toISOString():l.created_at;
+      const up={created_at:at,by_name:val("reW").trim()||l.by_name,method:val("reM")||l.method,content,next_date:val("reN")||null,edited_by_name:me.name||"",edited_at:new Date().toISOString()};
+      const {error}=await sb.from("recv_logs").update(up).eq("id",l.id);if(error)return toast("수정하지 못했습니다: "+error.message);Object.assign(l,up);ui.rlEdit=null;drawLogs();toast("수정했습니다");reload(["rlogs"],true)}};
   drawLogs();
   document.getElementById("rlM").onchange=()=>{const c=document.getElementById("rlC");c.placeholder=val("rlM")==="직접입력"?"내용을 직접 입력하세요":"예: 7/20까지 카드결제 예정";c.focus()};
   document.getElementById("rlAdd").onclick=async()=>{const content=val("rlC").trim();if(!content)return toast("내용을 입력하세요");const m=val("rlM"),nd=null,ld=val("rlD")||today(),who=val("rlW").trim()||me.name||"";
