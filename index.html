@@ -205,6 +205,7 @@ body.resizing,body.resizing *{cursor:col-resize!important;user-select:none}
 .csf{display:grid;gap:6px}.csr{display:grid;grid-template-columns:86px 1fr;align-items:center;gap:8px;font-size:13px;color:var(--muted,#555)}.csr:focus-within>span:first-child{color:var(--accent,#1d4ed8);font-weight:600}.csi{position:relative;display:block}.csi svg{position:absolute;left:9px;top:50%;transform:translateY(-50%);color:#98a2b3;pointer-events:none}.csi input{width:100%;padding:7px 8px 7px 30px;box-sizing:border-box}
 .rlrow{display:grid;grid-template-columns:150px 120px 1fr 84px;gap:8px;align-items:end;width:100%}.rlrow .f{margin:0}.rlrow input,.rlrow select{width:100%;box-sizing:border-box;height:38px}.rlrow .btn{height:38px;width:100%}.rlcin{display:flex;gap:6px}.rlcin select{flex:0 0 110px}.rlcin input{flex:1;min-width:0}@media (max-width:640px){.rlrow{grid-template-columns:1fr 1fr}.rlrow .rlc,.rlrow .btn{grid-column:1/-1}}
 .detq{display:flex;align-items:center;gap:6px}.detq input{width:70px;text-align:center}.detq .btn{min-width:34px}
+.cptabs{margin-bottom:4px}.cptabs button{font-weight:600}
 .btn.close{background:#f97316;border-color:#f97316;color:#fff}.btn.close:hover{background:#ea580c;border-color:#ea580c}
 .wt.skst,.wt.sk2{width:auto;min-width:min(100%,720px)}.wt.sk2 tbody tr{cursor:pointer}.wt.sk2 tbody tr:hover td{background:var(--accent-weak)}.wt.sk2 tr.cx0 td{color:#999}.skstk{margin-top:6px;padding-top:6px;border-top:1px dashed var(--line)}.skstk select{max-width:100%}
 .wt.sk td{vertical-align:middle}.wt.sk .skchk{width:34px;text-align:center}.wt.sk tr.alt td{background:#F3F7FC}.wt.sk tr.cx td{color:#999;text-decoration:line-through}.wt.sk td.skded{color:#1d4ed8}.wt.sk tbody tr{cursor:pointer}.wt.sk tbody tr:hover td{background:var(--accent-weak)}
@@ -3078,7 +3079,25 @@ function splitS3(txt){const a=String(txt||"").split(/\s*[\/,·]\s*/).map(x=>x.tr
 function custS3(c){const o=staffName(c.owner)||c.owner_name||"",cl=staffName(c.collector)||c.collector_name||"";return o&&cl&&cl!==o?o+"/"+cl:o}
 /* 계약·작업 창 위에 고객정보 팝업 (그 자리에서 수정) */
 function openCustPopup(c,after){c=custById(c.id)||c;const d=document.getElementById("cdlg"),f=document.getElementById("cpf");const ro=!canEditCust(c);
-  document.getElementById("cdlgH").textContent="고객정보 · "+c.name;f.innerHTML=custFieldsHtml(c,ro);
+  document.getElementById("cdlgH").textContent="고객정보 · "+c.name;
+  const docOK=!ro&&!ui.noFiles&&me.role!=="tech";
+  f.innerHTML=(docOK?`<div class="nav cptabs" role="tablist"><button type="button" role="tab" class="on" data-cpt="info">고객정보</button><button type="button" role="tab" data-cpt="docs">사업자등록증·계약서</button></div>`:"")
+    +`<div id="cpInfo" style="display:grid;gap:10px">${custFieldsHtml(c,ro)}</div>`+(docOK?`<div id="cpDocs" style="display:none;gap:12px"></div>`:"");
+  /* 사업자등록증·계약서 탭 */
+  const drawDocs=()=>{const box=document.getElementById("cpDocs");if(!box)return;const fl=custFiles(c).filter(x=>x.kind==="사업자등록증"||x.kind==="계약서");
+    box.innerHTML=`<fieldset><legend>사업자등록증</legend>${bizUploadBox("cpBizUp")}</fieldset>
+      <fieldset><legend>계약서</legend><div class="toolbar" style="padding:0"><label class="btn"><input type="file" id="cpCtrIn" accept="image/*,application/pdf" multiple hidden>계약서 사진 올리기</label><span class="mapt" id="cpSt">여러 장을 한 번에 올릴 수 있습니다.</span></div></fieldset>
+      <div class="fgrid">${fl.map((x,i)=>`<div role="button" tabindex="0" class="fth" data-cpf="${i}">${isPdf(x)?`<span class="fpdf">PDF</span>`:`<img alt="" data-p="${esc(x.path)}">`}<span class="fcap"><b>${esc(x.kind)}</b>${esc(x.created_at?x.created_at.slice(0,10):"")}</span></div>`).join("")||`<p class="mapt" style="grid-column:1/-1">올린 사업자등록증·계약서가 없습니다.</p>`}</div>`;
+    const ps=fl.filter(x=>!isPdf(x)).map(x=>x.path);if(ps.length)signUrls(ps).then(m=>box.querySelectorAll("img[data-p]").forEach(im=>{const u=m[im.dataset.p];if(u)im.src=u}));
+    box.querySelectorAll("[data-cpf]").forEach(b=>b.onclick=()=>openViewer(fl,+b.dataset.cpf,c,()=>{c=custById(c.id)||c;drawDocs()}));
+    bindBizUpload("cpBizUp",async(fd,file)=>{const set=(n,v)=>{const el=f.elements[n];if(el&&v&&!String(el.value).trim())el.value=v};
+      set("name",fd.name);set("ceo",fd.ceo);set("biz_no",fd.biz);set("address",fd.addr);
+      try{await storeBizDoc(c.id,file);await reload(["customers","files"],true);c=custById(c.id)||c;toast("등록증을 보관했습니다. 비어 있던 칸만 채웠으니 ‘고객정보’ 탭에서 확인 후 저장하세요.");drawDocs()}
+      catch(e){toast("등록증을 보관하지 못했습니다"+(/biz_doc|bucket|not found/i.test(e.message||"")?" — Supabase에서 phase1i.sql을 실행해 주세요":": "+(e.message||"")))}});
+    const ci=document.getElementById("cpCtrIn");ci.onchange=async()=>{const fs=[...ci.files];ci.value="";if(!fs.length)return;const st=document.getElementById("cpSt");
+      const rr=await uploadCustFiles(c.id,fs,"계약서",m=>st.textContent=m);toast(rr.fail.length?`${rr.ok}개 올림, ${rr.fail.length}개 실패${fileErrHint(rr.fail)}`:`계약서 ${rr.ok}장을 올렸습니다`);await reload(["files"],true);drawDocs()}};
+  f.querySelectorAll("[data-cpt]").forEach(b=>b.onclick=()=>{f.querySelectorAll("[data-cpt]").forEach(x=>x.classList.toggle("on",x===b));const docs=b.dataset.cpt==="docs";
+    document.getElementById("cpInfo").style.display=docs?"none":"grid";const dc=document.getElementById("cpDocs");dc.style.display=docs?"grid":"none";if(docs)drawDocs()});
   const ok=document.getElementById("cdlgOk");ok.hidden=ro;
   const save=async()=>{if(await saveCustomer(c,new FormData(f))){d.close();if(after)after(custById(c.id)||c)}};
   ok.onclick=save;document.getElementById("cdlgNo").onclick=()=>d.close();
