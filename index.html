@@ -2587,7 +2587,7 @@ async function fetchSink(){const {data,error}=await sb.from("sink_orders").selec
 function skSpec(it){const nm=String(it.name||"").replace(/^\d+\.\s*/,"");const sz=[it.w,it.d,it.h].filter(v=>v!==""&&v!=null).join("*");
   return [nm,it.opt1,it.opt2&&it.opt2!=="해당없음"?it.opt2:"",it.hole&&it.hole!=="해당없음"?it.hole:"",it.wheel&&it.wheel!=="해당없음"?"바퀴 "+it.wheel:""].filter(Boolean).join(" / ")+(sz?` [${sz}]`:"")}
 function skLine(o,i){const L=((skPrices[o.id]||{}).lines||[])[i]||{};const it=(o.items||[])[i]||{};const q=Number(it.qty||1)||1;let pr=Number(L.price||0),dd=Number(L.deduct||0),est=false;
-  if(!pr&&!it.from_stock&&isOffice()){const t=skPriceFor(it);if(t&&t.price){pr=t.price;est=true;if(!dd)dd=t.deduct||0}}const sup=pr*q,vat=Math.round(sup/10);return{price:pr,sup,vat,tot:sup+vat,deduct:dd,est}}
+  let dEst=false;if((!pr||!dd)&&!it.from_stock&&isOffice()){const t=skPriceFor(it);if(t){if(!pr&&t.price){pr=t.price;est=true}if(!dd&&t.deduct){dd=t.deduct;dEst=true}}}const sup=pr*q,vat=Math.round(sup/10);return{price:pr,sup,vat,tot:sup+vat,deduct:dd,est,dEst}}
 /* 싱크대 발주 목록 열 (필터 ▼ · 너비 조절) */
 TCFG.sk={cols:()=>[["od","발주일자"],["st","진행사항"],["ow","담당자"],["site","업체명(상호)"],["spec","품명 및 규격"],["qty","수량"],["due","입고예정"],
   ...(isOffice()?[["price","단가"],["sup","공급가액"],["vat","부가세"],["tot","합계금액"]]:[]),["in","입고일자"],["out","출고일자"],["memo","비고"],...(isOffice()?[["ded","출고가"]]:[])],sel:".wt.sk",lead:()=>1,byCls:true};
@@ -2617,7 +2617,7 @@ async function renderSinkView(){const off=isOffice();if(!skOrders)view().innerHT
         ${head?`<td${rs}${cc("due")}>${esc(ymd2(o.due_date))}</td>`:""}
         ${off?`<td class="num c-price${L.est?" skest":""}" ${L.est?'title="단가표 기준 (발주서를 저장하면 확정)"':""}>${L.price?won0(L.price):""}</td><td class="num c-sup${L.est?" skest":""}">${L.sup?won0(L.sup):""}</td><td class="num c-vat${L.est?" skest":""}">${L.vat?won0(L.vat):""}</td><td class="num c-tot${L.est?" skest":""}">${L.tot?won0(L.tot):""}</td>`:""}
         ${head?`<td${rs}${cc("in")}>${esc(ymd2(o.in_date))}</td><td${rs}${cc("out")}>${esc(ymd2(o.out_date))}</td><td${rs} class="wrap memo c-memo"><div class="clamp">${esc(o.memo||"")}</div></td>`:""}
-        ${off?`<td class="num skded c-ded">${L.deduct?won0(L.deduct):""}</td>`:""}</tr>`}).join("")}).join("");
+        ${off?`<td class="num skded c-ded${L.dEst?" skest":""}" ${L.dEst?'title="단가표 출고가 (발주서를 저장하면 확정)"':""}>${L.deduct?won0(L.deduct):""}</td>`:""}</tr>`}).join("")}).join("");
   view().innerHTML=`<div class="toolbar" style="padding:16px 20px 0;flex-wrap:wrap"><h2 style="margin:0;font-size:18px">싱크대 발주</h2>${skTabs()}<span class="mapt">${off?"전체 발주":"내 발주"}</span><span style="flex:1"></span>${me.role==="tech"?"":`<button class="btn pri" type="button" id="skNew">+ 신규발주</button>`}</div>
    ${ui.noSink?`<div class="sec"><p class="warnbox">싱크대 발주를 쓰려면 Supabase SQL Editor에서 <b>phase1ze.sql</b>을 실행해 주세요.</p></div>`:""}
    <div class="toolbar" style="flex-wrap:wrap"><input id="skQ" type="search" placeholder="업체명·담당자·품명 검색" value="${esc(ui.skq)}">
