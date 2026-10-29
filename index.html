@@ -2685,6 +2685,17 @@ function renderSinkStock(){const st=skStockItems();const live=st.filter(x=>x.rem
    ${wait.length?`<h3 class="ksec">출고대기 (입고완료된 고객 발주)</h3><div class="wtbox"><table class="wt sk2"><thead><tr><th>입고일자</th><th>업체명(상호)</th><th>담당자</th><th>품명 및 규격</th><th class="num">수량</th></tr></thead><tbody>${wait.filter(mt).map(x=>`<tr data-sko="${x.o.id}"><td>${esc(ymd2(x.o.in_date))}</td><td><b>${esc(x.o.site_name)}</b></td><td>${esc(x.o.owner_name)}</td><td>${esc(skSpec(x.it))}</td><td class="num">${x.q}</td></tr>`).join("")}</tbody></table></div>`:""}
    ${uses.length?`<h3 class="ksec">재고 사용 내역</h3><div class="wtbox"><table class="wt sk2"><thead><tr><th>발주일자</th><th>업체명(상호)</th><th>담당자</th><th>품명 및 규격</th><th class="num">수량</th><th>진행사항</th><th>쓴 재고</th></tr></thead><tbody>${uses.filter(mt).sort((a,b)=>String(b.o.order_date||"").localeCompare(String(a.o.order_date||""))).map(x=>`<tr data-sko="${x.o.id}"><td>${esc(ymd2(x.o.order_date))}</td><td><b>${esc(x.o.site_name)}</b></td><td>${esc(x.o.owner_name)}</td><td>${esc(skSpec(x.it))}</td><td class="num">${x.q}</td><td><span class="tag sk-${esc(x.o.status)}">${esc(x.o.status)}</span></td><td>${x.so?esc(ymd2(x.so.in_date||x.so.order_date))+" 입고분":`<span class="mapt">(지워진 재고)</span>`}</td></tr>`).join("")}</tbody></table></div>`:""}</div>`;
   bindSkTabs();
+  /* 품목별 현황·재고 목록·입고예정·출고대기·재고 사용 내역을 위쪽 탭으로 (아래로 길게 쌓이지 않게) */
+  {const sec=view().querySelector(".sec");const panes=[];let cur=null;[...sec.children].forEach(el=>{if(el.matches("h3.ksec")){cur={t:el.textContent.replace(/\s*\(.*\)\s*$/,""),box:document.createElement("div")};cur.box.className="skpane";panes.push(cur);el.remove();sec.appendChild(cur.box)}else if(cur)cur.box.appendChild(el)});
+    const cntOf={"재고 목록":sum,"입고예정":pend.reduce((a,x)=>a+x.q,0),"출고대기":wait.reduce((a,x)=>a+x.q,0),"재고 사용 내역":uses.reduce((a,x)=>a+x.q,0)};
+    if(!panes.some(p=>p.t===ui.skss))ui.skss=panes[0]&&panes[0].t;
+    const nav=document.createElement("div");nav.className="nav";nav.setAttribute("role","tablist");nav.style.margin="0 0 10px";
+    nav.innerHTML=panes.map(p=>`<button type="button" role="tab" data-skss="${esc(p.t)}" class="${p.t===ui.skss?"on":""}">${esc(p.t)}${cntOf[p.t]!=null?` <b>${cntOf[p.t]}</b>`:""}</button>`).join("");
+    sec.prepend(nav);panes.forEach(p=>{p.box.hidden=p.t!==ui.skss;if(p.t===ui.skss)p.box.classList.add("on")});
+    XSEL.sink=".skpane.on table";
+    nav.querySelectorAll("[data-skss]").forEach(b=>b.onclick=()=>{ui.skss=b.dataset.skss;renderSinkStock()});
+    /* 위 칩(입고예정·출고대기·재고 사용)을 눌러도 그 탭으로 */
+    view().querySelectorAll(".toolbar .chip").forEach(c=>{const t=c.textContent.startsWith("재고 사용")?"재고 사용 내역":c.textContent.startsWith("입고예정")?"입고예정":c.textContent.startsWith("출고대기")?"출고대기":c.textContent.startsWith("재고")?"재고 목록":"";if(t&&panes.some(p=>p.t===t)){c.style.cursor="pointer";c.onclick=()=>{ui.skss=t;renderSinkStock()}}})}
   const q=document.getElementById("skStQ");q.oninput=()=>{ui.skstq=q.value;clearTimeout(q._t);q._t=imeT(q,()=>{renderSinkStock();const n=document.getElementById("skStQ");n.focus();n.setSelectionRange(n.value.length,n.value.length)},250)};
   document.getElementById("skNewSt").onclick=()=>sinkDlg(null,{site:"재고"});
   view().querySelectorAll("[data-skuse]").forEach(b=>b.onclick=e=>{e.stopPropagation();sinkDlg(null,{stock:b.dataset.skuse})});
