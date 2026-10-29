@@ -2691,21 +2691,29 @@ function skPriceFor(it){if(!skPList||!skPList.length)return null;const n=skNormI
 function renderSinkPrice(){const rows=skPList||[];if(ui.skpq===undefined)ui.skpq="";const qq=ui.skpq.trim().toLowerCase();
   const list=rows.filter(r=>!qq||[r.name,r.opt1,r.opt2,r.memo,r.w_max].join(" ").toLowerCase().includes(qq));
   const dl=(id,a)=>`<datalist id="${id}">${a.map(x=>`<option value="${esc(x)}">`).join("")}</datalist>`;
-  const tr=r=>`<tr data-pl="${r.id||""}"><td><input data-f="name" list="spN" value="${esc(r.name||"")}" placeholder="품명"></td><td><input data-f="opt1" list="spO1" value="${esc(r.opt1||"")}" placeholder="모두"></td><td><input data-f="opt2" list="spO2" value="${esc(r.opt2||"")}" placeholder="모두"></td>
+  const tr=r=>`<tr data-pl="${r.id||""}"><td style="width:30px;text-align:center"><input type="checkbox" class="plsel" aria-label="선택"></td><td><input data-f="name" list="spN" value="${esc(r.name||"")}" placeholder="품명"></td><td><input data-f="opt1" list="spO1" value="${esc(r.opt1||"")}" placeholder="모두"></td><td><input data-f="opt2" list="spO2" value="${esc(r.opt2||"")}" placeholder="모두"></td>
     <td><input data-f="w_max" inputmode="numeric" value="${r.w_max??""}" placeholder="모두" style="width:80px"></td><td><input data-f="d" inputmode="numeric" value="${r.d??""}" placeholder="모두" style="width:70px"></td>
     <td><input data-f="price" inputmode="numeric" value="${r.price?won0(r.price):""}" style="width:100px;text-align:right"></td><td><input data-f="deduct" inputmode="numeric" value="${r.deduct?won0(r.deduct):""}" style="width:90px;text-align:right"></td>
     <td><input data-f="memo" value="${esc(r.memo||"")}"></td><td><button type="button" class="btn sm danger" data-pldel>삭제</button></td></tr>`;
   view().innerHTML=`<div class="toolbar" style="padding:16px 20px 0;flex-wrap:wrap"><h2 style="margin:0;font-size:18px">싱크대 발주</h2>${skTabs()}<span style="flex:1"></span>
      <button class="btn" type="button" id="spImp">구매내역 엑셀로 단가표 만들기</button><input type="file" id="spImpIn" accept=".xlsx,.xls" hidden><button class="btn" type="button" id="spApply">단가 없는 발주에 적용</button></div>
    ${ui.noSkPrice?`<div class="sec"><p class="warnbox">단가표를 쓰려면 Supabase SQL Editor에서 <b>phase1zh.sql</b>을 실행해 주세요.</p></div>`:""}
-   <div class="toolbar" style="flex-wrap:wrap"><input id="spQ" type="search" placeholder="품명·옵션 검색" value="${esc(ui.skpq)}"><span class="mapt">${list.length}줄</span><span style="flex:1"></span><button class="btn" type="button" id="spAdd">+ 줄 추가</button><button class="btn pri" type="button" id="spSave">저장</button></div>
+   <div class="toolbar" style="flex-wrap:wrap"><input id="spQ" type="search" placeholder="품명·옵션 검색" value="${esc(ui.skpq)}"><span class="mapt">${list.length}줄</span><span style="flex:1"></span><label class="chip"><input type="checkbox" id="spAll">전체 선택</label><button class="btn danger" type="button" id="spDelSel" disabled>선택 삭제 (0)</button><button class="btn" type="button" id="spAdd">+ 줄 추가</button><button class="btn pri" type="button" id="spSave">저장</button></div>
    <p class="mapt" style="margin:0 20px">발주 품목과 품명이 같고, 옵션이 같거나 비어 있고, W가 ‘W 이하’ 안에 드는 줄 중 가장 자세한 줄의 단가·공제가가 들어갑니다. ‘W 이하’를 비우면 모든 크기에 씁니다.</p>
    ${dl("spN",SK_NAMES)}${dl("spO1",SK_OPT1)}${dl("spO2",SK_OPT2)}
-   <div class="wrapx vis" style="padding-top:6px"><div class="wtbox"><table class="wt spl"><thead><tr><th>품명</th><th>옵션1</th><th>옵션2</th><th>W 이하</th><th>D</th><th>단가</th><th>공제가</th><th>메모</th><th></th></tr></thead>
-   <tbody>${list.map(tr).join("")||`<tr class="empty"><td colspan="9" class="mapt">단가표가 비어 있습니다. ‘+ 줄 추가’로 입력하거나, 나인주방 구매현황내역 엑셀로 만들 수 있습니다.</td></tr>`}</tbody></table></div></div>`;
+   <div class="wrapx vis" style="padding-top:6px"><div class="wtbox"><table class="wt spl"><thead><tr><th></th><th>품명</th><th>옵션1</th><th>옵션2</th><th>W 이하</th><th>D</th><th>단가</th><th>공제가</th><th>메모</th><th></th></tr></thead>
+   <tbody>${list.map(tr).join("")||`<tr class="empty"><td colspan="10" class="mapt" data-x>단가표가 비어 있습니다. ‘+ 줄 추가’로 입력하거나, 나인주방 구매현황내역 엑셀로 만들 수 있습니다.</td></tr>`}</tbody></table></div></div>`;
   bindSkTabs();const tb=view().querySelector(".wt.spl tbody");const dirty=new Set(),gone=new Set();
   const wire=row=>{row.querySelectorAll("input").forEach(el=>el.addEventListener("input",()=>{dirty.add(row);if(el.dataset.f==="price"||el.dataset.f==="deduct"){const n=skNum(el.value);if(n!=null&&String(el.value).replace(/,/g,"")===String(n))el.value=won0(n)}}));
-    row.querySelector("[data-pldel]").onclick=()=>{if(row.dataset.pl)gone.add(row.dataset.pl);dirty.delete(row);row.remove()}};
+    /* 줄 삭제: 저장된 줄은 바로 지움 */
+    row.querySelector("[data-pldel]").onclick=async()=>{const id=row.dataset.pl;if(id){if(!(await askConfirm("이 단가 줄을 삭제할까요?")))return;const {error}=await sb.from("sink_price_list").delete().eq("id",id);if(error)return toast("삭제하지 못했습니다: "+error.message);skPList=(skPList||[]).filter(x=>x.id!==id);toast("삭제했습니다")}dirty.delete(row);row.remove();updSel()};
+    row.querySelector(".plsel").onchange=updSel};
+  const updSel=()=>{const cb=[...tb.querySelectorAll(".plsel")];const n=cb.filter(x=>x.checked).length;const b=document.getElementById("spDelSel");b.disabled=!n;b.textContent=`선택 삭제 (${n})`;document.getElementById("spAll").checked=cb.length>0&&n===cb.length};
+  document.getElementById("spAll").onchange=e=>{tb.querySelectorAll(".plsel").forEach(x=>x.checked=e.target.checked);updSel()};
+  document.getElementById("spDelSel").onclick=async()=>{const rows=[...tb.querySelectorAll("tr[data-pl]")].filter(r=>r.querySelector(".plsel").checked);if(!rows.length)return;
+    if(!(await askConfirm(`선택한 ${rows.length}줄을 삭제할까요? 되돌릴 수 없습니다.`)))return;const ids=rows.map(r=>r.dataset.pl).filter(Boolean);
+    for(let i=0;i<ids.length;i+=200){const {error}=await sb.from("sink_price_list").delete().in("id",ids.slice(i,i+200));if(error)return toast("삭제하지 못했습니다: "+error.message)}
+    toast(`${rows.length}줄을 삭제했습니다`);await fetchSkPrice();renderSinkPrice()};
   tb.querySelectorAll("tr[data-pl]").forEach(wire);
   document.getElementById("spAdd").onclick=()=>{const e=tb.querySelector("tr.empty");if(e)e.remove();tb.insertAdjacentHTML("afterbegin",tr({}));const row=tb.firstElementChild;wire(row);dirty.add(row);row.querySelector("input").focus()};
   const q=document.getElementById("spQ");q.oninput=()=>{ui.skpq=q.value;clearTimeout(q._t);q._t=imeT(q,()=>{renderSinkPrice();const n=document.getElementById("spQ");n.focus();n.setSelectionRange(n.value.length,n.value.length)},250)};
