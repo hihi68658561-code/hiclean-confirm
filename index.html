@@ -1239,7 +1239,7 @@ function renderCtrView0(){
   const src=ui.ckpi&&KPI[ui.ckpi]?KPI[ui.ckpi][1].filter(k=>!monthClosed(k)).map(k=>({k,c:custById(k.customer_id)||{},s:payStat(k),b:[KPI[ui.ckpi][0]]})):rows;
   const AP={done:j=>j.status==="완료",open:j=>j.status==="접수"||j.status==="배정",hold:j=>j.status==="보류",cancel:j=>j.status==="취소",unpaid:()=>false,remove:()=>false};
   const rowOk=(x,r)=>!r||(x.a?AP[r](x.a):CROWS.find(y=>y[0]===r)[2](x.k));const typOf=x=>x.a?"추가설치":(x.k.contract_type||"구매");
-  const cnt=(r,t)=>src.filter(x=>rowOk(x,r)&&(!t||typOf(x)===t)).length;
+  const cnt=(r,t)=>src.filter(x=>typOf(x)!=="양도"&&rowOk(x,r)&&(!t||typOf(x)===t)).length;
   const qq=ui.cq.trim().toLowerCase();
   let list=src.filter(x=>rowOk(x,ui.crow)&&(!ui.cct||typOf(x)===ui.cct)
     &&(!qq||[x.c.name,x.c.search_text,x.c.ceo,x.c.phone,x.c.phone2,x.k.serial,x.k.memo,x.k.approval,staffName(x.k.sales3),x.k.sales3_name].join(" ").toLowerCase().includes(qq)));
@@ -1259,7 +1259,7 @@ function renderCtrView0(){
   list=cfApply("ctr",list,(c,x)=>cfText(ctrCell(c,x.k,x.c,x.s,x.b)));
   ui.csel=ui.csel||new Set();[...ui.csel].forEach(id=>{if(!list.some(x=>x.k.id===id))ui.csel.delete(id)});
   /* 영업: 무상증정·무상임대·경품·양도 칸은 숨김 */
-  const TY=me.role==="sales"?["구매","무료체험","추가설치"]:[...CTYPES,"추가설치"];
+  const TY=me.role==="sales"?["구매","무료체험","추가설치"]:[...CTYPES.filter(t=>t!=="양도"),"추가설치"];/* 양도는 집계에서 뺌 */
   const sumT=`<table class="sumt" aria-label="${esc(ui.cm)} 계약 집계"><thead><tr><th></th>${TY.map(t=>`<th>${t}</th>`).join("")}<th>합계</th></tr></thead><tbody>
     ${CROWS.map(([r,l])=>`<tr class="${r==="unpaid"?"open":""}"><th>${l}</th>${[...TY,""].map(t=>`<td class="cl ${ui.crow===r&&ui.cct===t?"on":""}" data-r="${r}" data-t="${t}">${cnt(r,t)}</td>`).join("")}</tr>`).join("")}
     <tr><th>합계</th>${[...TY,""].map(t=>`<td class="cl ${ui.crow===""&&ui.cct===t?"on":""}" data-r="" data-t="${t}"><b>${cnt("",t)}</b></td>`).join("")}</tr></tbody></table>`;
@@ -1283,7 +1283,7 @@ function renderCtrView0(){
    <div class="toolbar"><input id="cQ" type="search" placeholder="업체명(상호)·대표자·전화·시리얼·담당 검색" value="${esc(ui.cq)}">
      <div class="nav" role="group"><button type="button" id="cAll" class="${ui.crow||ui.cct||ui.ckpi?"":"on"}">전체</button></div>
      <span class="mapt">${ui.ckpi&&KPI[ui.ckpi]?esc(KPI[ui.ckpi][0])+" · ":""}${ui.crow?esc(CROWS.find(y=>y[0]===ui.crow)[1])+" · ":""}${ui.cct?esc(ui.cct)+" · ":""}${list.length}건</span>
-     <span style="flex:1"></span>${isOffice()&&hasMonthCol()?`<button class="btn" type="button" id="cMonth" disabled>월마감 (0)</button>`:""}${isOffice()?`<label class="chip"><input type="checkbox" id="cSelAll">전체 선택</label>`:""}${isAdmin()?`<button class="btn danger" type="button" id="cDel" disabled>선택 삭제 (0)</button>`:""}${cfClearBtn("ctr")}<button class="btn" type="button" id="cSort">정렬</button><button class="btn" type="button" id="cCols">입력화면설정</button>${isOffice()||me.role==="sales"?`<button class="btn pri" type="button" id="cNewK">+ 신규접수</button>`:""}</div>
+     <span style="flex:1"></span>${isOffice()&&hasMonthCol()?`<button class="btn" type="button" id="cMonth" disabled>월마감 (0)</button>`:""}${isOffice()?`<label class="chip"><input type="checkbox" id="cSelAll">전체 선택</label>`:""}${isAdmin()?`<button class="btn danger" type="button" id="cDel" disabled>선택 삭제 (0)</button>`:""}${cfClearBtn("ctr")}${sortCustom()?`<button class="btn" type="button" id="cSortX" title="예정일·시간 빠른 순(기본)으로 되돌립니다" style="border-color:#e67e22;color:#c0560a">기본 정렬로</button>`:""}<button class="btn" type="button" id="cSort">정렬</button><button class="btn" type="button" id="cCols">입력화면설정</button>${isOffice()||me.role==="sales"?`<button class="btn pri" type="button" id="cNewK">+ 신규접수</button>`:""}</div>
    <div class="wrapx vis" style="padding-top:10px"><div class="wtbox"><table class="wt ct"><thead><tr>${isOffice()?"<th></th>":""}<th>순번</th>${colHead(cols,"ctr",MONEYC)}</tr></thead><tbody>
     ${shown.map((x,i)=>`<tr data-ck="${x.k.id}" class="rs-${esc(ctrRowCls(x.k))}">${isOffice()?`<td><input type="checkbox" class="csel" data-id="${x.k.id}" ${ui.csel.has(x.k.id)?"checked":""} aria-label="선택"></td>`:""}<td>${i+1}</td>${cols.map(c=>ctrCell(c,x.k,x.c,x.s,x.b)).join("")}</tr>${!shown[i+1]||shown[i+1].gs!==x.gs?subRow(x.gs):""}`).join("")||`<tr><td colspan="${cols.length+2}" class="mapt" style="cursor:default">해당하는 계약이 없습니다.</td></tr>`}</tbody>
     ${shown.length?`<tfoot><tr>${isOffice()?"<th></th>":""}<th></th>${cols.map(c=>`<th class="${MONEYC.has(c)?"num":""}">${MONEYC.has(c)?won0(tot[c]):c===cols[0]?"합계":""}</th>`).join("")}</tr></tfoot>`:""}</table></div>
@@ -1296,9 +1296,9 @@ function renderCtrView0(){
   const ca=document.getElementById("cAll");if(ca)ca.onclick=()=>{ui.crow="";ui.cct="";ui.ckpi="";re()};
   view().querySelectorAll("[data-kpi]").forEach(el=>{const go=()=>{ui.ckpi=ui.ckpi===el.dataset.kpi?"":el.dataset.kpi;ui.crow="";ui.cct="";re()};el.onclick=go;el.onkeydown=e=>{if(e.key==="Enter"||e.key===" "){e.preventDefault();go()}}});
   document.getElementById("cCols").onclick=()=>colPicker(re);
-  document.getElementById("cSort").onclick=()=>sortPicker(re);cfBind("ctr",re);
+  document.getElementById("cSort").onclick=()=>sortPicker(re);{const x=document.getElementById("cSortX");if(x)x.onclick=()=>{setSort(null);re()}}cfBind("ctr",re);
   view().querySelectorAll(".wt.ct thead th[data-ck]").forEach(th=>{th.classList.add("sortable");const S=getSort();if(S[0]&&S[0].c===th.dataset.ck)th.dataset.sort=S[0].d===1?"asc":"desc";
-    th.onclick=e=>{if(e.target.closest(".rz")||e.target.closest(".fbtn"))return;const c=th.dataset.ck;const S=getSort();const d=S[0]&&S[0].c===c?-S[0].d:1;setSort([{c,d},...S.filter(x=>x.c!==c).slice(0,2)]);re()}});
+    th.onclick=e=>{if(e.target.closest(".rz")||e.target.closest(".fbtn"))return;const c=th.dataset.ck;const S=getSort();const cust=sortCustom();if(cust&&S[0].c===c&&S[0].d===-1){setSort(null);return re()}const d=cust&&S[0].c===c?-S[0].d:1;setSort([{c,d},...DEFSORT.filter(x=>x.c!==c).slice(0,2)]);re()}});
   const nk_=document.getElementById("cNewK");if(nk_)nk_.onclick=()=>jobDlg(null,null,"ctr");
   if(isOffice()){bindRowSel(ui.csel,"csel","cSelAll","cDel",delContracts,set=>{const b=document.getElementById("cMonth");if(b){const n=[...set].filter(id=>!id.startsWith("a:")).length;b.disabled=!n;b.textContent=`월마감 (${n})`}});
     const mb=document.getElementById("cMonth");if(mb)mb.onclick=async()=>{const ids=[...ui.csel].filter(id=>!id.startsWith("a:"));if(!ids.length)return;
@@ -1342,7 +1342,7 @@ function renderAllView0(){
   view().innerHTML=`<div class="toolbar"><h2 style="margin:0;font-size:18px">전체리스트</h2><span class="mapt">월마감(OK)된 계약</span>${hasMonthCol()?"":`<span class="warnbox" style="margin:0">월마감을 쓰려면 Supabase에서 phase1x.sql을 실행해 주세요.</span>`}</div>
    <div class="toolbar"><input id="caQ" type="search" placeholder="업체명(상호)·대표자·전화·주소·시리얼·담당 검색" value="${esc(ui.aq2)}">
      <span class="mapt" id="caCnt">${list.length}건${list.length>shown.length?` 중 ${shown.length}건 표시`:""}</span>
-     <span style="flex:1"></span>${isAdmin()&&hasMonthCol()?`<button class="btn" type="button" id="caBulk">나머지 계약 일괄 월마감</button>`:""}${cfClearBtn("all")}<button class="btn" type="button" id="caSort">정렬</button><button class="btn" type="button" id="caCols">입력화면설정</button>${isOffice()||me.role==="sales"?`<button class="btn pri" type="button" id="caNewK">+ 신규접수</button>`:""}</div>
+     <span style="flex:1"></span>${isAdmin()&&hasMonthCol()?`<button class="btn" type="button" id="caBulk">나머지 계약 일괄 월마감</button>`:""}${cfClearBtn("all")}${sortCustom()?`<button class="btn" type="button" id="caSortX" title="예정일·시간 빠른 순(기본)으로 되돌립니다" style="border-color:#e67e22;color:#c0560a">기본 정렬로</button>`:""}<button class="btn" type="button" id="caSort">정렬</button><button class="btn" type="button" id="caCols">입력화면설정</button>${isOffice()||me.role==="sales"?`<button class="btn pri" type="button" id="caNewK">+ 신규접수</button>`:""}</div>
    <div class="wrapx vis" style="padding-top:10px"><div class="wtbox"><table class="wt ca"><thead><tr><th>순번</th>${colHead(cols,"all",MONEYC)}</tr></thead><tbody>
     ${shown.map((x,i)=>`<tr data-ck="${x.k.id}" class="rs-${esc(ctrRowCls(x.k))}"><td>${i+1}</td>${cols.map(c=>ctrCell(c,x.k,x.c,x.s,x.b)).join("")}</tr>`).join("")||`<tr><td colspan="${cols.length+1}" class="mapt" style="cursor:default">월마감된 계약이 없습니다. 당월리스트에서 월마감 칸을 OK로 바꾸면 여기로 옮겨집니다.</td></tr>`}</tbody></table></div>
     ${list.length>shown.length?`<p style="text-align:center"><button class="btn" type="button" id="caMore">다음 300건 더 보기</button> <span class="mapt">찾는 건이 있으면 검색이 가장 빠릅니다.</span></p>`:""}</div>`;
@@ -1350,14 +1350,14 @@ function renderAllView0(){
   view().querySelectorAll(".wtbox").forEach(hbar);
   const re=()=>renderAllView();
   document.getElementById("caCols").onclick=()=>colPicker(re,"all");
-  document.getElementById("caSort").onclick=()=>sortPicker(re);cfBind("all",re);
+  document.getElementById("caSort").onclick=()=>sortPicker(re);{const x=document.getElementById("caSortX");if(x)x.onclick=()=>{setSort(null);re()}}cfBind("all",re);
   const bk=document.getElementById("caBulk");if(bk)bk.onclick=bulkMonthClose;
   /* 더 보기: 표를 다시 그리지 않고 아래에 이어 붙임 */
   const mo=document.getElementById("caMore");if(mo)mo.onclick=()=>{const tb=view().querySelector(".wt.ca tbody");const from=ui.allN,to=Math.min(list.length,from+300);
     tb.insertAdjacentHTML("beforeend",list.slice(from,to).map((x,i)=>`<tr data-ck="${x.k.id}" class="rs-${esc(ctrRowCls(x.k))}"><td>${from+i+1}</td>${cols.map(c=>ctrCell(c,x.k,x.c,x.s,x.b)).join("")}</tr>`).join(""));
     ui.allN=to;bindRows();const cnt=view().querySelector("#caCnt");if(cnt)cnt.textContent=`${list.length}건${list.length>to?` 중 ${to}건 표시`:""}`;if(to>=list.length)mo.parentElement.remove()};
   view().querySelectorAll(".wt.ca thead th[data-ck]").forEach(th=>{th.classList.add("sortable");const S=getSort();if(S[0]&&S[0].c===th.dataset.ck)th.dataset.sort=S[0].d===1?"asc":"desc";
-    th.onclick=e=>{if(e.target.closest(".rz")||e.target.closest(".fbtn"))return;const c=th.dataset.ck;const S=getSort();const d=S[0]&&S[0].c===c?-S[0].d:1;setSort([{c,d},...S.filter(x=>x.c!==c).slice(0,2)]);re()}});
+    th.onclick=e=>{if(e.target.closest(".rz")||e.target.closest(".fbtn"))return;const c=th.dataset.ck;const S=getSort();const cust=sortCustom();if(cust&&S[0].c===c&&S[0].d===-1){setSort(null);return re()}const d=cust&&S[0].c===c?-S[0].d:1;setSort([{c,d},...DEFSORT.filter(x=>x.c!==c).slice(0,2)]);re()}});
   const nk_=document.getElementById("caNewK");if(nk_)nk_.onclick=()=>jobDlg(null,null,"ctr");
   const q=document.getElementById("caQ");q.oninput=e=>{ui.aq2=e.target.value;ui.allN=300;clearTimeout(q._t);q._t=imeT(q,()=>{re();const n=document.getElementById("caQ");n.focus();n.setSelectionRange(n.value.length,n.value.length)},250)};
   function bindRows(){view().querySelectorAll(".wt.ca tr[data-ck]").forEach(tr=>tr.onclick=e=>{
@@ -1492,7 +1492,7 @@ function asSortPicker(onDone){let cur=asGetSort().map(x=>({...x}));
       <label class="f">방향<select data-sd="${i}"><option value="1" ${x.d===1?"selected":""}>오름차순 (빠른 날짜·작은 값·가나다)</option><option value="-1" ${x.d===-1?"selected":""}>내림차순 (최근 날짜·큰 값)</option></select></label><span></span></div>`}).join("");
     document.querySelectorAll("#spList [data-si]").forEach(s=>s.onchange=()=>{const i=+s.dataset.si;if(s.value)cur[i]={c:s.value,d:(cur[i]||{}).d||1};else cur.splice(i,1);cur=cur.filter(Boolean);draw()});
     document.querySelectorAll("#spList [data-sd]").forEach(s=>s.onchange=()=>{const i=+s.dataset.sd;if(cur[i])cur[i].d=+s.value})};
-  openDlg("정렬 설정",`<p class="mapt">1순위가 같으면 2순위, 2순위도 같으면 3순위로 정렬합니다. 열 제목을 눌러도 바로 정렬됩니다(한 번 더 누르면 반대로).<br>목록은 항상 <b>지난달부터 남은 미처리 → 당월 접수 → 이달 처리·입금된 예전 건 → 미수</b>로 묶이고, 고른 정렬은 각 묶음 안에서 적용됩니다.</p><div id="spList" style="display:grid;gap:8px"></div>`,
+  openDlg("정렬 설정",`<p class="mapt">1순위가 같으면 2순위, 2순위도 같으면 3순위로 정렬합니다. 열 제목을 눌러도 바로 정렬됩니다(한 번 더 누르면 반대로, 세 번째 누르면 기본 정렬로).<br>목록은 항상 <b>지난달부터 남은 미처리 → 당월 접수 → 이달 처리·입금된 예전 건 → 미수</b>로 묶이고, 고른 정렬은 각 묶음 안에서 적용됩니다.</p><div id="spList" style="display:grid;gap:8px"></div>`,
     [["접수한 순서 (기본)","",()=>{cur=ADEFSORT.map(x=>({...x}));draw();return true}],["예정일·시간 순","",()=>{cur=[{c:"visit",d:1},{c:"rdate",d:1}];draw();return true}],["취소"],["적용","pri",()=>{cur=cur.filter(x=>x&&x.c);asSetSort(cur.length&&JSON.stringify(cur)!==JSON.stringify(ADEFSORT)?cur:null);onDone()}]]);draw()}
 function renderAsView(){const _sv=snapScroll();renderAsView0();restoreScroll(_sv)}
 function renderAsView0(){
@@ -3296,8 +3296,9 @@ function instKey(k){const ij=installOf(k);const d=ij&&(ij.done_date||ij.visit_da
 const STORD=["미정","확정","완료","미수","보류","취소","철거예정","철거완료"];
 const DEFSORT=[{c:"idate",d:1},{c:"cdate",d:1},{c:"ctype",d:1}];
 const INSTSORT=[{c:"idate",d:1},{c:"cdate",d:1}];
-function sortKey(){return "hc.sort.ctr3."+(me&&me.id||"")}
+function sortKey(){return "hc.sort.ctr4."+(me&&me.id||"")}
 function getSort(){try{const v=JSON.parse(localStorage.getItem(sortKey())||"null");if(Array.isArray(v)&&v.length)return v}catch(e){}return DEFSORT}
+function sortCustom(){return JSON.stringify(getSort())!==JSON.stringify(DEFSORT)}
 function setSort(v){try{v?localStorage.setItem(sortKey(),JSON.stringify(v)):localStorage.removeItem(sortKey())}catch(e){}}
 function sortVal(col,x){const k=x.k,c=x.c,s=x.s;
   switch(col){case"reg":return k.created_at||"";case"idate":case"itime":{const j=x.a||installOf(k);const d=j&&(j.visit_date||j.done_date);return d?d+" "+timeKey(j.visit_time):""}case"iwday":{const ij=installOf(k);const d=ij&&(ij.visit_date||ij.done_date);return d?new Date(d+"T00:00:00").getDay():""}case"basis":return baseDate(k);case"cdate":return k.contract_date||"";case"last":return s.last||"";case"trial":return k.trial_end||"";
@@ -3317,8 +3318,8 @@ function sortPicker(onDone){let cur=getSort().map(x=>({...x}));
       <label class="f">방향<select data-sd="${i}"><option value="1" ${x.d===1?"selected":""}>오름차순 (빠른 날짜·작은 값·가나다)</option><option value="-1" ${x.d===-1?"selected":""}>내림차순 (최근 날짜·큰 값)</option></select></label><span></span></div>`}).join("");
     document.querySelectorAll("#spList [data-si]").forEach(s=>s.onchange=()=>{const i=+s.dataset.si;if(s.value)cur[i]={c:s.value,d:(cur[i]||{}).d||1};else cur.splice(i,1);cur=cur.filter(Boolean);draw()});
     document.querySelectorAll("#spList [data-sd]").forEach(s=>s.onchange=()=>{const i=+s.dataset.sd;if(cur[i])cur[i].d=+s.value})};
-  openDlg("정렬 설정",`<p class="mapt">1순위가 같으면 2순위, 2순위도 같으면 3순위로 정렬합니다. 열 제목을 눌러도 바로 정렬됩니다(한 번 더 누르면 반대로).<br>목록은 항상 <b>당월 건 → 당월 추가설치 → 이달 결제된 예전 건 → 미수 건</b>으로 묶이고, 고른 정렬은 각 묶음 안에서 적용됩니다.</p><div id="spList" style="display:grid;gap:8px"></div>`,
-    [["접수한 순서 (기본)","",()=>{cur=DEFSORT.map(x=>({...x}));draw();return true}],["설치일자·시간 순","",()=>{cur=INSTSORT.map(x=>({...x}));draw();return true}],["취소"],["적용","pri",()=>{cur=cur.filter(x=>x&&x.c);setSort(cur.length&&JSON.stringify(cur)!==JSON.stringify(DEFSORT)?cur:null);onDone()}]]);draw()}
+  openDlg("정렬 설정",`<p class="mapt">1순위가 같으면 2순위, 2순위도 같으면 3순위로 정렬합니다. 열 제목을 눌러도 바로 정렬됩니다(한 번 더 누르면 반대로, 세 번째 누르면 기본 정렬로).<br>목록은 항상 <b>당월 건 → 당월 추가설치 → 이달 결제된 예전 건 → 미수 건</b>으로 묶이고, 고른 정렬은 각 묶음 안에서 적용됩니다.</p><div id="spList" style="display:grid;gap:8px"></div>`,
+    [["예정일·시간 순 (기본)","",()=>{cur=DEFSORT.map(x=>({...x}));draw();return true}],["설치일자·시간 순","",()=>{cur=INSTSORT.map(x=>({...x}));draw();return true}],["취소"],["적용","pri",()=>{cur=cur.filter(x=>x&&x.c);setSort(cur.length&&JSON.stringify(cur)!==JSON.stringify(DEFSORT)?cur:null);onDone()}]]);draw()}
 function hasTrialCol(){return contracts.some(k=>"trial_end" in k)}
 /* 철거 계약이 완료되면 회색 줄 */
 /* 계약 창: 고객정보 옆 '설치·A/S' — 이 계약의 설치 작업과 이 고객의 A/S 등을 열기 */
