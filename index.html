@@ -2654,12 +2654,15 @@ function r0Stock(its){/* 저장 전: 재고 수량을 넘지 않는지 확인 */
     const left=(Number(it.qty||1)||1)-(used[k]||0);if(q>left){toast(`재고가 모자랍니다: ${skSpec(it)} (남은 ${left}개)`);return true}}return false}
 function skTabs(){return isOffice()?`<div class="nav" role="tablist">${[["order","싱크대발주"],["stock","재고현황"],["price","단가표"]].map(([k,l])=>`<button type="button" role="tab" class="${ui.sktab===k?"on":""}" data-sktab="${k}">${l}</button>`).join("")}</div>`:""}
 function bindSkTabs(){view().querySelectorAll("[data-sktab]").forEach(b=>b.onclick=()=>{ui.sktab=b.dataset.sktab;renderSinkView()})}
+/* 발주한 뒤 그 고객 설치가 끝났으면(설치 작업 완료) 출고대기에서 뺌 */
+function skInstalled(o){const cid=o.customer_id||((customers.find(x=>nk(x.name)===nk(o.site_name||""))||{}).id);const ks=o.contract_id?[ctrById(o.contract_id)].filter(Boolean):cid?custContracts(cid):[];
+  const od=String(o.order_date||"");return ks.some(k=>{const ij=installOf(k);if(ij&&ij.status==="완료"){const d=ij.done_date||ij.visit_date||"";return !d||!od||d>=od}return false})}
 function renderSinkStock(){const st=skStockItems();const live=st.filter(x=>x.remain>0);if(ui.skstq===undefined)ui.skstq="";const qq=ui.skstq.trim().toLowerCase();
   const pend=[],wait=[],uses=[];(skOrders||[]).forEach(o=>{if(o.status==="취소")return;
     (o.items||[]).forEach((it,i)=>{const q=Number(it.qty||1)||1;
       if(it.from_stock){const [oid,ii]=it.from_stock.split(":");const so=(skOrders||[]).find(x=>x.id===oid);uses.push({o,it,q,so,sit:so&&(so.items||[])[+ii]})}
       else if(skIsStockOrder(o)&&["신규접수","주문완료"].includes(o.status))pend.push({o,it,q});
-      else if(!skIsStockOrder(o)&&o.status==="입고완료")wait.push({o,it,q})})});
+      else if(!skIsStockOrder(o)&&o.status==="입고완료"&&!skInstalled(o))wait.push({o,it,q})})});
   const g={};const add=(it,k,n)=>{const sp=skSpec(it);(g[sp]=g[sp]||{sp,stock:0,pend:0,wait:0})[k]+=n};
   live.forEach(x=>add(x.it,"stock",x.remain));pend.forEach(x=>add(x.it,"pend",x.q));wait.forEach(x=>add(x.it,"wait",x.q));
   const gl=Object.values(g).filter(x=>!qq||x.sp.toLowerCase().includes(qq)).sort((a,b)=>b.stock-a.stock||KO.compare(a.sp,b.sp));
