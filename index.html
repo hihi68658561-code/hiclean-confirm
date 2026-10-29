@@ -2693,7 +2693,7 @@ function skPriceFor(it){if(!skPList||!skPList.length)return null;
   if(T.length){/* 1) 나인주방 품목명 글자가 같은 줄 */if(it.sup){const t=skTxtN(it.sup);const h=T.find(x=>x.t===t);if(h)return h.r}
     /* 2) 품목명을 나눠서 종류·옵션·W·D·H가 모두 같은 줄 */const n0=skNormItem(it);if(n0.cat&&n0.w){let best=null,bs=-1;
       for(const x of T){const p=x.p;if(p.cat!==n0.cat||p.w!==n0.w)continue;if(p.d&&n0.d&&p.d!==n0.d)continue;if(p.h&&n0.h&&p.h!==n0.h)continue;if(p.opt1&&n0.opt1&&p.opt1!==n0.opt1)continue;
-        const sc=skScore(n0,p);if(sc>bs){bs=sc;best=x.r}}if(best)return best}}
+        const sc=skScore(n0,p)-x.t.length/1000;/* 같으면 덧붙은 옵션이 적은(짧은) 품목명 */if(sc>bs){bs=sc;best=x.r}}if(best)return best}}
   const n=skNormItem(it);if(!n.cat)return null;
   const pick=strictD=>skPList.filter(r=>skCatOf(r.name)===n.cat&&(!r.opt1||skOptN(r.opt1)===n.opt1)&&(!r.opt2||skOpt2N(r.opt2)===n.opt2)&&(!strictD||!r.d||r.d===n.d)&&(!r.w_max||(n.w&&n.w<=r.w_max)));
   let c=pick(true);if(!c.length)c=pick(false);/* 깊이(D)가 같은 줄이 없으면 D는 보지 않음 */
@@ -2737,7 +2737,10 @@ function renderSinkPrice(){const rows=skPList||[];if(ui.skpq===undefined)ui.skpq
   /* 쓰시던 단가표 엑셀(품목명·입고가·출고가) 그대로 가져오기 */
   {const f2=document.getElementById("spImp2In");document.getElementById("spImp2").onclick=()=>f2.click();
    f2.onchange=async()=>{const f=f2.files[0];f2.value="";if(!f)return;let wb;try{wb=XLSX.read(await f.arrayBuffer(),{type:"array"})}catch(e){return toast("파일을 읽지 못했습니다")}
-    const out=[];for(const sn of wb.SheetNames){const a=XLSX.utils.sheet_to_json(wb.Sheets[sn],{header:1,raw:true,defval:""});const hi=a.findIndex(rw=>rw.some(c=>/품목명|품명/.test(String(c)))&&rw.some(c=>/입고가|단가/.test(String(c))));if(hi<0)continue;
+    /* ‘입고가’ 칸이 있는 시트(가격표)를 먼저 쓰고, 없을 때만 ‘단가’ 칸 시트 */
+    const sheets=wb.SheetNames.map(sn=>{const a=XLSX.utils.sheet_to_json(wb.Sheets[sn],{header:1,raw:true,defval:""});const hit=re=>a.findIndex(rw=>rw.some(c=>/품목명|품명/.test(String(c)))&&rw.some(c=>re.test(String(c).replace(/\s+/g,""))));return{a,h1:hit(/^입고가/),h2:hit(/^단가/)}});
+    const useIn=sheets.some(x=>x.h1>=0);
+    const out=[];for(const sh of sheets){const a=sh.a;const hi=useIn?sh.h1:sh.h2;if(hi<0)continue;
       const H=a[hi].map(c=>String(c).replace(/\s+/g,""));const col=re=>H.findIndex(h=>re.test(h));const cN=col(/^품목명|^품명/),cI=col(/^입고가|^단가/),cO=col(/^출고가/),cC=col(/^변경출고가/);
       a.slice(hi+1).forEach(rw=>{const name=String(rw[cN]??"").trim();if(!name)return;const pr=skNum(rw[cI])||0;const ch=cC>=0?skNum(rw[cC]):null;const ou=ch||(cO>=0?skNum(rw[cO]):0)||0;if(!pr&&!ou)return;out.push({name,opt1:"",opt2:"",w_max:null,d:null,price:pr,deduct:ou,memo:"단가표 엑셀"})})}
     if(!out.length)return toast("‘품목명’과 ‘입고가’ 칸이 있는 표를 찾지 못했습니다");
