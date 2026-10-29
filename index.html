@@ -1565,7 +1565,7 @@ function planAsImport(rows){
     const sg=c.id+"|"+(rd||"")+"|"+nk(sym);const dup=sig.has(sg);if(!dup)sig.add(sg);
     const k=c.__new?null:(custContracts(c.id).find(x=>t("시리얼")&&nk(x.serial)===nk(t("시리얼")))||custContracts(c.id)[0]||null);
     const idRaw=g("설치일");const idate=toDate(idRaw);
-    const prod={product:t("제품"),size:t("규격"),serial:t("시리얼")};if(!prod.product&&!prod.size&&!prod.serial&&k)Object.assign(prod,{product:k.product||"",size:k.size||"",serial:k.serial||""});
+    const prod={product:prodName(t("제품")),size:t("규격"),serial:t("시리얼")};if(!prod.product&&!prod.size&&!prod.serial&&k)Object.assign(prod,{product:k.product||"",size:k.size||"",serial:k.serial||""});
     if(idate)prod.install_date=idate;else if(t("설치일"))prod.install_note=t("설치일");
     const who=t("담당자");const s=who&&whoIs(who);
     const stx=t("처리현황");const vd=toDate(g("예정일"))||null;
@@ -3167,6 +3167,9 @@ function ctrJobBtn(c,k,isNew){if(isNew||!c||!k||!k.id)return[];
   if(!js.length)return[];
   return[["설치·A/S","gocust",()=>{if(js.length===1){jobDlg(js[0],c,js[0].kind);return true}
     openDlg(`설치·A/S · ${esc(c.name)}`,`<div class="cards">${js.map(j=>jobCard(j,false)).join("")}</div>`,[["계약정보","gocust",()=>{contractDlg(c,k);return true}],["닫기"]]);bindJobCards(document.getElementById("dlgB"));return true}]]}
+/* 제품 약칭 → 정식 이름 (1→1채널, 3→3채널, 온→온케어, 대→대광) */
+const PROD_FULL={"1":"1채널","3":"3채널","온":"온케어","대":"대광"};
+function prodName(v){const t=String(v??"").trim();return PROD_FULL[t]||t}
 function ctrRowCls(k){return k.stage==="철거완료"||k.stage==="철거"||(k.contract_type==="철거"&&k.stage==="완료")?"철거":k.stage}
 function trialCell(k){const d=k.trial_end;if(!d)return"";const td=today();const open=!["완료","취소","철거","철거예정","철거완료"].includes(k.stage)&&k.contract_type!=="철거";const days=Math.round((new Date(d)-new Date(td))/864e5);
   const cls=open&&days<0?"late":open&&days<=3?"soon":"";return `<span class="trial ${cls}" title="${open?(days<0?-days+"일 지남":days===0?"오늘 종료":days+"일 남음"):""}">${esc(ymd2(d))}</span>`}
@@ -3219,7 +3222,7 @@ function contractDlg(c,k,tpl,opts){ui.payEdit=null;
      if(isNew){const gg=gradeOf(c);if(gg&&gg.g==="블랙"&&!(await askConfirm(`블랙(거래 중지) 고객입니다.${gg.reason?" ("+gg.reason+")":""} 계속 등록할까요?`)))return true}
      const f=fdata("kf");const n=x=>Number(f.get(x)||0)||0;
      const p={contract_date:f.get("contract_date")||null,stage:f.get("stage"),contract_type:f.get("contract_type")||"구매",contract_doc:f.get("contract_doc"),channel:f.get("channel").trim(),referrer:f.get("referrer").trim(),free_trial:f.get("free_trial").trim(),...(hasTrialCol()||f.get("trial_end")?{trial_end:f.get("trial_end")||null}:{}),
-       sales1:f.get("sales1").trim(),sales2:f.get("sales2").trim(),product:f.get("product").trim(),size:f.get("size").trim(),serial:f.get("serial").trim(),
+       sales1:f.get("sales1").trim(),sales2:f.get("sales2").trim(),product:prodName(f.get("product")),size:f.get("size").trim(),serial:f.get("serial").trim(),
        wash_added:f.get("wash_added")==="1",pay_method:f.get("pay_method"),amt_ultra:n("amt_ultra"),amt_wash:n("amt_wash"),amt_parts:n("amt_parts"),amount:n("amount"),
        capital:Object.assign({},cap,{company:f.get("cap_company").trim(),monthly:n("cap_monthly"),months:n("cap_months")}),cms:Object.assign({},cms,{day:f.get("cms_day").trim()}),
        settle_month:f.get("settle_month")||"",memo:f.get("memo")};
@@ -3535,7 +3538,7 @@ function jobDlg(j,c,kind,tpl,preset){
        if(pt.paid_type==="무상"){pt.cost=0;pt.pay_status="";pt.pay_method=""}else{if(pt.cost&&!pt.paid_type)pt.paid_type="유상";if(pt.pay_method&&!pt.pay_status&&pt.cost)pt.pay_status="완료";if(pt.pay_status==="완료"&&!pt.pay_date)pt.pay_date=today()}
        if(off)pt.closed=!!f.get("closed");
        {const ps=f.getAll("ap");if(f.get("ap_etc")){const t=(f.get("ap_etc_t")||"").trim();if(t)ps.push(t)}pt.parts=ps.join(", ")}
-       if(off||isNew){_instMap=null;const base=asInstDate(Object.assign({},j,{product:{}}));const iv=f.get("as_idate")||"";const pr=Object.assign({},j.product||{},{product:(f.get("as_product")||"").trim(),size:(f.get("as_size")||"").trim(),serial:(f.get("as_serial")||"").trim()});
+       if(off||isNew){_instMap=null;const base=asInstDate(Object.assign({},j,{product:{}}));const iv=f.get("as_idate")||"";const pr=Object.assign({},j.product||{},{product:prodName(f.get("as_product")),size:(f.get("as_size")||"").trim(),serial:(f.get("as_serial")||"").trim()});
          if(!pr.product&&!pr.size&&!pr.serial){const k0=ctrById(j.contract_id)||custContracts(j.customer_id)[0];if(k0)Object.assign(pr,{product:k0.product||"",size:k0.size||"",serial:k0.serial||""})}
          if(f.get("as_used")){delete pr.install_date;pr.install_note="중고구매"}else{if(/중고/.test(pr.install_note||""))delete pr.install_note;if(iv&&iv!==base){pr.install_date=iv;delete pr.install_note}else delete pr.install_date}pt.product=pr}
        if(asx){const nn=x=>Number(f.get(x)||0)||0;Object.assign(pt,{action:(f.get("action")||"").trim(),trip_fee:nn("trip_fee"),part_fee:nn("part_fee"),...(f.has("distance")?{distance:f.get("distance")===""?null:nn("distance")}:{}),...(f.has("satisfaction")?{satisfaction:f.get("satisfaction")||""}:{})});
@@ -3810,7 +3813,7 @@ function planImport(rows,fresh){
     const badD=n=>{const v=g(n);const s=v instanceof Date?"":String(v??"").trim();if(s&&!toDate(v))notes.push(n+": "+s)};badD("계약일자");badD("설치일자");
     const memo=[t("비고"),...notes].filter(Boolean).join(" / ");
     const k={id:crypto.randomUUID(),customer_id:cust.id,contract_date:toDate(g("계약일자"))||null,stage,contract_type:ctype,channel,referrer:t("소개"),sales1:t("1차"),sales2:["무료체험","보상판매"].includes(s2)?"":s2,sales3_name:s3clean,free_trial:trial,
-      product:t("제품")==="수압식"?"수압식":t("제품"),size,options:opts.join(", "),serial:t("시리얼"),wash_added:!!t("수압식")||t("제품")==="수압식",
+      product:t("제품")==="수압식"?"수압식":prodName(t("제품")),size,options:opts.join(", "),serial:t("시리얼"),wash_added:!!t("수압식")||t("제품")==="수압식",
       amt_ultra:money(g("초음파")),amt_wash:money(g("워시")),amt_parts:amtParts,amount:money(g("합계금액",0)),pay_method:pay,contract_doc:doc==="○"?"사진":doc==="●"?"원본":"미수령",
       capital:(pay==="캐피탈"?{company:ap,approver:t("승인자"),monthly,interest:money(g("이자")),months:money(g("기간")),total:money(g("합계"))}:{}),
       cms:pay==="CMS"?{day:((stRaw.match(/(\d+)\s*일/)||[])[1]||"")}:{},tax,settle_month:sm?`${sm[1].length===2?"20"+sm[1]:sm[1]}-${sm[2].padStart(2,"0")}`:"",memo,import_raw:raw};
