@@ -3635,6 +3635,28 @@ function payTable(list){
    <tfoot><tr><th colspan="${isAdmin()?5:4}">합계 (납부 완료 기준)</th><th class="money" style="text-align:right">${won0(sumCard)}</th><th class="money" style="text-align:right">${won0(sumCash)}</th><th colspan="3">미수 ${won0(sumUn)}원</th></tr></tfoot></table></div>`;
 }
 function custLabel(c){return `${c.name} · ${c.phone||c.phone2||"전화 없음"}`}
+/* A/S 신규접수 확인요청 문자 (기사에게 보내는 카톡용) — 접수 창 안에 펼쳐서, 입력 중인 내용으로 바로 만듦 */
+function asReqText(j,c,note){const fv=n=>{const e=document.querySelector(`#jf [name="${n}"]`);return e?String(e.value||"").trim():""};
+  const d=fv("as_idate");const idt=d?d.slice(2).replace(/-/g,"-"):"";
+  const pt=fv("paid_type"),tf=Number(fv("trip_fee")||0),pf=Number(fv("part_fee")||0);
+  const man=v=>v%10000===0?(v/10000)+"만원":won0(v)+"원";
+  const cost=pt==="무상"?"무상":"출장비 "+man(tf||50000)+" + 부품비"+(pf?" "+man(pf):"");
+  return ["<AS 신규접수>","","1. 업체명 : "+((c&&c.name)||j.customer_name||""),"2. 전화번호 : "+((c&&(c.phone||c.phone2))||""),"3. 주소 : "+((c&&c.address)||j.address||""),
+    "4. 제품명 : "+[prodName(fv("as_product")),fv("as_size"),fv("as_serial")].filter(Boolean).join(" "),"5. 설치일자 : "+idt,"6. 고장내용 : "+fv("symptom").replace(/\s+/g," "),
+    "7. AS비용 : "+cost,"8. 특이사항 : "+String(note||"").replace(/\s+/g," ").trim(),"9. 처리내용 : ","10. 수리비용 : ","11. 어플설치 : ","12. 세제구입 : ","13. 이동거리 : ","14. 제품만족도 : ","15. 작업시간 : "].join("\n")}
+function asReqToggle(j,c){const ex=document.getElementById("asReq");if(ex){ex.remove();return}const f=document.getElementById("jf");if(!f)return;
+  /* 특이사항 기본값: 이 고객의 지난 A/S 마지막 처리 내용 */
+  const prev=c?jobs.filter(x=>x.customer_id===c.id&&x.id!==j.id&&asLike(x)&&x.status!=="취소"&&(x.result||"").trim()).sort((a,b)=>String(b.done_date||b.visit_date||b.request_date||"").localeCompare(String(a.done_date||a.visit_date||a.request_date||"")))[0]:null;
+  const pd=prev&&(prev.done_date||prev.visit_date||prev.request_date);const def=prev?(pd?`${+pd.slice(2,4)}/${+pd.slice(5,7)}/${+pd.slice(8,10)} `:"")+String(prev.result).replace(/\s+/g," ").trim():"";
+  const box=document.createElement("div");box.id="asReq";box.style.cssText="display:grid;gap:8px;border:1px solid var(--line);border-radius:10px;padding:12px;background:#fffbe6";
+  box.innerHTML=`<div style="display:flex;align-items:center;gap:8px"><b>A/S 확인요청 문자</b><span class="mapt" style="font-size:12px">위 입력 내용이 바로 반영됩니다</span><span style="flex:1"></span><button type="button" class="btn pri sm" id="asReqCp">복사</button><button type="button" class="btn sm" id="asReqX">접기</button></div>
+    <label class="f">특이사항<input id="asReqN" value="${esc(def)}" placeholder="예: 26/5/5 수리거부로 출장비만 받았음"></label>
+    <pre id="asReqOut" style="white-space:pre-wrap;background:#fff;border:1px solid var(--line);border-radius:8px;padding:10px;margin:0;font:inherit;font-size:14px;line-height:1.6"></pre>`;
+  f.prepend(box);const out=box.querySelector("#asReqOut"),n=box.querySelector("#asReqN");const draw=()=>{out.textContent=asReqText(j,c,n.value)};draw();
+  n.oninput=draw;f.addEventListener("input",e=>{if(document.getElementById("asReq")&&!box.contains(e.target))draw()});f.addEventListener("change",()=>{if(document.getElementById("asReq"))draw()});
+  box.querySelector("#asReqX").onclick=()=>box.remove();
+  box.querySelector("#asReqCp").onclick=async()=>{const t=out.textContent;try{await navigator.clipboard.writeText(t)}catch(e){const ta=document.createElement("textarea");ta.value=t;document.body.appendChild(ta);ta.select();document.execCommand("copy");ta.remove()}toast("복사했습니다. 카톡에 붙여넣기 하세요")};
+  box.scrollIntoView({block:"nearest"})}
 function jobDlg(j,c,kind,tpl,preset){
   let wantCtr=false;if(kind==="ctr"){wantCtr=true;kind="as"}
   /* 신규접수에는 '설치'가 없음 (설치는 계약으로 접수) */
@@ -3689,7 +3711,7 @@ function jobDlg(j,c,kind,tpl,preset){
    [...(c?[["고객정보","gocust",()=>{openCustPopup(c,c2=>{const el=document.querySelector("#jf .dsum");if(el){const pp=j.product||{};el.outerHTML=custSummary(c2,j.kind==="addon"?null:{product:pp.product,size:pp.size,serial:pp.serial})}j.customer_name=c2.name;j.address=c2.address||j.address;
        document.getElementById("dlgH").textContent=`${nTitle?"신규접수":kl(j)+" "+(isNew?"접수":"작업")} · ${c2.name}`});return true}]]:[]),
     ...(!isNew&&c&&me.role!=="tech"&&(ctrById(j.contract_id)||custContracts(c.id)[0])?[["계약정보","gocust",()=>{contractDlg(c,ctrById(j.contract_id)||custContracts(c.id)[0]);return true}]]:[]),
-    ...(isNew&&!c&&!tpl?[["새 고객 등록","gocust",()=>{const kv=(document.querySelector('#jf input[name=kind]:checked')||{}).value||j.kind;newCustomer(null,nc=>kv==="ctr"?contractDlg(nc,null):jobDlg(null,nc,kv));return true}]]:[]),["닫기"],...(!isNew&&j.kind==="install"&&j.contract_id&&me.role!=="tech"?[["싱크대 발주","",async()=>{if(!skOrders)await fetchSink();const ex=(skOrders||[]).find(o=>o.contract_id===j.contract_id&&o.status!=="취소");sinkDlg(ex||null,ex?null:{c,k:ctrById(j.contract_id)});return true}]]:[]),...(!isNew&&c&&(c.phone||c.phone2)?[["문자","",()=>{smsDlg({c,vars:{방문일:smsDate(j.visit_date),시간:j.visit_time||"",제품:[(j.product||{}).product,(j.product||{}).size].filter(Boolean).join(" "),금액:j.cost?won0(j.cost):""},ref_type:"job",ref_id:j.id,tpl:j.visit_date&&j.status!=="완료"?"방문 안내":j.status==="완료"&&j.kind==="install"?"설치 완료":j.kind==="as"?"A/S 접수":""});return true}]]:[]),...(!isNew&&canNewJob(c)?[["복사","",()=>{jobDlg(null,c,j.kind,j);return true}]]:[]),...(!isNew&&isAdmin()?[["삭제","danger",()=>{delJobs([j.id]);return true}]]:[]),...(can?[["저장","pri",async()=>{
+    ...(isNew&&!c&&!tpl?[["새 고객 등록","gocust",()=>{const kv=(document.querySelector('#jf input[name=kind]:checked')||{}).value||j.kind;newCustomer(null,nc=>kv==="ctr"?contractDlg(nc,null):jobDlg(null,nc,kv));return true}]]:[]),...(asLike(j)&&me.role!=="tech"?[["확인요청 문자","gocust",()=>{asReqToggle(j,c);return true}]]:[]),["닫기"],...(!isNew&&j.kind==="install"&&j.contract_id&&me.role!=="tech"?[["싱크대 발주","",async()=>{if(!skOrders)await fetchSink();const ex=(skOrders||[]).find(o=>o.contract_id===j.contract_id&&o.status!=="취소");sinkDlg(ex||null,ex?null:{c,k:ctrById(j.contract_id)});return true}]]:[]),...(!isNew&&c&&(c.phone||c.phone2)?[["문자","",()=>{smsDlg({c,vars:{방문일:smsDate(j.visit_date),시간:j.visit_time||"",제품:[(j.product||{}).product,(j.product||{}).size].filter(Boolean).join(" "),금액:j.cost?won0(j.cost):""},ref_type:"job",ref_id:j.id,tpl:j.visit_date&&j.status!=="완료"?"방문 안내":j.status==="완료"&&j.kind==="install"?"설치 완료":j.kind==="as"?"A/S 접수":""});return true}]]:[]),...(!isNew&&canNewJob(c)?[["복사","",()=>{jobDlg(null,c,j.kind,j);return true}]]:[]),...(!isNew&&isAdmin()?[["삭제","danger",()=>{delJobs([j.id]);return true}]]:[]),...(can?[["저장","pri",async()=>{
      const f=fdata("jf");
      if(f.get("kind")==="ctr"){const cc=c||pickable.find(x=>x.id===f.get("custId"));if(!cc)return toast("고객을 검색해서 목록에서 골라 주세요");contractDlg(cc,null);return true}
      if(isNew&&!c){const cc=pickable.find(x=>x.id===f.get("custId"));
