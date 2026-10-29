@@ -1249,7 +1249,8 @@ function renderCtrView0(){
     const oldDone=!x.a&&(x.k.contract_type||"구매")==="구매"&&bd&&bd<st0&&x.k.stage==="완료"&&!(x.s.unpaid>0);/* 구매 건 중 결제 완료된 것만 */
     if(oldDone&&(!tg||tg==="전기마감"))return 0;
     const ti=SETTLE.indexOf(tg);if(ti>=0)return ti;if(!x.a&&(x.k.stage==="취소"||x.k.stage==="보류"))return 3;
-    if(x.a||(x.b||[]).includes("설치")||(x.b||[]).includes("당월 계약"))return bd&&bd>=en0?2:bd&&bd<st0?4:1;
+    if(x.a)return bd&&bd>=en0?2:1.5;/* 추가설치는 당월마감 밑에 따로 */
+    if((x.b||[]).includes("설치")||(x.b||[]).includes("당월 계약"))return bd&&bd>=en0?2:bd&&bd<st0?4:1;
     if((x.b||[]).some(t=>t==="예정"||t==="날짜 없음"))return 2;return 4};
   list.forEach(x=>x.g=gOf(x));
   sortCtrList(list,x=>x.g);
@@ -1264,7 +1265,7 @@ function renderCtrView0(){
   const shown=list.slice(0,ui.xAll?1e9:500);
   /* 묶음별 소계 줄 (진한 초록) */
   const [cy,cmn]=ui.cm.split("-").map(Number);const nx=cmn===12?`${cy+1}년 01월`:`${cy}년 ${String(cmn+1).padStart(2,"0")}월`;
-  const GL=["전월미수채권",`${cy}년 ${String(cmn).padStart(2,"0")}월 당월마감`,`${nx} 익월마감`,"취소,보류","전기마감 (미수)"];
+  const GL={0:"전월미수채권",1:`${cy}년 ${String(cmn).padStart(2,"0")}월 당월마감`,1.5:`${cy}년 ${String(cmn).padStart(2,"0")}월 추가설치`,2:`${nx} 익월마감`,3:"취소,보류",4:"전기마감 (미수)"};
   const labC=cols.includes("name")?"name":cols[0];
   const subRow=g=>{const xs=shown.filter(x=>x.g===g);const t={amount:0,card:0,cash:0,paid:0,unpaid:0};xs.forEach(x=>{t.amount+=Number(x.k.amount||0);t.card+=x.s.card;t.cash+=x.s.other;t.paid+=x.s.paid;if(x.s.n||x.k.stage==="미수")t.unpaid+=x.s.unpaid});
     return `<tr class="subt">${isOffice()?"<td></td>":""}<td></td>${cols.map(c=>MONEYC.has(c)?`<td class="num">${won0(t[c])}</td>`:c===labC?`<td>${esc(GL[g])} <small>(${xs.length}건)</small></td>`:"<td></td>").join("")}</tr>`};
