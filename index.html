@@ -1244,9 +1244,13 @@ function renderCtrView0(){
   let list=src.filter(x=>rowOk(x,ui.crow)&&(!ui.cct||typOf(x)===ui.cct)
     &&(!qq||[x.c.name,x.c.search_text,x.c.ceo,x.c.phone,x.c.phone2,x.k.serial,x.k.memo,x.k.approval,staffName(x.k.sales3),x.k.sales3_name].join(" ").toLowerCase().includes(qq)));
   /* 소계 묶음: 0 당월마감(이달 설치) · 1 익월마감(다음 달 이후·날짜 없음) · 2 취소,보류 · 3 전기마감(미수·이월·예전 건 결제). 소계 칸에서 직접 고르면 그 묶음 */
-  const gOf=x=>{const tg=!x.a&&x.k.settle_tag;const ti=SETTLE.indexOf(tg);if(ti>=0)return ti;if(!x.a&&(x.k.stage==="취소"||x.k.stage==="보류"))return 2;
-    const bd=baseDate(x.k);if(x.a||(x.b||[]).includes("설치")||(x.b||[]).includes("당월 계약"))return bd&&bd>=en0?1:bd&&bd<st0?3:0;
-    if((x.b||[]).some(t=>t==="예정"||t==="날짜 없음"))return 1;return 3};
+  /* 0 전월미수채권(지난달 이전 설치·이번에 완료) · 1 당월마감 · 2 익월마감 · 3 취소,보류 · 4 전기마감(아직 미수) */
+  const gOf=x=>{const tg=!x.a&&x.k.settle_tag;const bd=baseDate(x.k);
+    const oldDone=!x.a&&bd&&bd<st0&&x.k.stage==="완료"&&!(x.s.unpaid>0);
+    if(oldDone&&(!tg||tg==="전기마감"))return 0;
+    const ti=SETTLE.indexOf(tg);if(ti>=0)return ti;if(!x.a&&(x.k.stage==="취소"||x.k.stage==="보류"))return 3;
+    if(x.a||(x.b||[]).includes("설치")||(x.b||[]).includes("당월 계약"))return bd&&bd>=en0?2:bd&&bd<st0?4:1;
+    if((x.b||[]).some(t=>t==="예정"||t==="날짜 없음"))return 2;return 4};
   list.forEach(x=>x.g=gOf(x));
   sortCtrList(list,x=>x.g);
   list=cfApply("ctr",list,(c,x)=>cfText(ctrCell(c,x.k,x.c,x.s,x.b)));
@@ -1260,7 +1264,7 @@ function renderCtrView0(){
   const shown=list.slice(0,ui.xAll?1e9:500);
   /* 묶음별 소계 줄 (진한 초록) */
   const [cy,cmn]=ui.cm.split("-").map(Number);const nx=cmn===12?`${cy+1}년 01월`:`${cy}년 ${String(cmn+1).padStart(2,"0")}월`;
-  const GL=[`${cy}년 ${String(cmn).padStart(2,"0")}월 당월마감`,`${nx} 익월마감`,"취소,보류","전기마감 (미수)"];
+  const GL=["전월미수채권",`${cy}년 ${String(cmn).padStart(2,"0")}월 당월마감`,`${nx} 익월마감`,"취소,보류","전기마감 (미수)"];
   const labC=cols.includes("name")?"name":cols[0];
   const subRow=g=>{const xs=shown.filter(x=>x.g===g);const t={amount:0,card:0,cash:0,paid:0,unpaid:0};xs.forEach(x=>{t.amount+=Number(x.k.amount||0);t.card+=x.s.card;t.cash+=x.s.other;t.paid+=x.s.paid;if(x.s.n||x.k.stage==="미수")t.unpaid+=x.s.unpaid});
     return `<tr class="subt">${isOffice()?"<td></td>":""}<td></td>${cols.map(c=>MONEYC.has(c)?`<td class="num">${won0(t[c])}</td>`:c===labC?`<td>${esc(GL[g])} <small>(${xs.length}건)</small></td>`:"<td></td>").join("")}</tr>`};
@@ -3221,7 +3225,7 @@ function ctrJobBtn(c,k,isNew){if(isNew||!c||!k||!k.id)return[];
 const PROD_FULL={"1":"1채널","3":"3채널","온":"온케어","대":"대광"};
 function prodName(v){const t=String(v??"").trim();return PROD_FULL[t]||t}
 /* 소계 (당월리스트·전체리스트): 당월마감 · 익월마감 · 취소,보류 · 전기마감 */
-const SETTLE=["당월마감","익월마감","취소,보류","전기마감"];
+const SETTLE=["전월미수채권","당월마감","익월마감","취소,보류","전기마감"];
 function settleMenu(td,k,re){if(!("settle_tag" in k))return toast("소계 칸을 쓰려면 Supabase에서 phase1zn.sql을 실행해 주세요.");
   document.querySelectorAll(".stmenu").forEach(x=>x.remove());const m=document.createElement("div");m.className="stmenu";
   m.innerHTML=[...SETTLE,""].map(v=>`<button type="button" data-v="${v}" class="${v===(k.settle_tag||"")?"on":""}">${v||"비우기"}</button>`).join("");
