@@ -2569,8 +2569,20 @@ const SK_NAMES=["01. 싱크대 / 왕대","02. 작업대(T)","03. 벽선반","04.
 const SK_OPT1=["1조","2조","1단","2단","3단","ㄱ자","ㄷ자","□자"],SK_OPT2=["기본형","좌우전30","다리형","해당없음"],SK_HOLE=["3Φ 타공","5Φ 타공","해당없음"],SK_WHEEL=["2개","4개","해당없음"];
 const SK_ST=["신규접수","주문완료","입고완료","출고완료","재고등록","취소"];
 let skOrders=null,skPrices={};
+/* 규격의 ×·x를 *로 통일 (500×700×830 → 500*700*830). 숫자 사이의 것만 바꿈 */
+const SKX=/(\d)\s*[×xX＊]\s*(?=\d)/g;
+function skStar(v){return String(v??"").replace(SKX,"$1*")}
+const skHasX=v=>/\d\s*[×xX＊]\s*\d/.test(String(v||""));
+/* 저장된 발주·단가표에 ×가 남아 있으면 *로 고쳐서 저장 (사무실 계정이 열 때 한 번씩) */
+async function skFixStarOrders(){if(!isOffice()||!skOrders)return;const bad=skOrders.filter(o=>(o.items||[]).some(it=>skHasX(it.sup)||skHasX(it.note)));
+  for(const o of bad){const items=(o.items||[]).map(it=>({...it,sup:it.sup!=null?skStar(it.sup):it.sup,note:it.note!=null?skStar(it.note):it.note}));const {error}=await sb.from("sink_orders").update({items}).eq("id",o.id);if(!error)o.items=items}}
+async function skFixStarPrices(){if(!isOffice()||!skPList)return;const bad=skPList.filter(r=>skHasX(r.name));if(!bad.length)return;
+  for(const r of bad){const nn=skStar(r.name);const dup=skPList.find(x=>x!==r&&x.name===nn&&(x.opt1||"")===(r.opt1||"")&&(x.opt2||"")===(r.opt2||""));
+    if(dup&&Number(dup.price||0)===Number(r.price||0)&&Number(dup.deduct||0)===Number(r.deduct||0)){const {error}=await sb.from("sink_price_list").delete().eq("id",r.id);if(!error)skPList=skPList.filter(x=>x!==r)}
+    else{const {error}=await sb.from("sink_price_list").update({name:nn}).eq("id",r.id);if(!error)r.name=nn}}
+  skPList=skPList.slice()}
 async function fetchSink(){const {data,error}=await sb.from("sink_orders").select("*").order("order_date",{ascending:false}).order("created_at",{ascending:false}).limit(2000);
-  if(error){ui.noSink=true;skOrders=[];return}ui.noSink=false;skOrders=data||[];
+  if(error){ui.noSink=true;skOrders=[];return}ui.noSink=false;skOrders=data||[];await skFixStarOrders();
   if(isOffice()){const {data:p}=await sb.from("sink_prices").select("*");skPrices=Object.fromEntries((p||[]).map(x=>[x.order_id,x]))}}
 function skSpec(it){const nm=String(it.name||"").replace(/^\d+\.\s*/,"");const sz=[it.w,it.d,it.h].filter(v=>v!==""&&v!=null).join("*");
   return [nm,it.opt1,it.opt2&&it.opt2!=="해당없음"?it.opt2:"",it.hole&&it.hole!=="해당없음"?it.hole:"",it.wheel&&it.wheel!=="해당없음"?"바퀴 "+it.wheel:""].filter(Boolean).join(" / ")+(sz?` [${sz}]`:"")}
@@ -2582,7 +2594,7 @@ TCFG.sk={cols:()=>[["od","발주일자"],["st","진행사항"],["ow","담당자"
 function skHead(){const F=cfF("sk"),N=new Set(["qty","price","sup","vat","tot","ded"]);return TCFG.sk.cols().map(([k,l])=>`<th class="c-${k}${N.has(k)?" num":""}" data-ck="${k}">${esc(l)}<span class="fbtn${F[k]?" on":""}" data-fc="${k}" role="button" title="${esc(l)} 필터" aria-label="${esc(l)} 필터">▼</span><span class="rz" data-rz="${k}" title="끌어서 너비 조절 · 두 번 클릭하면 원래대로"></span></th>`).join("")}
 function skTxt(c,o){const E=v=>v==null||v===""||v===0?"(빈 칸)":String(v);const its=(o.items||[]).length?o.items:[{}];const per=f=>its.map((it,i)=>E(f(it,i)));
   switch(c){case"od":return E(ymd2(o.order_date));case"st":return E(o.status);case"ow":return E(o.owner_name);case"site":return E(o.site_name);
-    case"spec":return per(it=>it.sup||skSpec(it));case"qty":return per(it=>it.qty||1);case"due":return E(ymd2(o.due_date));
+    case"spec":return per(it=>skStar(it.sup)||skSpec(it));case"qty":return per(it=>it.qty||1);case"due":return E(ymd2(o.due_date));
     case"price":return per((it,i)=>{const L=skLine(o,i);return L.price?won0(L.price):""});case"sup":return per((it,i)=>{const L=skLine(o,i);return L.sup?won0(L.sup):""});
     case"vat":return per((it,i)=>{const L=skLine(o,i);return L.vat?won0(L.vat):""});case"tot":return per((it,i)=>{const L=skLine(o,i);return L.tot?won0(L.tot):""});
     case"in":return E(ymd2(o.in_date));case"out":return E(ymd2(o.out_date));case"memo":return E(o.memo);case"ded":return per((it,i)=>{const L=skLine(o,i);return L.deduct?won0(L.deduct):""})}return"(빈 칸)"}
@@ -2601,7 +2613,7 @@ async function renderSinkView(){const off=isOffice();if(!skOrders)view().innerHT
     return its.map((it,i)=>{const L=skLine(o,i);if(o.status!=="취소"){tot.sup+=L.sup;tot.vat+=L.vat;tot.tot+=L.tot;tot.deduct+=L.deduct}
       const head=i===0;const rs=n>1?` rowspan="${n}"`:"";
       return `<tr data-sk="${o.id}" class="skr${oi%2?" alt":""}${o.status==="취소"?" cx":""}">${head?`<td${rs} class="skchk">${canDel(o)?`<input type="checkbox" class="sksel" data-id="${o.id}" ${ui.sksel.has(o.id)?"checked":""} aria-label="선택">`:""}</td><td${rs}${cc("od")}>${esc(ymd2(o.order_date))}</td><td${rs}${cc("st")}><span class="tag sk-${esc(o.status)}">${esc(o.status)}</span></td><td${rs}${cc("ow")}>${esc(o.owner_name)}</td><td${rs}${cc("site")}><b>${esc(o.site_name||"")}</b></td>`:""}
-        <td class="skspec c-spec">${it.from_stock?`<span class="tag sk-재고등록" title="재고에서 사용">재고</span> `:""}${esc(it.sup||skSpec(it))}${it.note&&it.note!==it.sup?` <small class="mapt">(${esc(it.note)})</small>`:""}${it.in_date&&o.status!=="입고완료"&&o.status!=="출고완료"&&o.status!=="재고등록"?` <span class="tag sk-입고완료" title="${esc(it.sup||"")}">입고 ${esc(ymd2(it.in_date))}</span>`:""}</td><td class="num c-qty">${esc(it.qty||1)}</td>
+        <td class="skspec c-spec">${it.from_stock?`<span class="tag sk-재고등록" title="재고에서 사용">재고</span> `:""}${esc(skStar(it.sup)||skSpec(it))}${it.note&&it.note!==it.sup?` <small class="mapt">(${esc(it.note)})</small>`:""}${it.in_date&&o.status!=="입고완료"&&o.status!=="출고완료"&&o.status!=="재고등록"?` <span class="tag sk-입고완료" title="${esc(it.sup||"")}">입고 ${esc(ymd2(it.in_date))}</span>`:""}</td><td class="num c-qty">${esc(it.qty||1)}</td>
         ${head?`<td${rs}${cc("due")}>${esc(ymd2(o.due_date))}</td>`:""}
         ${off?`<td class="num c-price${L.est?" skest":""}" ${L.est?'title="단가표 기준 (발주서를 저장하면 확정)"':""}>${L.price?won0(L.price):""}</td><td class="num c-sup${L.est?" skest":""}">${L.sup?won0(L.sup):""}</td><td class="num c-vat${L.est?" skest":""}">${L.vat?won0(L.vat):""}</td><td class="num c-tot${L.est?" skest":""}">${L.tot?won0(L.tot):""}</td>`:""}
         ${head?`<td${rs}${cc("in")}>${esc(ymd2(o.in_date))}</td><td${rs}${cc("out")}>${esc(ymd2(o.out_date))}</td><td${rs} class="wrap memo c-memo"><div class="clamp">${esc(o.memo||"")}</div></td>`:""}
@@ -2679,7 +2691,7 @@ const skOptN=v=>String(v||"").replace(/\s+/g,"").replace(/^n자$/i,"ㄷ자");
 const skOpt2N=v=>{v=String(v||"").replace(/\s+/g,"");return !v||v==="해당없음"||v==="-"?"기본형":v};
 function skNormItem(it){return{cat:skCatOf(it.name),opt1:skOptN(it.opt1),opt2:skOpt2N(it.opt2),w:skNum(it.w),d:skNum(it.d),h:skNum(it.h)}}
 /* 거래처 품명 글자 → 같은 모양 */
-function skParseSup(raw){let t=String(raw||"").replace(/\s+/g," ").trim();
+function skParseSup(raw){let t=skStar(String(raw||"")).replace(/\s+/g," ").trim();
   if(/^수선\s*:/.test(t))return{repair:true,raw:t,cat:""};
   t=t.replace(/^(씽|싱|쌩)크대\s*:\s*/,"");
   let dims=[];const br=t.match(/\[([^\]]*)\]/);
@@ -2713,7 +2725,7 @@ function skSupToItem(p,q){const nm=SK_NAMES.find(n=>skCatOf(n)===p.cat)||"";retu
 /* ---------- 단가표 ---------- */
 let skPList=null;
 async function fetchSkPrice(){const {data,error}=await sb.from("sink_price_list").select("*").order("name").order("opt1").order("w_max",{nullsFirst:false});
-  if(error){ui.noSkPrice=true;skPList=[];return}ui.noSkPrice=false;skPList=(data||[]).sort((a,b)=>KO.compare(a.name||"",b.name||"")||KO.compare(a.opt1||"",b.opt1||"")||KO.compare(a.opt2||"",b.opt2||"")||(a.w_max??1e9)-(b.w_max??1e9)||(a.d??0)-(b.d??0))}
+  if(error){ui.noSkPrice=true;skPList=[];return}ui.noSkPrice=false;skPList=(data||[]).sort((a,b)=>KO.compare(a.name||"",b.name||"")||KO.compare(a.opt1||"",b.opt1||"")||KO.compare(a.opt2||"",b.opt2||"")||(a.w_max??1e9)-(b.w_max??1e9)||(a.d??0)-(b.d??0));await skFixStarPrices()}
 /* 품목에 맞는 단가표 줄: 같은 품명, 옵션이 같거나 비어 있고, W가 'W 이하' 안에 드는 것 중 가장 자세한 것 */
 /* 단가표 줄 중 품명이 '01. …' 꼴이 아니면 나인주방 품목명 그대로 적은 줄 (엑셀 단가표 방식) */
 const skTxtN=v=>String(v||"").replace(/^(씽|싱|쌩)크대\s*:\s*/,"").replace(/[×xX＊]/g,"*").replace(/\s+/g,"").toLowerCase();
@@ -2834,7 +2846,7 @@ function sinkHistImport(fname,wb){const os=sinkHistParse(wb);if(!os||!os.length)
     let k=null;if(c){const ks=custContracts(c.id).filter(x=>x.stage!=="취소");k=ks.sort((a,b)=>Math.abs(new Date(a.contract_date||"2000-01-01")-new Date(o.od||"2000-01-01"))-Math.abs(new Date(b.contract_date||"2000-01-01")-new Date(o.od||"2000-01-01")))[0]||null;linked++}
     const w=whoIs(o.owner);stc[status]=(stc[status]||0)+1;
     plan.push({row:{order_date:o.od||today(),owner:w.id||null,owner_name:w.name||o.owner,customer_id:c?c.id:null,contract_id:k?k.id:null,site_name:o.site,due_date:o.due||null,status,items:o.items,in_date:o.ind||null,out_date:outD||null,
-      memo:[o.memo,outT].filter(Boolean).join(" / "),spec_text:o.items.map(it=>it.sup+(Number(it.qty||1)>1?` ×${it.qty}`:"")).join(", ")},lines:o.lines})});
+      memo:[o.memo,outT].filter(Boolean).join(" / "),spec_text:o.items.map(it=>skStar(it.sup)+(Number(it.qty||1)>1?` ×${it.qty}`:"")).join(", ")},lines:o.lines})});
   const nItems=plan.reduce((a,p)=>a+p.row.items.length,0);
   openDlg("발주 엑셀 가져오기",`<p><b>${esc(fname)}</b></p><table class="stafft"><tbody><tr><td>새 발주</td><td>${plan.length}건 (품목 ${nItems}개)</td></tr><tr><td>고객과 연결</td><td>${linked}건</td></tr><tr><td>이미 있는 발주 (건너뜀)</td><td>${dup}건</td></tr>
      <tr><td>진행사항</td><td>${Object.entries(stc).map(([k,v])=>`${esc(k)} ${v}`).join(" · ")}</td></tr></tbody></table>
