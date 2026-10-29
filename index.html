@@ -207,6 +207,7 @@ body.resizing,body.resizing *{cursor:col-resize!important;user-select:none}
 .detq{display:flex;align-items:center;gap:6px}.detq input{width:70px;text-align:center}.detq .btn{min-width:34px}
 .cptabs{margin-bottom:4px}.cptabs button{font-weight:600}
 .wt td.stc{text-align:center;white-space:nowrap;cursor:pointer}.wt td.stc.on{background:#14532d!important;color:#fff!important;font-weight:700}.stmenu{position:absolute;z-index:9999;background:#fff;border:1px solid #ccd;border-radius:8px;box-shadow:0 6px 20px rgba(0,0,0,.18);padding:4px;display:grid;gap:2px;min-width:110px}.stmenu button{border:0;background:none;text-align:left;padding:7px 10px;border-radius:6px;font:inherit;cursor:pointer}.stmenu button:hover{background:#eef2f7}.stmenu button.on{background:#14532d;color:#fff}
+.wt.ct tr.subt td{background:#1f4d2b!important;color:#fff!important;font-weight:700;cursor:default;border-color:#1f4d2b}.wt.ct tr.subt td small{color:#d1fae5;font-weight:400}
 .btn.close{background:#f97316;border-color:#f97316;color:#fff}.btn.close:hover{background:#ea580c;border-color:#ea580c}
 .wt.skst,.wt.sk2{width:auto;min-width:min(100%,720px)}.wt.sk2 tbody tr{cursor:pointer}.wt.sk2 tbody tr:hover td{background:var(--accent-weak)}.wt.sk2 tr.cx0 td{color:#999}.skstk{margin-top:6px;padding-top:6px;border-top:1px dashed var(--line)}.skstk select{max-width:100%}
 .wt.sk td{vertical-align:middle}.wt.sk .skchk{width:34px;text-align:center}.wt.sk tr.alt td{background:#F3F7FC}.wt.sk tr.cx td{color:#999;text-decoration:line-through}.wt.sk td.skded{color:#1d4ed8}.wt.sk tbody tr{cursor:pointer}.wt.sk tbody tr:hover td{background:var(--accent-weak)}
@@ -1209,7 +1210,7 @@ function ctrCell(col,k,c,st,basis){
     case"last":return `<td>${esc(ymd2(st.last))}</td>`;
     case"approval":return `<td>${esc(k.approval||k.pay_method||"")}</td>`;
     case"tax":{const t=k.tax||{};return `<td>${esc(t.date?ymd2(t.date):t.type||"")}</td>`}
-    case"settle":{if(k.__job)return "<td></td>";const v=k.settle_tag||"";return `<td class="stc ${v?"on":""}" data-settle="${k.id}" title="${isOffice()?"눌러서 소계 고르기":""}">${esc(v)}</td>`}
+    case"settle":{if(k.__job)return "<td></td>";const v=k.settle_tag||"";return `<td class="stc ${v?"on":""}" data-settle="${k.id}" title="${isOffice()?"눌러서 소계 묶음 직접 지정 (비우면 자동)":""}">${esc(v)}</td>`}
     case"chk_cust":case"chk_slip":case"chk_sales":case"chk_month":{if(k.__job)return "<td></td>";const v=k[col]||"";return `<td class="ckc ${v==="OK"?"ok":v?"note":""}" data-chk="${col}" data-kid="${k.id}" title="${isOffice()?"누르면 OK ↔ 빈칸":""}">${esc(v)}</td>`}
     case"memo":return `<td class="wrap memo" title="${esc(k.memo||"")}"><div class="clamp">${esc(k.memo||"")}</div></td>`;
   }
@@ -1242,7 +1243,12 @@ function renderCtrView0(){
   const qq=ui.cq.trim().toLowerCase();
   let list=src.filter(x=>rowOk(x,ui.crow)&&(!ui.cct||typOf(x)===ui.cct)
     &&(!qq||[x.c.name,x.c.search_text,x.c.ceo,x.c.phone,x.c.phone2,x.k.serial,x.k.memo,x.k.approval,staffName(x.k.sales3),x.k.sales3_name].join(" ").toLowerCase().includes(qq)));
-  sortCtrList(list);
+  /* 소계 묶음: 0 당월마감(이달 설치) · 1 익월마감(다음 달 이후·날짜 없음) · 2 취소,보류 · 3 전기마감(미수·이월·예전 건 결제). 소계 칸에서 직접 고르면 그 묶음 */
+  const gOf=x=>{const tg=!x.a&&x.k.settle_tag;const ti=SETTLE.indexOf(tg);if(ti>=0)return ti;if(!x.a&&(x.k.stage==="취소"||x.k.stage==="보류"))return 2;
+    const bd=baseDate(x.k);if(x.a||(x.b||[]).includes("설치")||(x.b||[]).includes("당월 계약"))return bd&&bd>=en0?1:bd&&bd<st0?3:0;
+    if((x.b||[]).some(t=>t==="예정"||t==="날짜 없음"))return 1;return 3};
+  list.forEach(x=>x.g=gOf(x));
+  sortCtrList(list,x=>x.g);
   list=cfApply("ctr",list,(c,x)=>cfText(ctrCell(c,x.k,x.c,x.s,x.b)));
   ui.csel=ui.csel||new Set();[...ui.csel].forEach(id=>{if(!list.some(x=>x.k.id===id))ui.csel.delete(id)});
   /* 영업: 무상증정·무상임대·경품·양도 칸은 숨김 */
@@ -1252,6 +1258,12 @@ function renderCtrView0(){
     <tr><th>합계</th>${[...TY,""].map(t=>`<td class="cl ${ui.crow===""&&ui.cct===t?"on":""}" data-r="" data-t="${t}"><b>${cnt("",t)}</b></td>`).join("")}</tr></tbody></table>`;
   const cols=getCols();const lab=Object.fromEntries(CCOLS.map(c=>[c[0],c[1]]));
   const shown=list.slice(0,ui.xAll?1e9:500);
+  /* 묶음별 소계 줄 (진한 초록) */
+  const [cy,cmn]=ui.cm.split("-").map(Number);const nx=cmn===12?`${cy+1}년 01월`:`${cy}년 ${String(cmn+1).padStart(2,"0")}월`;
+  const GL=[`${cy}년 ${String(cmn).padStart(2,"0")}월 당월마감`,`${nx} 익월마감`,"취소,보류","전기마감 (미수)"];
+  const labC=cols.includes("name")?"name":cols[0];
+  const subRow=g=>{const xs=shown.filter(x=>x.g===g);const t={amount:0,card:0,cash:0,paid:0,unpaid:0};xs.forEach(x=>{t.amount+=Number(x.k.amount||0);t.card+=x.s.card;t.cash+=x.s.other;t.paid+=x.s.paid;if(x.s.n||x.k.stage==="미수")t.unpaid+=x.s.unpaid});
+    return `<tr class="subt">${isOffice()?"<td></td>":""}<td></td>${cols.map(c=>MONEYC.has(c)?`<td class="num">${won0(t[c])}</td>`:c===labC?`<td>${esc(GL[g])} <small>(${xs.length}건)</small></td>`:"<td></td>").join("")}</tr>`};
   const tot={amount:0,card:0,cash:0,paid:0,unpaid:0};shown.forEach(x=>{tot.amount+=Number(x.k.amount||0);tot.card+=x.s.card;tot.cash+=x.s.other;tot.paid+=x.s.paid;if(x.s.n||x.k.stage==="미수")tot.unpaid+=x.s.unpaid});
   view().innerHTML=`${ui.noPay?`<div class="sec" style="max-width:none"><p class="warnbox">입금 내역 칸이 아직 없습니다. Supabase SQL Editor에서 <b>phase1h.sql</b>을 실행하면 입금·미수금·마감 체크를 쓸 수 있습니다.</p></div>`:""}
    <div class="sumwrap"><div style="display:grid;gap:8px;align-content:start"><div style="display:flex;gap:8px;align-items:center"><h2 style="margin:0;font-size:18px">당월리스트</h2>
@@ -1266,7 +1278,7 @@ function renderCtrView0(){
      <span class="mapt">${ui.ckpi&&KPI[ui.ckpi]?esc(KPI[ui.ckpi][0])+" · ":""}${ui.crow?esc(CROWS.find(y=>y[0]===ui.crow)[1])+" · ":""}${ui.cct?esc(ui.cct)+" · ":""}${list.length}건</span>
      <span style="flex:1"></span>${isOffice()&&hasMonthCol()?`<button class="btn" type="button" id="cMonth" disabled>월마감 (0)</button>`:""}${isOffice()?`<label class="chip"><input type="checkbox" id="cSelAll">전체 선택</label>`:""}${isAdmin()?`<button class="btn danger" type="button" id="cDel" disabled>선택 삭제 (0)</button>`:""}${cfClearBtn("ctr")}<button class="btn" type="button" id="cSort">정렬</button><button class="btn" type="button" id="cCols">입력화면설정</button>${isOffice()||me.role==="sales"?`<button class="btn pri" type="button" id="cNewK">+ 신규접수</button>`:""}</div>
    <div class="wrapx vis" style="padding-top:10px"><div class="wtbox"><table class="wt ct"><thead><tr>${isOffice()?"<th></th>":""}<th>순번</th>${colHead(cols,"ctr",MONEYC)}</tr></thead><tbody>
-    ${shown.map((x,i)=>`<tr data-ck="${x.k.id}" class="rs-${esc(ctrRowCls(x.k))}">${isOffice()?`<td><input type="checkbox" class="csel" data-id="${x.k.id}" ${ui.csel.has(x.k.id)?"checked":""} aria-label="선택"></td>`:""}<td>${i+1}</td>${cols.map(c=>ctrCell(c,x.k,x.c,x.s,x.b)).join("")}</tr>`).join("")||`<tr><td colspan="${cols.length+2}" class="mapt" style="cursor:default">해당하는 계약이 없습니다.</td></tr>`}</tbody>
+    ${shown.map((x,i)=>`<tr data-ck="${x.k.id}" class="rs-${esc(ctrRowCls(x.k))}">${isOffice()?`<td><input type="checkbox" class="csel" data-id="${x.k.id}" ${ui.csel.has(x.k.id)?"checked":""} aria-label="선택"></td>`:""}<td>${i+1}</td>${cols.map(c=>ctrCell(c,x.k,x.c,x.s,x.b)).join("")}</tr>${!shown[i+1]||shown[i+1].g!==x.g?subRow(x.g):""}`).join("")||`<tr><td colspan="${cols.length+2}" class="mapt" style="cursor:default">해당하는 계약이 없습니다.</td></tr>`}</tbody>
     ${shown.length?`<tfoot><tr>${isOffice()?"<th></th>":""}<th></th>${cols.map(c=>`<th class="${MONEYC.has(c)?"num":""}">${MONEYC.has(c)?won0(tot[c]):c===cols[0]?"합계":""}</th>`).join("")}</tr></tfoot>`:""}</table></div>
     ${list.length>500?`<p class="mapt">앞의 500건만 보입니다. 검색으로 좁혀 주세요.</p>`:""}</div>`;
   applyColW(cols);bindColResize(cols);
@@ -3182,12 +3194,12 @@ function sortVal(col,x){const k=x.k,c=x.c,s=x.s;
     case"amount":return Number(k.amount||0);case"card":return s.card;case"cash":return s.other;case"paid":return s.paid;case"unpaid":return s.n||k.stage==="미수"?s.unpaid:-1e15;
     case"stage":return STORD.indexOf(k.stage);case"ctype":return CTYPES.indexOf(k.contract_type||"구매");case"name":return c.name||"";}
   return ctrCell(col,k,c,s,x.b).replace(/<[^>]*>/g,"").replace(/&amp;/g,"&").trim()}
-function sortCtrList(list){const S=getSort();const cache=new Map();const v=(x,col)=>{const key=col;let m=cache.get(x);if(!m){m={};cache.set(x,m)}if(!(key in m))m[key]=sortVal(col,x);return m[key]};
+function sortCtrList(list,gf){const S=getSort();const G=gf||(()=>0);const cache=new Map();const v=(x,col)=>{const key=col;let m=cache.get(x);if(!m){m={};cache.set(x,m)}if(!(key in m))m[key]=sortVal(col,x);return m[key]};
   /* 묶음 순서: 당월 설치 → 당월 추가설치(당월 맨 끝) → 이달 결제된 예전 건 → 미수·기타 */
   const grp=true;const bo=x=>!x.b?0:x.a?0.5:x.b.includes("설치")?0:x.b.includes("결제")?1:2;
   /* 각 묶음 안에서 보류·취소 → 철거완료는 맨 뒤로 */
   const sb_=x=>{const t=x.a?"":x.k.stage;return t==="보류"||t==="취소"?1:(t==="철거완료"||t==="철거")&&!(x.b&&x.b.includes("설치"))?3:0};/* 철거예정, 당월 설치 후 철거완료는 날짜 순서대로 함께 */
-  list.sort((a,b)=>{if(grp&&bo(a)!==bo(b))return bo(a)-bo(b);if(sb_(a)!==sb_(b))return sb_(a)-sb_(b);for(const {c,d} of S){const A=v(a,c),B=v(b,c);const ea=A===""||A==null,eb=B===""||B==null;if(ea&&eb)continue;if(ea)return 1;if(eb)return -1;
+  list.sort((a,b)=>{if(G(a)!==G(b))return G(a)-G(b);if(grp&&bo(a)!==bo(b))return bo(a)-bo(b);if(sb_(a)!==sb_(b))return sb_(a)-sb_(b);for(const {c,d} of S){const A=v(a,c),B=v(b,c);const ea=A===""||A==null,eb=B===""||B==null;if(ea&&eb)continue;if(ea)return 1;if(eb)return -1;
     const r=typeof A==="number"&&typeof B==="number"?A-B:KO.compare(String(A),String(B));if(r)return r*d}return regCmp(a.k,b.k)})}
 function sortPicker(onDone){let cur=getSort().map(x=>({...x}));
   const opts=v=>`<option value="">(없음)</option><option value="reg" ${v==="reg"?"selected":""}>접수한 순서 (등록순)</option>`+CCOLS.map(c=>`<option value="${c[0]}" ${c[0]===v?"selected":""}>${esc(c[1])}</option>`).join("");
