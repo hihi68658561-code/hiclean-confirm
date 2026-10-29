@@ -2463,7 +2463,7 @@ function addXlsBtn(){const v=ui.view;if(!XSEL[v]||!isOffice()||!window.XLSX)retu
   tb=tb||view().querySelector(".toolbar");if(!tb)return;const b=document.createElement("button");b.type="button";b.className="btn";b.id="xlsDown";b.textContent="엑셀 다운로드";b.onclick=()=>exportView();tb.appendChild(b);addPrintBtn(tb);addSetlBtn(tb)}
 /* 당월 설치·A/S, 당월리스트: 체크한 건의 확인서를 한 번에 인쇄 */
 /* 당월리스트: 싱크·부자재 정산 엑셀 (설치 1건 = 제품·싱크 품목·부자재·설치비 여러 줄) */
-const SETL_DEF={활성제:21000,수저력:12000,현판:0,사용안내판:0,설치비:400000};
+const SETL_DEF={활성제:21000,수저력:12000,현판:0,사용안내판:0,설치비:400000,"설치비(수압식만)":200000};
 function setlPrices(){try{return Object.assign({},SETL_DEF,JSON.parse(localStorage.getItem("hc.setl")||"{}"))}catch(e){return{...SETL_DEF}}}
 function addSetlBtn(tb){if(ui.view!=="ctrm"||!isOffice()||document.getElementById("setlBtn"))return;const b=document.createElement("button");b.type="button";b.className="btn";b.id="setlBtn";b.textContent="정산 엑셀";b.title="싱크·부자재 정산 양식으로 내려받기";b.onclick=setlDlg;tb.appendChild(b)}
 function setlDlg(){const P=setlPrices();const ym=thisMonth();
@@ -2490,7 +2490,8 @@ async function setlExport(ym,P){if(!window.XLSX)return toast("엑셀 도구를 �
     line([prodName(k.product),k.size].filter(Boolean).join(" ")||"제품",0,"","");
     ords.forEach(o=>(o.items||[]).forEach((it,i)=>{const L=skLine(o,i);line(it.sup||skSpec(it),L.price,Number(it.qty||1)||1,it.from_stock?"재고사용":"")}));
     String(j.parts||"").split(/\s*[,/]\s*/).map(x=>x.trim()).filter(Boolean).forEach(t=>{const m=t.match(/^(.*?)(\d+)\s*(개|통|ea)?$/i);const nm=m?m[1].trim():t,q=m?+m[2]:1;const [n2,pr]=pmap(nm);line(n2,pr,q,"")});
-    line("설치비",P.설치비,1,"")});
+    /* 수압식만 설치하면 설치비 따로 */const washOnly=/수압식/.test(String(k.product||""))||(!String(k.product||"").trim()&&k.wash_added);
+    line("설치비",washOnly?P["설치비(수압식만)"]:P.설치비,1,"")});
   const ws=XLSX.utils.aoa_to_sheet(rows);ws["!merges"]=[{s:{r:0,c:0},e:{r:0,c:H.length-1}}];
   for(let R=2;R<rows.length;R++)[7,9,11].forEach(C=>{const a=XLSX.utils.encode_cell({r:R,c:C});if(ws[a]&&typeof ws[a].v==="number")ws[a].z="#,##0"});
   ws["!cols"]=[5,10,10,14,9,30,38,10,6,11,10,11,16].map(w=>({wch:w}));
