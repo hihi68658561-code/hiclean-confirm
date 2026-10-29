@@ -3493,11 +3493,13 @@ function jobDlg(j,c,kind,tpl,preset){
    <div class="f mapt">담당 기사 ${off?"(여러 명 선택 가능)":""}</div>
    <div class="chk">${techs.map(t=>`<label><input type="checkbox" name="tech" value="${t.user_id}" ${(j.techs||[]).includes(t.user_id)?"checked":""} ${off?"":"disabled"}>${esc(t.name)}</label>`).join("")||`<span class="mapt">등록된 기사가 없습니다. ‘직원’ 화면에서 기사를 등록하세요.</span>`}</div>
    <label class="f">${j.kind==="as"?"불편사항·접수 내용":"요청 사항"}<textarea name="symptom" ${(off||isNew)?"":"readonly"}>${esc(j.symptom)}</textarea></label>
-   <label class="f">처리 내용<textarea name="result" ${can?"":"readonly"}>${esc(j.result)}</textarea></label>
+   ${(()=>{/* 교체부품 체크 (A/S류): LCD·파워·FET·기타(직접 입력) */const toks=String(j.parts||"").split(/\s*[,/·]\s*/).map(x=>x.trim()).filter(Boolean);const std=["LCD","파워","FET"];const has=t=>toks.some(x=>x.toUpperCase()===t.toUpperCase());const etc=toks.filter(x=>!std.some(t=>t.toUpperCase()===x.toUpperCase())).join(", ");
+     return `<div id="partsBox" ${asLike(j)?"":"hidden"}><div class="f mapt">교체부품</div><div class="chk">${std.map(t=>`<label><input type="checkbox" name="ap" value="${t}" ${has(t)?"checked":""} ${can?"":"disabled"}>${t}</label>`).join("")}<label><input type="checkbox" name="ap_etc" id="apEtc" ${etc?"checked":""} ${can?"":"disabled"}>기타</label><input name="ap_etc_t" id="apEtcT" value="${esc(etc)}" placeholder="기타 부품 직접 입력" ${can?"":"readonly"} style="display:${etc?"inline-block":"none"};min-width:180px"></div></div>`})()}
+   <label class="f">내용<textarea name="result" ${can?"":"readonly"}>${esc(j.result)}</textarea></label>
    <fieldset id="asBox" style="padding:10px 12px" ${asLike(j)?"":"hidden"}><legend>A/S·이전설치 제품·조치</legend>
      <div class="g3">${inp("as_product","제품",p.product,"text",!(off||isNew),'list="pdList2"')}${inp("as_size","규격",p.size,"text",!(off||isNew))}${inp("as_serial","시리얼",p.serial,"text",!(off||isNew))}</div>
      <div class="g3">${(()=>{_instMap=null;const d=asInstDate(j);const ro=!(off||isNew);const used=!d&&/중고/.test(p.install_note||"");return `<div class="f"><span>설치일</span><input name="as_idate" type="date" value="${esc(d)}" ${ro||used?"readonly":""} aria-label="설치일"></div><div class="f"><span>중고구매 여부</span><span class="chk" style="padding:0"><label style="padding:6px 10px"><input type="checkbox" name="as_used" ${used?"checked":""} ${ro?"disabled":""}>중고구매 (설치일 없음)</label></span></div>`})()}${inp("action","조치방법",j.action||(can&&asx?"방문조치":""),"text",!can||!asx,'list="actList" onfocus="this.select()"')}</div>
-     ${asx?`<div class="g3">${inp("as_parts","교체부품",j.parts||"","text",!can,'placeholder="예: LCD, 파워"')}${inp("distance","거리(km)",j.distance??"","number",!can)}${sel("satisfaction","만족도",[["","(선택)"],["상","상"],["중","중"],["하","하"]],j.satisfaction||"",!can)}</div>`:`<div class="g3">${inp("as_parts","교체부품",j.parts||"","text",!can,'placeholder="예: LCD, 파워"')}<span></span><span></span></div><p class="mapt" style="margin:0">조치방법·출장비·부품비·거리·만족도·세금계산서 칸은 Supabase에서 phase1q.sql을 실행하면 쓸 수 있습니다.</p>`}
+     ${asx?"":`<p class="mapt" style="margin:0">조치방법·출장비·부품비·거리·만족도·세금계산서 칸은 Supabase에서 phase1q.sql을 실행하면 쓸 수 있습니다.</p>`}
      ${p.install_note&&!/중고/.test(p.install_note)?`<p class="mapt" style="margin:0">엑셀 설치일 칸: ${esc(p.install_note)}</p>`:""}
      <datalist id="actList">${AS_ACTS.map(x=>`<option value="${esc(x)}">`).join("")}</datalist><datalist id="pdList2">${[...new Set(contracts.map(x=>x.product).filter(Boolean))].map(x=>`<option value="${esc(x)}">`).join("")}</datalist></fieldset>
    <fieldset id="payBox" style="padding:10px 12px" ${asLike(j)||j.kind==="addon"?"":"hidden"}><legend>비용·결제</legend>
@@ -3532,11 +3534,11 @@ function jobDlg(j,c,kind,tpl,preset){
      if(asLike(j)){Object.assign(pt,{paid_type:f.get("paid_type")||"",cost:Number(f.get("cost")||0)||0,pay_status:f.get("pay_status")||"",pay_method:f.get("pay_method")||"",pay_date:f.get("pay_date")||null,pay_name:(f.get("pay_name")||"").trim(),pay_memo:(f.get("pay_memo")||"").trim()});
        if(pt.paid_type==="무상"){pt.cost=0;pt.pay_status="";pt.pay_method=""}else{if(pt.cost&&!pt.paid_type)pt.paid_type="유상";if(pt.pay_method&&!pt.pay_status&&pt.cost)pt.pay_status="완료";if(pt.pay_status==="완료"&&!pt.pay_date)pt.pay_date=today()}
        if(off)pt.closed=!!f.get("closed");
-       pt.parts=(f.get("as_parts")||"").trim();
+       {const ps=f.getAll("ap");if(f.get("ap_etc")){const t=(f.get("ap_etc_t")||"").trim();if(t)ps.push(t)}pt.parts=ps.join(", ")}
        if(off||isNew){_instMap=null;const base=asInstDate(Object.assign({},j,{product:{}}));const iv=f.get("as_idate")||"";const pr=Object.assign({},j.product||{},{product:(f.get("as_product")||"").trim(),size:(f.get("as_size")||"").trim(),serial:(f.get("as_serial")||"").trim()});
          if(!pr.product&&!pr.size&&!pr.serial){const k0=ctrById(j.contract_id)||custContracts(j.customer_id)[0];if(k0)Object.assign(pr,{product:k0.product||"",size:k0.size||"",serial:k0.serial||""})}
          if(f.get("as_used")){delete pr.install_date;pr.install_note="중고구매"}else{if(/중고/.test(pr.install_note||""))delete pr.install_note;if(iv&&iv!==base){pr.install_date=iv;delete pr.install_note}else delete pr.install_date}pt.product=pr}
-       if(asx){const nn=x=>Number(f.get(x)||0)||0;Object.assign(pt,{action:(f.get("action")||"").trim(),trip_fee:nn("trip_fee"),part_fee:nn("part_fee"),distance:f.get("distance")===""||f.get("distance")==null?null:nn("distance"),satisfaction:f.get("satisfaction")||""});
+       if(asx){const nn=x=>Number(f.get(x)||0)||0;Object.assign(pt,{action:(f.get("action")||"").trim(),trip_fee:nn("trip_fee"),part_fee:nn("part_fee"),...(f.has("distance")?{distance:f.get("distance")===""?null:nn("distance")}:{}),...(f.has("satisfaction")?{satisfaction:f.get("satisfaction")||""}:{})});
          if(off&&f.has("tax_date"))pt.tax_date=f.get("tax_date")||null;if(hasDet()&&f.has("det_qty")){pt.det_qty=nn("det_qty");pt.det_fee=nn("det_fee")}
          if(!pt.cost&&pt.paid_type!=="무상"){pt.cost=pt.trip_fee+pt.part_fee+(pt.det_fee||0);if(pt.cost&&!pt.paid_type)pt.paid_type="유상"}}
      }else{pt.sink_status=f.get("sink_status")||"";pt.sink_memo=f.get("sink_memo")||"";pt.parts=f.get("parts")||"";
@@ -3570,6 +3572,7 @@ function jobDlg(j,c,kind,tpl,preset){
     /* 유상이면 출장비 기본 50,000원 (직접 고칠 수 있음) */
     const tripDef=()=>{if(pt&&pt.value==="유상"&&!a.value){a.value=AS_TRIP_DEFAULT;go()}};if(pt)pt.addEventListener("change",tripDef);if(!n(tot))tripDef();
     tot.title="출장비+부품비+세제 금액 자동 합계 (직접 고칠 수도 있음)"})();
+  {const ce=document.getElementById("apEtc"),ct=document.getElementById("apEtcT");if(ce&&ct)ce.onchange=()=>{ct.style.display=ce.checked?"inline-block":"none";if(ce.checked)ct.focus()}}
   /* 시간 칸: 입력을 마치면 오전·오후 붙여서 보기 좋게 */
   document.querySelectorAll('#jf [name="visit_time"],#jf [name="end_time"]').forEach(el=>{if(el.readOnly)return;el.addEventListener("blur",()=>{el.value=fmtTime(el.value)});
     /* 누르면 전체 선택 → 바로 새로 입력 (클릭으로 선택이 풀리지 않게 첫 mouseup은 막음) */
@@ -3592,7 +3595,7 @@ function jobDlg(j,c,kind,tpl,preset){
     _instMap=null;const d=asInstDate({customer_id:cc.id,product:{}});const di=q("as_idate");if(di&&!di.value&&d)di.value=d})}
   document.querySelectorAll('#jf input[name=kind]').forEach(x=>x.onchange=()=>{const isC=x.value==="ctr";document.getElementById("jBody").style.display=isC?"none":"grid";document.getElementById("jCtrHint").style.display=isC?"block":"none";
     if(isC){const cc=c||pickable.find(y=>y.id===(document.getElementById("jcId")||{}).value)||null;contractDlg(cc,null,null,{pick:!cc,intake:true});return}
-    const as=x.value==="as"||x.value==="move"||x.value==="etc";{const kl_=document.getElementById("jKL");if(kl_){kl_.style.display=x.value==="etc"?"inline-block":"none";if(x.value==="etc")setTimeout(()=>kl_.focus(),0)}}document.getElementById("payBox").hidden=!(as||x.value==="addon");document.getElementById("asBox").hidden=!as;document.getElementById("sinkBox").hidden=as;document.getElementById("addonBox").hidden=x.value!=="addon";
+    const as=x.value==="as"||x.value==="move"||x.value==="etc";{const pb=document.getElementById("partsBox");if(pb)pb.hidden=!as}{const kl_=document.getElementById("jKL");if(kl_){kl_.style.display=x.value==="etc"?"inline-block":"none";if(x.value==="etc")setTimeout(()=>kl_.focus(),0)}}document.getElementById("payBox").hidden=!(as||x.value==="addon");document.getElementById("asBox").hidden=!as;document.getElementById("sinkBox").hidden=as;document.getElementById("addonBox").hidden=x.value!=="addon";
     const t=document.getElementById("jf").querySelector('textarea[name=symptom]');if(t)t.previousSibling.textContent=as?"불편사항·접수 내용":"요청 사항";
     document.getElementById("dlgH").textContent=`${nTitle?"신규접수":KLABEL[x.value]+" "+(isNew?"접수":"작업")}${j.customer_name?" · "+j.customer_name:""}`;
     const jk=document.getElementById("jpKind");if(jk&&JOBPHOTO[x.value])jk.value=JOBPHOTO[x.value]});
