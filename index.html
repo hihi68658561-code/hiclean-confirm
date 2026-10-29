@@ -2467,7 +2467,7 @@ function addXlsBtn(){const v=ui.view;if(!XSEL[v]||!isOffice()||!window.XLSX)retu
   tb=tb||view().querySelector(".toolbar");if(!tb)return;const b=document.createElement("button");b.type="button";b.className="btn";b.id="xlsDown";b.textContent="엑셀 다운로드";b.onclick=()=>exportView();tb.appendChild(b);addPrintBtn(tb);addSetlBtn(tb)}
 /* 당월 설치·A/S, 당월리스트: 체크한 건의 확인서를 한 번에 인쇄 */
 /* 당월리스트: 싱크·부자재 정산 엑셀 (설치 1건 = 제품·싱크 품목·부자재·설치비 여러 줄) */
-const SETL_DEF={활성제:21000,수저랙:12000,현판:0,사용안내판:0,설치비:400000,"설치비(수압식만)":200000};
+const SETL_DEF={활성제:21000,수저랙:12000,세로바:27000,현판:0,사용안내판:0,설치비:400000,"설치비(수압식만)":200000};
 function setlPrices(){try{const o=JSON.parse(localStorage.getItem("hc.setl")||"{}");if("수저력" in o){if(!("수저랙" in o))o.수저랙=o.수저력;delete o.수저력}return Object.assign({},SETL_DEF,o)}catch(e){return{...SETL_DEF}}}
 function addSetlBtn(tb){if(ui.view!=="ctrm"||!isOffice()||document.getElementById("setlBtn"))return;const b=document.createElement("button");b.type="button";b.className="btn";b.id="setlBtn";b.textContent="정산 엑셀";b.title="싱크·부자재 정산 양식으로 내려받기";b.onclick=setlDlg;tb.appendChild(b)}
 function setlDlg(){const P=setlPrices();const ym=thisMonth();
@@ -2483,7 +2483,7 @@ async function setlExport(ym,P){if(!window.XLSX)return toast("엑셀 도구를 �
   if(!js.length)return toast("그 달에 설치 완료된 건이 없습니다");
   const H=["NO","발주일자","설치일자","설치팀","영업담당","업체명","품목명[규격]","단가","수량","공급가액","부가세액","합계","비고"];
   const rows=[[`${+ym.slice(5)}월 싱크 및 부자재 정산`],H];let no=0;
-  const pmap=n=>{const t=String(n).replace(/\s/g,"");if(/세제|활성제/.test(t))return["활성제",P.활성제];if(/수저/.test(t))return["수저랙",P.수저랙];if(/현판/.test(t))return["현판",P.현판];if(/안내판/.test(t))return["사용안내판",P.사용안내판];return[n,0]};
+  const pmap=n=>{const t=String(n).replace(/\s/g,"");if(/세제|활성제/.test(t))return["활성제",P.활성제];if(/수저/.test(t))return["수저랙",P.수저랙];if(/세로바/.test(t))return["세로바",P.세로바];if(/현판/.test(t))return["현판",P.현판];if(/안내판/.test(t))return["사용안내판",P.사용안내판];return[n,0]};
   js.forEach(j=>{no++;const k=(j.contract_id&&ctrById(j.contract_id))||(j.kind==="install"?custContracts(j.customer_id)[0]:null)||{};const c=custById(j.customer_id)||{};
     const ords=(skOrders||[]).filter(o=>o.status!=="취소"&&k.id&&o.contract_id===k.id);
     const od=ords.map(o=>o.order_date).filter(Boolean).sort()[0]||k.contract_date||"";
