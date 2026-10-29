@@ -731,7 +731,7 @@ function renderCustList(){
   document.getElementById("clist").innerHTML=shown.map(({c,k})=>`<div class="citem${ui.sel===c.id?" sel":""}" data-id="${c.id}" tabindex="0">
     <span class="n">${esc(c.name)}${gradeBadge(c)}${q&&c.search_text&&String(c.search_text).toLowerCase().replace(/[-\s]/g,"").includes(q)?` <small class="mapt">(${esc(c.search_text)})</small>`:""}${(()=>{if(!q||String(c.name||"").toLowerCase().replace(/[-\s]/g,"").includes(q))return"";const bare=v=>String(v||"").replace(/\s*\([^)]*\)\s*$/,"").toLowerCase().replace(/[-\s]/g,"");const x=custContracts(c.id).find(k=>k.xname&&String(k.xname).toLowerCase().replace(/[-\s]/g,"").includes(q)&&bare(k.xname)!==bare(c.name));return x?` <small class="mapt" title="엑셀 이관 때 이 고객으로 묶인 계약">(엑셀: ${esc(x.xname)})</small>`:""})()}</span>
     <span class="s"><span>${esc(c.phone||c.phone2)}</span>${k?`<span>${esc([k.product,k.size].filter(Boolean).join(" "))}${k.serial?" · "+esc(k.serial):""}</span>`:""}<span>담당 ${esc(staffName(c.owner)||c.owner_name||"-")}</span></span>
-    <span class="s">${k?`${k.contract_type&&k.contract_type!=="구매"?`<span class="tag ct-${esc(k.contract_type)}">${esc(k.contract_type)}</span>`:""}<span class="tag st-${esc(k.stage)}">${esc(k.stage)}</span>`:""}${c.collector||c.collector_name?`<span class="tag">수금 ${esc(staffName(c.collector)||c.collector_name||"")}</span>`:""}</span></div>`).join("")
+    <span class="s">${k?`${k.contract_type&&k.contract_type!=="구매"?`<span class="tag ct-${esc(k.contract_type)}">${esc(k.contract_type)}</span>`:""}<span class="tag st-${esc(k.stage)}">${esc(k.stage)}</span>`:""}${me.role!=="tech"&&(c.collector||c.collector_name)?`<span class="tag">수금 ${esc(staffName(c.collector)||c.collector_name||"")}</span>`:""}</span></div>`).join("")
     +(list.length>shown.length?`<div class="empty" style="padding:14px">${list.length-shown.length}곳 더 있습니다. 검색으로 좁혀 주세요.</div>`:"")
     ||`<div class="empty" style="padding:16px">${customers.length?(ui.stage||ui.ctype||ui.grade?"검색 결과가 없습니다. 위의 구분·진행단계·관리등급 선택을 ‘전체’로 바꿔 보세요.":"검색 결과가 없습니다."):(isOffice()?"‘엑셀 이관’으로 기존 고객관리 엑셀을 올려 주세요.":"볼 수 있는 고객이 없습니다.")}</div>`;
 }
@@ -758,7 +758,7 @@ function custFieldsHtml(c,ro){return `    <div class="g2">${inp("name","업체�
     <div class="g2">${inp("phone","전화번호",c.phone,"text",ro)}${inp("phone2","일반전화",c.phone2,"text",ro)}</div>
     ${inp("address","상점주소",c.address,"text",ro)}
     <div class="g2">${isOffice()?inp("owner","담당자(3차 계약자)",staffName(c.owner)||c.owner_name||"","text",false,'list="ownList" placeholder="이름 입력 또는 목록에서 선택"'):inp("_o","담당자",staffName(c.owner)||c.owner_name,"text",true)}
-      ${isOffice()?inp("collector","수금 배정",staffName(c.collector)||c.collector_name||"","text",false,'list="ownList" placeholder="이름 입력 또는 목록에서 선택"'):inp("_c","수금 배정",staffName(c.collector)||c.collector_name,"text",true)}</div>
+      ${isOffice()?inp("collector","수금 배정",staffName(c.collector)||c.collector_name||"","text",false,'list="ownList" placeholder="이름 입력 또는 목록에서 선택"'):me.role==="tech"?"<span></span>":inp("_c","수금 배정",staffName(c.collector)||c.collector_name,"text",true)}</div>
     <datalist id="ownList">${staff.filter(s=>s.active).map(s=>`<option value="${esc(s.name)}">${esc(ROLE[s.role])}</option>`).join("")}</datalist>
     ${c.owner_name&&!c.owner?`<p class="mapt">엑셀에 적힌 담당자: ${esc(c.owner_name)} (직원 계정과 아직 연결되지 않음)</p>`:""}
     <label class="f">메모<textarea name="memo" ${ro?"readonly":""}>${esc(c.memo)}</textarea></label>
