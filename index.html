@@ -2571,7 +2571,7 @@ async function renderSinkView(){const off=isOffice();if(!skOrders)view().innerHT
     return its.map((it,i)=>{const L=skLine(o,i);if(o.status!=="취소"){tot.sup+=L.sup;tot.vat+=L.vat;tot.tot+=L.tot;tot.deduct+=L.deduct}
       const head=i===0;const rs=n>1?` rowspan="${n}"`:"";
       return `<tr data-sk="${o.id}" class="skr${oi%2?" alt":""}${o.status==="취소"?" cx":""}">${head?`<td${rs} class="skchk">${canDel(o)?`<input type="checkbox" class="sksel" data-id="${o.id}" ${ui.sksel.has(o.id)?"checked":""} aria-label="선택">`:""}</td><td${rs}>${esc(ymd2(o.order_date))}</td><td${rs}><span class="tag sk-${esc(o.status)}">${esc(o.status)}</span></td><td${rs}>${esc(o.owner_name)}</td><td${rs}><b>${esc(o.site_name||"")}</b></td>`:""}
-        <td class="skspec">${it.from_stock?`<span class="tag sk-재고등록" title="재고에서 사용">재고</span> `:""}${esc(skSpec(it))}${it.note?` <small class="mapt">(${esc(it.note)})</small>`:""}${it.in_date&&o.status!=="입고완료"&&o.status!=="출고완료"&&o.status!=="재고등록"?` <span class="tag sk-입고완료" title="${esc(it.sup||"")}">입고 ${esc(ymd2(it.in_date))}</span>`:""}</td><td class="num">${esc(it.qty||1)}</td>
+        <td class="skspec">${it.from_stock?`<span class="tag sk-재고등록" title="재고에서 사용">재고</span> `:""}${esc(it.sup||skSpec(it))}${it.note&&it.note!==it.sup?` <small class="mapt">(${esc(it.note)})</small>`:""}${it.in_date&&o.status!=="입고완료"&&o.status!=="출고완료"&&o.status!=="재고등록"?` <span class="tag sk-입고완료" title="${esc(it.sup||"")}">입고 ${esc(ymd2(it.in_date))}</span>`:""}</td><td class="num">${esc(it.qty||1)}</td>
         ${head?`<td${rs}>${esc(ymd2(o.due_date))}</td>`:""}
         ${off?`<td class="num${L.est?" skest":""}" ${L.est?'title="단가표 기준 (발주서를 저장하면 확정)"':""}>${L.price?won0(L.price):""}</td><td class="num${L.est?" skest":""}">${L.sup?won0(L.sup):""}</td><td class="num${L.est?" skest":""}">${L.vat?won0(L.vat):""}</td><td class="num${L.est?" skest":""}">${L.tot?won0(L.tot):""}</td>`:""}
         ${head?`<td${rs}>${esc(ymd2(o.in_date))}</td><td${rs}>${esc(ymd2(o.out_date))}</td><td${rs} class="wrap memo"><div class="clamp">${esc(o.memo||"")}</div></td>`:""}
@@ -2582,7 +2582,7 @@ async function renderSinkView(){const off=isOffice();if(!skOrders)view().innerHT
      <input id="skM" type="month" value="${esc(ui.skm)}" aria-label="발주 월" style="padding:5px 8px;border:1px solid var(--line);border-radius:6px;background:var(--field)">
      ${off?`<select id="skOwn" aria-label="담당자"><option value="">담당자 전체</option>${owners.map(x=>`<option ${ui.skown===x?"selected":""}>${esc(x)}</option>`).join("")}</select>`:""}
      <div class="rstages"><button type="button" class="chip ${ui.skst?"":"on"}" data-sks="">전체 ${skOrders.length}</button>${SK_ST.map(s=>`<button type="button" class="chip ${ui.skst===s?"on":""}" data-sks="${s}"><span class="tag sk-${s}">${s}</span> ${cnt(s)}</button>`).join("")}</div>
-     <span class="mapt">${list.length}건</span><span style="flex:1"></span><button class="btn danger" type="button" id="skDel" ${ui.sksel.size?"":"disabled"}>선택 삭제 (${ui.sksel.size})</button>${off?`<button class="btn" type="button" id="skIn">입고 내역 가져오기</button>`:""}</div>
+     <span class="mapt">${list.length}건</span><span style="flex:1"></span><button class="btn danger" type="button" id="skDel" ${ui.sksel.size?"":"disabled"}>선택 삭제 (${ui.sksel.size})</button>${off?`<button class="btn" type="button" id="skIn">입고 내역 가져오기</button><button class="btn" type="button" id="skHist">발주 엑셀 가져오기</button><input type="file" id="skHistIn" accept=".xlsx,.xls" hidden>`:""}</div>
    <div class="wrapx vis" style="padding-top:6px"><div class="wtbox"><table class="wt sk"><thead><tr><th class="skchk"><input type="checkbox" id="skAll" aria-label="전체 선택"></th><th>발주일자</th><th>진행사항</th><th>담당자</th><th>업체명(상호)</th><th>품명 및 규격</th><th>수량</th><th>입고예정</th>${off?"<th>단가</th><th>공급가액</th><th>부가세</th><th>합계금액</th>":""}<th>입고일자</th><th>출고일자</th><th>비고</th>${off?"<th>출고가</th>":""}</tr></thead>
      <tbody>${rows||`<tr><td colspan="${off?16:11}" class="mapt">발주가 없습니다.</td></tr>`}</tbody>
      ${off&&list.length?`<tfoot><tr><th colspan="8">합계</th><th></th><th class="num">${won0(tot.sup)}</th><th class="num">${won0(tot.vat)}</th><th class="num">${won0(tot.tot)}</th><th colspan="3"></th><th class="num">${won0(tot.deduct)}</th></tr></tfoot>`:""}</table></div></div>`;
@@ -2591,6 +2591,7 @@ async function renderSinkView(){const off=isOffice();if(!skOrders)view().innerHT
   document.getElementById("skM").onchange=e=>{ui.skm=e.target.value;re()};const so=document.getElementById("skOwn");if(so)so.onchange=e=>{ui.skown=e.target.value;re()};
   view().querySelectorAll("[data-sks]").forEach(b=>b.onclick=()=>{ui.skst=b.dataset.sks;re()});
   const nb=document.getElementById("skNew");if(nb)nb.onclick=()=>sinkDlg(null);bindSkTabs();const si=document.getElementById("skIn");if(si)si.onclick=()=>sinkInDlg();
+  {const hb=document.getElementById("skHist"),hi=document.getElementById("skHistIn");if(hb){hb.onclick=()=>hi.click();hi.onchange=async()=>{const f=hi.files[0];hi.value="";if(!f)return;let wb;try{wb=XLSX.read(await f.arrayBuffer(),{type:"array",cellDates:true})}catch(e){return toast("파일을 읽지 못했습니다")}sinkHistImport(f.name,wb)}}}
   view().querySelectorAll("tr[data-sk]").forEach(tr=>tr.onclick=e=>{if(e.target.closest(".skchk"))return;sinkDlg(skOrders.find(o=>o.id===tr.dataset.sk))});
   const upd=()=>{const b=document.getElementById("skDel");b.disabled=!ui.sksel.size;b.textContent=`선택 삭제 (${ui.sksel.size})`};
   view().querySelectorAll(".sksel").forEach(c=>c.onchange=()=>{c.checked?ui.sksel.add(c.dataset.id):ui.sksel.delete(c.dataset.id);upd()});
@@ -2778,6 +2779,42 @@ function skSupRows(wb){const out=[];
   return out}
 function skPasteRows(text,date){return String(text||"").split(/\r?\n/).map(l=>l.trim()).filter(Boolean).map(l=>{const c=l.split("\t").map(x=>x.trim());const nums=c.slice(1).map(skNum).filter(n=>n!=null);
   const raw=c[0];const qty=nums.find(n=>n>0&&n<100)||1;const price=nums.find(n=>n>=1000)||0;const memo=c.slice(1).filter(x=>x&&skNum(x)==null).join(" ");return{date,raw,qty,price,memo,p:skParseSup(raw)}})}
+/* 쓰시던 ‘나인주방 발주서’ 엑셀(발주 시트) → 싱크대 발주 기록. 업체명 칸이 비어 있는 줄은 위 발주의 품목. */
+function sinkHistParse(wb){const sn=wb.SheetNames.find(n=>/발주/.test(n))||wb.SheetNames[0];const ws=wb.Sheets[sn];const a=XLSX.utils.sheet_to_json(ws,{header:1,raw:true,defval:""});
+  (ws["!merges"]||[]).forEach(m=>{const v=(a[m.s.r]||[])[m.s.c];for(let R=m.s.r;R<=m.e.r;R++)for(let C=m.s.c;C<=m.e.c;C++){a[R]=a[R]||[];if(a[R][C]===""||a[R][C]==null)a[R][C]=v}});
+  const hi=a.findIndex(rw=>rw.some(c=>/품명및규격|품명/.test(String(c).replace(/\s+/g,"")))&&rw.some(c=>/발주일자/.test(String(c))));if(hi<0)return null;
+  const H=a[hi].map(c=>String(c).replace(/\s+/g,""));const col=re=>H.findIndex(h=>re.test(h));
+  const I={od:col(/^발주일자/),ow:col(/^담당자/),site:col(/^업체명/),spec:col(/^품명/),qty:col(/^수량/),due:col(/^입고예정/),price:col(/^단가/),ind:col(/^입고일자/),out:col(/^출고/),memo:col(/^비고/),inp:col(/^입고단가/),nd:col(/^변경공제가/),od2:col(/^기존공제가/)};
+  const dt=v=>v instanceof Date?toDate(v):(()=>{const m=String(v||"").match(/(\d{4})[.\-/](\d{1,2})[.\-/](\d{1,2})/);return m?`${m[1]}-${sp2(m[2])}-${sp2(m[3])}`:""})();
+  const orders=[];let cur=null;
+  a.slice(hi+1).forEach(rw=>{const g=k=>I[k]>=0?rw[I[k]]:"";const spec=String(g("spec")||"").trim();if(!spec)return;const site=String(g("site")||"").trim();const od=dt(g("od"));
+    if(!cur||(site&&(site!==cur.site||(od&&od!==cur.od)))){cur={site:site||(cur&&cur.site)||"",od:od||(cur&&cur.od)||"",owner:String(g("ow")||"").trim()||(cur&&cur.owner)||"",due:dt(g("due")),ind:dt(g("ind")),outRaw:g("out"),memo:String(g("memo")||"").trim(),items:[],lines:[]};orders.push(cur)}
+    const p=skParseSup(spec);const it={...skSupToItem(p,skNum(g("qty"))||1),sup:spec,note:""};const pr=skNum(g("price"))||skNum(g("inp"))||0;const dd=skNum(g("nd"))||skNum(g("od2"))||0;
+    if(cur.ind)it.in_date=cur.ind;cur.items.push(it);cur.lines.push({price:pr,deduct:dd})});
+  return orders.filter(o=>o.site&&o.items.length)}
+function sinkHistImport(fname,wb){const os=sinkHistParse(wb);if(!os||!os.length)return toast("‘발주일자’·‘품명및규격’ 칸이 있는 발주 시트를 찾지 못했습니다");
+  const bare=v=>nk(String(v||"").replace(/\s*\([^)]*\)\s*$/,""));
+  const sig=o=>bare(o.site)+"|"+(o.od||"")+"|"+skTxtN((o.items[0]||{}).sup||"");
+  const have=new Set((skOrders||[]).map(o=>bare(o.site_name)+"|"+(o.order_date||"")+"|"+skTxtN(((o.items||[])[0]||{}).sup||((o.items||[])[0]||{}).note||"")));
+  const plan=[];let dup=0,linked=0;const stc={};
+  os.forEach(o=>{if(have.has(sig(o))){dup++;return}have.add(sig(o));
+    const out=o.outRaw;const outD=out instanceof Date?toDate(out):(/\d{4}[.\-/]\d{1,2}[.\-/]\d{1,2}/.test(String(out))?(String(out).match(/(\d{4})[.\-/](\d{1,2})[.\-/](\d{1,2})/).slice(1).map((x,i)=>i?sp2(x):x).join("-")):"");const outT=out instanceof Date||outD?"":String(out||"").trim().replace(/^-$/,"");
+    let status=outD?"출고완료":/재고|보관/.test(outT)?"재고등록":/취소/.test(outT+o.memo)?"취소":o.ind?"입고완료":"주문완료";
+    const c=customers.find(x=>nk(x.name)===nk(o.site))||customers.find(x=>bare(x.name)===bare(o.site));
+    let k=null;if(c){const ks=custContracts(c.id).filter(x=>x.stage!=="취소");k=ks.sort((a,b)=>Math.abs(new Date(a.contract_date||"2000-01-01")-new Date(o.od||"2000-01-01"))-Math.abs(new Date(b.contract_date||"2000-01-01")-new Date(o.od||"2000-01-01")))[0]||null;linked++}
+    const w=whoIs(o.owner);stc[status]=(stc[status]||0)+1;
+    plan.push({row:{order_date:o.od||today(),owner:w.id||null,owner_name:w.name||o.owner,customer_id:c?c.id:null,contract_id:k?k.id:null,site_name:o.site,due_date:o.due||null,status,items:o.items,in_date:o.ind||null,out_date:outD||null,
+      memo:[o.memo,outT].filter(Boolean).join(" / "),spec_text:o.items.map(it=>it.sup+(Number(it.qty||1)>1?` ×${it.qty}`:"")).join(", ")},lines:o.lines})});
+  const nItems=plan.reduce((a,p)=>a+p.row.items.length,0);
+  openDlg("발주 엑셀 가져오기",`<p><b>${esc(fname)}</b></p><table class="stafft"><tbody><tr><td>새 발주</td><td>${plan.length}건 (품목 ${nItems}개)</td></tr><tr><td>고객과 연결</td><td>${linked}건</td></tr><tr><td>이미 있는 발주 (건너뜀)</td><td>${dup}건</td></tr>
+     <tr><td>진행사항</td><td>${Object.entries(stc).map(([k,v])=>`${esc(k)} ${v}`).join(" · ")}</td></tr></tbody></table>
+    <p class="mapt">업체명 칸이 비어 있는 줄은 위 발주의 품목으로 묶습니다. 출고여부가 날짜면 출고완료, ‘재고 등록·보유재고·보관’이면 재고등록, 입고일자만 있으면 입고완료입니다. 단가(없으면 입고단가)는 발주 단가로, 변경 공제가(없으면 기존 공제가)는 출고가로 들어갑니다.</p>`,
+   [["닫기"],["가져오기","pri",async()=>{try{let n=0;
+      for(let i=0;i<plan.length;i+=100){const ch=plan.slice(i,i+100);toast(`가져오는 중… ${Math.min(i+100,plan.length)}/${plan.length}`);
+        const {data,error}=await sb.from("sink_orders").insert(ch.map(p=>p.row)).select("id");if(error)throw error;
+        const pl=(data||[]).map((d,j)=>({order_id:d.id,lines:ch[j].lines,updated_at:new Date().toISOString()})).filter(x=>x.lines.some(l=>l.price||l.deduct));
+        if(pl.length){const e2=await sb.from("sink_prices").upsert(pl);if(e2.error)throw e2.error}n+=ch.length}
+      toast(`발주 ${n}건을 가져왔습니다`);reload(["jobs"],true);renderSinkView()}catch(e){toast("가져오는 중 멈췄습니다: "+(e.message||""));renderSinkView();return true}}]])}
 function sinkInDlg(){openDlg("입고 내역 가져오기",`<div id="sif" style="display:grid;gap:10px">
     <p class="mapt" style="margin:0">나인주방에서 받은 입고(구매현황·거래명세) 엑셀을 고르거나, 품명 칸을 복사해 붙여넣으세요. 발주와 자동으로 맞춰 드리고, 확인 후 ‘입고완료’로 바꿉니다.</p>
     <label class="f">엑셀 파일<input type="file" id="siFile" accept=".xlsx,.xls,.csv"></label>
