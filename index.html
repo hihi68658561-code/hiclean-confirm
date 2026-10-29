@@ -206,7 +206,7 @@ body.resizing,body.resizing *{cursor:col-resize!important;user-select:none}
 .rlrow{display:grid;grid-template-columns:150px 120px 1fr 84px;gap:8px;align-items:end;width:100%}.rlrow .f{margin:0}.rlrow input,.rlrow select{width:100%;box-sizing:border-box;height:38px}.rlrow .btn{height:38px;width:100%}.rlcin{display:flex;gap:6px}.rlcin select{flex:0 0 110px}.rlcin input{flex:1;min-width:0}@media (max-width:640px){.rlrow{grid-template-columns:1fr 1fr}.rlrow .rlc,.rlrow .btn{grid-column:1/-1}}
 .detq{display:flex;align-items:center;gap:6px}.detq input{width:70px;text-align:center}.detq .btn{min-width:34px}
 .cptabs{margin-bottom:4px}.cptabs button{font-weight:600}
-.wt td.stc{text-align:center;white-space:nowrap;cursor:pointer}.wt td.stc.on{background:#14532d!important;color:#fff!important;font-weight:700}.stmenu{position:absolute;z-index:9999;background:#fff;border:1px solid #ccd;border-radius:8px;box-shadow:0 6px 20px rgba(0,0,0,.18);padding:4px;display:grid;gap:2px;min-width:110px}.stmenu button{border:0;background:none;text-align:left;padding:7px 10px;border-radius:6px;font:inherit;cursor:pointer}.stmenu button:hover{background:#eef2f7}.stmenu button.on{background:#14532d;color:#fff}
+.wt td.stc{text-align:center;white-space:nowrap;cursor:pointer}.wt td.stc.on{color:#000!important;font-weight:600}.stmenu{position:absolute;z-index:9999;background:#fff;border:1px solid #ccd;border-radius:8px;box-shadow:0 6px 20px rgba(0,0,0,.18);padding:4px;display:grid;gap:2px;min-width:110px}.stmenu button{border:0;background:none;text-align:left;padding:7px 10px;border-radius:6px;font:inherit;cursor:pointer}.stmenu button:hover{background:#eef2f7}.stmenu button.on{background:#14532d;color:#fff}
 .wt.ct tr.subt td{background:#1f4d2b!important;color:#fff!important;font-weight:700;cursor:default;border-color:#1f4d2b}.wt.ct tr.subt td small{color:#d1fae5;font-weight:400}
 .btn.close{background:#f97316;border-color:#f97316;color:#fff}.btn.close:hover{background:#ea580c;border-color:#ea580c}
 .wt.skst,.wt.sk2{width:auto;min-width:min(100%,720px)}.wt.sk2 tbody tr{cursor:pointer}.wt.sk2 tbody tr:hover td{background:var(--accent-weak)}.wt.sk2 tr.cx0 td{color:#999}.skstk{margin-top:6px;padding-top:6px;border-top:1px dashed var(--line)}.skstk select{max-width:100%}
@@ -1061,7 +1061,7 @@ const CCOLS=[
  ["basis","기준",1],["ctype","구분",1],["stage","진행단계",1],["trial","무료체험 종료일",1],["name","업체명(상호)",1],["ceo","대표자",1],["phone","전화번호",1],["addr","상점주소",0],
  ["cdate","계약일자",1],["idate","예정일",1],["iwday","요일",1],["itime","시간",1],["channel","영업 경로",0],["referrer","소개",0],["s1","1차",0],["s2","2차",0],["s3","3차(담당)",1],["doc","계약서",0],["tech","설치기사",0],
  ["product","제품",1],["size","사이즈",1],["serial","시리얼",1],["wash","수압식",0],["sink","싱크준비",1],["sinkm","싱크대 품명 및 규격",1],["parts","부자재",0],["amount","합계금액",1],["card","카드",1],["cash","현금+캐피탈",1],["paid","입금합계",0],["unpaid","미수금",1],["last","최종결제일",1],
- ["approval","승인처",1],["tax","계산서 발급",0],["chk_cust","고객등록",1],["chk_slip","전표마감",1],["chk_sales","매출마감",1],["chk_month","월마감",1],["settle","소계",1],["memo","비고",1]];
+ ["approval","승인처",1],["tax","계산서 발급",0],["chk_cust","고객등록",1],["chk_slip","전표마감",1],["chk_sales","매출마감",1],["chk_month","월마감",1],["settle","마감",1],["memo","비고",1]];
 const MONEYC=new Set(["amount","card","cash","paid","unpaid"]);
 /* 표 열 설정(넣고 빼기·순서·너비) — 계약관리(ctr)·작업현황(work) 공용, 브라우저별로 기억 */
 const TCFG={ctr:{cols:()=>CCOLS.filter(c=>!(me&&me.role==="sales"&&["chk_cust","chk_slip","chk_sales","chk_month","settle"].includes(c[0]))),sel:".wt.ct",lead:()=>isOffice()?2:1},work:{cols:()=>WCOLS,sel:".wt.wk",lead:()=>isAdmin()?2:1}};
@@ -1210,7 +1210,7 @@ function ctrCell(col,k,c,st,basis){
     case"last":return `<td>${esc(ymd2(st.last))}</td>`;
     case"approval":return `<td>${esc(k.approval||k.pay_method||"")}</td>`;
     case"tax":{const t=k.tax||{};return `<td>${esc(t.date?ymd2(t.date):t.type||"")}</td>`}
-    case"settle":{if(k.__job)return "<td></td>";const v=k.settle_tag||"";return `<td class="stc ${v?"on":""}" data-settle="${k.id}" title="${isOffice()?"눌러서 소계 묶음 직접 지정 (비우면 자동)":""}">${esc(v)}</td>`}
+    case"settle":{if(k.__job)return "<td></td>";const v=k.settle_tag||"";return `<td class="stc ${v?"on":""}" data-settle="${k.id}" title="${isOffice()?"눌러서 마감 묶음 직접 지정 (비우면 자동)":""}">${esc(v)}</td>`}
     case"chk_cust":case"chk_slip":case"chk_sales":case"chk_month":{if(k.__job)return "<td></td>";const v=k[col]||"";return `<td class="ckc ${v==="OK"?"ok":v?"note":""}" data-chk="${col}" data-kid="${k.id}" title="${isOffice()?"누르면 OK ↔ 빈칸":""}">${esc(v)}</td>`}
     case"memo":return `<td class="wrap memo" title="${esc(k.memo||"")}"><div class="clamp">${esc(k.memo||"")}</div></td>`;
   }
@@ -3332,7 +3332,7 @@ const PROD_FULL={"1":"1채널","3":"3채널","온":"온케어","대":"대광"};
 function prodName(v){const t=String(v??"").trim();return PROD_FULL[t]||t}
 /* 소계 (당월리스트·전체리스트): 당월마감 · 익월마감 · 취소,보류 · 전기마감 */
 const SETTLE=["전월미수채권","당월마감","익월마감","취소,보류","전기마감"];
-function settleMenu(td,k,re){if(!("settle_tag" in k))return toast("소계 칸을 쓰려면 Supabase에서 phase1zn.sql을 실행해 주세요.");
+function settleMenu(td,k,re){if(!("settle_tag" in k))return toast("마감 칸을 쓰려면 Supabase에서 phase1zn.sql을 실행해 주세요.");
   document.querySelectorAll(".stmenu").forEach(x=>x.remove());const m=document.createElement("div");m.className="stmenu";
   m.innerHTML=[...SETTLE,""].map(v=>`<button type="button" data-v="${v}" class="${v===(k.settle_tag||"")?"on":""}">${v||"비우기"}</button>`).join("");
   document.body.appendChild(m);const b=td.getBoundingClientRect();m.style.top=(window.scrollY+b.bottom+2)+"px";m.style.left=Math.max(8,window.scrollX+b.right-m.offsetWidth)+"px";
