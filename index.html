@@ -2658,8 +2658,10 @@ function bindSkTabs(){view().querySelectorAll("[data-sktab]").forEach(b=>b.oncli
 function skInstalled(o){const cid=o.customer_id||((customers.find(x=>nk(x.name)===nk(o.site_name||""))||{}).id);const ks=o.contract_id?[ctrById(o.contract_id)].filter(Boolean):cid?custContracts(cid):[];
   const od=String(o.order_date||"");let r="";ks.some(k=>{const ij=installOf(k);if(ij&&ij.status==="완료"){const d=ij.done_date||ij.visit_date||"";if(!d||!od||d>=od){r=d||today();return true}}return false});return r}
 /* 설치가 끝난 고객의 '입고완료' 발주 → 자동으로 '출고완료' (출고일자 = 설치일) */
-async function skAutoOut(){if(!isOffice()||!skOrders)return;const t=skOrders.filter(o=>o.status==="입고완료"&&!skIsStockOrder(o)&&skInstalled(o));
-  for(const o of t){const d=skInstalled(o);const {error}=await sb.from("sink_orders").update({status:"출고완료",out_date:o.out_date||d}).eq("id",o.id);if(!error){o.status="출고완료";o.out_date=o.out_date||d}}}
+/* 2026년 이전에 입고된 고객 발주(입고완료)는 모두 출고완료 처리 (출고일자 = 입고일자). '…재고' 업장은 실제 재고라 그대로 */
+const skOldOut=o=>o.status==="입고완료"&&!skIsStockOrder(o)&&!/재고/.test(o.site_name||"")&&String(o.in_date||o.order_date||"9")<"2026-01-01";
+async function skAutoOut(){if(!isOffice()||!skOrders)return;const t=skOrders.filter(o=>skOldOut(o)||(o.status==="입고완료"&&!skIsStockOrder(o)&&skInstalled(o)));
+  for(const o of t){const d=skOldOut(o)?(o.in_date||o.order_date):skInstalled(o);const {error}=await sb.from("sink_orders").update({status:"출고완료",out_date:o.out_date||d}).eq("id",o.id);if(!error){o.status="출고완료";o.out_date=o.out_date||d}}}
 function renderSinkStock(){const st=skStockItems();const live=st.filter(x=>x.remain>0);if(ui.skstq===undefined)ui.skstq="";const qq=ui.skstq.trim().toLowerCase();
   const pend=[],wait=[],uses=[];(skOrders||[]).forEach(o=>{if(o.status==="취소")return;
     (o.items||[]).forEach((it,i)=>{const q=Number(it.qty||1)||1;
