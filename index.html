@@ -3185,8 +3185,8 @@ function sortVal(col,x){const k=x.k,c=x.c,s=x.s;
 function sortCtrList(list){const S=getSort();const cache=new Map();const v=(x,col)=>{const key=col;let m=cache.get(x);if(!m){m={};cache.set(x,m)}if(!(key in m))m[key]=sortVal(col,x);return m[key]};
   /* 묶음 순서: 당월 설치 → 당월 추가설치(당월 맨 끝) → 이달 결제된 예전 건 → 미수·기타 */
   const grp=true;const bo=x=>!x.b?0:x.a?0.5:x.b.includes("설치")?0:x.b.includes("결제")?1:2;
-  /* 각 묶음 안에서 보류·취소 → 철거예정 → 철거완료는 맨 뒤로 */
-  const sb_=x=>{const t=x.a?"":x.k.stage;return t==="보류"||t==="취소"?1:t==="철거예정"?2:t==="철거완료"||t==="철거"?3:0};
+  /* 각 묶음 안에서 보류·취소 → 철거완료는 맨 뒤로 */
+  const sb_=x=>{const t=x.a?"":x.k.stage;return t==="보류"||t==="취소"?1:t==="철거완료"||t==="철거"?3:0};/* 철거예정은 설치일 순서대로 함께 */
   list.sort((a,b)=>{if(grp&&bo(a)!==bo(b))return bo(a)-bo(b);if(sb_(a)!==sb_(b))return sb_(a)-sb_(b);for(const {c,d} of S){const A=v(a,c),B=v(b,c);const ea=A===""||A==null,eb=B===""||B==null;if(ea&&eb)continue;if(ea)return 1;if(eb)return -1;
     const r=typeof A==="number"&&typeof B==="number"?A-B:KO.compare(String(A),String(B));if(r)return r*d}return regCmp(a.k,b.k)})}
 function sortPicker(onDone){let cur=getSort().map(x=>({...x}));
