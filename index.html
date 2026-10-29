@@ -2460,8 +2460,41 @@ const XSEL={sink:".wt.sk",leads:".wt.ld",work:".wt.wk",ctrm:".wt.ct",allm:".wt.c
 const XNAME={sink:"싱크대 발주",leads:"DB관리",work:"당월 설치·AS 전체리스트",ctrm:"당월리스트",allm:"전체리스트",asm:"AS관리",recv:"미수·채권관리",sched:"담당자별 일정표"};
 function addXlsBtn(){const v=ui.view;if(!XSEL[v]||!isOffice()||!window.XLSX)return;const tbl=view().querySelector(XSEL[v]);if(!tbl||document.getElementById("xlsDown"))return;
   let tb=null,el=tbl.closest(".wrapx")||tbl.closest(".wtbox");while(el&&!tb){let s=el.previousElementSibling;while(s&&!tb){if(s.classList&&s.classList.contains("toolbar"))tb=s;s=s.previousElementSibling}el=el.parentElement;if(el===view())break}
-  tb=tb||view().querySelector(".toolbar");if(!tb)return;const b=document.createElement("button");b.type="button";b.className="btn";b.id="xlsDown";b.textContent="엑셀 다운로드";b.onclick=()=>exportView();tb.appendChild(b);addPrintBtn(tb)}
+  tb=tb||view().querySelector(".toolbar");if(!tb)return;const b=document.createElement("button");b.type="button";b.className="btn";b.id="xlsDown";b.textContent="엑셀 다운로드";b.onclick=()=>exportView();tb.appendChild(b);addPrintBtn(tb);addSetlBtn(tb)}
 /* 당월 설치·A/S, 당월리스트: 체크한 건의 확인서를 한 번에 인쇄 */
+/* 당월리스트: 싱크·부자재 정산 엑셀 (설치 1건 = 제품·싱크 품목·부자재·설치비 여러 줄) */
+const SETL_DEF={활성제:21000,수저력:12000,현판:0,사용안내판:0,설치비:400000};
+function setlPrices(){try{return Object.assign({},SETL_DEF,JSON.parse(localStorage.getItem("hc.setl")||"{}"))}catch(e){return{...SETL_DEF}}}
+function addSetlBtn(tb){if(ui.view!=="ctrm"||!isOffice()||document.getElementById("setlBtn"))return;const b=document.createElement("button");b.type="button";b.className="btn";b.id="setlBtn";b.textContent="정산 엑셀";b.title="싱크·부자재 정산 양식으로 내려받기";b.onclick=setlDlg;tb.appendChild(b)}
+function setlDlg(){const P=setlPrices();const ym=thisMonth();
+  openDlg("싱크·부자재 정산 엑셀",`<div id="slf" style="display:grid;gap:10px"><div class="g3"><label class="f">설치 월<input type="month" name="ym" value="${ym}"></label><span></span><span></span></div>
+    <p class="mapt" style="margin:0">그 달에 <b>설치 완료</b>된 건마다 제품 · 싱크대 발주 품목(발주 금액) · 제공 부자재 · 설치비 줄을 만듭니다. 재고에서 쓴 싱크는 비고에 ‘재고사용’.</p>
+    <fieldset><legend>단가 (바꾸면 다음에도 기억)</legend><div class="g3">${Object.keys(SETL_DEF).map(k=>`<label class="f">${k}${k==="활성제"?" (세제)":""}<input type="number" data-sp="${k}" value="${P[k]}"></label>`).join("")}</div></fieldset></div>`,
+    [["닫기"],["내려받기","pri",async()=>{const pr={};document.querySelectorAll("#slf [data-sp]").forEach(i=>pr[i.dataset.sp]=Number(i.value||0)||0);try{localStorage.setItem("hc.setl",JSON.stringify(pr))}catch(e){}
+      const m=(document.querySelector('#slf [name=ym]')||{}).value||ym;await setlExport(m,pr);return true}]])}
+async function setlExport(ym,P){if(!window.XLSX)return toast("엑셀 도구를 불러오지 못했습니다");toast("정산 엑셀을 만드는 중…");
+  if(!skOrders)await fetchSink();if(!skPList)await fetchSkPrice();
+  const [st,en]=monthRange(ym);const d2=d=>d?`${d.slice(2,4)}/${+d.slice(5,7)}/${+d.slice(8,10)}`:"";
+  const js=jobs.filter(j=>(j.kind==="install"||j.kind==="addon")&&j.status==="완료"&&doneOf(j)>=st&&doneOf(j)<en).sort((a,b)=>doneOf(a).localeCompare(doneOf(b))||(a.customer_name||"").localeCompare(b.customer_name||"","ko"));
+  if(!js.length)return toast("그 달에 설치 완료된 건이 없습니다");
+  const H=["NO","발주일자","설치일자","설치팀","영업담당","업체명","품목명[규격]","단가","수량","공급가액","부가세액","합계","비고"];
+  const rows=[[`${+ym.slice(5)}월 싱크 및 부자재 정산`],H];let no=0;
+  const pmap=n=>{const t=String(n).replace(/\s/g,"");if(/세제|활성제/.test(t))return["활성제",P.활성제];if(/수저/.test(t))return["수저력",P.수저력];if(/현판/.test(t))return["현판",P.현판];if(/안내판/.test(t))return["사용안내판",P.사용안내판];return[n,0]};
+  js.forEach(j=>{no++;const k=(j.contract_id&&ctrById(j.contract_id))||(j.kind==="install"?custContracts(j.customer_id)[0]:null)||{};const c=custById(j.customer_id)||{};
+    const ords=(skOrders||[]).filter(o=>o.status!=="취소"&&k.id&&o.contract_id===k.id);
+    const od=ords.map(o=>o.order_date).filter(Boolean).sort()[0]||k.contract_date||"";
+    const tr=k.contract_type==="무료체험"&&k.trial_end?` (무료체험 ${+k.trial_end.slice(5,7)}/${+k.trial_end.slice(8,10)})`:"";
+    const base=[no,d2(od),d2(doneOf(j)),whoOf(j).replace(/\s*·\s*/g," ").replace(/,\s*/g," "),String(s3Text(k)||"").split("/")[0].trim(),(c.name||j.customer_name||"")+tr];
+    const line=(item,price,qty,memo)=>{const sup=price&&qty?price*qty:0;rows.push([...base,item,price||0,qty===""?"":qty,sup,"",sup,memo||""])};
+    if(j.kind==="addon"){const a=addonItem(j);line([a.product,a.size].filter(Boolean).join(" ")||"추가설치",Number(j.cost||0),1,"추가설치");return}
+    line([prodName(k.product),k.size].filter(Boolean).join(" ")||"제품",0,"","");
+    ords.forEach(o=>(o.items||[]).forEach((it,i)=>{const L=skLine(o,i);line(it.sup||skSpec(it),L.price,Number(it.qty||1)||1,it.from_stock?"재고사용":"")}));
+    String(j.parts||"").split(/\s*[,/]\s*/).map(x=>x.trim()).filter(Boolean).forEach(t=>{const m=t.match(/^(.*?)(\d+)\s*(개|통|ea)?$/i);const nm=m?m[1].trim():t,q=m?+m[2]:1;const [n2,pr]=pmap(nm);line(n2,pr,q,"")});
+    line("설치비",P.설치비,1,"")});
+  const ws=XLSX.utils.aoa_to_sheet(rows);ws["!merges"]=[{s:{r:0,c:0},e:{r:0,c:H.length-1}}];
+  for(let R=2;R<rows.length;R++)[7,9,11].forEach(C=>{const a=XLSX.utils.encode_cell({r:R,c:C});if(ws[a]&&typeof ws[a].v==="number")ws[a].z="#,##0"});
+  ws["!cols"]=[5,10,10,14,9,30,38,10,6,11,10,11,16].map(w=>({wch:w}));
+  const wb=XLSX.utils.book_new();XLSX.utils.book_append_sheet(wb,ws,`${ym.slice(0,4)}년${+ym.slice(5)}월`);XLSX.writeFile(wb,`싱크부자재정산_${ym}.xlsx`);toast(`설치 ${js.length}건 정산 엑셀을 내려받았습니다`)}
 function addPrintBtn(tb){const v=ui.view;if(v!=="work"&&v!=="ctrm"&&v!=="asm")return;if(document.getElementById("prtSel"))return;const b=document.createElement("button");b.type="button";b.className="btn";b.id="prtSel";b.textContent="인쇄";b.title="체크한 건의 설치·A/S 확인서 인쇄";
   b.onclick=()=>{let list=[];
     if(v==="asm")list=[...(ui.asel||[])].map(id=>jobs.find(j=>j.id===id)).filter(Boolean).map(j=>[j,custById(j.customer_id)]);
