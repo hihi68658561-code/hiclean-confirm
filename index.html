@@ -1401,7 +1401,7 @@ function asMoney(j){const c=Number(j.cost||0);const pay=j.pay_status==="완료"|
 const ACOLS=[
  ["basis","접수월",1],["rdate","접수일자",1],["kind","구분",1],["name","업체명(상호)",1],["ceo","대표자",0],["phone","전화번호",1],["addr","주소",1],["symptom","접수내용",1],["result","내용",1],
  ["visit","예정일",1],["wday","요일",1],["time","시간",0],["status","처리현황",1],["done","완료일",0],["idate","설치일",1],["product","제품",1],["size","규격",1],["serial","시리얼",1],["parts","교체부품",1],
- ["tech","담당자",1],["action","조치방법",1],["cost","청구금액(총합계)",1],["trip","출장비",1],["pfee","부품비",1],["dist","거리",1],["sat","만족도",1],["pmeth","청구방법",1],["ptype","유상/무상",1],
+ ["tech","담당자",1],["action","조치방법",1],["cost","청구금액(총합계)",1],["trip","출장비",1],["pfee","부품비",1],["pmeth","청구방법",1],["ptype","유상/무상",1],
  ["pdate","입금일",1],["pname","입금자명",1],["unpaid","미수",1],["card","카드",1],["cash","현금",1],["closed","마감",1],["pmemo","입금 메모",0],["reg","등록일시",0]];
 const AMONEY=new Set(["cost","trip","pfee","unpaid","card","cash"]);
 TCFG.as={cols:()=>ACOLS,sel:".wt.am",lead:()=>isAdmin()?2:1};
