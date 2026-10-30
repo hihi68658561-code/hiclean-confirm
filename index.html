@@ -2536,7 +2536,7 @@ function setlDlg(){const P=setlPrices();const ym=thisMonth();
     <p class="mapt" style="margin:0">그 달에 <b>설치 완료</b>된 건마다 제품 · 싱크대 발주 품목(발주 금액) · 제공 부자재 · 설치비 줄을 만듭니다. 재고에서 쓴 싱크는 비고에 ‘재고사용’.</p>
     <fieldset><legend>단가 (바꾸면 다음에도 기억)</legend><div class="g3">${Object.keys(SETL_DEF).map(k=>`<label class="f">${k}${k==="활성제"?" (세제)":""}<input type="number" data-sp="${k}" value="${P[k]}"></label>`).join("")}</div></fieldset></div>`,
     [["닫기"],["내려받기","pri",async()=>{const pr={};document.querySelectorAll("#slf [data-sp]").forEach(i=>pr[i.dataset.sp]=Number(i.value||0)||0);try{localStorage.setItem("hc.setl",JSON.stringify(pr))}catch(e){}
-      const m=(document.querySelector('#slf [name=ym]')||{}).value||ym;await setlExport(m,pr);return true}]])}
+      const m=(document.querySelector('#slf [name=ym]')||{}).value||ym;try{await setlExport(m,pr)}catch(e){console.error(e);toast("정산 엑셀을 만들지 못했습니다: "+(e&&e.message||e))}return true}]])}
 async function setlExport(ym,P){if(!window.XLSX)return toast("엑셀 도구를 불러오지 못했습니다");toast("정산 엑셀을 만드는 중…");
   if(!skOrders)await fetchSink();if(!skPList)await fetchSkPrice();
   const [st,en]=monthRange(ym);const d2=d=>d?`${d.slice(2,4)}/${+d.slice(5,7)}/${+d.slice(8,10)}`:"";
@@ -2545,8 +2545,10 @@ async function setlExport(ym,P){if(!window.XLSX)return toast("엑셀 도구를 �
   const H=["NO","발주일자","설치일자","설치팀","영업담당","업체명","품목명[규격]","단가","수량","공급가액","부가세액","합계","비고"];
   const rows=[[`${+ym.slice(5)}월 싱크 및 부자재 정산`],H];let no=0;
   const pmap=n=>{const t=String(n).replace(/\s/g,"");if(/세제|활성제/.test(t))return["활성제",P.활성제];if(/수저/.test(t))return["수저랙",P.수저랙];if(/세로바/.test(t))return["세로바",P.세로바];if(/현판/.test(t))return["현판",P.현판];if(/안내판/.test(t))return["사용안내판",P.사용안내판];return[n,0]};
+  /* 발주 → 작업 연결은 한 번만 계산 (발주 수 × 작업 수만큼 반복하면 오래 걸림) */
+  const jset=new Set(js.map(j=>j.id));const ordBy=new Map();(skOrders||[]).forEach(o=>{if(o.status==="취소")return;const jj=skJobOf(o);if(jj&&jset.has(jj.id)){if(!ordBy.has(jj.id))ordBy.set(jj.id,[]);ordBy.get(jj.id).push(o)}});
   js.forEach(j=>{no++;const k=(j.contract_id&&ctrById(j.contract_id))||(j.kind==="install"?custContracts(j.customer_id)[0]:null)||{};const c=custById(j.customer_id)||{};
-    const ords=(skOrders||[]).filter(o=>o.status!=="취소"&&skJobOf(o)===j);/* 발주일 기준으로 설치·추가설치에 나눔 */
+    const ords=ordBy.get(j.id)||[];/* 발주일 기준으로 설치·추가설치에 나눔 */
     const od=ords.map(o=>o.order_date).filter(Boolean).sort()[0]||k.contract_date||"";
     const tr=k.contract_type==="무료체험"&&k.trial_end?` (무료체험 ${+k.trial_end.slice(5,7)}/${+k.trial_end.slice(8,10)})`:"";
     const base=[no,d2(od),d2(doneOf(j)),whoOf(j).replace(/\s*·\s*/g," ").replace(/,\s*/g," "),(()=>{/* 영업담당(3차): 계약 → (추가설치처럼 계약 연결이 없으면) 이 고객의 계약 → 고객 담당자 */const f=v=>String(v||"").split("/")[0].trim();let v=f(s3Text(k));if(!v)for(const kk of custContracts(j.customer_id)){v=f(s3Text(kk));if(v)break}return v||f(staffName(c.owner)||c.owner_name)})(),(c.name||j.customer_name||"")+tr];
@@ -2704,9 +2706,11 @@ function bindSkTabs(){view().querySelectorAll("[data-sktab]").forEach(b=>b.oncli
 /* 발주한 뒤 그 고객 설치가 끝났으면(설치 작업 완료) 출고대기에서 뺌 */
 /* 발주가 어느 작업(설치·추가설치) 것인지: 같은 고객의 설치·추가설치 중 발주일 이후 가장 먼저 하는 작업.
    (계약 1건에 나중에 싱크대를 추가로 설치해도, 그 발주는 그 추가설치 건으로 들어감) */
+let _skJobsSrc=null,_skJobsBy=null;
 function skJobOf(o){const k0=o.contract_id&&ctrById(o.contract_id);const cid=o.customer_id||(k0&&k0.customer_id)||((customers.find(x=>nk(x.name)===nk(o.site_name||""))||{}).id);if(!cid)return null;
   const jd=j=>j.done_date||j.visit_date||"";const od=String(o.order_date||"");
-  const js=jobs.filter(j=>j.customer_id===cid&&(j.kind==="install"||j.kind==="addon")&&j.status!=="취소").sort((a,b)=>(jd(a)||"9999").localeCompare(jd(b)||"9999"));
+  if(_skJobsSrc!==jobs){_skJobsSrc=jobs;_skJobsBy=new Map();jobs.forEach(j=>{if((j.kind==="install"||j.kind==="addon")&&j.status!=="취소"){if(!_skJobsBy.has(j.customer_id))_skJobsBy.set(j.customer_id,[]);_skJobsBy.get(j.customer_id).push(j)}});_skJobsBy.forEach(a=>a.sort((x,y)=>(jd(x)||"9999").localeCompare(jd(y)||"9999")))}
+  const js=_skJobsBy.get(cid)||[];
   return js.find(j=>!jd(j)||!od||jd(j)>=od)||null}
 function skInstalled(o){const j=skJobOf(o);if(j&&j.status==="완료")return j.done_date||j.visit_date||today();return ""}
 /* 설치가 끝난 고객의 '입고완료' 발주 → 자동으로 '출고완료' (출고일자 = 설치일) */
