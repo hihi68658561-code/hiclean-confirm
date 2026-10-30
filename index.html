@@ -224,14 +224,15 @@ body.resizing,body.resizing *{cursor:col-resize!important;user-select:none}
 .wt.sm tr.sneed th{background:#FF00FF;color:#fff}.wt.sm td.need{background:#FF0000;color:#fff;font-weight:700}.wt.sm tr.stot td,.wt.sm tr.stot th{background:#FFFF00;color:#1b1b1b;font-weight:700;border-top:2px solid #555}
 .wt.su tr.sout td{color:#777}.wt.su tr.sx td{color:#999;text-decoration:line-through}.wt.su tbody tr{cursor:pointer}.mono{font-family:ui-monospace,Consolas,monospace;font-size:12px}
 .tag.skplan{background:#FFFF00;color:#FF0000;border-color:#FFFF00;font-weight:700}
-.srow{display:flex;gap:16px;align-items:stretch;flex-wrap:wrap}
+.srow{display:flex;gap:14px;align-items:stretch;flex-wrap:wrap}
 /* 오른쪽 TYPE 정리·중고 내역은 현황표 높이에 맞춰 끝을 맞춤 (넘치면 중고 내역만 스크롤) */
 .sside{position:relative;align-self:stretch;min-height:200px}
-.sside .ssin{position:absolute;inset:6px 0 0 0;display:flex;flex-direction:column;gap:8px}
-.sside .susedbox{flex:1 1 auto;min-height:0;overflow:auto;border-radius:6px}
+.sside .ssin{position:absolute;inset:7px 0 1px 0;display:flex;flex-direction:column;justify-content:space-between;gap:8px}
+.sside .susedbox{flex:0 1 auto;min-height:0;overflow:auto;border-radius:6px}
+.sside .ssin:not(:has(.splanbox)){justify-content:flex-start}
 .sside .stafft th,.sside .stafft td{padding:3px 8px;font-size:12px;line-height:1.3}
 .sside .splanbox{padding:6px;flex:0 0 auto}
-@media (max-width:1100px){.sside{min-height:0}.sside .ssin{position:static}.sside .susedbox{max-height:260px}}/* 왼쪽 여백(16px) = 표와 패널 사이 = 패널 오른쪽 여백: 남는 폭은 패널이 채움 */.sside{flex:1 1 250px;min-width:250px;margin-right:max(16px,env(safe-area-inset-right,0px))}.sside .stafft th{text-align:left;white-space:nowrap}.slegend thead th{color:#c00000}.sused thead th{color:#c00000}
+@media (max-width:1100px){.sside{min-height:0}.sside .ssin{position:static}.sside .susedbox{max-height:260px}}.sside{width:250px}.sside .stafft th{text-align:left;white-space:nowrap}.slegend thead th{color:#c00000}.sused thead th{color:#c00000}
 .splanbox{background:#FFFF00;color:#FF0000;font-weight:700;text-align:center;padding:10px;border:1px solid #e6c200;border-radius:6px;cursor:pointer;line-height:1.4}.splanbox b{font-size:18px;margin-left:6px}
 @media (max-width:760px){.sside{width:auto;padding:6px 16px 0}}.tag.skin{background:#00CC66;color:#1b1b1b;border-color:#00CC66}.tag.skout{background:#fff;color:#555;border-color:#aaa}.usedsum{display:flex;gap:14px;align-items:flex-start;flex-wrap:wrap}
 .wgrid{display:grid;grid-template-columns:minmax(260px,1fr) minmax(0,3fr);gap:14px;padding:6px 20px 20px}.wgrid .wtbox{max-height:calc(100vh - 330px)}.kpi.wstock b{font-size:26px;color:#1b1b1b}.kpi.wstock{background:#FFFF00;border-color:#e6c200}
@@ -3100,7 +3101,7 @@ function stockUltraHtml(){const cm=stkCtrMap();const units=stkUnits.map(u=>({u,s
       <tr><th>TYPE</th><td>A : 세로 700<br>B : 세로 600<br>C : 세로 특수 사이즈</td></tr><tr><th>턱</th><td>유턱 : 1 · 무턱 : 0</td></tr><tr><th>배수</th><td>우 : R · 좌 : L</td></tr></tbody></table>
     <div class="susedbox"><table class="stafft sused"><thead><tr class="uclk" data-uspec="" role="button" tabindex="0" title="중고 재고 전체 보기"><th>중고 내역</th><th class="num">${usedIn}</th></tr></thead><tbody>${Object.entries(ug).sort((a,b)=>b[1]-a[1]).map(([k,n])=>`<tr class="uclk${ui.sfil&&ui.sfil.spec===k?" on":""}" data-uspec="${esc(k)}" role="button" tabindex="0" title="이 중고 제품 보기"><td>${esc(k)}</td><td class="num">${n}</td></tr>`).join("")||`<tr><td colspan="2" class="mapt">중고 재고 없음</td></tr>`}</tbody></table></div>
     ${(()=>{const pl=units.filter(x=>x.u.status==="생산예정").length;return pl?`<div class="splanbox" role="button" tabindex="0" id="sPlan">생산입고 등록요망 <b>${pl}</b></div>`:""})()}</div></div>`;
-  const mat=`<div class="srow"><div class="wrapx vis" style="padding-top:6px;padding-right:0;min-width:0;max-width:100%"><div class="wtbox" style="max-height:none;width:fit-content;max-width:100%"><table class="wt sm"><thead><tr><th colspan="3">구분</th>${sizes.map(s=>`<th colspan="3" class="szs">${s}</th>`).join("")}<th rowspan="2">합계</th></tr>
+  const mat=`<div class="srow"><div class="wrapx vis" style="padding-top:6px;min-width:0;max-width:100%"><div class="wtbox" style="max-height:none;width:fit-content;max-width:100%"><table class="wt sm"><thead><tr><th colspan="3">구분</th>${sizes.map(s=>`<th colspan="3" class="szs">${s}</th>`).join("")}<th rowspan="2">합계</th></tr>
       <tr><th>제품</th><th>턱</th><th>배수</th>${sizes.map(()=>STK_TY.map(t=>`<th title="${STK_TYNAME[t]}" class="${t==="A"?"szs":""}">${t}</th>`).join("")).join("")}</tr></thead><tbody>${tb}
       <tr class="stot"><th colspan="3">총계</th>${allT.map(a=>a.map((n,i)=>`<td class="num${i===0?" szs":""}">${n||""}</td>`).join("")).join("")}<td class="num"><b>${fresh.length}</b></td></tr></tbody></table></div>
     </div>${side}</div><p class="mapt" style="margin:6px 20px 0">현황표는 새 제품 재고만 셉니다(중고 ${usedIn}대는 오른쪽 ‘중고 내역’). 숫자를 누르면 아래 목록이 그 제품으로 바뀝니다. ‘적정 재고’ 칸을 누르면 입력할 수 있습니다. 생산 필요 = 적정 재고 − 유턱(우·좌) 재고.</p>`;
