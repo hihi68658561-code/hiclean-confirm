@@ -693,11 +693,11 @@ function render(){if(ui._fresh){ui._fresh=false;render0();window.scrollTo(0,0);r
 function render0(){
   ui.dirty=false;
   if(me.role==="sales"&&(ui.view==="work"||ui.view==="asm"))ui.view="home";
-  const tabs=[["home","홈"],["cust","고객"]];if(me.role!=="tech")tabs.push(["leads","DB관리"]);if(me.role!=="sales")tabs.push(["work","당월 설치·A/S 전체리스트"]);if(me.role!=="tech")tabs.push(["ctrm","당월리스트"],["allm","전체리스트"],...(me.role==="sales"?[]:[["asm","A/S관리"]]),["recv","미수·채권관리"]);tabs.push(["sched","담당자별 일정표"]);if(me.role!=="tech")tabs.push(["sink","싱크대발주"]);if(isOffice())tabs.push(["stock","재고관리"]);if(me.role!=="tech")tabs.push(["sms","문자"]);tabs.push(["notice","공지사항"]);if(isAdmin())tabs.push(["staff","직원"],["settings","설정"]);
+  const tabs=[["home","홈"],["cust","고객"]];if(me.role!=="tech")tabs.push(["leads","DB관리"]);if(me.role!=="sales")tabs.push(["work","당월 설치·A/S 전체리스트"]);if(me.role!=="tech")tabs.push(["ctrm","당월리스트"],["allm","전체리스트"],...(me.role==="sales"?[]:[["asm","A/S관리"]]),["recv","미수·채권관리"]);tabs.push(["sched","담당자별 일정표"]);if(me.role!=="tech")tabs.push(["sink","싱크대발주"]);if(isOffice())tabs.push(["stock","재고관리"]);if(me.role!=="tech")tabs.push(["sms","문자"]);tabs.push(["notice","공지사항"]);if(isAdmin())tabs.push(["settings","설정"]);
   document.getElementById("nav").innerHTML=tabs.map(([k,l])=>`<button type="button" class="${ui.view===k?"on":""}${k==="notice"&&ui.view!=="notice"&&noticeUnread()?" ndot":""}" data-v="${k}">${l}</button>`).join("");
   document.querySelectorAll("#nav button").forEach(b=>b.onclick=()=>{ui.view=b.dataset.v;if(ui.view==="sched")ui.schJump=true;ui.jsel=new Set();ui._fresh=true;render()});
   if(ui.view==="install"||ui.view==="as")ui.view="work";
-  if(ui.view==="home")renderHomeView();else if(ui.view==="cust")renderCustView();else if(ui.view==="work")renderWorkView();else if(ui.view==="ctrm")renderCtrView();else if(ui.view==="asm")renderAsView();else if(ui.view==="leads")renderLeadView();else if(ui.view==="recv")renderRecvView();else if(ui.view==="allm")renderAllView();else if(ui.view==="sched")renderSchedView();else if(ui.view==="sms")renderSmsView();else if(ui.view==="notice")renderNoticeView();else if(ui.view==="sink")renderSinkView();else if(ui.view==="stock")renderStockView();else if(ui.view==="staff")renderStaffView();else if(ui.view==="delete")renderDeleteView();else renderSettings();
+  if(ui.view==="home")renderHomeView();else if(ui.view==="cust")renderCustView();else if(ui.view==="work")renderWorkView();else if(ui.view==="ctrm")renderCtrView();else if(ui.view==="asm")renderAsView();else if(ui.view==="leads")renderLeadView();else if(ui.view==="recv")renderRecvView();else if(ui.view==="allm")renderAllView();else if(ui.view==="sched")renderSchedView();else if(ui.view==="sms")renderSmsView();else if(ui.view==="notice")renderNoticeView();else if(ui.view==="sink")renderSinkView();else if(ui.view==="stock")renderStockView();else if(ui.view==="staff"){ui.view="settings";ui.settab="perm";render()}else if(ui.view==="delete")renderDeleteView();else{if(ui.settab==="etc"||!isAdmin())renderSettings();else renderStaffView()}
   addXlsBtn();
 }
 
@@ -2524,8 +2524,13 @@ function addXlsBtn(){const v=ui.view;if(!XSEL[v]||!isOffice()||!window.XLSX)retu
       m.querySelector('[data-k=v]').onclick=()=>{close();exportView()};m.querySelector('[data-k=s]').onclick=()=>{close();setlDlg()}}}
   else{b.textContent="엑셀 다운로드";b.onclick=()=>exportView()}
   tb.appendChild(b);addPrintBtn(tb)}
+/* 설정: 하위 탭 (권한관리 = 직원 설정 · 기타설정 = 확인서 인쇄 문구) */
+function ensureSetTabs(){if(ui.view!=="settings"||!isAdmin()||document.getElementById("setTabs"))return;const v=view();if(!v.firstElementChild)return;
+  const d=document.createElement("div");d.id="setTabs";d.className="toolbar";d.style.cssText="padding:16px 20px 0;flex-wrap:wrap";
+  d.innerHTML=`<h2 style="margin:0;font-size:18px">설정</h2><div class="nav" role="tablist">${[["perm","권한관리"],["etc","기타설정"]].map(([k,l])=>`<button type="button" role="tab" data-settab="${k}" class="${(ui.settab||"perm")===k?"on":""}">${l}</button>`).join("")}</div>`;
+  v.prepend(d);d.querySelectorAll("[data-settab]").forEach(b=>b.onclick=()=>{ui.settab=b.dataset.settab;render()})}
 /* 검색·칩 등으로 화면 안쪽만 다시 그려도 엑셀 다운로드·인쇄 버튼이 빠지지 않게 */
-(()=>{let q=false;const ob=new MutationObserver(()=>{if(q)return;q=true;queueMicrotask(()=>{q=false;try{if(me)addXlsBtn()}catch(e){}})});const tgt=view&&view();if(tgt)ob.observe(tgt,{childList:true})})();
+(()=>{let q=false;const ob=new MutationObserver(()=>{if(q)return;q=true;queueMicrotask(()=>{q=false;try{if(me){addXlsBtn();ensureSetTabs()}}catch(e){}})});const tgt=view&&view();if(tgt)ob.observe(tgt,{childList:true})})();
 /* 당월 설치·A/S, 당월리스트: 체크한 건의 확인서를 한 번에 인쇄 */
 /* 당월리스트: 싱크·부자재 정산 엑셀 (설치 1건 = 제품·싱크 품목·부자재·설치비 여러 줄) */
 const SETL_DEF={활성제:21000,수저랙:12000,세로바:27000,현판:0,사용안내판:0,설치비:400000,"설치비(수압식만)":200000,"설치비(추가설치)":50000};
@@ -4023,7 +4028,6 @@ function renderDeleteView(){
 /* ================= 설정 (관리자) ================= */
 function renderSettings(){
   view().innerHTML=`<div class="sec"><fieldset><legend>확인서 설정</legend><label class="f">입금계좌 안내 문구<input id="sBank" value="${esc(S.bank)}"></label><div class="actions"><button class="btn pri" id="bSaveSet" type="button">저장</button></div></fieldset></div>`;
-  if(isOffice()){const fs=document.createElement("fieldset");fs.id="smsSet";fs.style.marginTop="16px";view().querySelector(".sec").appendChild(fs);renderSmsTplSet()}
   document.getElementById("bSaveSet").onclick=async()=>{const b=val("sBank").trim();if(!b)return;const {error}=await sb.from("settings").update({bank:b}).eq("id",1);if(error)return toast("저장하지 못했습니다");S.bank=b;toast("저장했습니다")};
 }
 
