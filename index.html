@@ -4066,9 +4066,11 @@ function planImport(rows,fresh){
   const byKey={};exCust.forEach(c=>byKey[custKey(c)]=c);
   const byName={};exCust.forEach(c=>{const n=nk(c.name);(byName[n]=byName[n]||[]).push(c)});
   const digits=s=>String(s||"").replace(/\D/g,"");
-  const serials=new Set(exCtr.map(k=>nk(k.serial)).filter(Boolean));
+  /* 시리얼은 같은 업체 안에서만 중복으로 봄 (다른 업체가 같은 번호를 쓴 줄을 건너뛰지 않게) */
+  const snKeys=k=>{const c=custById(k.customer_id)||{};return [c.name,c.xname].filter(Boolean).map(n=>nk(k.serial)+"|"+nk(n))};
+  const serials=new Set(exCtr.filter(k=>k.serial).flatMap(snKeys));
   const sig=new Set(exCtr.map(k=>k.customer_id+"|"+nk(k.product)+"|"+(k.contract_date||"")+"|"+k.amount));
-  const bySerial={},bySig={};exCtr.forEach(k=>{if(k.serial)bySerial[nk(k.serial)]=k;bySig[k.customer_id+"|"+nk(k.product)+"|"+(k.contract_date||"")+"|"+k.amount]=k});
+  const bySerial={},bySig={};exCtr.forEach(k=>{if(k.serial)snKeys(k).forEach(x=>bySerial[x]=k);bySig[k.customer_id+"|"+nk(k.product)+"|"+(k.contract_date||"")+"|"+k.amount]=k});
   const newCust=[],newCtr=[],newJob=[],newPay=[],updCtr=[],missJob=[];let skipped=0,payWarn=0,payFix=0;const td=today();const withPay=!ui.noPay;
   rows.forEach(({t,g,raw,has})=>{
     let name=t("업체명");const notes=[];
@@ -4130,21 +4132,21 @@ function planImport(rows,fresh){
     const fdate=toDate(g("설치일자"))||toDate(g("계약일자"))||null;
     if(unSet){const add=fillPays(k.amount,pays.reduce((a,p)=>a+p.amount,0),pays.filter(p=>p.method==="카드").reduce((a,p)=>a+p.amount,0),fdate);if(add.length){pays.push(...add);fixNew=true}}
     const sg=k.customer_id+"|"+nk(k.product)+"|"+(k.contract_date||"")+"|"+k.amount;
-    const ex=(k.serial&&bySerial[nk(k.serial)])||bySig[sg];
+    const sk_=nk(k.serial)+"|"+nk(name);const ex=(k.serial&&bySerial[sk_])||bySig[sg];
     /* 설치 작업 (엑셀 한 줄 = 설치 1건) */
     const mkJob=(cu,kk)=>{const vd=toDate(g("설치일자"))||null;const tn=t("설치1");
       const status=(kk.stage||stage)==="취소"?"취소":(vd&&vd<=td?"완료":(vd||tn?"배정":"접수"));
       const sinkRaw=t("싱크준비")||t("싱크발주");
       return{id:crypto.randomUUID(),kind:"install",customer_id:cu.id,contract_id:kk.id,customer_name:cu.name,address:cu.address,product:productOf(kk),status,request_date:kk.contract_date||vd||td,visit_date:vd,visit_time:t("시간"),
         techs:[],tech_names:tn,symptom:"",result:"",cost:0,sink_status:SINKS.includes(sinkRaw)?sinkRaw:(sinkRaw?"기타":""),sink_memo:SINKS.includes(sinkRaw)?"":sinkRaw,parts:partsText,done_date:status==="완료"?vd:null}};
-    if((k.serial&&serials.has(nk(k.serial)))||sig.has(sg)){skipped++;
+    if((k.serial&&serials.has(sk_))||sig.has(sg)){skipped++;
       if(ex&&!jobs.some(j=>j.contract_id===ex.id&&j.kind!=="as")&&!installOf(ex)&&!missJob.some(j=>j.contract_id===ex.id)){const cu=custById(ex.customer_id);if(cu)missJob.push(mkJob(cu,ex))}
       if(cust.__new&&!newCust.includes(cust)){delete byKey[key];const bn=byName[nk(name)];if(bn){const i=bn.indexOf(cust);if(i>=0)bn.splice(i,1)}}
       if(ex&&withPay){updCtr.push({id:ex.id,patch:Object.assign({contract_type:ctype,channel,stage},extra,k.tax&&Object.keys(k.tax).length?{tax:k.tax}:{}),pays:(()=>{const xp=paysOf(ex);if(!xp.length)return pays.map(p=>Object.assign(p,{contract_id:ex.id,customer_id:ex.customer_id}));
         const s=payStat(ex);const add=fillPays(Number(ex.amount||0),s.paid,s.card,fdate);if(add.length)payFix++;return add.map(p=>Object.assign(p,{contract_id:ex.id,customer_id:ex.customer_id}))})()})}
       return}
     if(cust.__new&&!newCust.includes(cust))newCust.push(cust);
-    if(k.serial)serials.add(nk(k.serial));sig.add(sg);newCtr.push(k);if(fixNew)payFix++;
+    if(k.serial)serials.add(sk_);sig.add(sg);newCtr.push(k);if(fixNew)payFix++;
     pays.forEach(p=>{p.contract_id=k.id;p.customer_id=k.customer_id;newPay.push(p)});
     // 설치 작업
     newJob.push(mkJob(cust,k));
