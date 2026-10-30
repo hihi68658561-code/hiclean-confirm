@@ -2606,12 +2606,15 @@ document.addEventListener("change",e=>{const t=e.target;if(!t||!t.matches||!t.ma
 async function renderSinkView(){const off=isOffice();if(!skOrders)view().innerHTML=`<p class="mapt" style="padding:20px">불러오는 중…</p>`;await fetchSink();
   if(!off)ui.sktab="order";if(!ui.sktab)ui.sktab="order";XSEL.sink=ui.sktab==="stock"?".wt.skst":ui.sktab==="price"?".wt.spl":".wt.sk";XNAME.sink=ui.sktab==="stock"?"싱크대 재고현황":ui.sktab==="price"?"싱크대 단가표":"싱크대 발주";
   if(off)await fetchSkPrice();if(ui.sktab==="stock")return renderSinkStock();if(ui.sktab==="price")return renderSinkPrice();
-  ["skq","skst","skown"].forEach(k=>{if(ui[k]===undefined)ui[k]=""});if(ui.skm===undefined)ui.skm="";if(!ui.sksel)ui.sksel=new Set();
+  ["skq"].forEach(k=>{if(ui[k]===undefined)ui[k]=""});if(ui.skst===undefined)ui.skst="미출고";/* 기본: 지난달~이번 달 발주 중 아직 출고 안 된 것 */
+  if(ui.skm1===undefined){const tm=thisMonth();const [y,m]=tm.split("-").map(Number);ui.skm1=m===1?`${y-1}-12`:`${y}-${String(m-1).padStart(2,"0")}`;ui.skm2=tm}if(!ui.sksel)ui.sksel=new Set();
   const canDel=o=>off||(o.owner===me.id&&o.status==="신규접수");[...ui.sksel].forEach(id=>{if(!skOrders.some(o=>o.id===id))ui.sksel.delete(id)});
   const qq=ui.skq.trim().toLowerCase();
-  let list=skOrders.filter(o=>(!ui.skst||o.status===ui.skst)&&(!ui.skown||o.owner_name===ui.skown)&&(!ui.skm||String(o.order_date||"").startsWith(ui.skm))
+  const SK_NOTOUT=o=>!["출고완료","취소","재고등록"].includes(o.status);
+  const inP=o=>{const m=String(o.order_date||"").slice(0,7);return (!ui.skm1||m>=ui.skm1)&&(!ui.skm2||m<=ui.skm2)};const per=skOrders.filter(inP);
+  let list=per.filter(o=>(!ui.skst||(ui.skst==="미출고"?SK_NOTOUT(o):o.status===ui.skst))
     &&(!qq||[o.site_name,o.owner_name,o.memo,...(o.items||[]).map(skSpec)].join(" ").toLowerCase().includes(qq)));
-  const cnt=s=>skOrders.filter(o=>o.status===s).length;const owners=[...new Set(skOrders.map(o=>o.owner_name).filter(Boolean))].sort(KO.compare);
+  const cnt=s=>per.filter(o=>o.status===s).length;const owners=[...new Set(skOrders.map(o=>o.owner_name).filter(Boolean))].sort(KO.compare);
   list=cfApply("sk",list,skTxt);
   const tot={sup:0,vat:0,tot:0,deduct:0};const cc=k=>` class="c-${k}"`;
   const rows=list.map((o,oi)=>{const its=(o.items||[]).length?o.items:[{}];const n=its.length;
@@ -2623,29 +2626,34 @@ async function renderSinkView(){const off=isOffice();if(!skOrders)view().innerHT
         ${off?`<td class="num c-price${L.est?" skest":""}" ${L.est?'title="단가표 기준 (발주서를 저장하면 확정)"':""}>${L.price?won0(L.price):""}</td><td class="num c-sup${L.est?" skest":""}">${L.sup?won0(L.sup):""}</td><td class="num c-vat${L.est?" skest":""}">${L.vat?won0(L.vat):""}</td><td class="num c-tot${L.est?" skest":""}">${L.tot?won0(L.tot):""}</td>`:""}
         ${head?`<td${rs}${cc("in")}>${esc(ymd2(o.in_date))}</td><td${rs}${cc("out")}>${esc(ymd2(o.out_date))}</td><td${rs} class="wrap memo c-memo"><div class="clamp">${esc(o.memo||"")}</div></td>`:""}
         ${off?`<td class="num skded c-ded${L.dEst?" skest":""}" ${L.dEst?'title="단가표 출고가 (발주서를 저장하면 확정)"':""}>${L.deduct?won0(L.deduct):""}</td>`:""}</tr>`}).join("")}).join("");
-  view().innerHTML=`<div class="toolbar" style="padding:16px 20px 0;flex-wrap:wrap"><h2 style="margin:0;font-size:18px">싱크대 발주</h2>${skTabs()}${off?"":`<span class="mapt">내 발주</span>`}<span style="flex:1"></span>${me.role==="tech"?"":`<button class="btn pri" type="button" id="skNew">+ 신규발주</button>`}</div>
+  view().innerHTML=`<div class="toolbar" style="padding:16px 20px 0;flex-wrap:wrap"><h2 style="margin:0;font-size:18px">싱크대 발주</h2>${skTabs()}${off?"":`<span class="mapt">내 발주</span>`}<span style="flex:1"></span>${off?`<span style="position:relative"><button class="btn" type="button" id="skImp" aria-haspopup="menu">가져오기 ▾</button><input type="file" id="skHistIn" accept=".xlsx,.xls" hidden></span>`:""}${me.role==="tech"?"":`<button class="btn pri" type="button" id="skNew">+ 신규발주</button>`}</div>
    ${ui.noSink?`<div class="sec"><p class="warnbox">싱크대 발주를 쓰려면 Supabase SQL Editor에서 <b>phase1ze.sql</b>을 실행해 주세요.</p></div>`:""}
    <div class="toolbar" style="flex-wrap:wrap"><input id="skQ" type="search" placeholder="업체명·담당자·품명 검색" value="${esc(ui.skq)}">
-     <input id="skM" type="month" value="${esc(ui.skm)}" aria-label="발주 월" style="padding:5px 8px;border:1px solid var(--line);border-radius:6px;background:var(--field)">
-     ${off?`<select id="skOwn" aria-label="담당자"><option value="">담당자 전체</option>${owners.map(x=>`<option ${ui.skown===x?"selected":""}>${esc(x)}</option>`).join("")}</select>`:""}
-     <div class="rstages"><button type="button" class="chip ${ui.skst?"":"on"}" data-sks="">전체 ${skOrders.length}</button>${SK_ST.map(s=>`<button type="button" class="chip ${ui.skst===s?"on":""}" data-sks="${s}"><span class="tag sk-${s}">${s}</span> ${cnt(s)}</button>`).join("")}</div>
-     <span class="mapt">${list.length}건</span>${cfClearBtn("sk")}<span style="flex:1"></span>${off?`<select id="skBulk" ${ui.sksel.size?"":"disabled"} aria-label="선택한 발주 진행사항 변경"><option value="">선택 ${ui.sksel.size}건 진행사항 변경…</option>${SK_ST.map(s=>`<option>${s}</option>`).join("")}</select>`:""}<button class="btn danger" type="button" id="skDel" ${ui.sksel.size?"":"disabled"}>선택 삭제 (${ui.sksel.size})</button>${off?`<button class="btn" type="button" id="skIn">입고 내역 가져오기</button><button class="btn" type="button" id="skHist">발주 엑셀 가져오기</button><input type="file" id="skHistIn" accept=".xlsx,.xls" hidden>`:""}</div>
+     <span style="display:inline-flex;align-items:center;gap:4px"><input id="skM1" type="month" value="${esc(ui.skm1)}" aria-label="발주 시작 월" style="padding:5px 8px;border:1px solid var(--line);border-radius:6px;background:var(--field)">~<input id="skM2" type="month" value="${esc(ui.skm2)}" aria-label="발주 종료 월" style="padding:5px 8px;border:1px solid var(--line);border-radius:6px;background:var(--field)"></span>
+     <div class="rstages"><button type="button" class="chip ${ui.skst==="미출고"?"on":""}" data-sks="미출고" title="출고완료·취소·재고등록을 뺀 발주">미출고 ${per.filter(SK_NOTOUT).length}</button><button type="button" class="chip ${ui.skst?"":"on"}" data-sks="">전체 ${per.length}</button>${SK_ST.map(s=>`<button type="button" class="chip ${ui.skst===s?"on":""}" data-sks="${s}"><span class="tag sk-${s}">${s}</span> ${cnt(s)}</button>`).join("")}</div>
+     <span class="mapt">${list.length}건</span>${cfClearBtn("sk")}<span style="flex:1"></span>${off?`<button class="btn" type="button" id="skBulk" ${ui.sksel.size?"":"disabled"}>진행사항변경</button>`:""}<button class="btn danger" type="button" id="skDel" ${ui.sksel.size?"":"disabled"}>선택 삭제 (${ui.sksel.size})</button></div>
    <div class="wrapx vis" style="padding-top:6px"><div class="wtbox"><table class="wt sk"><thead><tr><th class="skchk"><input type="checkbox" id="skAll" aria-label="전체 선택"></th>${skHead()}</tr></thead>
      <tbody>${rows||`<tr><td colspan="${off?16:11}" class="mapt">발주가 없습니다.</td></tr>`}</tbody>
      ${off&&list.length?`<tfoot><tr><th colspan="8">합계</th><th></th><th class="num">${won0(tot.sup)}</th><th class="num">${won0(tot.vat)}</th><th class="num">${won0(tot.tot)}</th><th colspan="3"></th><th class="num">${won0(tot.deduct)}</th></tr></tfoot>`:""}</table></div></div>`;
   const re=()=>renderSinkView();cfBind("sk",re);{const cols=TCFG.sk.cols().map(c=>c[0]);applyColW(cols,null,"sk");bindColResize(cols,"sk")}
   const q=document.getElementById("skQ");q.oninput=()=>{ui.skq=q.value;clearTimeout(q._t);q._t=imeT(q,()=>{re().then(()=>{const n=document.getElementById("skQ");n.focus();n.setSelectionRange(n.value.length,n.value.length)})},250)};
-  document.getElementById("skM").onchange=e=>{ui.skm=e.target.value;re()};const so=document.getElementById("skOwn");if(so)so.onchange=e=>{ui.skown=e.target.value;re()};
+  document.getElementById("skM1").onchange=e=>{ui.skm1=e.target.value;re()};document.getElementById("skM2").onchange=e=>{ui.skm2=e.target.value;re()};
   view().querySelectorAll("[data-sks]").forEach(b=>b.onclick=()=>{ui.skst=b.dataset.sks;re()});
-  const nb=document.getElementById("skNew");if(nb)nb.onclick=()=>sinkDlg(null);bindSkTabs();const si=document.getElementById("skIn");if(si)si.onclick=()=>sinkInDlg();
-  {const hb=document.getElementById("skHist"),hi=document.getElementById("skHistIn");if(hb){hb.onclick=()=>hi.click();hi.onchange=async()=>{const f=hi.files[0];hi.value="";if(!f)return;let wb;try{wb=XLSX.read(await f.arrayBuffer(),{type:"array",cellDates:true})}catch(e){return toast("파일을 읽지 못했습니다")}sinkHistImport(f.name,wb)}}}
+  const nb=document.getElementById("skNew");if(nb)nb.onclick=()=>sinkDlg(null);bindSkTabs();{const ib=document.getElementById("skImp");if(ib)ib.onclick=e=>{e.stopPropagation();document.querySelectorAll(".stmenu").forEach(x=>x.remove());const m=document.createElement("div");m.className="stmenu";m.setAttribute("role","menu");
+    m.innerHTML=`<button type="button" data-k="in">입고 내역 가져오기</button><button type="button" data-k="hist">발주 엑셀 가져오기</button>`;document.body.appendChild(m);const r=ib.getBoundingClientRect();m.style.left=Math.max(8,r.right-m.offsetWidth+window.scrollX)+"px";m.style.top=(r.bottom+4+window.scrollY)+"px";
+    const close=()=>{m.remove();document.removeEventListener("mousedown",out,true)};const out=ev=>{if(!m.contains(ev.target))close()};setTimeout(()=>document.addEventListener("mousedown",out,true),0);
+    m.querySelector('[data-k=in]').onclick=()=>{close();sinkInDlg()};m.querySelector('[data-k=hist]').onclick=()=>{close();document.getElementById("skHistIn").click()}}}
+  {const hb=document.getElementById("skImp"),hi=document.getElementById("skHistIn");if(hb){hi.onchange=async()=>{const f=hi.files[0];hi.value="";if(!f)return;let wb;try{wb=XLSX.read(await f.arrayBuffer(),{type:"array",cellDates:true})}catch(e){return toast("파일을 읽지 못했습니다")}sinkHistImport(f.name,wb)}}}
   view().querySelectorAll("tr[data-sk]").forEach(tr=>tr.onclick=e=>{if(e.target.closest(".skchk"))return;sinkDlg(skOrders.find(o=>o.id===tr.dataset.sk))});
-  const upd=()=>{const b=document.getElementById("skDel");b.disabled=!ui.sksel.size;b.textContent=`선택 삭제 (${ui.sksel.size})`;const bk=document.getElementById("skBulk");if(bk){bk.disabled=!ui.sksel.size;bk.options[0].textContent=`선택 ${ui.sksel.size}건 진행사항 변경…`}};
-  {const bk=document.getElementById("skBulk");if(bk)bk.onchange=async()=>{const v=bk.value;const ids=[...ui.sksel];if(!v||!ids.length)return;
-    if(!(await askConfirm(`선택한 발주 ${ids.length}건의 진행사항을 ‘${v}’(으)로 바꿀까요?${v==="입고완료"?" 입고일자가 비어 있으면 오늘 날짜를 넣습니다.":v==="출고완료"?" 출고일자가 비어 있으면 오늘 날짜를 넣습니다.":""}`))){bk.value="";return}
-    let n=0,err="";for(const id of ids){const o=skOrders.find(x=>x.id===id);if(!o)continue;const up={status:v};if(v==="입고완료"&&!o.in_date)up.in_date=today();if(v==="출고완료"&&!o.out_date)up.out_date=today();
-      const {error}=await sb.from("sink_orders").update(up).eq("id",id);if(error){err=error.message;break}Object.assign(o,up);n++}
-    if(err)toast(`${n}건 바꾼 뒤 멈췄습니다: ${err}`);else toast(`${n}건을 ‘${v}’(으)로 바꿨습니다`);ui.sksel=new Set();renderSinkView()}}
+  const upd=()=>{const b=document.getElementById("skDel");b.disabled=!ui.sksel.size;b.textContent=`선택 삭제 (${ui.sksel.size})`;const bk=document.getElementById("skBulk");if(bk)bk.disabled=!ui.sksel.size};
+  {const bk=document.getElementById("skBulk");if(bk)bk.onclick=()=>{const ids=[...ui.sksel];if(!ids.length)return;
+    openDlg("진행사항변경",`<div id="skbf" style="display:grid;gap:12px"><div class="chk" role="radiogroup" aria-label="진행사항">${["입고완료","출고완료"].map((v,i)=>`<label><input type="radio" name="bst" value="${v}" ${i===0?"checked":""}> ${v}</label>`).join("")}</div>
+      <label class="f"><span id="skbL">입고일자</span><input type="date" name="bd" value="${today()}"></label><p style="margin:0;font-size:15px"><b>${ids.length}건</b>을 변경하시겠습니까?</p></div>`,
+      [["닫기"],["변경","pri",async()=>{const v=(document.querySelector('#skbf [name=bst]:checked')||{}).value;const d=document.querySelector('#skbf [name=bd]').value;if(!v)return true;if(!d){toast("날짜를 고르세요");return true}
+        let n=0,err="";for(const id of ids){const o=skOrders.find(x=>x.id===id);if(!o)continue;const up={status:v};if(v==="입고완료")up.in_date=d;else{up.out_date=d;if(!o.in_date)up.in_date=d}
+          const {error}=await sb.from("sink_orders").update(up).eq("id",id);if(error){err=error.message;break}Object.assign(o,up);n++}
+        if(err)toast(`${n}건 바꾼 뒤 멈췄습니다: ${err}`);else toast(`${n}건을 ‘${v}’(으)로 바꿨습니다`);ui.sksel=new Set();renderSinkView()}]]);
+    document.querySelectorAll('#skbf [name=bst]').forEach(r=>r.onchange=()=>{document.getElementById("skbL").textContent=r.value==="출고완료"?"출고일자":"입고일자"})}}
   view().querySelectorAll(".sksel").forEach(c=>c.onchange=()=>{c.checked?ui.sksel.add(c.dataset.id):ui.sksel.delete(c.dataset.id);upd()});
   document.getElementById("skAll").onchange=e=>{view().querySelectorAll(".sksel").forEach(c=>{c.checked=e.target.checked;c.checked?ui.sksel.add(c.dataset.id):ui.sksel.delete(c.dataset.id)});upd()};
   document.getElementById("skDel").onclick=async()=>{const ids=[...ui.sksel];if(!ids.length)return;if(!(await askConfirm(`선택한 발주 ${ids.length}건을 삭제할까요? 금액 기록도 함께 지워집니다.`)))return;
