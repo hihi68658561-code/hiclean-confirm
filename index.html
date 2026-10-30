@@ -224,6 +224,7 @@ body.resizing,body.resizing *{cursor:col-resize!important;user-select:none}
 .wt.sm tr.sneed th{background:#FF00FF;color:#fff}.wt.sm td.need{background:#FF0000;color:#fff;font-weight:700}.wt.sm tr.stot td,.wt.sm tr.stot th{background:#FFFF00;color:#1b1b1b;font-weight:700;border-top:2px solid #555}
 .wt.su tr.sout td{color:#777}.wt.su tr.sx td{color:#999;text-decoration:line-through}.wt.su tbody tr{cursor:pointer}.mono{font-family:ui-monospace,Consolas,monospace;font-size:12px}
 .tag.skplan{background:#FFFF00;color:#FF0000;border-color:#FFFF00;font-weight:700}
+.xroles{display:flex;gap:6px;flex-wrap:nowrap}.xroles label{display:inline-flex;align-items:center;gap:4px;white-space:nowrap;border:1px solid var(--line);border-radius:6px;padding:4px 8px;font-size:13px;cursor:pointer}.xroles input{width:auto!important;min-width:0!important;margin:0}.xroles input:disabled+*,.xroles label:has(input:disabled){opacity:.45}
 .srow{display:flex;gap:14px;align-items:stretch;flex-wrap:wrap}
 /* 오른쪽 TYPE 정리·중고 내역은 현황표 높이에 맞춰 끝을 맞춤 (넘치면 중고 내역만 스크롤) */
 .sside{position:relative;align-self:stretch;min-height:200px}
@@ -598,12 +599,12 @@ document.getElementById("loginForm").addEventListener("submit",async e=>{
 });
 async function afterLogin(user){
   document.getElementById("login").hidden=true;
-  const {data}=await sb.from("staff").select("name,role,active").eq("user_id",user.id).maybeSingle();
+  const {data}=await sb.from("staff").select("*").eq("user_id",user.id).maybeSingle();
   document.getElementById("bLogout").hidden=false;document.getElementById("bPw").hidden=false;
   if(!data||!data.active){me={id:user.id,email:user.email,role:""};view().innerHTML=`<div class="empty"><h2>아직 직원으로 등록되지 않은 계정입니다</h2><p>${esc(user.email)} 계정으로 로그인했습니다. 관리자에게 직원 등록을 요청하세요.</p></div>`;return}
-  me={id:user.id,email:user.email,name:data.name,role:data.role};
-  ui.view="home";if(me.role==="tech"){ui.jscope="mine"}else ui.jscope="all";
-  document.getElementById("modeLabel").textContent=`${me.name||me.email} · ${ROLE[me.role]}`;document.getElementById("bMore").textContent=`${me.name||"메뉴"} ▾`;
+  me={id:user.id,email:user.email,name:data.name,role:data.role,extra:Array.isArray(data.extra_roles)?data.extra_roles:[]};
+  ui.view="home";if(me.role==="tech"||(me.role==="sales"&&meHas("tech"))){ui.jscope="mine"}else ui.jscope="all";
+  document.getElementById("modeLabel").textContent=`${me.name||me.email} · ${[me.role,...me.extra].map(r=>ROLE[r]).filter(Boolean).join("+")}`;document.getElementById("bMore").textContent=`${me.name||"메뉴"} ▾`;
   document.getElementById("bImport").hidden=!isOffice();
   await loadAll();
 }
@@ -645,7 +646,7 @@ async function incFetch(tb,cur,full,withCount){const since=maxUpd(cur);if(!cur.l
 async function loadAll(){
   view().innerHTML=`<div class="empty"><h2>불러오는 중…</h2></div>`;
   try{
-    [staff,customers,contracts,jobs,payments,files,grades,notes,leads,rcases,rlogs]=await Promise.all([fetchAll("staff","user_id,name,role,aliases,active"),fetchAll("customers"),fetchCtr(),fetchAll("jobs"),fetchPays(),fetchFiles(),fetchGrades(),fetchNotes(),fetchLeads(),fetchRCases(),fetchRLogs()]);
+    [staff,customers,contracts,jobs,payments,files,grades,notes,leads,rcases,rlogs]=await Promise.all([fetchAll("staff"),fetchAll("customers"),fetchCtr(),fetchAll("jobs"),fetchPays(),fetchFiles(),fetchGrades(),fetchNotes(),fetchLeads(),fetchRCases(),fetchRLogs()]);
     const st=await sb.from("settings").select("bank").eq("id",1).maybeSingle();if(st.data&&st.data.bank)S.bank=st.data.bank;
   }catch(e){view().innerHTML=`<div class="empty"><h2>데이터를 불러오지 못했습니다</h2><p>${esc(e.message||"")}</p><p>1단계 데이터베이스 설정(phase1.sql)을 실행했는지 확인해 주세요.</p></div>`;return}
   if(ui.sel&&!custById(ui.sel))ui.sel=null;
@@ -654,7 +655,7 @@ async function loadAll(){
 async function fetchPays(){if(me&&me.role==="tech")return[];try{const r=await fetchAll("payments");ui.noPay=false;return r}catch(e){ui.noPay=true;return[]}}
 async function fetchFiles(){try{const r=await fetchAll("customer_files");ui.noFiles=false;return r}catch(e){ui.noFiles=true;return[]}}
 async function fetchGrades(){if(me&&me.role==="tech")return[];try{const r=await fetchAll("customer_grades");ui.noGrades=false;return r}catch(e){ui.noGrades=true;return[]}}
-const TBL={recv:fetchRCases,rlogs:fetchRLogs,leads:fetchLeads,notes:fetchNotes,grades:fetchGrades,files:fetchFiles,payments:fetchPays,customers:()=>fetchAll("customers"),contracts:fetchCtr,jobs:()=>fetchAll("jobs"),staff:()=>fetchAll("staff","user_id,name,role,aliases,active")};
+const TBL={recv:fetchRCases,rlogs:fetchRLogs,leads:fetchLeads,notes:fetchNotes,grades:fetchGrades,files:fetchFiles,payments:fetchPays,customers:()=>fetchAll("customers"),contracts:fetchCtr,jobs:()=>fetchAll("jobs"),staff:()=>fetchAll("staff")};
 let reloadSeq=0;
 async function reload(tables,quiet){
   const seq=++reloadSeq;let res;
@@ -692,8 +693,8 @@ function restoreScroll(s){if(!s||s.v!==ui.view)return;const els=[...document.que
 function render(){if(ui._fresh){ui._fresh=false;render0();window.scrollTo(0,0);return}const _sv=snapScroll();try{render0()}finally{restoreScroll(_sv)}}
 function render0(){
   ui.dirty=false;
-  if(me.role==="sales"&&(ui.view==="work"||ui.view==="asm"))ui.view="home";
-  const tabs=[["home","홈"],["cust","고객"]];if(me.role!=="tech")tabs.push(["leads","DB관리"]);if(me.role!=="sales")tabs.push(["work","당월 설치·A/S 전체리스트"]);if(me.role!=="tech")tabs.push(["ctrm","당월리스트"],["allm","전체리스트"],...(me.role==="sales"?[]:[["asm","A/S관리"]]),["recv","미수·채권관리"]);tabs.push(["sched","담당자별 일정표"]);if(me.role!=="tech")tabs.push(["sink","싱크대발주"]);if(isOffice())tabs.push(["stock","재고관리"]);if(me.role!=="tech")tabs.push(["sms","문자"]);tabs.push(["notice","공지사항"]);if(isAdmin())tabs.push(["settings","설정"]);
+  if(me.role==="sales"&&((ui.view==="work"&&!meHas("tech"))||ui.view==="asm"))ui.view="home";
+  const tabs=[["home","홈"],["cust","고객"]];if(me.role!=="tech")tabs.push(["leads","DB관리"]);if(me.role!=="sales"||meHas("tech"))tabs.push(["work","당월 설치·A/S 전체리스트"]);if(me.role!=="tech")tabs.push(["ctrm","당월리스트"],["allm","전체리스트"],...(me.role==="sales"?[]:[["asm","A/S관리"]]),["recv","미수·채권관리"]);tabs.push(["sched","담당자별 일정표"]);if(me.role!=="tech")tabs.push(["sink","싱크대발주"]);if(isOffice())tabs.push(["stock","재고관리"]);if(me.role!=="tech")tabs.push(["sms","문자"]);tabs.push(["notice","공지사항"]);if(isAdmin())tabs.push(["settings","설정"]);
   document.getElementById("nav").innerHTML=tabs.map(([k,l])=>`<button type="button" class="${ui.view===k?"on":""}${k==="notice"&&ui.view!=="notice"&&noticeUnread()?" ndot":""}" data-v="${k}">${l}</button>`).join("");
   document.querySelectorAll("#nav button").forEach(b=>b.onclick=()=>{ui.view=b.dataset.v;if(ui.view==="sched")ui.schJump=true;ui.jsel=new Set();ui._fresh=true;render()});
   if(ui.view==="install"||ui.view==="as")ui.view="work";
@@ -763,7 +764,10 @@ function renderCustMain(){
 }
 function inp(name,label,v,type="text",ro=false,extra=""){return `<label class="f">${label}<input name="${name}" type="${type}" value="${esc(v??"")}" ${ro?"readonly":""} ${extra}></label>`}
 function sel(name,label,opts,v,ro=false){return `<label class="f">${label}<select name="${name}" ${ro?"disabled":""}>${opts.map(o=>Array.isArray(o)?`<option value="${esc(o[0])}" ${o[0]===v?"selected":""}>${esc(o[1])}</option>`:`<option ${o===v?"selected":""}>${esc(o)}</option>`).join("")}</select></label>`}
-function staffOpts(roles){return [["","(없음)"],...staff.filter(s=>s.active&&(!roles||roles.includes(s.role))).map(s=>[s.user_id,`${s.name} (${ROLE[s.role]})`])]}
+/* 직원 역할: 기본 역할(권한) + 추가 역할(맡는 업무). 기사·영업 목록에는 추가 역할로도 나옴 */
+function hasRole(s,r){return !!s&&(s.role===r||(Array.isArray(s.extra_roles)&&s.extra_roles.includes(r))||(s===me&&(me.extra||[]).includes(r)))}
+function meHas(r){return !!me&&(me.role===r||(me.extra||[]).includes(r))}
+function staffOpts(roles){return [["","(없음)"],...staff.filter(s=>s.active&&(!roles||roles.some(r=>hasRole(s,r)))).map(s=>[s.user_id,`${s.name} (${ROLE[s.role]})`])]}
 function custFieldsHtml(c,ro){return `    <div class="g2">${inp("name","업체명(상호)",c.name,"text",ro)}${inp("biz_name","사업장명",c.biz_name,"text",ro)}</div>
     <div class="g2">${inp("ceo","대표자",c.ceo,"text",ro)}${inp("biz_no","사업자등록번호",c.biz_no,"text",ro)}</div>
     <div class="g2">${inp("phone","전화번호",c.phone,"text",ro)}${inp("phone2","일반전화",c.phone2,"text",ro)}</div>
@@ -1679,7 +1683,7 @@ function renderSchedView0(){
   const keyOfName=n=>{if(SCH_OUT.includes(n))return"_out";const s=staff.find(x=>x.name===n||(x.aliases||[]).includes(n));return s?(SCH_OUT.includes(s.name)?"_out":s.user_id):"n:"+n};
   const gk=j=>[...new Set((j.techs||[]).length?j.techs.map(id=>SCH_OUT.includes(staffName(id))?"_out":id):schNames(j).map(keyOfName))];
   const used=new Set(mj.flatMap(gk));
-  const people=staff.filter(s=>((s.active&&s.role==="tech")||used.has(s.user_id))&&!SCH_OUT.includes(s.name));
+  const people=staff.filter(s=>((s.active&&hasRole(s,"tech"))||used.has(s.user_id))&&!SCH_OUT.includes(s.name));
   const nameKeys=[...used].filter(k=>String(k).startsWith("n:")).sort((a,b)=>a.localeCompare(b,"ko"));
   const hid=schHidden();
   const allGroups=[...people.map(s=>({id:s.user_id,name:s.name})),...nameKeys.map(k=>({id:k,name:k.slice(2)}))];
@@ -1928,7 +1932,7 @@ function leadDlg(l,pre){const isNew=!l;l=l||Object.assign({status:"",recv_date:t
    ${ro?"":`<div class="payadd"><input id="lcD" type="date" value="${today()}" aria-label="상담일자"><input id="lcT" placeholder="상담 내용 (예: 사장님께 상담 후 오더, 기물 측정 요청)" aria-label="상담 내용" style="flex:1;min-width:240px"><button type="button" class="btn" id="lcAdd">상담 추가</button></div>
    <p class="mapt" style="margin:0">상담을 추가한 뒤 ‘저장’을 눌러야 반영됩니다.</p>`}
    <datalist id="lItem">${LITEM.map(x=>`<option value="${x}">`).join("")}</datalist><datalist id="lSrc">${LSRC.map(x=>`<option value="${x}">`).join("")}</datalist>
-   <datalist id="lProg">${LPROG.map(x=>`<option value="${x}">`).join("")}</datalist><datalist id="stList2">${staff.filter(s=>s.active&&s.role!=="tech").map(s=>`<option value="${esc(s.name)}">`).join("")}</datalist></div>`,
+   <datalist id="lProg">${LPROG.map(x=>`<option value="${x}">`).join("")}</datalist><datalist id="stList2">${staff.filter(s=>s.active&&(s.role!=="tech"||hasRole(s,"sales")||hasRole(s,"office"))).map(s=>`<option value="${esc(s.name)}">`).join("")}</datalist></div>`,
    [...(!isNew&&!l.customer_id&&can?[["계약 전환","gocust",()=>{leadConvert(l);return true}]]:[]),["닫기"],...(!isNew&&(l.phone||l.contact_phone)?[["문자","",()=>{smsDlg({c:{name:l.biz_name||l.contact_name||"",ceo:l.ceo||"",phone:l.phone||"",phone2:l.contact_phone||""},ref_type:"lead",ref_id:l.id});return true}]]:[]),...(!isNew&&isAdmin()?[["삭제","danger",async()=>{const {error}=await sb.from("leads").delete().eq("id",l.id);if(error)return toast("삭제하지 못했습니다: "+error.message);toast("삭제했습니다");reload(["leads"])}]]:[]),
     ...(can?[["저장","pri",async()=>{const r=await leadSave(l,isNew,cons);if(!r)return true}]]:[])]);
   const draw=()=>{const box=document.getElementById("lCons");if(!box)return;box.innerHTML=cons.length?`<table class="stafft"><thead><tr><th style="width:110px">상담일자</th><th>내용</th>${ro?"":"<th style='width:50px'></th>"}</tr></thead><tbody>${cons.map((x,i)=>`<tr><td>${esc(x.d||"")}</td><td style="white-space:pre-wrap">${esc(x.t||"")}${x.by?` <small class="mapt">· ${esc(x.by)}</small>`:""}</td>${ro?"":`<td><button type="button" class="btn sm danger" data-cx="${i}" aria-label="상담 삭제">삭제</button></td>`}</tr>`).join("")}</tbody></table>`:`<p class="mapt" style="margin:0">상담 이력이 없습니다.</p>`;
@@ -2191,7 +2195,7 @@ function recvDlg(x){const cs=x.cs||{stage:"정상관리",transfer:{}};const off=
    <h3 class="ksec">1. 채권금액</h3>
    <table class="stafft"><thead><tr><th class="num">매출액</th><th class="num">입금액</th><th class="num">미수금</th><th>채권연령</th><th class="num">고객 미수 합계</th></tr></thead><tbody><tr><td class="num">${won0(x.amount)}</td><td class="num">${won0(x.paid)}</td><td class="num neg"><b>${won0(x.unpaid)}</b></td><td>${x.days==null?"-":x.days+"일"} <small class="mapt">(설치 ${esc(x.idate||"-")})</small></td><td class="num">${won0(x.csum)}</td></tr></tbody></table>
    ${ext?`<div class="g3">${off&&x.t==="etc"?inp("owner_name","담당자",x.owner,"text",false,'list="rOwn"'):inp("_o","담당자 (3차/수금)",x.ownerFull||x.owner,"text",true)}${inp("progress","진행단계",cs.progress||"","text",!off,'list="rProg" placeholder="미수·추심·CMS-15일"')}${sel("kind","채권종류",RKINDS,x.kind,!off||x.t!=="etc")}</div>
-   <datalist id="rOwn">${staff.filter(s=>s.active&&s.role!=="tech").map(s=>`<option value="${esc(s.name)}">`).join("")}<option value="SCI"></datalist><datalist id="rProg">${RPROG.map(v=>`<option value="${v}">`).join("")}</datalist>`:""}
+   <datalist id="rOwn">${staff.filter(s=>s.active&&(s.role!=="tech"||hasRole(s,"sales")||hasRole(s,"office"))).map(s=>`<option value="${esc(s.name)}">`).join("")}<option value="SCI"></datalist><datalist id="rProg">${RPROG.map(v=>`<option value="${v}">`).join("")}</datalist>`:""}
    <h3 class="ksec">2. 입금내역</h3>
    <table class="stafft"><thead><tr><th>날짜</th><th>내역</th><th class="num">채권발생</th><th class="num">입금액</th><th class="num">미수금</th>${ledEd?"<th></th>":""}</tr></thead><tbody>
     ${L.map((r,i)=>ui.lgEdit===lgKey(i)&&x.t==="etc"&&off?`<tr class="pedit"><td><input type="date" id="leD" value="${esc(r.d||"")}"></td><td><input id="leT" value="${esc(r.t)}"></td><td><input type="number" id="leA" value="${r.add||""}" style="text-align:right"></td><td><input type="number" id="leP" value="${r.pay||""}" style="text-align:right"></td><td></td><td style="white-space:nowrap"><button type="button" class="btn sm pri" id="leSave">저장</button> <button type="button" class="btn sm" id="leNo">닫기</button></td></tr>`
@@ -2200,7 +2204,7 @@ function recvDlg(x){const cs=x.cs||{stage:"정상관리",transfer:{}};const off=
      :off?`<div class="payadd"><input type="date" id="lgD" value="${today()}" aria-label="날짜"><input id="lgT" placeholder="내역 (예: 현금 입금)" aria-label="내역"><input type="number" id="lgA" placeholder="채권발생" aria-label="채권발생"><input type="number" id="lgP" placeholder="입금액" aria-label="입금액"><button type="button" class="btn" id="lgAdd">내역 추가</button></div>`:""}
    <h3 class="ksec">3. 채권관리이력</h3>
    <div class="rlrow"><label class="f">날짜<input type="date" id="rlD" value="${today()}"></label>
-     <label class="f">담당자<input id="rlW" list="rlWL" value="${esc(me.name||"")}" placeholder="이름 입력·선택" autocomplete="off" onfocus="this.select()"><datalist id="rlWL">${[...new Set(staff.filter(s=>s.active&&s.role!=="tech").map(s=>s.name).filter(Boolean))].map(n=>`<option value="${esc(n)}">`).join("")}</datalist></label>
+     <label class="f">담당자<input id="rlW" list="rlWL" value="${esc(me.name||"")}" placeholder="이름 입력·선택" autocomplete="off" onfocus="this.select()"><datalist id="rlWL">${[...new Set(staff.filter(s=>s.active&&(s.role!=="tech"||hasRole(s,"sales")||hasRole(s,"office"))).map(s=>s.name).filter(Boolean))].map(n=>`<option value="${esc(n)}">`).join("")}</datalist></label>
      <label class="f rlc">내용<span class="rlcin"><select id="rlM" aria-label="방법">${RMETH.map(m=>`<option>${m}</option>`).join("")}</select><input id="rlC" placeholder="예: 7/20까지 카드결제 예정" aria-label="관리 내용"></span></label>
      <button type="button" class="btn pri" id="rlAdd">추가</button></div>
    <p class="mapt" style="margin:0">추가하면 바로 저장됩니다. 다음 조치일은 아래 ‘채권관리단계’에서 정하세요.</p>
@@ -2270,7 +2274,7 @@ function recvNewDlg(){openDlg("채권 직접 등록",`<div id="rnf" style="displ
    <div class="g3">${inp("amount","채권금액","","number")}${inp("owner_name","담당자",me.name||"","text",false,'list="rOwn2"')}${inp("progress","진행단계","","text",false,'list="rProg2"')}</div>
    <div class="g3"><label class="f">채권관리단계<select name="stage">${RSTAGES.map(s=>`<option ${s==="정상"?"selected":""} ${!RHARD.includes(s)||isAdmin()?"":"disabled"}>${s}</option>`).join("")}</select></label>${inp("next_date","다음 조치일","","date")}<label class="f">입금 약속 (날짜 · 금액)<span style="display:flex;gap:6px"><input type="date" name="promise_date" aria-label="약속일"><input type="number" name="promise_amount" placeholder="금액" aria-label="약속 금액"></span></label></div>
    <label class="f">관리 메모 (선택 · 채권관리이력에 첫 기록으로 남음)<input name="memo0" placeholder="예: 10/30까지 입금 약속"></label>
-   <datalist id="rOwn2">${staff.filter(s=>s.active&&s.role!=="tech").map(s=>`<option value="${esc(s.name)}">`).join("")}</datalist><datalist id="rProg2">${RPROG.map(v=>`<option value="${v}">`).join("")}</datalist>
+   <datalist id="rOwn2">${staff.filter(s=>s.active&&(s.role!=="tech"||hasRole(s,"sales")||hasRole(s,"office"))).map(s=>`<option value="${esc(s.name)}">`).join("")}</datalist><datalist id="rProg2">${RPROG.map(v=>`<option value="${v}">`).join("")}</datalist>
    <datalist id="rCustL">${staff.filter(s=>s.active).map(s=>`<option value="${esc(s.name)}">`).join("")}</datalist></div>`,
   [["취소"],["등록","pri",async()=>{const f=fdata("rnf");const title=(f.get("title")||"").trim(),amount=Number(f.get("amount")||0)||0,d=f.get("issue_date")||today();if(!title||!amount){toast("대상과 채권금액을 입력하세요");return true}
     const w=whoIs((f.get("owner_name")||"").trim());const cu=customers.find(c=>nk(c.name)===nk(title));
@@ -2990,7 +2994,7 @@ function sinkDlg(o,pre){const off=isOffice();const isNew=!o;pre=pre||{};const st
   openDlg(isNew?(stSrc?"싱크대 발주 · 재고에서 사용":"싱크대 신규발주"):"싱크대 발주서 · "+esc(o.site_name||""),`<div id="skf" style="display:grid;gap:10px">
     ${canEdit?"":`<p class="warnbox" style="margin:0">주문이 들어간 발주는 사무실에서만 고칠 수 있습니다.</p>`}
     <div class="g3">${off?inp("owner_name","주문자(담당자)",o.owner_name,"text",false,'list="skOwnL"'):inp("_o","주문자",o.owner_name||me.name,"text",true)}${inp("order_date","발주일자",o.order_date,"date",!off)}${inp("due_date","입고요청일",o.due_date||"","date",!canEdit)}</div>
-    ${dl("skOwnL",staff.filter(s=>s.active&&s.role!=="tech").map(s=>s.name))}
+    ${dl("skOwnL",staff.filter(s=>s.active&&(s.role!=="tech"||hasRole(s,"sales")||hasRole(s,"office"))).map(s=>s.name))}
     <div class="f"><span>설치업장명 (계약정보 조회)</span><div id="skCust"></div></div>
     <h3 class="ksec">품목</h3><div id="skItems" style="display:grid;gap:8px"></div>
     ${canEdit?`<button type="button" class="btn" id="skAdd" style="justify-self:start">+ 품목 추가</button>`:""}
@@ -3497,7 +3501,7 @@ function contractDlg(c,k,tpl,opts){ui.payEdit=null;
    ${isNew?`<p class="mapt" style="margin:0">입금 기록은 계약을 저장한 뒤 다시 열어서 추가할 수 있습니다.</p>`:`<div id="paySec"></div>`}
    ${isNew?`<label class="chip"><input type="checkbox" name="mkjob" checked>설치 작업도 함께 만들기${me.role==="sales"?"":" (기사에게 설치 건으로 보임)"}</label>`:""}
    <datalist id="chList">${["중앙회","인바운드","MOU","보상판매","기존고객","하이클린","소개"].map(x=>`<option value="${x}">`).join("")}</datalist>
-   <datalist id="s3List">${staff.filter(s=>s.active&&["admin","office","sales"].includes(s.role)).map(s=>`<option value="${esc(s.name)}">${esc(ROLE[s.role])}</option>`).join("")}</datalist>
+   <datalist id="s3List">${staff.filter(s=>s.active&&["admin","office","sales"].some(r=>hasRole(s,r))).map(s=>`<option value="${esc(s.name)}">${esc(ROLE[s.role])}</option>`).join("")}</datalist>
    <datalist id="stList">${staff.filter(s=>s.active).map(s=>`<option value="${esc(s.name)}">`).join("")}<option value="무료체험"></datalist>
    <datalist id="pdList">${[...new Set(contracts.map(x=>x.product).filter(Boolean))].map(x=>`<option value="${esc(x)}">`).join("")}</datalist></div>`,
    ro?[["고객정보","gocust",()=>{openCustPopup(c,refreshK);return true}],...ctrJobBtn(c,k,isNew),["닫기"]]:[pickM?["새 고객 등록","gocust",()=>{newCustomer(null,nc=>contractDlg(nc,null));return true}]:["고객정보","gocust",()=>{if(!c)return toast("고객을 먼저 고르세요");openCustPopup(c,refreshK);return true}],...ctrJobBtn(c,k,isNew),...(!isNew&&canNewJob(c)?[["접수","",()=>{ctrIntake(c,k);return true}]]:[]),...(!isNew&&me.role!=="tech"?[["싱크대 발주","",()=>{sinkDlg(null,{c,k});return true}]]:[]),["취소"],...(!isNew?[["복사","",()=>{contractDlg(c,null,k);return true}]]:[]),...(!isNew&&isOffice()?[["양도","",()=>{transferDlg(c,k);return true}]]:[]),...(!isNew&&isAdmin()?[["삭제","danger",async()=>{await undoTransfers([k.id]);const {error}=await sb.from("contracts").delete().eq("id",k.id);toast(error?"삭제하지 못했습니다":"삭제했습니다");reload(["contracts","customers"])}]]:[]),["저장","pri",async()=>{
@@ -3715,7 +3719,7 @@ function renderWorkView0(){
     <div class="toolbar">
     <input id="jQ" type="search" placeholder="업체명(상호)·전화·주소·기사 검색" value="${esc(ui.jq)}" aria-label="검색">
     <div class="nav" role="group" aria-label="구분">${[["","전체"],...KINDS.map(k=>[k,KLABEL[k]])].map(([k,l])=>`<button type="button" data-wk="${k}" class="${ui.wkind===k?"on":""}">${l}</button>`).join("")}</div>
-    ${me.role==="tech"?`<select id="jScope" aria-label="범위"><option value="mine" ${ui.jscope==="mine"?"selected":""}>내 배정 건</option><option value="all" ${ui.jscope==="all"?"selected":""}>전체</option></select>
+    ${meHas("tech")?`<select id="jScope" aria-label="범위"><option value="mine" ${ui.jscope==="mine"?"selected":""}>내 배정 건</option><option value="all" ${ui.jscope==="all"?"selected":""}>전체</option></select>
     <div class="nav" role="group" aria-label="보기"><button type="button" data-wv="table" class="${ui.wview==="table"?"on":""}">표</button><button type="button" data-wv="card" class="${ui.wview==="card"?"on":""}">카드</button></div>`:""}
     <span style="flex:1"></span>
     ${selOK?`<label class="chip"><input type="checkbox" id="jAll">전체 선택</label>`:""}${admin?`<button class="btn danger" type="button" id="bJDel" disabled>선택 삭제 (0)</button>`:""}
@@ -3782,7 +3786,7 @@ function jobDlg(j,c,kind,tpl,preset){
   else if(isNew){const k=c?custContracts(c.id)[0]:null;j={kind,customer_id:c?c.id:null,contract_id:k?k.id:null,customer_name:c?c.name:"",address:c?c.address:"",product:productOf(k),status:"접수",request_date:today(),techs:[],tech_names:"",symptom:"",result:"",cost:0,sink_status:"",sink_memo:"",parts:"",visit_time:""}}
   if(isNew&&preset)Object.assign(j,preset);
   const can=isNew||canEditJob(j);const off=isOffice();const p=asLike(j)?asProd(j):(j.product||{});const asx=hasAsx();const he=hasEnd();
-  const techs=staff.filter(s=>s.active&&s.role==="tech");
+  const techs=staff.filter(s=>s.active&&hasRole(s,"tech"));
   const pickable=customers.filter(x=>isOffice()||x.owner===me.id);
   const canCtr=isNew&&!tpl&&(isOffice()||me.role==="sales");if(!canCtr)wantCtr=false;
   if(wantCtr)return contractDlg(c||null,null,null,{pick:!c,intake:true});
@@ -3974,20 +3978,24 @@ async function renderStaffView(){
   view().innerHTML=`<div class="sec"><h2 style="margin:0;font-size:18px">직원 관리</h2>
    <p class="mapt">직원 추가 순서: ① Supabase 화면의 Authentication → Users → Add user에서 직원 이메일과 임시 비밀번호로 계정을 만듭니다(Auto Confirm 체크). ② 아래 ‘직원 등록’에 그 이메일과 역할을 넣습니다. ③ 직원에게 이메일과 임시 비밀번호를 알려주고, 로그인 후 ‘비밀번호 변경’을 하게 합니다.</p>
    <p class="mapt">‘다른 이름’에는 엑셀에 적힌 줄임 이름을 쉼표로 넣습니다(예: 성진). 그다음 ‘엑셀 이름 연결’을 누르면 엑셀의 3차·설치1 이름이 직원 계정에 연결되어 담당 고객과 배정이 잡힙니다.</p></div>
-   <div class="wrapx"><table class="stafft"><thead><tr><th>이름</th><th>이메일</th><th>역할</th><th>다른 이름(엑셀)</th><th>사용</th><th></th></tr></thead><tbody>
+   <div class="wrapx"><table class="stafft"><thead><tr><th>이름</th><th>이메일</th><th>역할</th><th>추가 역할</th><th>다른 이름(엑셀)</th><th>사용</th><th></th></tr></thead><tbody>
    ${data.map(r=>`<tr data-u="${r.user_id}"><td><input data-f="name" value="${esc(r.name)}"></td><td>${esc(r.email)}</td>
      <td><select data-f="role">${Object.entries(ROLE).map(([k,l])=>`<option value="${k}" ${r.role===k?"selected":""}>${l}</option>`).join("")}</select></td>
+     <td><span class="xroles">${(()=>{const sx=(staff.find(x=>x.user_id===r.user_id)||{}).extra_roles||[];return [["office","사무실"],["sales","영업"],["tech","A/S 기사"]].map(([k,l])=>`<label><input type="checkbox" data-x="${k}" ${sx.includes(k)?"checked":""} ${r.role===k?"disabled":""}>${l}</label>`).join("")})()}</span></td>
      <td><input data-f="aliases" value="${esc((r.aliases||[]).join(", "))}"></td><td><input type="checkbox" data-f="active" ${r.active?"checked":""} style="width:auto;min-width:0"></td>
      <td><button class="btn sm" type="button" data-save>저장</button></td></tr>`).join("")}</tbody></table></div>
    <div class="sec"><fieldset><legend>직원 등록</legend><div class="g3"><label class="f">이메일<input id="sEm" type="email"></label><label class="f">이름<input id="sNm"></label>
      <label class="f">역할<select id="sRl">${Object.entries(ROLE).map(([k,l])=>`<option value="${k}">${l}</option>`).join("")}</select></label></div>
      <div class="actions"><button class="btn pri" type="button" id="bAddS">등록</button><span style="flex:1"></span><button class="btn" type="button" id="bLink">엑셀 이름 연결</button></div></fieldset>
    <table class="stafft"><thead><tr><th>역할</th><th>볼 수 있는 것</th></tr></thead><tbody>
-    <tr><td>관리자</td><td>전체 + 직원 관리·설정·삭제</td></tr><tr><td>사무실</td><td>전체 고객·계약·작업, 기사 배정, 엑셀 이관</td></tr>
+    <tr><td>추가 역할</td><td>기본 역할의 권한은 그대로 두고 업무만 더 맡깁니다. 예) 사무실 + 설치·A/S 기사 → 기사 목록·일정표에 나오고 ‘내 배정 건’을 볼 수 있음. 영업 + 기사 → 배정받은 설치·A/S 건을 보고 처리</td></tr><tr><td>관리자</td><td>전체 + 직원 관리·설정·삭제</td></tr><tr><td>사무실</td><td>전체 고객·계약·작업, 기사 배정, 엑셀 이관</td></tr>
     <tr><td>영업</td><td>본인이 3차 계약자(담당)이거나 수금 배정된 고객과 그 계약·작업</td></tr><tr><td>설치·A/S 기사</td><td>전체 설치·A/S 목록(조회), 배정받은 고객 정보, 배정 건 처리 입력. 계약 금액은 볼 수 없음</td></tr></tbody></table></div>`;
   view().querySelectorAll("[data-save]").forEach(b=>b.onclick=async()=>{const tr=b.closest("tr");const g=f=>tr.querySelector(`[data-f="${f}"]`);
     const {error}=await sb.rpc("update_staff",{p_user:tr.dataset.u,p_name:g("name").value.trim(),p_role:g("role").value,p_aliases:g("aliases").value.split(",").map(s=>s.trim()).filter(Boolean),p_active:g("active").checked});
-    toast(error?(error.message||"저장하지 못했습니다"):"저장했습니다");if(!error)reload(["staff"])});
+    if(error)return toast(error.message||"저장하지 못했습니다");
+    const xr=[...tr.querySelectorAll("[data-x]:checked:not(:disabled)")].map(x=>x.dataset.x);const {error:e2}=await sb.rpc("set_staff_extra",{p_user:tr.dataset.u,p_roles:xr});
+    if(e2)return toast(/set_staff_extra/.test(e2.message||"")?"추가 역할을 쓰려면 Supabase에서 phase1zp.sql을 실행해 주세요":"추가 역할을 저장하지 못했습니다: "+e2.message);toast("저장했습니다");reload(["staff"])});
+  view().querySelectorAll('select[data-f="role"]').forEach(sl=>sl.onchange=()=>{const tr=sl.closest("tr");tr.querySelectorAll("[data-x]").forEach(x=>{x.disabled=x.dataset.x===sl.value;if(x.disabled)x.checked=false})});
   document.getElementById("bAddS").onclick=async()=>{const {error}=await sb.rpc("add_staff",{p_email:val("sEm"),p_name:val("sNm"),p_role:val("sRl")});toast(error?(error.message||"등록하지 못했습니다"):"등록했습니다");if(!error)reload(["staff"])};
   document.getElementById("bLink").onclick=linkNames;
 }
