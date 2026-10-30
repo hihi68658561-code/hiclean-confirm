@@ -2598,6 +2598,11 @@ function skTxt(c,o){const E=v=>v==null||v===""||v===0?"(빈 칸)":String(v);cons
     case"price":return per((it,i)=>{const L=skLine(o,i);return L.price?won0(L.price):""});case"sup":return per((it,i)=>{const L=skLine(o,i);return L.sup?won0(L.sup):""});
     case"vat":return per((it,i)=>{const L=skLine(o,i);return L.vat?won0(L.vat):""});case"tot":return per((it,i)=>{const L=skLine(o,i);return L.tot?won0(L.tot):""});
     case"in":return E(ymd2(o.in_date));case"out":return E(ymd2(o.out_date));case"memo":return E(o.memo);case"ded":return per((it,i)=>{const L=skLine(o,i);return L.deduct?won0(L.deduct):""})}return"(빈 칸)"}
+/* 싱크대 발주서: 입고일자를 넣으면 '입고완료', 출고일자를 넣으면 '출고완료'로 진행사항 자동 변경 */
+document.addEventListener("change",e=>{const t=e.target;if(!t||!t.matches||!t.matches('#dlg input[name="in_date"],#dlg input[name="out_date"]')||!t.value)return;
+  const st=document.querySelector('#dlg select[name="status"]');if(!st||![...st.options].some(o=>o.value==="재고등록"))return;
+  if(t.name==="out_date"){if(st.value!=="취소")st.value="출고완료"}else if(["신규접수","주문완료"].includes(st.value))st.value="입고완료";
+  st.dispatchEvent(new Event("change",{bubbles:true}))});
 async function renderSinkView(){const off=isOffice();if(!skOrders)view().innerHTML=`<p class="mapt" style="padding:20px">불러오는 중…</p>`;await fetchSink();
   if(!off)ui.sktab="order";if(!ui.sktab)ui.sktab="order";XSEL.sink=ui.sktab==="stock"?".wt.skst":ui.sktab==="price"?".wt.spl":".wt.sk";XNAME.sink=ui.sktab==="stock"?"싱크대 재고현황":ui.sktab==="price"?"싱크대 단가표":"싱크대 발주";
   if(off)await fetchSkPrice();if(ui.sktab==="stock")return renderSinkStock();if(ui.sktab==="price")return renderSinkPrice();
@@ -2624,7 +2629,7 @@ async function renderSinkView(){const off=isOffice();if(!skOrders)view().innerHT
      <input id="skM" type="month" value="${esc(ui.skm)}" aria-label="발주 월" style="padding:5px 8px;border:1px solid var(--line);border-radius:6px;background:var(--field)">
      ${off?`<select id="skOwn" aria-label="담당자"><option value="">담당자 전체</option>${owners.map(x=>`<option ${ui.skown===x?"selected":""}>${esc(x)}</option>`).join("")}</select>`:""}
      <div class="rstages"><button type="button" class="chip ${ui.skst?"":"on"}" data-sks="">전체 ${skOrders.length}</button>${SK_ST.map(s=>`<button type="button" class="chip ${ui.skst===s?"on":""}" data-sks="${s}"><span class="tag sk-${s}">${s}</span> ${cnt(s)}</button>`).join("")}</div>
-     <span class="mapt">${list.length}건</span>${cfClearBtn("sk")}<span style="flex:1"></span><button class="btn danger" type="button" id="skDel" ${ui.sksel.size?"":"disabled"}>선택 삭제 (${ui.sksel.size})</button>${off?`<button class="btn" type="button" id="skIn">입고 내역 가져오기</button><button class="btn" type="button" id="skHist">발주 엑셀 가져오기</button><input type="file" id="skHistIn" accept=".xlsx,.xls" hidden>`:""}</div>
+     <span class="mapt">${list.length}건</span>${cfClearBtn("sk")}<span style="flex:1"></span>${off?`<select id="skBulk" ${ui.sksel.size?"":"disabled"} aria-label="선택한 발주 진행사항 변경"><option value="">선택 ${ui.sksel.size}건 진행사항 변경…</option>${SK_ST.map(s=>`<option>${s}</option>`).join("")}</select>`:""}<button class="btn danger" type="button" id="skDel" ${ui.sksel.size?"":"disabled"}>선택 삭제 (${ui.sksel.size})</button>${off?`<button class="btn" type="button" id="skIn">입고 내역 가져오기</button><button class="btn" type="button" id="skHist">발주 엑셀 가져오기</button><input type="file" id="skHistIn" accept=".xlsx,.xls" hidden>`:""}</div>
    <div class="wrapx vis" style="padding-top:6px"><div class="wtbox"><table class="wt sk"><thead><tr><th class="skchk"><input type="checkbox" id="skAll" aria-label="전체 선택"></th>${skHead()}</tr></thead>
      <tbody>${rows||`<tr><td colspan="${off?16:11}" class="mapt">발주가 없습니다.</td></tr>`}</tbody>
      ${off&&list.length?`<tfoot><tr><th colspan="8">합계</th><th></th><th class="num">${won0(tot.sup)}</th><th class="num">${won0(tot.vat)}</th><th class="num">${won0(tot.tot)}</th><th colspan="3"></th><th class="num">${won0(tot.deduct)}</th></tr></tfoot>`:""}</table></div></div>`;
@@ -2635,7 +2640,12 @@ async function renderSinkView(){const off=isOffice();if(!skOrders)view().innerHT
   const nb=document.getElementById("skNew");if(nb)nb.onclick=()=>sinkDlg(null);bindSkTabs();const si=document.getElementById("skIn");if(si)si.onclick=()=>sinkInDlg();
   {const hb=document.getElementById("skHist"),hi=document.getElementById("skHistIn");if(hb){hb.onclick=()=>hi.click();hi.onchange=async()=>{const f=hi.files[0];hi.value="";if(!f)return;let wb;try{wb=XLSX.read(await f.arrayBuffer(),{type:"array",cellDates:true})}catch(e){return toast("파일을 읽지 못했습니다")}sinkHistImport(f.name,wb)}}}
   view().querySelectorAll("tr[data-sk]").forEach(tr=>tr.onclick=e=>{if(e.target.closest(".skchk"))return;sinkDlg(skOrders.find(o=>o.id===tr.dataset.sk))});
-  const upd=()=>{const b=document.getElementById("skDel");b.disabled=!ui.sksel.size;b.textContent=`선택 삭제 (${ui.sksel.size})`};
+  const upd=()=>{const b=document.getElementById("skDel");b.disabled=!ui.sksel.size;b.textContent=`선택 삭제 (${ui.sksel.size})`;const bk=document.getElementById("skBulk");if(bk){bk.disabled=!ui.sksel.size;bk.options[0].textContent=`선택 ${ui.sksel.size}건 진행사항 변경…`}};
+  {const bk=document.getElementById("skBulk");if(bk)bk.onchange=async()=>{const v=bk.value;const ids=[...ui.sksel];if(!v||!ids.length)return;
+    if(!(await askConfirm(`선택한 발주 ${ids.length}건의 진행사항을 ‘${v}’(으)로 바꿀까요?${v==="입고완료"?" 입고일자가 비어 있으면 오늘 날짜를 넣습니다.":v==="출고완료"?" 출고일자가 비어 있으면 오늘 날짜를 넣습니다.":""}`))){bk.value="";return}
+    let n=0,err="";for(const id of ids){const o=skOrders.find(x=>x.id===id);if(!o)continue;const up={status:v};if(v==="입고완료"&&!o.in_date)up.in_date=today();if(v==="출고완료"&&!o.out_date)up.out_date=today();
+      const {error}=await sb.from("sink_orders").update(up).eq("id",id);if(error){err=error.message;break}Object.assign(o,up);n++}
+    if(err)toast(`${n}건 바꾼 뒤 멈췄습니다: ${err}`);else toast(`${n}건을 ‘${v}’(으)로 바꿨습니다`);ui.sksel=new Set();renderSinkView()}}
   view().querySelectorAll(".sksel").forEach(c=>c.onchange=()=>{c.checked?ui.sksel.add(c.dataset.id):ui.sksel.delete(c.dataset.id);upd()});
   document.getElementById("skAll").onchange=e=>{view().querySelectorAll(".sksel").forEach(c=>{c.checked=e.target.checked;c.checked?ui.sksel.add(c.dataset.id):ui.sksel.delete(c.dataset.id)});upd()};
   document.getElementById("skDel").onclick=async()=>{const ids=[...ui.sksel];if(!ids.length)return;if(!(await askConfirm(`선택한 발주 ${ids.length}건을 삭제할까요? 금액 기록도 함께 지워집니다.`)))return;
