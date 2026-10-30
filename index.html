@@ -3196,8 +3196,10 @@ function stockImport(fname,wb){let rows=null,hr=-1;
       remark:t(I.remark),used:/중고/.test(code),grade:I.code>=0?t(I.code+1):"",out_date:toDate(g(I.out))||null,site_name:t(I.site),status:""};
     if(!u.used)u.grade="";u.serial=t(I.serial)||stkSerial(u);
     /* 수량 0 = 이미 나간 제품. 출고일자가 글자(예: 10월)면 오늘로 넣고 원래 글자는 Remark에 남김 */
-    const q=I.qty>=0?String(g(I.qty)).trim():"1";if(q===""){u.status="생산예정";u.out_date=null}else if(q!=="0")u.out_date=null;
-    if(q==="0"&&!u.out_date){u.out_date=today();const raw=t(I.out);if(raw)u.remark=[u.remark,"출고일자: "+raw].filter(Boolean).join(" / ")}
+    /* 수량 0·'-' = 이미 나간 제품. 출고일자가 적혀 있으면 수량과 상관없이 출고 */
+    const q=I.qty>=0?String(g(I.qty)).trim():"1";const gone=q==="0"||/^[-–—]+$/.test(q);
+    if(!u.out_date){if(q==="")u.status="생산예정"}
+    if(gone&&!u.out_date){u.out_date=today();const raw=t(I.out);if(raw)u.remark=[u.remark,"출고일자: "+raw].filter(Boolean).join(" / ")}
     /* 등록일 = 가져온 날: 이후에 설치 완료되는 계약만 자동 출고로 연결 */
     u.in_date=today();out.push(u)});
   const byNo=new Map(stkUnits.map(x=>[String(Number(x.no)),x]));const neu=out.filter(u=>!byNo.has(String(Number(u.no)))),upd=out.filter(u=>byNo.has(String(Number(u.no))));
