@@ -2505,7 +2505,7 @@ function addXlsBtn(){const v=ui.view;if(!XSEL[v]||!isOffice()||!window.XLSX)retu
   tb=tb||view().querySelector(".toolbar");if(!tb)return;const b=document.createElement("button");b.type="button";b.className="btn";b.id="xlsDown";b.textContent="엑셀 다운로드";b.onclick=()=>exportView();tb.appendChild(b);addPrintBtn(tb);addSetlBtn(tb)}
 /* 당월 설치·A/S, 당월리스트: 체크한 건의 확인서를 한 번에 인쇄 */
 /* 당월리스트: 싱크·부자재 정산 엑셀 (설치 1건 = 제품·싱크 품목·부자재·설치비 여러 줄) */
-const SETL_DEF={활성제:21000,수저랙:12000,세로바:27000,현판:0,사용안내판:0,설치비:400000,"설치비(수압식만)":200000};
+const SETL_DEF={활성제:21000,수저랙:12000,세로바:27000,현판:0,사용안내판:0,설치비:400000,"설치비(수압식만)":200000,"설치비(추가설치)":50000};
 function setlPrices(){try{const o=JSON.parse(localStorage.getItem("hc.setl")||"{}");if("수저력" in o){if(!("수저랙" in o))o.수저랙=o.수저력;delete o.수저력}return Object.assign({},SETL_DEF,o)}catch(e){return{...SETL_DEF}}}
 function addSetlBtn(tb){if(ui.view!=="ctrm"||!isOffice()||document.getElementById("setlBtn"))return;const b=document.createElement("button");b.type="button";b.className="btn";b.id="setlBtn";b.textContent="정산 엑셀";b.title="싱크·부자재 정산 양식으로 내려받기";b.onclick=setlDlg;tb.appendChild(b)}
 function setlDlg(){const P=setlPrices();const ym=thisMonth();
@@ -2528,7 +2528,7 @@ async function setlExport(ym,P){if(!window.XLSX)return toast("엑셀 도구를 �
     const tr=k.contract_type==="무료체험"&&k.trial_end?` (무료체험 ${+k.trial_end.slice(5,7)}/${+k.trial_end.slice(8,10)})`:"";
     const base=[no,d2(od),d2(doneOf(j)),whoOf(j).replace(/\s*·\s*/g," ").replace(/,\s*/g," "),String(s3Text(k)||"").split("/")[0].trim(),(c.name||j.customer_name||"")+tr];
     const line=(item,price,qty,memo)=>{const sup=price&&qty?price*qty:0;rows.push([...base,item,price||0,qty===""?"":qty,sup,"",sup,memo||""])};
-    if(j.kind==="addon"){const a=addonItem(j);line([a.product,a.size].filter(Boolean).join(" ")||"추가설치",Number(j.cost||0),1,"추가설치");return}
+    if(j.kind==="addon"){const a=addonItem(j);line([a.product,a.size].filter(Boolean).join(" ")||"추가설치",Number(j.cost||0),1,"추가설치");line("설치비",P["설치비(추가설치)"],1,"추가설치");return}
     line([prodName(k.product),k.size].filter(Boolean).join(" ")||"제품",0,"","");
     ords.forEach(o=>(o.items||[]).forEach((it,i)=>{const L=skLine(o,i);line(it.sup||skSpec(it),L.price,Number(it.qty||1)||1,it.from_stock?"재고사용":"")}));
     String(j.parts||"").split(/\s*[,/]\s*/).map(x=>x.trim()).filter(Boolean).forEach(t=>{const m=t.match(/^(.*?)(\d+)\s*(개|통|ea)?$/i);const nm=m?m[1].trim():t,q=m?+m[2]:1;const [n2,pr]=pmap(nm);line(n2,pr,q,"")});
