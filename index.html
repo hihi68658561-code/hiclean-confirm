@@ -2590,6 +2590,10 @@ const SKX=/(\d)\s*[×xX＊]\s*(?=\d)/g;
 function skStar(v){return String(v??"").replace(SKX,"$1*")}
 const skHasX=v=>/\d\s*[×xX＊]\s*\d/.test(String(v||""));
 /* 저장된 발주·단가표에 ×가 남아 있으면 *로 고쳐서 저장 (사무실 계정이 열 때 한 번씩) */
+function skSpecText(its){return (its||[]).map(it=>skSpec(it)+(Number(it.qty||1)>1?` ×${it.qty}`:"")+(it.note&&it.note!==it.sup?` (${it.note})`:"")).join(", ")}
+/* 예전에 '직접입력 [..]'으로 저장된 품명 및 규격을 적은 글자로 다시 저장 (설치·추가설치 작업 칸도 같이 바뀜) */
+async function skFixDirectText(){if(!isOffice()||!skOrders)return;for(const o of skOrders.filter(o=>/직접\s*입력/.test(o.spec_text||"")&&(o.items||[]).some(it=>/직접\s*입력/.test(it.name||"")&&String(it.sup||"").trim()))){
+  const t=skSpecText(o.items);if(t===o.spec_text)continue;const {error}=await sb.from("sink_orders").update({spec_text:t}).eq("id",o.id);if(!error)o.spec_text=t}}
 async function skFixStarOrders(){if(!isOffice()||!skOrders)return;const bad=skOrders.filter(o=>(o.items||[]).some(it=>skHasX(it.sup)||skHasX(it.note)));
   for(const o of bad){const items=(o.items||[]).map(it=>({...it,sup:it.sup!=null?skStar(it.sup):it.sup,note:it.note!=null?skStar(it.note):it.note}));const {error}=await sb.from("sink_orders").update({items}).eq("id",o.id);if(!error)o.items=items}}
 async function skFixStarPrices(){if(!isOffice()||!skPList)return;const bad=skPList.filter(r=>skHasX(r.name));if(!bad.length)return;
@@ -2598,9 +2602,9 @@ async function skFixStarPrices(){if(!isOffice()||!skPList)return;const bad=skPLi
     else{const {error}=await sb.from("sink_price_list").update({name:nn}).eq("id",r.id);if(!error)r.name=nn}}
   skPList=skPList.slice()}
 async function fetchSink(){const {data,error}=await sb.from("sink_orders").select("*").order("order_date",{ascending:false}).order("created_at",{ascending:false}).limit(2000);
-  if(error){ui.noSink=true;skOrders=[];return}ui.noSink=false;skOrders=data||[];await skFixStarOrders();await skAutoOut();
+  if(error){ui.noSink=true;skOrders=[];return}ui.noSink=false;skOrders=data||[];await skFixStarOrders();await skFixDirectText();await skAutoOut();
   if(isOffice()){const {data:p}=await sb.from("sink_prices").select("*");skPrices=Object.fromEntries((p||[]).map(x=>[x.order_id,x]))}}
-function skSpec(it){const nm=String(it.name||"").replace(/^\d+\.\s*/,"");const sz=[it.w,it.d,it.h].filter(v=>v!==""&&v!=null).join("*");
+function skSpec(it){const nm=String(it.name||"").replace(/^\d+\.\s*/,"");/* 직접입력 품목은 적은 글자 그대로 */if(/직접\s*입력/.test(nm)&&String(it.sup||"").trim())return skStar(it.sup).trim();const sz=[it.w,it.d,it.h].filter(v=>v!==""&&v!=null).join("*");
   return [nm,it.opt1,it.opt2&&it.opt2!=="해당없음"?it.opt2:"",it.hole&&it.hole!=="해당없음"?it.hole:"",it.wheel&&it.wheel!=="해당없음"?"바퀴 "+it.wheel:""].filter(Boolean).join(" / ")+(sz?` [${sz}]`:"")}
 function skLine(o,i){const L=((skPrices[o.id]||{}).lines||[])[i]||{};const it=(o.items||[])[i]||{};const q=Number(it.qty||1)||1;let pr=Number(L.price||0),dd=Number(L.deduct||0),est=false;
   let dEst=false;if((!pr||!dd)&&!it.from_stock&&isOffice()){const t=skPriceFor(it);if(t){if(!pr&&t.price){pr=t.price;est=true}if(!dd&&t.deduct){dd=t.deduct;dEst=true}}}const sup=pr*q,vat=Math.round(sup/10);return{price:pr,sup,vat,tot:sup+vat,deduct:dd,est,dEst}}
@@ -2985,7 +2989,7 @@ function sinkDlg(o,pre){const off=isOffice();const isNew=!o;pre=pre||{};const st
       if(!p.site_name){toast("설치업장명을 고르거나 입력하세요 (재고면 ‘재고’)");return true}
       if(off){const w=whoIs((f.get("owner_name")||"").trim());Object.assign(p,{owner:w.id,owner_name:w.name,order_date:f.get("order_date")||today(),status:f.get("status")||"신규접수",in_date:f.get("in_date")||null,out_date:f.get("out_date")||null})}
       else if(isNew)Object.assign(p,{owner:me.id,owner_name:me.name||"",order_date:today(),status:"신규접수"});
-      p.spec_text=its.map(it=>skSpec(it)+(Number(it.qty||1)>1?` ×${it.qty}`:"")+(it.note?` (${it.note})`:"")).join(", ");
+      p.spec_text=skSpecText(its);
       const go=pp=>isNew?sb.from("sink_orders").insert(pp).select().single():sb.from("sink_orders").update(pp).eq("id",o.id).select().single();
       let r=await go(p);if(r.error&&/spec_text/.test(r.error.message)){const {spec_text,...p2}=p;r=await go(p2)}
       if(r.error){toast(/sink_orders/.test(r.error.message)&&/exist|find/.test(r.error.message)?"Supabase에서 phase1ze.sql을 먼저 실행해 주세요.":"저장하지 못했습니다: "+r.error.message);return true}
