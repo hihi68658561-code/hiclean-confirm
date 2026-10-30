@@ -2516,7 +2516,16 @@ const XSEL={sink:".wt.sk",leads:".wt.ld",work:".wt.wk",ctrm:".wt.ct",allm:".wt.c
 const XNAME={sink:"싱크대 발주",leads:"DB관리",work:"당월 설치·AS 전체리스트",ctrm:"당월리스트",allm:"전체리스트",asm:"AS관리",recv:"미수·채권관리",sched:"담당자별 일정표"};
 function addXlsBtn(){const v=ui.view;if(!XSEL[v]||!isOffice()||!window.XLSX)return;const tbl=view().querySelector(XSEL[v]);if(!tbl||document.getElementById("xlsDown"))return;
   let tb=null,el=tbl.closest(".wrapx")||tbl.closest(".wtbox");while(el&&!tb){let s=el.previousElementSibling;while(s&&!tb){if(s.classList&&s.classList.contains("toolbar"))tb=s;s=s.previousElementSibling}el=el.parentElement;if(el===view())break}
-  tb=tb||view().querySelector(".toolbar");if(!tb)return;const b=document.createElement("button");b.type="button";b.className="btn";b.id="xlsDown";b.textContent="엑셀 다운로드";b.onclick=()=>exportView();tb.appendChild(b);addPrintBtn(tb);addSetlBtn(tb)}
+  tb=tb||view().querySelector(".toolbar");if(!tb)return;const b=document.createElement("button");b.type="button";b.className="btn";b.id="xlsDown";
+  /* 당월리스트: 엑셀 다운로드 하나로 묶고 '화면 다운로드 · 정산 다운로드' 고르기 */
+  if(v==="ctrm"){b.textContent="엑셀 다운로드 ▾";b.setAttribute("aria-haspopup","menu");b.onclick=e=>{e.stopPropagation();document.querySelectorAll(".stmenu").forEach(x=>x.remove());const m=document.createElement("div");m.className="stmenu";m.setAttribute("role","menu");
+      m.innerHTML=`<button type="button" data-k="v">화면 다운로드</button><button type="button" data-k="s">정산 다운로드</button>`;document.body.appendChild(m);const r=b.getBoundingClientRect();m.style.left=Math.max(8,r.right-m.offsetWidth+window.scrollX)+"px";m.style.top=(r.bottom+4+window.scrollY)+"px";
+      const close=()=>{m.remove();document.removeEventListener("mousedown",out,true)};const out=ev=>{if(!m.contains(ev.target))close()};setTimeout(()=>document.addEventListener("mousedown",out,true),0);
+      m.querySelector('[data-k=v]').onclick=()=>{close();exportView()};m.querySelector('[data-k=s]').onclick=()=>{close();setlDlg()}}}
+  else{b.textContent="엑셀 다운로드";b.onclick=()=>exportView()}
+  tb.appendChild(b);addPrintBtn(tb)}
+/* 검색·칩 등으로 화면 안쪽만 다시 그려도 엑셀 다운로드·인쇄 버튼이 빠지지 않게 */
+(()=>{let q=false;const ob=new MutationObserver(()=>{if(q)return;q=true;queueMicrotask(()=>{q=false;try{if(me)addXlsBtn()}catch(e){}})});const tgt=view&&view();if(tgt)ob.observe(tgt,{childList:true})})();
 /* 당월 설치·A/S, 당월리스트: 체크한 건의 확인서를 한 번에 인쇄 */
 /* 당월리스트: 싱크·부자재 정산 엑셀 (설치 1건 = 제품·싱크 품목·부자재·설치비 여러 줄) */
 const SETL_DEF={활성제:21000,수저랙:12000,세로바:27000,현판:0,사용안내판:0,설치비:400000,"설치비(수압식만)":200000,"설치비(추가설치)":50000};
