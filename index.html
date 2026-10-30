@@ -2540,7 +2540,7 @@ async function setlExport(ym,P){if(!window.XLSX)return toast("엑셀 도구를 �
     const ords=(skOrders||[]).filter(o=>o.status!=="취소"&&k.id&&o.contract_id===k.id);
     const od=ords.map(o=>o.order_date).filter(Boolean).sort()[0]||k.contract_date||"";
     const tr=k.contract_type==="무료체험"&&k.trial_end?` (무료체험 ${+k.trial_end.slice(5,7)}/${+k.trial_end.slice(8,10)})`:"";
-    const base=[no,d2(od),d2(doneOf(j)),whoOf(j).replace(/\s*·\s*/g," ").replace(/,\s*/g," "),String(s3Text(k)||"").split("/")[0].trim(),(c.name||j.customer_name||"")+tr];
+    const base=[no,d2(od),d2(doneOf(j)),whoOf(j).replace(/\s*·\s*/g," ").replace(/,\s*/g," "),(()=>{/* 영업담당(3차): 계약 → (추가설치처럼 계약 연결이 없으면) 이 고객의 계약 → 고객 담당자 */const f=v=>String(v||"").split("/")[0].trim();let v=f(s3Text(k));if(!v)for(const kk of custContracts(j.customer_id)){v=f(s3Text(kk));if(v)break}return v||f(staffName(c.owner)||c.owner_name)})(),(c.name||j.customer_name||"")+tr];
     const line=(item,price,qty,memo)=>{const sup=price&&qty?price*qty:0;rows.push([...base,item,price||0,qty===""?"":qty,sup,"",sup,memo||""])};
     if(j.kind==="addon"){const a=addonItem(j);line([a.product,a.size].filter(Boolean).join(" ")||"추가설치",Number(j.cost||0),1,"추가설치");line("설치비",P["설치비(추가설치)"],1,"추가설치");return}
     line([prodName(k.product),k.size].filter(Boolean).join(" ")||"제품",0,"","");
