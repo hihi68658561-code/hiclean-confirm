@@ -3338,7 +3338,7 @@ function renderContracts(c){
   const adm=isAdmin()&&ks.length>0;ui.ksel=ui.ksel||new Set();[...ui.ksel].forEach(id=>{if(!ks.some(k=>k.id===id))ui.ksel.delete(id)});
   tb.innerHTML=`<div class="toolbar"><span style="flex:1"></span>
     ${adm?`<label class="chip"><input type="checkbox" id="kAll">전체 선택</label><button class="btn danger" type="button" id="bKDel" disabled>선택 삭제 (0)</button>`:""}</div><div class="cards">${ks.map(k=>`<div class="card click" data-k="${k.id}">
-    <div class="t">${adm?`<input type="checkbox" class="ksel" data-ks="${k.id}" ${ui.ksel.has(k.id)?"checked":""} aria-label="선택" style="width:18px;height:18px">`:""}${k.contract_type&&k.contract_type!=="구매"?`<span class="tag ct-${esc(k.contract_type)}">${esc(k.contract_type)}</span>`:""}<span class="tag st-${esc(k.stage)}">${esc(k.stage)}</span>${esc([k.product,k.size,k.options&&"("+k.options+")"].filter(Boolean).join(" "))}${k.serial?` · SN ${esc(k.serial)}`:""}${k.wash_added?` <span class="badge">수압식</span>`:""}</div>
+    <div class="t">${adm?`<input type="checkbox" class="ksel" data-ks="${k.id}" ${ui.ksel.has(k.id)?"checked":""} aria-label="선택" style="width:18px;height:18px">`:""}${k.contract_type&&k.contract_type!=="구매"?`<span class="tag ct-${esc(k.contract_type)}">${esc(k.contract_type)}</span>`:""}<span class="tag st-${esc(k.stage)}">${esc(k.stage)}</span>${(()=>{if(k.stage==="철거완료")return"";const rj=ctrRemovedJob(k);return rj?`<span class="tag st-철거완료" title="철거 ${esc(rj.done_date||rj.visit_date||"")}">철거</span>`:""})()}${esc([k.product,k.size,k.options&&"("+k.options+")"].filter(Boolean).join(" "))}${k.serial?` · SN ${esc(k.serial)}`:""}${k.wash_added?` <span class="badge">수압식</span>`:""}</div>
     <div class="d"><span>계약 ${esc(k.contract_date||"-")}</span><span class="money">${won0(k.amount)}원</span><span>${esc(k.pay_method||"결제방식 미정")}</span><span>계약서 ${esc(k.contract_doc)}</span><span>3차 ${esc(s3Text(k)||"-")}</span>${k.channel?`<span>${esc(k.channel)}</span>`:""}</div></div>`).join("")||`<div class="empty" style="padding:8px 0">계약이 없습니다.</div>`}</div>`;
   const nb=document.getElementById("bNewK");if(nb)nb.onclick=()=>contractDlg(c,null);
   tb.querySelectorAll("[data-k]").forEach(el=>el.onclick=e=>{if(e.target.closest(".ksel"))return;contractDlg(c,contracts.find(k=>k.id===el.dataset.k))});
@@ -3776,6 +3776,11 @@ function asReqToggle(j,c){const ex=document.getElementById("asReq");if(ex){ex.re
   box.querySelector("#asReqX").onclick=()=>box.remove();
   box.querySelector("#asReqCp").onclick=async()=>{const t=out.textContent;try{await navigator.clipboard.writeText(t)}catch(e){const ta=document.createElement("textarea");ta.value=t;document.body.appendChild(ta);ta.select();document.execCommand("copy");ta.remove()}toast("복사했습니다. 카톡에 붙여넣기 하세요")};
   box.scrollIntoView({block:"nearest"})}
+/* 철거 작업이 가리키는 계약: 연결 계약 → 없으면 같은 고객 계약 중 제품·규격이 같은 것 */
+function rmCtrOf(j){if(j.contract_id){const k=ctrById(j.contract_id);if(k)return k}const p=j.product||{};const ks=custContracts(j.customer_id);
+  return ks.find(k=>nk(prodName(k.product))===nk(prodName(p.product))&&nk(k.size)===nk(p.size)&&(!p.serial||nk(k.serial)===nk(p.serial)))||ks.find(k=>p.serial&&nk(k.serial)===nk(p.serial))||null}
+/* 이 계약 제품이 철거됐는지 (완료된 철거 작업이 이 계약을 가리킴) */
+function ctrRemovedJob(k){return jobs.find(j=>j.kind==="remove"&&j.status==="완료"&&j.customer_id===k.customer_id&&rmCtrOf(j)===k)||null}
 function jobDlg(j,c,kind,tpl,preset){
   let wantCtr=false;if(kind==="ctr"){wantCtr=true;kind="as"}
   /* 신규접수에는 '설치'가 없음 (설치는 계약으로 접수) */
@@ -3869,7 +3874,9 @@ function jobDlg(j,c,kind,tpl,preset){
      let pmsg="";if(isNew&&jpSel.length&&r.data){const up={ok:0,fail:[]};const gr={};jpSel.forEach(x=>(gr[x.kind]=gr[x.kind]||[]).push(x.file));
        for(const k of Object.keys(gr)){const u=await uploadCustFiles(r.data.customer_id,gr[k],k,m=>toast(m),r.data.id);up.ok+=u.ok;up.fail=up.fail.concat(u.fail)}
        pmsg=up.fail.length?` · 사진 ${up.ok}개 올림, ${up.fail.length}개 실패${fileErrHint(up.fail)}`:` · 사진 ${up.ok}개`;jpSel.forEach(x=>x.url&&URL.revokeObjectURL(x.url))}
-     toast((isNew?`${kl(j)} 접수했습니다`:"저장했습니다")+pmsg);reload(["jobs","customers","files"])}]]:[])]);
+     /* 철거 완료 → 그 계약 진행단계를 '철거완료'로 */
+     {const jj=Object.assign({},j,pt,r.data||{});if(jj.kind==="remove"&&jj.status==="완료"&&isOffice()){const kk=rmCtrOf(jj);if(kk&&!["철거완료","취소"].includes(kk.stage)){const {error:e3}=await sb.from("contracts").update({stage:"철거완료"}).eq("id",kk.id);if(!e3){kk.stage="철거완료";pmsg+=" · 계약을 철거완료로 바꿈"}}}}
+     toast((isNew?`${kl(j)} 접수했습니다`:"저장했습니다")+pmsg);reload(["jobs","customers","files","contracts"])}]]:[])]);
   const jpSel=isNew?bindNewCustFiles("jp"):[];if(!isNew)renderJobFiles(j,c);
   /* 중고구매 체크하면 설치일 비움 */
   (()=>{const jf=document.getElementById("jf");const u=jf&&jf.querySelector('[name="as_used"]'),d=jf&&jf.querySelector('[name="as_idate"]');if(!u||!d||u.disabled)return;
