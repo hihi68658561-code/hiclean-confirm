@@ -217,13 +217,20 @@ body.resizing,body.resizing *{cursor:col-resize!important;user-select:none}
 .wt.sm{font-size:12px;border:2px solid #333!important}.wt.sm td,.wt.sm th{border-bottom:1px solid #9aa4ae!important}.wt.sm td,.wt.sm thead th{border-left:1px solid #9aa4ae}
 .wt.su{border:none}.sused .uclk{cursor:pointer}.sused tbody .uclk:hover td,.sused thead .uclk:hover th{background:#fff4e5}.sused .uclk.on td{background:#ffe8cc;font-weight:600}.wt.su thead{position:sticky;top:0;z-index:3}.wt.su thead th{position:static!important}.wt.su td,.wt.su th{border:none!important;border-right:1px solid #d5dbe1!important;border-bottom:1px solid #d5dbe1!important;text-align:center}.wt.su th .fbtn{margin-left:3px}.wt.su td.memo{text-align:left}.wt.su thead th{font-weight:700;color:#1b1b1b}
 .wt.su th.hg-p{background:#D9D9D9}.wt.su th.hg-q{background:#FFFF00}.wt.su th.hg-m{background:#DDEBF7}.wt.su th.hg-c{background:#FFE699}.wt.su th.hg-s{background:#9BC2E6}.wt.su th.hg-u{background:#fff}
-.wt.su td.sq{font-weight:700}.wt.su td.q1{background:#FF0000!important;color:#fff!important}.qu{background:#9e9e9e!important;color:#fff!important;font-size:12px}.tag.ucchk{background:#FFF3C4;color:#b45309;border-color:#f59e0b}.qr{background:#FB8C00!important;color:#fff!important;font-size:12px}.wt.su tr.srsv td{background:#FFF3E0}.wt.su td.qp{background:#FFFF00!important;color:#FF0000!important}.wt.su td.sser{font-weight:700}.wt.sm .szs{border-left:2px solid #555!important}.wt.sm tbody tr>td:last-child,.wt.sm thead tr:first-child>th:last-child{border-left:2px solid #555}.wt.sm th,.wt.sm td{padding:3px 5px;text-align:center;min-width:26px}.wt.sm td,.wt.sm thead th[title]{min-width:38px;width:38px;box-sizing:border-box}.wt.sm td.cl{cursor:pointer}.wt.sm td.cl:hover,.wt.sm td.cl.on{background:var(--accent-weak);outline:2px solid var(--accent)}
+.wt.su td.sq{font-weight:700}.wt.su td.q1{background:#FF0000!important;color:#fff!important}.qu{background:#9e9e9e!important;color:#fff!important;font-size:12px}.tag.ucchk{background:#FFF3C4;color:#b45309;border-color:#f59e0b}.qr{background:#FB8C00!important;color:#fff!important;font-size:12px}.wt.su tr.srsv td{background:#FFF3E0}.wt.su td.qp{background:#FFFF00!important;color:#FF0000!important}.wt.su td.sser{font-weight:700}.wt.sm .szs{border-left:2px solid #555!important}.wt.sm tbody tr>td:last-child,.wt.sm thead tr:first-child>th:last-child{border-left:2px solid #555}.wt.sm th,.wt.sm td{padding:1px 5px;line-height:1.25;height:20px;text-align:center;min-width:26px}.wt.sm td,.wt.sm thead th[title]{min-width:38px;width:38px;box-sizing:border-box}.wt.sm td.cl{cursor:pointer}.wt.sm td.cl:hover,.wt.sm td.cl.on{background:var(--accent-weak);outline:2px solid var(--accent)}
 .wt.sm th.smodel{writing-mode:horizontal-tb;font-weight:700;min-width:84px}.wt.sm th.sm0{background:#FFFF00;color:#1b1b1b}.wt.sm th.sm1{background:#00B0F0;color:#1b1b1b}.wt.sm th.sm2{background:#DDEBF7;color:#1b1b1b}
 .wt.sm tr.smf td,.wt.sm tr.smf th{border-top:2px solid #555}.wt.sm tr.ssum td,.wt.sm tr.ssum th{background:#F8CBAD;color:#1b1b1b}.wt.sm tr.stgt td{color:#c00000;font-weight:700}.wt.sm td.ed{cursor:pointer}.wt.sm td.ed:hover{background:var(--accent-weak)}
 .wt.sm tr.sneed th{background:#FF00FF;color:#fff}.wt.sm td.need{background:#FF0000;color:#fff;font-weight:700}.wt.sm tr.stot td,.wt.sm tr.stot th{background:#FFFF00;color:#1b1b1b;font-weight:700;border-top:2px solid #555}
 .wt.su tr.sout td{color:#777}.wt.su tr.sx td{color:#999;text-decoration:line-through}.wt.su tbody tr{cursor:pointer}.mono{font-family:ui-monospace,Consolas,monospace;font-size:12px}
 .tag.skplan{background:#FFFF00;color:#FF0000;border-color:#FFFF00;font-weight:700}
-.srow{display:flex;gap:14px;align-items:flex-start;flex-wrap:wrap}.sside{display:grid;gap:10px;width:250px;padding:6px 0 0 0}.sside .stafft th{text-align:left;white-space:nowrap}.slegend thead th{color:#c00000}.sused thead th{color:#c00000}
+.srow{display:flex;gap:14px;align-items:stretch;flex-wrap:wrap}
+/* 오른쪽 TYPE 정리·중고 내역은 현황표 높이에 맞춰 끝을 맞춤 (넘치면 중고 내역만 스크롤) */
+.sside{position:relative;align-self:stretch;min-height:200px}
+.sside .ssin{position:absolute;inset:6px 0 0 0;display:flex;flex-direction:column;gap:8px}
+.sside .susedbox{flex:1 1 auto;min-height:0;overflow:auto;border-radius:6px}
+.sside .stafft th,.sside .stafft td{padding:3px 8px;font-size:12px;line-height:1.3}
+.sside .splanbox{padding:6px;flex:0 0 auto}
+@media (max-width:1100px){.sside{min-height:0}.sside .ssin{position:static}.sside .susedbox{max-height:260px}}.sside{width:250px}.sside .stafft th{text-align:left;white-space:nowrap}.slegend thead th{color:#c00000}.sused thead th{color:#c00000}
 .splanbox{background:#FFFF00;color:#FF0000;font-weight:700;text-align:center;padding:10px;border:1px solid #e6c200;border-radius:6px;cursor:pointer;line-height:1.4}.splanbox b{font-size:18px;margin-left:6px}
 @media (max-width:760px){.sside{width:auto;padding:6px 16px 0}}.tag.skin{background:#00CC66;color:#1b1b1b;border-color:#00CC66}.tag.skout{background:#fff;color:#555;border-color:#aaa}.usedsum{display:flex;gap:14px;align-items:flex-start;flex-wrap:wrap}
 .wgrid{display:grid;grid-template-columns:minmax(260px,1fr) minmax(0,3fr);gap:14px;padding:6px 20px 20px}.wgrid .wtbox{max-height:calc(100vh - 330px)}.kpi.wstock b{font-size:26px;color:#1b1b1b}.kpi.wstock{background:#FFFF00;border-color:#e6c200}
@@ -1389,7 +1396,12 @@ function renderPaySec(k){
      <datalist id="cardList2">${["농협카드","비씨카드","국민카드","신한카드","삼성카드","현대카드","롯데카드","하나카드","우리카드","네이버페이","하나캐피탈"].map(x=>`<option value="${x}">`).join("")}</datalist>
      <p class="mapt">승인취소는 금액을 음수로 넣으세요(예: -4440000). 입금은 바로 저장됩니다.</p>`:""}</div>`;
   if(!can)return;
-  const after=async()=>{await reload(["payments"],true);renderPaySec(k)};
+  /* 입금 내역이 바뀌면 결제방식을 입금 수단으로 자동 맞춤 (카드+현금 → '카드+현금', 승인취소로 0이 된 카드는 뺌) */
+  const autoPM=async()=>{const net={};paysOf(k).forEach(p=>{const m=p.method==="입금"?"현금":p.method==="승인취소"?"카드":p.method;net[m]=(net[m]||0)+Number(p.amount||0)});
+    const has=m=>(net[m]||0)>0;let v="";if(has("캐피탈"))v="캐피탈";else if(has("CMS"))v="CMS";else if(has("카드")&&has("현금"))v="카드+현금";else if(has("카드"))v="카드";else if(has("현금"))v="현금";
+    if(!v||v===k.pay_method||k.pay_method==="분납")return;const {error}=await sb.from("contracts").update({pay_method:v}).eq("id",k.id);if(error)return;k.pay_method=v;
+    const sl=document.querySelector('#dlg select[name="pay_method"]');if(sl){sl.value=v;sl.dispatchEvent(new Event("change",{bubbles:true}))}toast(`결제방식을 ‘${v}’(으)로 바꿨습니다`)};
+  const after=async()=>{await reload(["payments"],true);renderPaySec(k);await autoPM()};
   document.getElementById("pAdd").onclick=async()=>{let a=Number(val("pA")||0);const m=val("pM");if(!a)return toast("금액을 입력하세요");if(m==="승인취소"&&a>0)a=-a;
     const {error}=await sb.from("payments").insert({contract_id:k.id,customer_id:k.customer_id,pay_date:val("pD")||null,method:m,payer:val("pN").trim(),amount:a,memo:val("pMemo").trim()});
     if(error)return toast("입금을 저장하지 못했습니다: "+error.message);toast("입금을 추가했습니다");await after()};
@@ -3082,15 +3094,15 @@ function stockUltraHtml(){const cm=stkCtrMap();const units=stkUnits.map(u=>({u,s
   const allT=sizes.map(s=>STK_TY.map(t=>fresh.filter(x=>x.u.size===s&&x.u.ty===t).length));
   const usedIn=live.filter(x=>x.u.used).length;
   const ug={};live.filter(x=>x.u.used).forEach(x=>{const k=stkSpec(x.u);ug[k]=(ug[k]||0)+1});
-  const side=`<div class="sside"><table class="stafft slegend"><thead><tr><th colspan="2">TYPE 정리</th></tr></thead><tbody>
+  const side=`<div class="sside"><div class="ssin"><table class="stafft slegend"><thead><tr><th colspan="2">TYPE 정리</th></tr></thead><tbody>
       <tr><th>품명</th><td>ON : Oncare<br>AT : 올뉴트리플<br>CL : 클린365</td></tr><tr><th>채널</th><td>1 : 1채널 · 3 : 3채널</td></tr>
       <tr><th>TYPE</th><td>A : 세로 700<br>B : 세로 600<br>C : 세로 특수 사이즈</td></tr><tr><th>턱</th><td>유턱 : 1 · 무턱 : 0</td></tr><tr><th>배수</th><td>우 : R · 좌 : L</td></tr></tbody></table>
-    <table class="stafft sused"><thead><tr class="uclk" data-uspec="" role="button" tabindex="0" title="중고 재고 전체 보기"><th>중고 내역</th><th class="num">${usedIn}</th></tr></thead><tbody>${Object.entries(ug).sort((a,b)=>b[1]-a[1]).map(([k,n])=>`<tr class="uclk${ui.sfil&&ui.sfil.spec===k?" on":""}" data-uspec="${esc(k)}" role="button" tabindex="0" title="이 중고 제품 보기"><td>${esc(k)}</td><td class="num">${n}</td></tr>`).join("")||`<tr><td colspan="2" class="mapt">중고 재고 없음</td></tr>`}</tbody></table>
-    ${(()=>{const pl=units.filter(x=>x.u.status==="생산예정").length;return pl?`<div class="splanbox" role="button" tabindex="0" id="sPlan">생산입고<br>등록요망 <b>${pl}</b></div>`:""})()}</div>`;
+    <div class="susedbox"><table class="stafft sused"><thead><tr class="uclk" data-uspec="" role="button" tabindex="0" title="중고 재고 전체 보기"><th>중고 내역</th><th class="num">${usedIn}</th></tr></thead><tbody>${Object.entries(ug).sort((a,b)=>b[1]-a[1]).map(([k,n])=>`<tr class="uclk${ui.sfil&&ui.sfil.spec===k?" on":""}" data-uspec="${esc(k)}" role="button" tabindex="0" title="이 중고 제품 보기"><td>${esc(k)}</td><td class="num">${n}</td></tr>`).join("")||`<tr><td colspan="2" class="mapt">중고 재고 없음</td></tr>`}</tbody></table></div>
+    ${(()=>{const pl=units.filter(x=>x.u.status==="생산예정").length;return pl?`<div class="splanbox" role="button" tabindex="0" id="sPlan">생산입고 등록요망 <b>${pl}</b></div>`:""})()}</div></div>`;
   const mat=`<div class="srow"><div class="wrapx vis" style="padding-top:6px;min-width:0;max-width:100%"><div class="wtbox" style="max-height:none;width:fit-content;max-width:100%"><table class="wt sm"><thead><tr><th colspan="3">구분</th>${sizes.map(s=>`<th colspan="3" class="szs">${s}</th>`).join("")}<th rowspan="2">합계</th></tr>
       <tr><th>제품</th><th>턱</th><th>배수</th>${sizes.map(()=>STK_TY.map(t=>`<th title="${STK_TYNAME[t]}" class="${t==="A"?"szs":""}">${t}</th>`).join("")).join("")}</tr></thead><tbody>${tb}
       <tr class="stot"><th colspan="3">총계</th>${allT.map(a=>a.map((n,i)=>`<td class="num${i===0?" szs":""}">${n||""}</td>`).join("")).join("")}<td class="num"><b>${fresh.length}</b></td></tr></tbody></table></div>
-    <p class="mapt" style="margin:6px 0 0">현황표는 새 제품 재고만 셉니다(중고 ${usedIn}대는 오른쪽 ‘중고 내역’). 숫자를 누르면 아래 목록이 그 제품으로 바뀝니다. ‘적정 재고’ 칸을 누르면 입력할 수 있습니다. 생산 필요 = 적정 재고 − 유턱(우·좌) 재고.</p></div>${side}</div>`;
+    </div>${side}</div><p class="mapt" style="margin:6px 20px 0">현황표는 새 제품 재고만 셉니다(중고 ${usedIn}대는 오른쪽 ‘중고 내역’). 숫자를 누르면 아래 목록이 그 제품으로 바뀝니다. ‘적정 재고’ 칸을 누르면 입력할 수 있습니다. 생산 필요 = 적정 재고 − 유턱(우·좌) 재고.</p>`;
   return mat+stockListHtml(units,false)}
 /* ---------- 제품(시리얼) 목록: 초음파·중고 공통 ---------- */
 const STKCF=[["y","년"],["m","월"],["d","일"],["model","품명"],["ch","채널"],["size","SIZE"],["ty","TY"],["lip","유턱"],["drain","배수"],["no","No.(시리얼)"]];
