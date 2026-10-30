@@ -3019,21 +3019,22 @@ function stkState(u,cm){if(stkUC(u))return{st:"uc"};if(u.status)return{st:"x",la
    - 재고 목록에 그 번호가 있고, 그 고객에게 나가 있는(출고·출고예정) 제품이면 → 상태 '중고확인', 입고일 = 철거일
    - 재고 목록에 없으면(예전 출고분) → 계약의 제품·사이즈로 새로 등록 (최근에 철거완료로 바꾼 계약만) */
 async function stkRemoveSync(){if(!isOffice()||!stkUnits||ui.noStock)return;
-  const done=new Set(String(stkSet.rm_done||"").split(",").filter(Boolean));const cm=stkCtrMap();let changed=false;
+  const done=new Set(String(stkSet.rm_done2||"").split(",").filter(Boolean));/* 계약id:번호 — 시리얼을 나중에 넣거나 바꿔도 다시 확인 */const cm=stkCtrMap();let changed=false;
   const rmDate=k=>{const js=jobs.filter(j=>j.kind==="remove"&&j.status==="완료"&&(j.contract_id===k.id||j.customer_id===k.customer_id)).map(j=>j.done_date||j.visit_date).filter(Boolean).sort();return js.pop()||String(k.updated_at||"").slice(0,10)||today()};
-  for(const k of contracts){if(k.stage!=="철거완료"||done.has(k.id))continue;const d=String(k.serial||"").replace(/\D/g,"");if(d.length<3){done.add(k.id);changed=true;continue}
-    const n=String(Number(d));const c=custById(k.customer_id)||{};const rd=rmDate(k);
+  for(const k of contracts){if(k.stage!=="철거완료")continue;const d=String(k.serial||"").replace(/\D/g,"");if(d.length<3)continue;
+    const n=String(Number(d));const key=k.id+":"+n;if(done.has(key))continue;const c=custById(k.customer_id)||{};const rd=rmDate(k);
     const memo=`${rd.slice(2).replace(/-/g,"")} ${[cityOf(c.address),c.name].filter(Boolean).join(" ")} 철거`;
     const us=stkUnits.filter(u=>String(Number(String(u.no||"").replace(/\D/g,"")||"0"))===n);
     const st=u=>stkState(u,cm);
-    const mine=us.find(u=>{const s=st(u);return (s.st==="out"||s.st==="rsv")&&(!s.cid||s.cid===k.customer_id)});
+    const mine=us.find(u=>{const s=st(u);if(!(s.st==="out"||s.st==="rsv"))return false;if(s.cid)return s.cid===k.customer_id;const sn=nk(s.site||"");return !sn||!c.name||sn.includes(nk(c.name))});
     try{
       if(mine){const {error}=await sb.from("stock_units").update({status:"중고확인",out_date:null,site_name:"",customer_id:null,in_date:rd,remark:[memo,mine.remark].filter(Boolean).join(" / ")}).eq("id",mine.id);if(error)throw error}
-      else if(!us.length&&String(k.updated_at||"")>="2026-10-01"){const pn=prodName(k.product);const model=/온케어|oncare/i.test(pn)?"ON":/올뉴|트리플/.test(pn)?"AT":/^3/.test(pn)?"AT":/클린|^1/.test(pn)?"CL":"";
+      else if(!us.length&&String(k.updated_at||"")<"2026-10-01")continue;/* 예전 철거 건은 재고에 번호가 생기면 그때 반영 */
+      else if(!us.length){const pn=prodName(k.product);const model=/온케어|oncare/i.test(pn)?"ON":/올뉴|트리플/.test(pn)?"AT":/^3/.test(pn)?"AT":/클린|^1/.test(pn)?"CL":"";
         const sz=Number((String(k.size||"").match(/\d{3,4}/)||[])[0])||null;
         const {error}=await sb.from("stock_units").insert({model,ch:model?STK_MODELS[model].ch:null,size:sz,no:d.padStart(5,"0"),in_date:rd,status:"중고확인",remark:memo});if(error)throw error}
-      done.add(k.id);changed=true}catch(e){console.warn("철거 재고 반영 실패",e)}}
-  if(changed){const v=[...done].join(",");const {error}=await sb.from("stock_settings").upsert({key:"rm_done",value:v});if(!error)stkSet.rm_done=v;await fetchStock()}}
+      done.add(key);changed=true}catch(e){console.warn("철거 재고 반영 실패",e)}}
+  if(changed){const v=[...done].join(",");const {error}=await sb.from("stock_settings").upsert({key:"rm_done2",value:v});if(!error)stkSet.rm_done2=v;await fetchStock()}}
 async function renderStockView(){if(!isOffice()){view().innerHTML=`<div class="empty"><h2>사무실·관리자만 쓸 수 있는 화면입니다</h2></div>`;return}
   if(!stkUnits)view().innerHTML=`<p class="mapt" style="padding:20px">불러오는 중…</p>`;await fetchStock();await stkRemoveSync();if(!ui.stab)ui.stab="ultra";
   const tabs=[["ultra","초음파세척기"],["wash","수압식세척기"]];if(ui.stab==="used")ui.stab="ultra";
