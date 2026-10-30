@@ -2537,12 +2537,14 @@ async function setlExport(ym,P){if(!window.XLSX)return toast("엑셀 도구를 �
   const rows=[[`${+ym.slice(5)}월 싱크 및 부자재 정산`],H];let no=0;
   const pmap=n=>{const t=String(n).replace(/\s/g,"");if(/세제|활성제/.test(t))return["활성제",P.활성제];if(/수저/.test(t))return["수저랙",P.수저랙];if(/세로바/.test(t))return["세로바",P.세로바];if(/현판/.test(t))return["현판",P.현판];if(/안내판/.test(t))return["사용안내판",P.사용안내판];return[n,0]};
   js.forEach(j=>{no++;const k=(j.contract_id&&ctrById(j.contract_id))||(j.kind==="install"?custContracts(j.customer_id)[0]:null)||{};const c=custById(j.customer_id)||{};
-    const ords=(skOrders||[]).filter(o=>o.status!=="취소"&&k.id&&o.contract_id===k.id);
+    const ords=(skOrders||[]).filter(o=>o.status!=="취소"&&skJobOf(o)===j);/* 발주일 기준으로 설치·추가설치에 나눔 */
     const od=ords.map(o=>o.order_date).filter(Boolean).sort()[0]||k.contract_date||"";
     const tr=k.contract_type==="무료체험"&&k.trial_end?` (무료체험 ${+k.trial_end.slice(5,7)}/${+k.trial_end.slice(8,10)})`:"";
     const base=[no,d2(od),d2(doneOf(j)),whoOf(j).replace(/\s*·\s*/g," ").replace(/,\s*/g," "),(()=>{/* 영업담당(3차): 계약 → (추가설치처럼 계약 연결이 없으면) 이 고객의 계약 → 고객 담당자 */const f=v=>String(v||"").split("/")[0].trim();let v=f(s3Text(k));if(!v)for(const kk of custContracts(j.customer_id)){v=f(s3Text(kk));if(v)break}return v||f(staffName(c.owner)||c.owner_name)})(),(c.name||j.customer_name||"")+tr];
     const line=(item,price,qty,memo)=>{const sup=price&&qty?price*qty:0;rows.push([...base,item,price||0,qty===""?"":qty,sup,"",sup,memo||""])};
-    if(j.kind==="addon"){const a=addonItem(j);line([a.product,a.size].filter(Boolean).join(" ")||"추가설치",Number(j.cost||0),1,"추가설치");line("설치비",P["설치비(추가설치)"],1,"추가설치");return}
+    if(j.kind==="addon"){const a=addonItem(j);line([a.product,a.size].filter(Boolean).join(" ")||"추가설치",Number(j.cost||0),1,"추가설치");
+      ords.forEach(o=>(o.items||[]).forEach((it,i)=>{const L=skLine(o,i);line(skStar(it.sup)||skSpec(it),L.price,Number(it.qty||1)||1,it.from_stock?"재고사용":"추가설치")}));
+      line("설치비",P["설치비(추가설치)"],1,"추가설치");return}
     line([prodName(k.product),k.size].filter(Boolean).join(" ")||"제품",0,"","");
     ords.forEach(o=>(o.items||[]).forEach((it,i)=>{const L=skLine(o,i);line(it.sup||skSpec(it),L.price,Number(it.qty||1)||1,it.from_stock?"재고사용":"")}));
     String(j.parts||"").split(/\s*[,/]\s*/).map(x=>x.trim()).filter(Boolean).forEach(t=>{const m=t.match(/^(.*?)(\d+)\s*(개|통|ea)?$/i);const nm=m?m[1].trim():t,q=m?+m[2]:1;const [n2,pr]=pmap(nm);line(n2,pr,q,"")});
@@ -2687,8 +2689,13 @@ function r0Stock(its){/* 저장 전: 재고 수량을 넘지 않는지 확인 */
 function skTabs(){return isOffice()?`<div class="nav" role="tablist">${[["order","싱크대발주"],["stock","재고현황"],["price","단가표"]].map(([k,l])=>`<button type="button" role="tab" class="${ui.sktab===k?"on":""}" data-sktab="${k}">${l}</button>`).join("")}</div>`:""}
 function bindSkTabs(){view().querySelectorAll("[data-sktab]").forEach(b=>b.onclick=()=>{ui.sktab=b.dataset.sktab;renderSinkView()})}
 /* 발주한 뒤 그 고객 설치가 끝났으면(설치 작업 완료) 출고대기에서 뺌 */
-function skInstalled(o){const cid=o.customer_id||((customers.find(x=>nk(x.name)===nk(o.site_name||""))||{}).id);const ks=o.contract_id?[ctrById(o.contract_id)].filter(Boolean):cid?custContracts(cid):[];
-  const od=String(o.order_date||"");let r="";ks.some(k=>{const ij=installOf(k);if(ij&&ij.status==="완료"){const d=ij.done_date||ij.visit_date||"";if(!d||!od||d>=od){r=d||today();return true}}return false});return r}
+/* 발주가 어느 작업(설치·추가설치) 것인지: 같은 고객의 설치·추가설치 중 발주일 이후 가장 먼저 하는 작업.
+   (계약 1건에 나중에 싱크대를 추가로 설치해도, 그 발주는 그 추가설치 건으로 들어감) */
+function skJobOf(o){const k0=o.contract_id&&ctrById(o.contract_id);const cid=o.customer_id||(k0&&k0.customer_id)||((customers.find(x=>nk(x.name)===nk(o.site_name||""))||{}).id);if(!cid)return null;
+  const jd=j=>j.done_date||j.visit_date||"";const od=String(o.order_date||"");
+  const js=jobs.filter(j=>j.customer_id===cid&&(j.kind==="install"||j.kind==="addon")&&j.status!=="취소").sort((a,b)=>(jd(a)||"9999").localeCompare(jd(b)||"9999"));
+  return js.find(j=>!jd(j)||!od||jd(j)>=od)||null}
+function skInstalled(o){const j=skJobOf(o);if(j&&j.status==="완료")return j.done_date||j.visit_date||today();return ""}
 /* 설치가 끝난 고객의 '입고완료' 발주 → 자동으로 '출고완료' (출고일자 = 설치일) */
 /* 2026년 이전에 입고된 고객 발주(입고완료)는 모두 출고완료 처리 (출고일자 = 입고일자). '…재고' 업장은 실제 재고라 그대로 */
 const skOldOut=o=>o.status==="입고완료"&&!skIsStockOrder(o)&&!/재고/.test(o.site_name||"")&&String(o.in_date||o.order_date||"9")<"2026-01-01";
