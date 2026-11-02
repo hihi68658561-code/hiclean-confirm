@@ -1073,9 +1073,12 @@ function installOf(k){if(k.__job)return k.__job;if(!instIdx)buildInstIdx();retur
 const CCOLS=[
  ["basis","기준",1],["ctype","구분",1],["stage","진행단계",1],["trial","무료체험 종료일",1],["name","업체명(상호)",1],["ceo","대표자",1],["phone","전화번호",1],["addr","상점주소",0],
  ["cdate","계약일자",1],["idate","예정일",1],["iwday","요일",1],["itime","시간",1],["channel","영업 경로",0],["referrer","소개",0],["s1","1차",0],["s2","2차",0],["s3","3차(담당)",1],["doc","계약서",0],["tech","설치기사",0],
- ["product","제품",1],["size","사이즈",1],["serial","시리얼",1],["wash","수압식",0],["sink","싱크준비",1],["sinkm","싱크대 품명 및 규격",1],["parts","부자재",0],["amount","합계금액",1],["card","카드",1],["cash","현금+캐피탈",1],["paid","입금합계",0],["unpaid","미수금",1],["last","최종결제일",1],
+ ["product","제품",1],["size","사이즈",1],["serial","시리얼",1],["wash","수압식",0],["sink","싱크준비",1],["sinkm","싱크대 품명 및 규격",1],["parts","부자재",0],["a_ultra","초음파 금액",0],["a_wash","워시(수압식) 금액",0],["a_parts","부자재 금액",0],["amount","합계금액",1],["card","카드",1],["cash","현금+캐피탈",1],["paid","입금합계",0],["unpaid","미수금",1],["last","최종결제일",1],
  ["approval","승인처",1],["tax","계산서 발급",0],["chk_cust","고객등록",1],["chk_slip","전표마감",1],["chk_sales","매출마감",1],["chk_month","월마감",1],["settle","마감",1],["memo","비고",1]];
-const MONEYC=new Set(["amount","card","cash","paid","unpaid"]);
+/* 엑셀 다운로드할 때는 합계금액 앞에 초음파·워시(수압식)·부자재 금액을 나눠서 넣음 */
+function xSplitCols(cols){if(!ui.xAll||isTechOnly())return cols;const add=["a_ultra","a_wash","a_parts"].filter(c=>!cols.includes(c));if(!add.length)return cols;const i=cols.indexOf("amount");const out=cols.slice();out.splice(i<0?out.length:i,0,...add);return out}
+function isTechOnly(){return !!me&&me.role==="tech"}
+const MONEYC=new Set(["amount","card","cash","paid","unpaid","a_ultra","a_wash","a_parts"]);
 /* 표 열 설정(넣고 빼기·순서·너비) — 계약관리(ctr)·작업현황(work) 공용, 브라우저별로 기억 */
 const TCFG={ctr:{cols:()=>CCOLS.filter(c=>!(me&&me.role==="sales"&&["chk_cust","chk_slip","chk_sales","chk_month","settle"].includes(c[0]))),sel:".wt.ct",lead:()=>isOffice()?2:1},work:{cols:()=>WCOLS,sel:".wt.wk",lead:()=>isAdmin()?2:1}};
 function colKey(t="ctr"){return "hc.cols."+t+"."+(me&&me.id||"")}
@@ -1215,7 +1218,7 @@ function ctrCell(col,k,c,st,basis){
     case"sink":return `<td>${ij?sinkCell(ij):""}</td>`;
     case"sinkm":return `<td class="wrap memo"><div class="clamp">${esc(ij&&ij.sink_memo||"")}</div></td>`;
     case"parts":return `<td>${esc(ij&&ij.parts||"")}</td>`;
-    case"amount":return `<td class="num">${won0(k.amount)}</td>`;
+    case"amount":return `<td class="num">${won0(k.amount)}</td>`;case"a_ultra":return `<td class="num">${k.amt_ultra?won0(k.amt_ultra):""}</td>`;case"a_wash":return `<td class="num">${k.amt_wash?won0(k.amt_wash):""}</td>`;case"a_parts":return `<td class="num">${k.amt_parts?won0(k.amt_parts):""}</td>`;
     case"card":return `<td class="num">${st.card?won0(st.card):""}</td>`;
     case"cash":return `<td class="num">${st.other?won0(st.other):""}</td>`;
     case"paid":return `<td class="num">${st.paid?won0(st.paid):""}</td>`;
@@ -1278,15 +1281,15 @@ function renderCtrView0(){
   const sumT=`<table class="sumt" aria-label="${esc(ui.cm)} 계약 집계"><thead><tr><th></th>${TY.map(t=>`<th>${t}</th>`).join("")}<th>합계</th></tr></thead><tbody>
     ${CROWS.map(([r,l])=>`<tr class="${r==="unpaid"?"open":""}"><th>${l}</th>${[...TY,""].map(t=>`<td class="cl ${ui.crow===r&&ui.cct===t?"on":""}" data-r="${r}" data-t="${t}">${cnt(r,t)}</td>`).join("")}</tr>`).join("")}
     <tr><th>합계</th>${[...TY,""].map(t=>`<td class="cl ${ui.crow===""&&ui.cct===t?"on":""}" data-r="" data-t="${t}"><b>${cnt("",t)}</b></td>`).join("")}</tr></tbody></table>`;
-  const cols=getCols();const lab=Object.fromEntries(CCOLS.map(c=>[c[0],c[1]]));
+  const cols=xSplitCols(getCols());const lab=Object.fromEntries(CCOLS.map(c=>[c[0],c[1]]));
   const shown=list.slice(0,ui.xAll?1e9:500);
   /* 묶음별 소계 줄 (진한 초록) */
   const [cy,cmn]=ui.cm.split("-").map(Number);const nx=cmn===12?`${cy+1}년 01월`:`${cy}년 ${String(cmn+1).padStart(2,"0")}월`;
   const GL={0:"전월미수채권",1:`${cy}년 ${String(cmn).padStart(2,"0")}월 당월마감`,1.5:`${cy}년 ${String(cmn).padStart(2,"0")}월 추가설치`,2:`${nx} 익월마감`,3:"취소,보류",4:"전기마감 (미수)"};
   const labC=cols.includes("name")?"name":cols[0];
-  const subRow=g=>{const xs=shown.filter(x=>x.gs===g);const t={amount:0,card:0,cash:0,paid:0,unpaid:0};xs.forEach(x=>{t.amount+=Number(x.k.amount||0);t.card+=x.s.card;t.cash+=x.s.other;t.paid+=x.s.paid;if(x.s.n||x.k.stage==="미수")t.unpaid+=x.s.unpaid});
+  const subRow=g=>{const xs=shown.filter(x=>x.gs===g);const t={amount:0,card:0,cash:0,paid:0,unpaid:0,a_ultra:0,a_wash:0,a_parts:0};xs.forEach(x=>{t.amount+=Number(x.k.amount||0);t.a_ultra+=Number(x.k.amt_ultra||0);t.a_wash+=Number(x.k.amt_wash||0);t.a_parts+=Number(x.k.amt_parts||0);t.card+=x.s.card;t.cash+=x.s.other;t.paid+=x.s.paid;if(x.s.n||x.k.stage==="미수")t.unpaid+=x.s.unpaid});
     return `<tr class="subt">${isOffice()?"<td></td>":""}<td></td>${cols.map(c=>MONEYC.has(c)?`<td class="num">${won0(t[c])}</td>`:c===labC?`<td>${esc(GL[g])} <small>(${xs.length}건)</small></td>`:"<td></td>").join("")}</tr>`};
-  const tot={amount:0,card:0,cash:0,paid:0,unpaid:0};shown.forEach(x=>{tot.amount+=Number(x.k.amount||0);tot.card+=x.s.card;tot.cash+=x.s.other;tot.paid+=x.s.paid;if(x.s.n||x.k.stage==="미수")tot.unpaid+=x.s.unpaid});
+  const tot={amount:0,card:0,cash:0,paid:0,unpaid:0,a_ultra:0,a_wash:0,a_parts:0};shown.forEach(x=>{tot.amount+=Number(x.k.amount||0);tot.a_ultra+=Number(x.k.amt_ultra||0);tot.a_wash+=Number(x.k.amt_wash||0);tot.a_parts+=Number(x.k.amt_parts||0);tot.card+=x.s.card;tot.cash+=x.s.other;tot.paid+=x.s.paid;if(x.s.n||x.k.stage==="미수")tot.unpaid+=x.s.unpaid});
   view().innerHTML=`${ui.noPay?`<div class="sec" style="max-width:none"><p class="warnbox">입금 내역 칸이 아직 없습니다. Supabase SQL Editor에서 <b>phase1h.sql</b>을 실행하면 입금·미수금·마감 체크를 쓸 수 있습니다.</p></div>`:""}
    <div class="sumwrap"><div style="display:grid;gap:8px;align-content:start"><div style="display:flex;gap:8px;align-items:center"><h2 style="margin:0;font-size:18px">당월리스트</h2>
       </div>
@@ -1353,7 +1356,7 @@ function renderAllView0(){
   let list=rows.filter(x=>!qq||[x.c.name,x.c.search_text,x.c.ceo,x.c.phone,x.c.phone2,x.c.address,x.k.serial,x.k.memo,x.k.approval,staffName(x.k.sales3),x.k.sales3_name].join(" ").toLowerCase().includes(qq));
   sortCtrList(list);
   list=cfApply("all",list,(c,x)=>cfText(ctrCell(c,x.k,x.c,x.s,x.b)));
-  const cols=getCols("all").filter(k=>!(me.role==="sales"&&CHKCOLS.includes(k)));const shown=list.slice(0,ui.xAll?1e9:ui.allN);
+  const cols=xSplitCols(getCols("all").filter(k=>!(me.role==="sales"&&CHKCOLS.includes(k))));const shown=list.slice(0,ui.xAll?1e9:ui.allN);
   view().innerHTML=`<div class="toolbar"><h2 style="margin:0;font-size:18px">전체리스트</h2><span class="mapt">월마감(OK)된 계약</span>${hasMonthCol()?"":`<span class="warnbox" style="margin:0">월마감을 쓰려면 Supabase에서 phase1x.sql을 실행해 주세요.</span>`}</div>
    <div class="toolbar"><input id="caQ" type="search" placeholder="업체명(상호)·대표자·전화·주소·시리얼·담당 검색" value="${esc(ui.aq2)}">
      <span class="mapt" id="caCnt">${list.length}건${list.length>shown.length?` 중 ${shown.length}건 표시`:""}</span>
