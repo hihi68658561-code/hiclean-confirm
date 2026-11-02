@@ -1176,7 +1176,7 @@ function colPicker(onDone,t="ctr"){
 /* 당월리스트에 나오는 계약(설치·결제가 그달이거나 해결 안 된 미수) */
 function ctrInMonth(k,ym){const [st0,en0]=monthRange(ym);const inM=d=>d&&d>=st0&&d<en0;const s=payStat(k);const bd=baseDate(k);
   return inM(bd)||inM(s.last)||!bd||bd>=en0||(k.stage==="미수"&&bd<en0)}
-function bulkMonthClose(){const ym=thisMonth();const ids=contracts.filter(k=>k.chk_month!=="OK"&&!ctrInMonth(k,ym)).map(k=>k.id);
+function bulkMonthClose(){const ym=ctrMonth();const ids=contracts.filter(k=>k.chk_month!=="OK"&&!ctrInMonth(k,ym)).map(k=>k.id);
   if(!ids.length)return toast("월마감할 계약이 없습니다");
   openDlg("나머지 계약 일괄 월마감",`<p>이번 달(${esc(ym)}) 당월리스트에 나오는 계약을 <b>제외한</b> 나머지 계약 <b>${ids.length}건</b>을 월마감 OK로 바꿉니다.</p><p class="mapt">이번 달 설치·결제된 건과 해결되지 않은 미수 건은 당월리스트에 그대로 남습니다. 바꾼 건은 전체리스트에서 보이고, 각 계약의 월마감 칸을 지우면 되돌릴 수 있습니다.</p>`,
     [["취소"],["월마감 처리","pri",async()=>{for(let i=0;i<ids.length;i+=200){toast(`월마감 처리 중… ${Math.min(i+200,ids.length)}/${ids.length}`);const {error}=await sb.from("contracts").update({chk_month:"OK"}).in("id",ids.slice(i,i+200));if(error)return toast("처리하지 못했습니다: "+error.message)}
@@ -1230,8 +1230,10 @@ function ctrCell(col,k,c,st,basis){
   return "<td></td>";
 }
 function renderCtrView(){const _sv=snapScroll();renderCtrView0();restoreScroll(_sv)}
+/* 당월리스트 기준 달: 마감을 10일에 확정하므로 매월 1~10일은 전월, 11일부터 이번 달 */
+function ctrMonth(){const t=today();const [y,m,d]=t.split("-").map(Number);if(d>10)return t.slice(0,7);return m===1?`${y-1}-12`:`${y}-${String(m-1).padStart(2,"0")}`}
 function renderCtrView0(){
-  ui.cm=thisMonth();ui.cmAll=false;if(ui.crow===undefined)ui.crow="";if(ui.cct===undefined)ui.cct="";if(ui.cq===undefined)ui.cq="";
+  ui.cm=ctrMonth();ui.cmAll=false;if(ui.crow===undefined)ui.crow="";if(ui.cct===undefined)ui.cct="";if(ui.cq===undefined)ui.cq="";
   const all=!!ui.cmAll;const [st0,en0]=monthRange(ui.cm);const inM=d=>all?!!d:(d&&d>=st0&&d<en0);
   const rows=[];
   contracts.forEach(k=>{const s=payStat(k);const b=[];if(all){if(!monthClosed(k))rows.push({k,c:custById(k.customer_id)||{},s,b:["전체"]});return}
@@ -1239,7 +1241,7 @@ function renderCtrView0(){
     if(inM(s.last))b.push("결제");
     if(k.stage==="미수"&&(!baseDate(k)||baseDate(k)<en0)&&!b.length)b.push("미수");
     /* 이번 달 화면: 날짜가 없거나 다음 달 이후로 잡힌 계약, 지난달 것 중 월마감 안 된 계약도 보이게 (어느 목록에도 안 나오는 일 방지) */
-    if(!b.length&&ui.cm===thisMonth()&&k.stage!=="취소"){const bd=baseDate(k);b.push(!bd?"날짜 없음":bd>=en0?"예정":"이월")}
+    if(!b.length&&ui.cm===ctrMonth()&&k.stage!=="취소"){const bd=baseDate(k);b.push(!bd?"날짜 없음":bd>=en0?"예정":"이월")}
     if(b.length&&!monthClosed(k))rows.push({k,c:custById(k.customer_id)||{},s,b})});
   jobs.forEach(j=>{if(j.kind!=="addon")return;const k=addonRow(j);if((all||inM(baseDate(k)))&&!monthClosed(k))rows.push({k,c:custById(j.customer_id)||{},s:payStat(k),b:["설치"],a:j})});
   // 금액 요약
@@ -1258,7 +1260,7 @@ function renderCtrView0(){
     &&(!qq||[x.c.name,x.c.search_text,x.c.ceo,x.c.phone,x.c.phone2,x.k.serial,x.k.memo,x.k.approval,staffName(x.k.sales3),x.k.sales3_name].join(" ").toLowerCase().includes(qq)));
   /* 소계 묶음: 0 당월마감(이달 설치) · 1 익월마감(다음 달 이후·날짜 없음) · 2 취소,보류 · 3 전기마감(미수·이월·예전 건 결제). 소계 칸에서 직접 고르면 그 묶음 */
   /* 0 전월미수채권(지난달 이전 설치·이번에 완료) · 1 당월마감 · 2 익월마감 · 3 취소,보류 · 4 전기마감(아직 미수) */
-  const gOf=x=>{const bd=baseDate(x.k);let tg=!x.a&&x.k.settle_tag;/* 직접 고른 당월·익월마감은 그 달 기준이라, 지난달 이전 건이면 무시하고 자동으로 */if((tg==="당월마감"||tg==="익월마감")&&bd&&bd<st0)tg="";
+  const gOf=x=>{const bd=baseDate(x.k);const tg=!x.a&&x.k.settle_tag;
     const oldDone=!x.a&&(x.k.contract_type||"구매")==="구매"&&bd&&bd<st0&&x.k.stage==="완료"&&!(x.s.unpaid>0);/* 구매 건 중 결제 완료된 것만 */
     if(oldDone&&(!tg||tg==="전기마감"))return 0;
     const ti=SETTLE.indexOf(tg);if(ti>=0)return ti;if(!x.a&&(x.k.stage==="취소"||x.k.stage==="보류"))return 3;
@@ -2540,7 +2542,7 @@ function ensureSetTabs(){if(ui.view!=="settings"||!isAdmin()||document.getElemen
 const SETL_DEF={활성제:21000,수저랙:12000,세로바:27000,수전:22000,샴푸:21000,린스:21000,현판:0,사용안내판:0,설치비:400000,"설치비(수압식만)":200000,"설치비(추가설치)":50000};
 function setlPrices(){try{const o=JSON.parse(localStorage.getItem("hc.setl")||"{}");if("수저력" in o){if(!("수저랙" in o))o.수저랙=o.수저력;delete o.수저력}return Object.assign({},SETL_DEF,o)}catch(e){return{...SETL_DEF}}}
 function addSetlBtn(tb){if(ui.view!=="ctrm"||!isOffice()||document.getElementById("setlBtn"))return;const b=document.createElement("button");b.type="button";b.className="btn";b.id="setlBtn";b.textContent="정산 엑셀";b.title="싱크·부자재 정산 양식으로 내려받기";b.onclick=setlDlg;tb.appendChild(b)}
-function setlDlg(){const P=setlPrices();const ym=thisMonth();
+function setlDlg(){const P=setlPrices();const ym=ctrMonth();
   openDlg("싱크·부자재 정산 엑셀",`<div id="slf" style="display:grid;gap:10px"><div class="g3"><label class="f">설치 월<input type="month" name="ym" value="${ym}"></label><span></span><span></span></div>
     <p class="mapt" style="margin:0">그 달에 <b>설치 완료</b>된 건마다 제품 · 싱크대 발주 품목(출고가·공제가) · 제공 부자재 · 설치비 줄을 만듭니다. 재고에서 쓴 싱크는 비고에 ‘재고사용’.</p>
     <fieldset><legend>단가 (바꾸면 다음에도 기억)</legend><div class="g3">${Object.keys(SETL_DEF).map(k=>`<label class="f">${k}${k==="활성제"?" (세제)":""}<input type="number" data-sp="${k}" value="${P[k]}"></label>`).join("")}</div></fieldset></div>`,
@@ -2597,7 +2599,7 @@ function exportView(){const v=ui.view;const sel=XSEL[v];if(!sel)return;toast("�
         else if(typeof cell.v==="string"){cell.t="s"}
         wid[C]=Math.max(wid[C]||4,Math.min(40,[...s].reduce((n,ch)=>n+(ch.charCodeAt(0)>127?2:1),0)+2))}
       ws["!cols"]=wid.map(w=>({wch:w}));const wb=XLSX.utils.book_new();const nm=XNAME[v]||"목록";XLSX.utils.book_append_sheet(wb,ws,nm.slice(0,31).replace(/[\\/?*\[\]:]/g,""));
-      const tag=v==="sched"?(ui.sm||thisMonth()):v==="ctrm"?(ui.cm||thisMonth()):today();XLSX.writeFile(wb,`${nm}_${tag}.xlsx`);toast("엑셀 파일을 내려받았습니다")}
+      const tag=v==="sched"?(ui.sm||thisMonth()):v==="ctrm"?(ui.cm||ctrMonth()):today();XLSX.writeFile(wb,`${nm}_${tag}.xlsx`);toast("엑셀 파일을 내려받았습니다")}
     catch(e){toast("엑셀 파일을 만들지 못했습니다: "+(e.message||""))}finally{render()}},30)}
 
 /* ================= 싱크대 발주 ================= */
