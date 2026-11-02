@@ -3442,7 +3442,7 @@ function hasTrialCol(){return contracts.some(k=>"trial_end" in k)}
 /* 철거 계약이 완료되면 회색 줄 */
 /* 계약 창: 고객정보 옆 '설치·A/S' — 이 계약의 설치 작업과 이 고객의 A/S 등을 열기 */
 function ctrJobBtn(c,k,isNew){if(isNew||!c||!k||!k.id)return[];
-  const js=jobs.filter(j=>j.contract_id===k.id||(j.customer_id===c.id&&asLike(j))).sort((a,b)=>(a.kind==="install"?0:1)-(b.kind==="install"?0:1)||String(b.visit_date||b.request_date||"").localeCompare(String(a.visit_date||a.request_date||"")));
+  const js=jobs.filter(j=>j.contract_id===k.id||(j.customer_id===c.id&&(asLike(j)||!j.contract_id||!ctrById(j.contract_id)))).sort(/* 계약 연결이 빠진 같은 고객 설치·철거·추가설치도 */(a,b)=>(a.kind==="install"?0:1)-(b.kind==="install"?0:1)||String(b.visit_date||b.request_date||"").localeCompare(String(a.visit_date||a.request_date||"")));
   if(!js.length)return[];
   return[["설치·A/S","gocust",()=>{if(js.length===1){jobDlg(js[0],c,js[0].kind);return true}
     openDlg(`설치·A/S · ${esc(c.name)}`,`<div class="cards">${js.map(j=>jobCard(j,false)).join("")}</div>`,[["계약정보","gocust",()=>{contractDlg(c,k);return true}],["닫기"]]);bindJobCards(document.getElementById("dlgB"));return true}]]}
