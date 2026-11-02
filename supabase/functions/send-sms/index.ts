@@ -1,6 +1,8 @@
 // 하이클린 업무관리 · 문자 보내기 (솔라피)
 // Supabase > Edge Functions 에 이름 'send-sms' 로 배포합니다.
 // 필요한 비밀 값(Edge Functions > Secrets): SOLAPI_API_KEY, SOLAPI_API_SECRET, SOLAPI_SENDER(등록된 발신번호, 숫자만)
+// 카카오 알림톡(선택): SOLAPI_PFID(솔라피에 연결한 카카오 채널 pfId), SOLAPI_TPL_VISIT(승인된 '방문 안내' 템플릿 ID)
+//   두 값이 있으면 kakao:{template:"visit"}가 붙은 메시지는 알림톡으로 보내고, 실패하면 같은 내용을 문자로 대신 보냅니다.
 import { createClient } from "jsr:@supabase/supabase-js@2";
 
 const CORS = {
@@ -42,7 +44,7 @@ Deno.serve(async (req) => {
   const { data: st } = await admin.from("staff").select("name,role,active").eq("user_id", u.user.id).maybeSingle();
   if (!st || !st.active) return json({ error: "문자를 보낼 권한이 없습니다" }, 403);
 
-  let body: { messages?: { to: string; text: string; subject?: string; customer_id?: string; ref_type?: string; ref_id?: string }[] };
+  let body: { messages?: { to: string; text: string; subject?: string; customer_id?: string; ref_type?: string; ref_id?: string; kakao?: { template?: string; variables?: Record<string, string> } }[] };
   try { body = await req.json(); } catch { return json({ error: "잘못된 요청입니다" }, 400); }
   const list = (body.messages || []).map((m) => ({ ...m, to: String(m.to || "").replace(/\D/g, ""), text: String(m.text || "").trim() }));
   if (!list.length) return json({ error: "보낼 문자가 없습니다" }, 400);
@@ -53,8 +55,17 @@ Deno.serve(async (req) => {
     if (bytes(m.text) > 2000) return json({ error: "문자 내용이 너무 깁니다 (2000바이트 이하)" }, 400);
   }
 
+  const PFID = Deno.env.get("SOLAPI_PFID") || "";
+  const TPL: Record<string, string> = { visit: Deno.env.get("SOLAPI_TPL_VISIT") || "" };
   const messages = list.map((m) => {
     const lms = bytes(m.text) > 90;
+    const tid = m.kakao?.template ? TPL[m.kakao.template] : "";
+    if (PFID && tid) {
+      // 알림톡: 실패하면 text 내용으로 문자 대체 발송 (disableSms: false)
+      const variables: Record<string, string> = {};
+      for (const [k, v] of Object.entries(m.kakao?.variables || {})) variables[`#{${k}}`] = String(v ?? "");
+      return { to: m.to, from: FROM, text: m.text, type: "ATA", kakaoOptions: { pfId: PFID, templateId: tid, variables, disableSms: false } };
+    }
     return { to: m.to, from: FROM, text: m.text, type: lms ? "LMS" : "SMS", ...(lms ? { subject: (m.subject || "하이클린").slice(0, 20) } : {}) };
   });
   let res: Response, out: any;

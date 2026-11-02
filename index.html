@@ -2334,7 +2334,7 @@ function renderCustRecv(c){const tb=document.getElementById("tabBody");const xs=
 let smsTpl=null;
 async function loadSmsTpl(force){if(smsTpl&&!force)return smsTpl;const {data,error}=await sb.from("sms_templates").select("*").order("sort").order("created_at");if(error){ui.noSms=true;smsTpl=[];return smsTpl}ui.noSms=false;smsTpl=data||[];return smsTpl}
 function smsBytes(s){let n=0;for(const ch of String(s||""))n+=ch.charCodeAt(0)>127?2:1;return n}
-function smsFill(t,v){return String(t||"").replace(/\{(업체명|대표자|방문일|시간|미수금|금액|제품|계좌)\}/g,(m,k)=>v[k]!=null&&v[k]!==""?String(v[k]):m)}
+function smsFill(t,v){return String(t||"").replace(/\{(업체명|대표자|방문일|시간|미수금|금액|제품|계좌|기사|작업)\}/g,(m,k)=>v[k]!=null&&v[k]!==""?String(v[k]):m)}
 function smsDate(d){if(!d)return"";const [y,m,dd]=d.split("-").map(Number);if(!m)return d;const w="일월화수목금토"[new Date(d).getDay()];return `${m}월 ${dd}일(${w})`}
 /* opts: {c, vars, ref_type, ref_id, tpl(문구 제목), pick(고객 검색)} */
 async function smsDlg(opts){opts=opts||{};let c=opts.c||null;const pick=!c;let v={};
@@ -3797,6 +3797,19 @@ function rmCtrOf(j){if(j.contract_id){const k=ctrById(j.contract_id);if(k)return
   return ks.find(k=>nk(prodName(k.product))===nk(prodName(p.product))&&nk(k.size)===nk(p.size)&&(!p.serial||nk(k.serial)===nk(p.serial)))||ks.find(k=>p.serial&&nk(k.serial)===nk(p.serial))||null}
 /* 이 계약 제품이 철거됐는지 (완료된 철거 작업이 이 계약을 가리킴) */
 function ctrRemovedJob(k){return jobs.find(j=>j.kind==="remove"&&j.status==="완료"&&j.customer_id===k.customer_id&&rmCtrOf(j)===k)||null}
+/* 배정 안내: 알림톡(설정돼 있으면) → 실패하면 문자. 문자 문구는 '방문 안내' 문구를 씀 */
+const VISIT_DEF="[하이클린] {업체명} 고객님, {작업} 방문 일정 안내드립니다.\n■ 방문일: {방문일}\n■ 시간: {시간}\n■ 담당 기사: {기사}\n일정 변경이 필요하시면 연락 부탁드립니다.";
+async function visitNotifyDlg(j,c){c=c||custById(j.customer_id);if(!c)return;const phones=[c.phone,c.phone2].map(x=>String(x||"").trim()).filter(x=>/^0\d/.test(x.replace(/\D/g,"")));if(!phones.length)return;
+  let tpl=VISIT_DEF;try{const ts=await loadSmsTpl();const t=(ts||[]).find(x=>(x.title||"").replace(/\s/g,"")==="방문안내");if(t&&t.content)tpl=t.content}catch(e){}
+  const p=j.product||{};const vars={업체명:c.name||j.customer_name||"",대표자:c.ceo||"",방문일:smsDate(j.visit_date),시간:fmtTime(j.visit_time)||"",제품:[prodName(p.product),p.size].filter(Boolean).join(" "),기사:whoOf(j).replace(/\s*·\s*/g,", "),작업:kl(j)||"설치",계좌:S.bank||""};
+  const text=smsFill(tpl,vars).replace(/\s*\{(시간|기사|제품|대표자)\}/g,"");
+  openDlg("고객에게 방문 안내를 보낼까요?",`<div id="vnf" style="display:grid;gap:10px"><p class="mapt" style="margin:0">${esc(kl(j))} 배정이 저장되었습니다. 카카오 알림톡으로 보내고, 알림톡이 안 되면 같은 내용을 문자로 보냅니다.</p>
+    <label class="f">받는 번호<select name="to">${phones.map(x=>`<option>${esc(x)}</option>`).join("")}</select></label>
+    <label class="f">내용 (문자로 갈 때 이 내용)<textarea name="text" rows="7">${esc(text)}</textarea></label></div>`,
+   [["보내지 않음"],["보내기","pri",async()=>{const to=document.querySelector('#vnf [name=to]').value,tx=document.querySelector('#vnf [name=text]').value.trim();if(!tx){toast("내용을 입력하세요");return true}
+     const {data,error}=await sb.functions.invoke("send-sms",{body:{messages:[{to,text:tx,customer_id:c.id,ref_type:"job",ref_id:j.id||null,kakao:{template:"visit",variables:{업체명:vars.업체명,작업:vars.작업,방문일:vars.방문일,시간:vars.시간,기사:vars.기사}}}]}});
+     if(error||(data&&data.error)){toast("보내지 못했습니다: "+((data&&data.error)||error.message||""));return true}
+     const f=data&&data.failed&&Object.keys(data.failed).length;toast(f?"보내지 못했습니다: "+Object.values(data.failed)[0]:"방문 안내를 보냈습니다");}]])}
 function jobDlg(j,c,kind,tpl,preset){
   let wantCtr=false;if(kind==="ctr"){wantCtr=true;kind="as"}
   /* 신규접수에는 '설치'가 없음 (설치는 계약으로 접수) */
@@ -3892,7 +3905,10 @@ function jobDlg(j,c,kind,tpl,preset){
        pmsg=up.fail.length?` · 사진 ${up.ok}개 올림, ${up.fail.length}개 실패${fileErrHint(up.fail)}`:` · 사진 ${up.ok}개`;jpSel.forEach(x=>x.url&&URL.revokeObjectURL(x.url))}
      /* 철거 완료 → 그 계약 진행단계를 '철거완료'로 */
      {const jj=Object.assign({},j,pt,r.data||{});if(jj.kind==="remove"&&jj.status==="완료"&&isOffice()){const kk=rmCtrOf(jj);if(kk&&!["철거완료","취소"].includes(kk.stage)){const {error:e3}=await sb.from("contracts").update({stage:"철거완료"}).eq("id",kk.id);if(!e3){kk.stage="철거완료";pmsg+=" · 계약을 철거완료로 바꿈"}}}}
-     toast((isNew?`${kl(j)} 접수했습니다`:"저장했습니다")+pmsg);reload(["jobs","customers","files","contracts"])}]]:[])]);
+     toast((isNew?`${kl(j)} 접수했습니다`:"저장했습니다")+pmsg);reload(["jobs","customers","files","contracts"]);
+     /* 배정(기사·방문일)이 새로 잡히거나 바뀌면 → 고객 방문 안내 보내기 확인창 */
+     {const nj=Object.assign({},j,pt,r.data||{});const chg=isNew||String(j.visit_date||"")!==String(nj.visit_date||"")||String(j.visit_time||"")!==String(nj.visit_time||"")||JSON.stringify(j.techs||[])!==JSON.stringify(nj.techs||[]);
+       if(chg&&nj.visit_date&&((nj.techs||[]).length||String(nj.tech_names||"").trim())&&!["완료","취소","보류"].includes(nj.status)&&me.role!=="tech")setTimeout(()=>visitNotifyDlg(nj,c),350)}}]]:[])]);
   const jpSel=isNew?bindNewCustFiles("jp"):[];if(!isNew)renderJobFiles(j,c);
   /* 중고구매 체크하면 설치일 비움 */
   (()=>{const jf=document.getElementById("jf");const u=jf&&jf.querySelector('[name="as_used"]'),d=jf&&jf.querySelector('[name="as_idate"]');if(!u||!d||u.disabled)return;
