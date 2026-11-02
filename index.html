@@ -2542,7 +2542,7 @@ function setlPrices(){try{const o=JSON.parse(localStorage.getItem("hc.setl")||"{
 function addSetlBtn(tb){if(ui.view!=="ctrm"||!isOffice()||document.getElementById("setlBtn"))return;const b=document.createElement("button");b.type="button";b.className="btn";b.id="setlBtn";b.textContent="정산 엑셀";b.title="싱크·부자재 정산 양식으로 내려받기";b.onclick=setlDlg;tb.appendChild(b)}
 function setlDlg(){const P=setlPrices();const ym=thisMonth();
   openDlg("싱크·부자재 정산 엑셀",`<div id="slf" style="display:grid;gap:10px"><div class="g3"><label class="f">설치 월<input type="month" name="ym" value="${ym}"></label><span></span><span></span></div>
-    <p class="mapt" style="margin:0">그 달에 <b>설치 완료</b>된 건마다 제품 · 싱크대 발주 품목(발주 금액) · 제공 부자재 · 설치비 줄을 만듭니다. 재고에서 쓴 싱크는 비고에 ‘재고사용’.</p>
+    <p class="mapt" style="margin:0">그 달에 <b>설치 완료</b>된 건마다 제품 · 싱크대 발주 품목(출고가·공제가) · 제공 부자재 · 설치비 줄을 만듭니다. 재고에서 쓴 싱크는 비고에 ‘재고사용’.</p>
     <fieldset><legend>단가 (바꾸면 다음에도 기억)</legend><div class="g3">${Object.keys(SETL_DEF).map(k=>`<label class="f">${k}${k==="활성제"?" (세제)":""}<input type="number" data-sp="${k}" value="${P[k]}"></label>`).join("")}</div></fieldset></div>`,
     [["닫기"],["내려받기","pri",async()=>{const pr={};document.querySelectorAll("#slf [data-sp]").forEach(i=>pr[i.dataset.sp]=Number(i.value||0)||0);try{localStorage.setItem("hc.setl",JSON.stringify(pr))}catch(e){}
       const m=(document.querySelector('#slf [name=ym]')||{}).value||ym;try{await setlExport(m,pr)}catch(e){console.error(e);toast("정산 엑셀을 만들지 못했습니다: "+(e&&e.message||e))}return true}]])}
@@ -2563,10 +2563,10 @@ async function setlExport(ym,P){if(!window.XLSX)return toast("엑셀 도구를 �
     const base=[no,d2(od),d2(doneOf(j)),whoOf(j).replace(/\s*·\s*/g," ").replace(/,\s*/g," "),(()=>{/* 영업담당(3차): 계약 → (추가설치처럼 계약 연결이 없으면) 이 고객의 계약 → 고객 담당자 */const f=v=>String(v||"").split("/")[0].trim();let v=f(s3Text(k));if(!v)for(const kk of custContracts(j.customer_id)){v=f(s3Text(kk));if(v)break}return v||f(staffName(c.owner)||c.owner_name)})(),(c.name||j.customer_name||"")+tr];
     const line=(item,price,qty,memo)=>{const sup=price&&qty?price*qty:0;rows.push([...base,item,price||0,qty===""?"":qty,sup,"",sup,memo||""])};
     if(j.kind==="addon"){const a=addonItem(j);line([a.product,a.size].filter(Boolean).join(" ")||"추가설치",Number(j.cost||0),1,"추가설치");
-      ords.forEach(o=>(o.items||[]).forEach((it,i)=>{const L=skLine(o,i);line(skStar(it.sup)||skSpec(it),L.price,Number(it.qty||1)||1,it.from_stock?"재고사용":"추가설치")}));
+      ords.forEach(o=>(o.items||[]).forEach((it,i)=>{const L=skLine(o,i);line(skStar(it.sup)||skSpec(it),L.deduct||L.price,Number(it.qty||1)||1,[it.from_stock?"재고사용":"추가설치",!L.deduct&&L.price?"출고가 없음(발주 단가)":""].filter(Boolean).join(" · "))}));
       line("설치비",P["설치비(추가설치)"],1,"추가설치");return}
     line([prodName(k.product),k.size].filter(Boolean).join(" ")||"제품",0,"","");
-    ords.forEach(o=>(o.items||[]).forEach((it,i)=>{const L=skLine(o,i);line(it.sup||skSpec(it),L.price,Number(it.qty||1)||1,it.from_stock?"재고사용":"")}));
+    ords.forEach(o=>(o.items||[]).forEach((it,i)=>{const L=skLine(o,i);/* 싱크대는 출고가(공제가) */line(skStar(it.sup)||skSpec(it),L.deduct||L.price,Number(it.qty||1)||1,[it.from_stock?"재고사용":"",!L.deduct&&L.price?"출고가 없음(발주 단가)":""].filter(Boolean).join(" · "))}));
     String(j.parts||"").split(/\s*[,/]\s*/).map(x=>x.trim()).filter(Boolean).forEach(t=>{const m=t.match(/^(.*?)(\d+)\s*(개|통|ea)?$/i);const nm=m?m[1].trim():t,q=m?+m[2]:1;const [n2,pr]=pmap(nm);line(n2,pr,q,"")});
     /* 수압식만 설치하면 설치비 따로 */const washOnly=/수압식/.test(String(k.product||""))||(!String(k.product||"").trim()&&k.wash_added);
     line("설치비",washOnly?P["설치비(수압식만)"]:P.설치비,1,"")});
