@@ -1673,7 +1673,8 @@ const KHOL={"2025-01-01":"신정","2025-01-27":"임시공휴일","2025-01-28":"�
 /* 일정표에서 '외부' 한 칸으로 묶을 업체·사람 */
 const SCH_OUT=["싱크닥터","아트원","용달착불","쿡키스","이성진"];
 function schNames(j){return (j.techs||[]).length?[]:String(j.tech_names||"").split(/[\s,\/·]+/).map(x=>x.trim()).filter(Boolean)}
-function schDay(j){return j.visit_date||j.done_date||""}
+/* 일정표 날짜: 완료된 작업은 실제 완료일, 아니면 방문(예정)일 */
+function schDay(j){return (j.status==="완료"&&j.done_date)||j.visit_date||j.done_date||""}
 function renderSchedView(){const _sv=snapScroll();renderSchedView0();restoreScroll(_sv);if(ui.schJump){ui.schJump=false;schJumpToday()}}
 /* 일정표를 열면 오늘 날짜 줄이 맨 위에 오게 */
 function schJumpToday(){const tbl=view().querySelector(".wt.sch");if(!tbl)return;const row=tbl.querySelector("tbody tr.stoday");if(!row)return;const box=tbl.closest(".wtbox");
