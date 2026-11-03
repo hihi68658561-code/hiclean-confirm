@@ -3072,7 +3072,7 @@ function sinkDlg(o,pre){const off=isOffice();const isNew=!o;pre=pre||{};const st
 }
 
 /* ================= 재고관리 (초음파세척기·수압식세척기·중고세척기) ================= */
-const STK_MODELS={CL:{name:"Clean 1CH",short:"클린1",ch:1},ON:{name:"Oncare 3CH",short:"온케어3",ch:3},AT:{name:"올뉴트리플 3CH",short:"올뉴3",ch:3}};
+const STK_MODELS={CL:{name:"Clean 1CH",short:"클린1",ch:1},ON:{name:"Oncare 3CH",short:"온케어3",ch:3},AT:{name:"올뉴트리플 3CH",short:"올뉴3",ch:3},DK:{name:"대광",short:"대광",ch:null}};
 const STK_SIZES=[600,700,800,900,1000,1200,1500,1800,2000,2100],STK_TY=["A","B","C"];
 const STK_TYNAME={A:"세로 700",B:"세로 600",C:"세로 특수"};
 let stkUnits=null,stkTargets=[],washMoves=[],stkSet={};
@@ -3131,7 +3131,7 @@ async function renderStockView(){if(!isOffice()){view().innerHTML=`<div class="e
 /* ---------- 초음파 ---------- */
 function stockUltraHtml(){const cm=stkCtrMap();const units=stkUnits.map(u=>({u,s:stkState(u,cm)}));ui._stk=units;
   const live=units.filter(x=>x.s.st==="in");const fresh=live.filter(x=>!x.u.used);
-  const models=[...new Set(["CL","ON","AT",...stkUnits.map(u=>u.model).filter(Boolean)])];
+  const models=[...new Set(["CL","ON","AT",...fresh.map(x=>x.u.model).filter(Boolean)])];/* 새 제품이 없는 품명(대광 중고 등)은 현황표에 칸을 만들지 않음 */
   const sizes=[...new Set([...STK_SIZES,...stkUnits.map(u=>u.size).filter(Boolean)])].sort((a,b)=>a-b);
   const cnt=(m,s,t,lip,dr)=>fresh.filter(x=>x.u.model===m&&x.u.size===s&&x.u.ty===t&&(lip==null||x.u.lip===lip)&&(dr==null||x.u.drain===dr)).length;
   const tgt=(m,s,t)=>{const r=stkTargets.find(x=>x.model===m&&x.size===s&&x.ty===t);return r?r.qty:0};
@@ -3146,11 +3146,11 @@ function stockUltraHtml(){const cm=stkCtrMap();const units=stkUnits.map(u=>({u,s
     tb+=`<tr class="sneed"><th colspan="2">생산 필요</th>${sizes.map(s=>STK_TY.map(t=>{const v=tgt(m,s,t)-cnt(m,s,t,1);return `<td class="num${t==="A"?" szs":""}${v>0?" need":""}" title="적정 재고 − 유턱(우·좌) 재고">${v>0?"- "+v:""}</td>`}).join("")).join("")}<td></td></tr>`}});
   const allT=sizes.map(s=>STK_TY.map(t=>fresh.filter(x=>x.u.size===s&&x.u.ty===t).length));
   const usedIn=live.filter(x=>x.u.used).length;
-  const ug={};live.filter(x=>x.u.used).forEach(x=>{const k=stkSpec(x.u);ug[k]=(ug[k]||0)+1});
+  const ug={};live.filter(x=>x.u.used).forEach(x=>{const k=x.u.model==="DK"?"대광":stkSpec(x.u);ug[k]=(ug[k]||0)+1});/* 대광 중고는 한 줄로 */
   const side=`<div class="sside"><div class="ssin"><table class="stafft slegend"><thead><tr><th colspan="2">TYPE 정리</th></tr></thead><tbody>
       <tr><th>품명</th><td>ON : Oncare<br>AT : 올뉴트리플<br>CL : 클린365</td></tr><tr><th>채널</th><td>1 : 1채널 · 3 : 3채널</td></tr>
       <tr><th>TYPE</th><td>A : 세로 700<br>B : 세로 600<br>C : 세로 특수 사이즈</td></tr><tr><th>턱</th><td>유턱 : 1 · 무턱 : 0</td></tr><tr><th>배수</th><td>우 : R · 좌 : L</td></tr></tbody></table>
-    <div class="susedbox"><table class="stafft sused"><thead><tr class="uclk" data-uspec="" role="button" tabindex="0" title="중고 재고 전체 보기"><th>중고 내역</th><th class="num">${usedIn}</th></tr></thead><tbody>${Object.entries(ug).sort((a,b)=>b[1]-a[1]).map(([k,n])=>`<tr class="uclk${ui.sfil&&ui.sfil.spec===k?" on":""}" data-uspec="${esc(k)}" role="button" tabindex="0" title="이 중고 제품 보기"><td>${esc(k)}</td><td class="num">${n}</td></tr>`).join("")||`<tr><td colspan="2" class="mapt">중고 재고 없음</td></tr>`}</tbody></table></div>
+    <div class="susedbox"><table class="stafft sused"><thead><tr class="uclk" data-uspec="" role="button" tabindex="0" title="중고 재고 전체 보기"><th>중고 내역</th><th class="num">${usedIn}</th></tr></thead><tbody>${Object.entries(ug).sort((a,b)=>(a[0]==="대광")-(b[0]==="대광")||b[1]-a[1]).map(([k,n])=>`<tr class="uclk${ui.sfil&&ui.sfil.spec===k?" on":""}" data-uspec="${esc(k)}" role="button" tabindex="0" title="이 중고 제품 보기" ${k==="대광"?'style="font-weight:700;background:#e9ecef"':""}><td>${esc(k)}</td><td class="num">${n}</td></tr>`).join("")||`<tr><td colspan="2" class="mapt">중고 재고 없음</td></tr>`}</tbody></table></div>
     ${(()=>{const pl=units.filter(x=>x.u.status==="생산예정").length;return pl?`<div class="splanbox" role="button" tabindex="0" id="sPlan">생산입고 등록요망 <b>${pl}</b></div>`:""})()}</div></div>`;
   const mat=`<div class="srow"><div class="wrapx vis" style="padding-top:6px;min-width:0;max-width:100%"><div class="wtbox" style="max-height:none;width:fit-content;max-width:100%"><table class="wt sm"><thead><tr><th colspan="3">구분</th>${sizes.map(s=>`<th colspan="3" class="szs">${s}</th>`).join("")}<th rowspan="2">합계</th></tr>
       <tr><th>제품</th><th>턱</th><th>배수</th>${sizes.map(()=>STK_TY.map(t=>`<th title="${STK_TYNAME[t]}" class="${t==="A"?"szs":""}">${t}</th>`).join("")).join("")}</tr></thead><tbody>${tb}
@@ -3160,12 +3160,12 @@ function stockUltraHtml(){const cm=stkCtrMap();const units=stkUnits.map(u=>({u,s
 /* ---------- 제품(시리얼) 목록: 초음파·중고 공통 ---------- */
 const STKCF=[["y","년"],["m","월"],["d","일"],["model","품명"],["ch","채널"],["size","SIZE"],["ty","TY"],["lip","유턱"],["drain","배수"],["no","No.(시리얼)"]];
 TCFG.stk={cols:()=>STKCF,sel:".wt.su",lead:()=>0};
-function stkTxt(c,x){const u=x.u;const v={y:u.mfg_y,m:u.mfg_m,d:u.mfg_d,model:u.model,ch:u.ch,size:u.size,ty:u.ty,lip:u.lip,drain:u.drain,no:u.no}[c];return v==null||v===""?"(빈 칸)":String(v)}
+function stkTxt(c,x){const u=x.u;const v={y:u.mfg_y,m:u.mfg_m,d:u.mfg_d,model:u.model==="DK"?"대광":u.model,ch:u.ch,size:u.size,ty:u.ty,lip:u.lip,drain:u.drain,no:u.no}[c];return v==null||v===""?"(빈 칸)":String(v)}
 function stockListHtml(units,usedOnly){if(!ui.sst)ui.sst="in";if(ui.sq===undefined)ui.sq="";
   const f=ui.sfil;const qq=ui.sq.trim().toLowerCase();
   if(ui.sst==="x"&&false)ui.sst="in";const stOk=(x,s)=>s==="all"||(s==="x"?(x.s.st==="x"&&x.s.label==="생산예정"):s==="used"?((x.u.used&&x.s.st==="in")||x.s.st==="uc"):x.s.st===s);
   let list=units.filter(x=>(!usedOnly||x.u.used)&&stOk(x,ui.sst)
-    &&(!f||(f.spec?(x.u.used&&stkSpec(x.u)===f.spec):(x.u.model===f.m&&x.u.size===f.s&&x.u.ty===f.t&&(f.lip==null||x.u.lip===f.lip)&&(f.dr==null||x.u.drain===f.dr)&&!x.u.used)))
+    &&(!f||(f.spec?(x.u.used&&(f.spec==="대광"?x.u.model==="DK":stkSpec(x.u)===f.spec)):(x.u.model===f.m&&x.u.size===f.s&&x.u.ty===f.t&&(f.lip==null||x.u.lip===f.lip)&&(f.dr==null||x.u.drain===f.dr)&&!x.u.used)))
     &&(!qq||[x.u.serial,x.u.no,x.u.remark,stkSiteLabel(x.s,x.u),stkSpec(x.u),x.u.grade].join(" ").toLowerCase().includes(qq)));
   list.sort((a,b)=>{const na=Number(a.u.no),nb=Number(b.u.no),fa=isFinite(na)&&String(a.u.no??"").trim()!=="",fb=isFinite(nb)&&String(b.u.no??"").trim()!=="";if(fa&&fb&&na!==nb)return na-nb;if(fa!==fb)return fa?-1:1;return String(a.u.no??"").localeCompare(String(b.u.no??""),"ko",{numeric:true})});
   list=cfApply("stk",list,stkTxt);
@@ -3179,7 +3179,7 @@ function stockListHtml(units,usedOnly){if(!ui.sst)ui.sst="in";if(ui.sq===undefin
      <tr><th colspan="10" class="hg-p">생산부 기입</th><th rowspan="3" class="hg-q">수량</th><th colspan="2" class="hg-m">관리부 기입</th><th class="hg-c">공통 기입</th><th rowspan="3" class="hg-s">Serial No.</th><th rowspan="3" class="hg-u">중고여부</th><th rowspan="3" class="hg-u">등급</th></tr>
      <tr><th colspan="3" class="hg-p">제조년월일</th><th colspan="7" class="hg-p">구분</th><th rowspan="2" class="hg-m">출고일자</th><th rowspan="2" class="hg-m">설치업장</th><th rowspan="2" class="hg-c">메모</th></tr>
      <tr>${(()=>{const F=cfF("stk");return STKCF.map(([k,l])=>`<th class="hg-p" data-ck="${k}">${l}<span class="fbtn${F[k]?" on":""}" data-fc="${k}" role="button" title="${l} 필터" aria-label="${l} 필터">▼</span></th>`).join("")})()}</tr></thead><tbody>
-    ${shown.map(x=>{const u=x.u,s=x.s;return `<tr data-su="${u.id}" class="${s.st==="out"?"sout":s.st==="rsv"?"srsv":s.st==="x"?(s.label==="생산예정"?"splan":"sx"):""}"><td>${u.mfg_y??""}</td><td>${u.mfg_m??""}</td><td>${u.mfg_d??""}</td><td>${esc(u.model)}</td><td>${u.ch??""}</td><td>${u.size??""}</td><td>${esc(u.ty)}</td><td>${u.lip??""}</td><td>${esc(u.drain)}</td><td>${esc(u.no)}</td>
+    ${shown.map(x=>{const u=x.u,s=x.s;return `<tr data-su="${u.id}" class="${s.st==="out"?"sout":s.st==="rsv"?"srsv":s.st==="x"?(s.label==="생산예정"?"splan":"sx"):""}"><td>${u.mfg_y??""}</td><td>${u.mfg_m??""}</td><td>${u.mfg_d??""}</td><td>${esc(u.model==="DK"?"대광":u.model)}</td><td>${u.ch??""}</td><td>${u.size??""}</td><td>${esc(u.ty)}</td><td>${u.lip??""}</td><td>${esc(u.drain)}</td><td>${esc(u.no)}</td>
       <td class="sq ${s.st==="uc"?"qu":s.st==="in"?"q1":s.st==="rsv"?"qr":s.st==="x"?(s.label==="생산예정"?"qp":"qx"):""}" title="${s.st==="uc"?"중고전환 확인 대기":s.st==="in"?"재고":s.st==="rsv"?"출고예정 (재고에서 뺌)":s.st==="out"?"출고":esc(s.label)}">${s.st==="uc"?"확인":s.st==="in"?1:s.st==="rsv"?"예정":s.st==="out"?0:s.label==="생산예정"?"예정":esc(s.label)}</td>
       <td>${esc(ymd2(s.date||""))}</td><td>${s.st==="uc"?"":esc(stkSiteLabel(s,u))}${(s.st==="out"||s.st==="rsv")&&s.auto?` <small class="mapt">(계약)</small>`:""}</td>
       <td class="wrap memo"><div class="clamp">${esc(u.remark)}</div></td><td class="mono sser">${esc(u.serial||stkSerial(u))}</td><td>${s.st==="uc"?`<span class="tag ucchk" title="중고전환 확인 대기 (재고에서 뺌)">확인</span>`:u.used?"중고":""}</td><td>${esc(u.grade)}</td></tr>`}).join("")||`<tr><td colspan="17" class="mapt">해당하는 제품이 없습니다.</td></tr>`}</tbody></table></div></div>`}
@@ -3206,7 +3206,7 @@ function stockUnitDlg(u,asUsed){const isNew=!u;const cm=stkCtrMap();const s=u?st
   openDlg(isNew?(asUsed?"중고세척기 입고":"초음파세척기 입고 등록"):"제품 · "+esc(u.serial||stkSerial(u)),`<div id="suf" style="display:grid;gap:10px">
     <h3 class="ksec">생산 정보</h3>
     <div class="g3">${inp("mfg_y","제조 년(2자리)",u.mfg_y??"","number")}${inp("mfg_m","월",u.mfg_m??"","number")}${inp("mfg_d","일",u.mfg_d??"","number")}</div>
-    <div class="g3"><label class="f">품명<select name="model">${opt([["CL","CL · Clean 1CH"],["ON","ON · Oncare 3CH"],["AT","AT · 올뉴트리플 3CH"],...(u.model&&!STK_MODELS[u.model]?[[u.model,u.model]]:[])],u.model)}</select></label>${sel("ch","채널",[["1","1채널"],["3","3채널"]],String(u.ch??""))}${inp("size","SIZE",u.size??"","number",false,'list="stSz"')}</div>
+    <div class="g3"><label class="f">품명<select name="model">${opt([["CL","CL · Clean 1CH"],["ON","ON · Oncare 3CH"],["AT","AT · 올뉴트리플 3CH"],["DK","대광"],...(u.model&&!STK_MODELS[u.model]?[[u.model,u.model]]:[])],u.model)}</select></label>${sel("ch","채널",[["1","1채널"],["3","3채널"]],String(u.ch??""))}${inp("size","SIZE",u.size??"","number",false,'list="stSz"')}</div>
     <div class="g3">${sel("ty","TY",[["A","A · 세로 700"],["B","B · 세로 600"],["C","C · 세로 특수"]],u.ty)}${sel("lip","유턱",[["1","1 · 유턱"],["0","0 · 무턱"]],String(u.lip??""))}${sel("drain","배수",[["R","R · 우"],["L","L · 좌"]],u.drain)}</div>
     <div class="g3">${inp("no","No.",u.no||(isNew?nextNo():""))}${isNew?inp("cnt","연속 등록 대수",1,"number",false,'min="1" max="200"'):"<span></span>"}<label class="f">Serial No.<input name="serial" value="${esc(u.serial||stkSerial(u))}" class="mono"></label></div>
     <datalist id="stSz">${STK_SIZES.map(x=>`<option value="${x}">`).join("")}</datalist>
