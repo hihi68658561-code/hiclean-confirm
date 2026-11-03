@@ -2649,7 +2649,14 @@ function skLine(o,i){const L=((skPrices[o.id]||{}).lines||[])[i]||{};const it=(o
 /* 싱크대 발주 목록 열 (필터 ▼ · 너비 조절) */
 TCFG.sk={cols:()=>[["od","발주일자"],["st","진행사항"],["ow","담당자"],["site","업체명(상호)"],["spec","품명 및 규격"],["qty","수량"],["due","입고예정"],
   ...(isOffice()?[["price","단가"],["sup","공급가액"],["vat","부가세"],["tot","합계금액"]]:[]),["in","입고일자"],["out","출고일자"],["memo","비고"],...(isOffice()?[["ded","출고가"]]:[])],sel:".wt.sk",lead:()=>1,byCls:true};
-function skHead(){const F=cfF("sk"),N=new Set(["qty","price","sup","vat","tot","ded"]);return TCFG.sk.cols().map(([k,l])=>`<th class="c-${k}${N.has(k)?" num":""}" data-ck="${k}">${esc(l)}<span class="fbtn${F[k]?" on":""}" data-fc="${k}" role="button" title="${esc(l)} 필터" aria-label="${esc(l)} 필터">▼</span><span class="rz" data-rz="${k}" title="끌어서 너비 조절 · 두 번 클릭하면 원래대로"></span></th>`).join("")}
+/* 싱크대 발주 정렬: 열 제목 클릭 (오름 → 내림 → 기본). 기본은 발주일자 빠른 순 */
+function skSortList(list){const so=ui.sksort||{c:"od",d:1};const N=new Set(["qty","price","sup","vat","tot","ded"]);
+  const key=o=>{if(so.c==="od")return o.order_date||"";if(so.c==="due")return o.due_date||"";if(so.c==="in")return o.in_date||"";if(so.c==="out")return o.out_date||"";if(so.c==="st")return SK_ST.indexOf(o.status);
+    if(N.has(so.c)){const its=(o.items||[]).length?o.items:[{}];return its.reduce((a,it,i)=>{const L=skLine(o,i);return a+(so.c==="qty"?Number(it.qty||1):so.c==="price"?L.price:so.c==="sup"?L.sup:so.c==="vat"?L.vat:so.c==="tot"?L.tot:L.deduct)},0)}
+    const v=skTxt(so.c,o);return (Array.isArray(v)?v[0]:v).replace("(빈 칸)","")};
+  list.sort((a,b)=>{const A=key(a),B=key(b);const ea=A===""||A==null,eb=B===""||B==null;if(ea!==eb)return ea?1:-1;const r=typeof A==="number"&&typeof B==="number"?A-B:KO.compare(String(A),String(B));
+    return r*so.d||String(a.order_date||"").localeCompare(String(b.order_date||""))||String(a.created_at||"").localeCompare(String(b.created_at||""))})}
+function skHead(){const F=cfF("sk"),N=new Set(["qty","price","sup","vat","tot","ded"]);const so=ui.sksort||{c:"od",d:1};return TCFG.sk.cols().map(([k,l])=>`<th class="c-${k}${N.has(k)?" num":""} sortable" ${so.c===k?`data-sort="${so.d===1?"asc":"desc"}"`:""} data-ck="${k}">${esc(l)}<span class="fbtn${F[k]?" on":""}" data-fc="${k}" role="button" title="${esc(l)} 필터" aria-label="${esc(l)} 필터">▼</span><span class="rz" data-rz="${k}" title="끌어서 너비 조절 · 두 번 클릭하면 원래대로"></span></th>`).join("")}
 function skTxt(c,o){const E=v=>v==null||v===""||v===0?"(빈 칸)":String(v);const its=(o.items||[]).length?o.items:[{}];const per=f=>its.map((it,i)=>E(f(it,i)));
   switch(c){case"od":return E(ymd2(o.order_date));case"st":return E(o.status);case"ow":return E(o.owner_name);case"site":return E(o.site_name);
     case"spec":return per(it=>skStar(it.sup)||skSpec(it));case"qty":return per(it=>it.qty||1);case"due":return E(ymd2(o.due_date));
@@ -2664,7 +2671,7 @@ document.addEventListener("change",e=>{const t=e.target;if(!t||!t.matches||!t.ma
 async function renderSinkView(){const off=isOffice();if(!skOrders)view().innerHTML=`<p class="mapt" style="padding:20px">불러오는 중…</p>`;await fetchSink();
   if(!off)ui.sktab="order";if(!ui.sktab)ui.sktab="order";XSEL.sink=ui.sktab==="stock"?".wt.skst":ui.sktab==="price"?".wt.spl":".wt.sk";XNAME.sink=ui.sktab==="stock"?"싱크대 재고현황":ui.sktab==="price"?"싱크대 단가표":"싱크대 발주";
   if(off)await fetchSkPrice();if(ui.sktab==="stock")return renderSinkStock();if(ui.sktab==="price")return renderSinkPrice();
-  ["skq"].forEach(k=>{if(ui[k]===undefined)ui[k]=""});if(ui.skst===undefined)ui.skst="미출고";/* 기본: 지난달~이번 달 발주 중 아직 출고 안 된 것 */
+  ["skq"].forEach(k=>{if(ui[k]===undefined)ui[k]=""});if(ui.skst===undefined)ui.skst="";/* 기본: 전체 *//* 기본: 지난달~이번 달 발주 중 아직 출고 안 된 것 */
   if(ui.skm1===undefined){const tm=thisMonth();const [y,m]=tm.split("-").map(Number);ui.skm1=m===1?`${y-1}-12`:`${y}-${String(m-1).padStart(2,"0")}`;ui.skm2=tm}if(!ui.sksel)ui.sksel=new Set();
   const canDel=o=>off||(o.owner===me.id&&o.status==="신규접수");[...ui.sksel].forEach(id=>{if(!skOrders.some(o=>o.id===id))ui.sksel.delete(id)});
   const qq=ui.skq.trim().toLowerCase();
@@ -2673,7 +2680,7 @@ async function renderSinkView(){const off=isOffice();if(!skOrders)view().innerHT
   let list=per.filter(o=>(!ui.skst||(ui.skst==="미출고"?SK_NOTOUT(o):o.status===ui.skst))
     &&(!qq||[o.site_name,o.owner_name,o.memo,...(o.items||[]).map(skSpec)].join(" ").toLowerCase().includes(qq)));
   const cnt=s=>per.filter(o=>o.status===s).length;const owners=[...new Set(skOrders.map(o=>o.owner_name).filter(Boolean))].sort(KO.compare);
-  list=cfApply("sk",list,skTxt);
+  list=cfApply("sk",list,skTxt);skSortList(list);
   const tot={sup:0,vat:0,tot:0,deduct:0};const cc=k=>` class="c-${k}"`;
   const rows=list.map((o,oi)=>{const its=(o.items||[]).length?o.items:[{}];const n=its.length;
     return its.map((it,i)=>{const L=skLine(o,i);if(o.status!=="취소"){tot.sup+=L.sup;tot.vat+=L.vat;tot.tot+=L.tot;tot.deduct+=L.deduct}
@@ -2693,7 +2700,7 @@ async function renderSinkView(){const off=isOffice();if(!skOrders)view().innerHT
    <div class="wrapx vis" style="padding-top:6px"><div class="wtbox"><table class="wt sk"><thead><tr><th class="skchk"><input type="checkbox" id="skAll" aria-label="전체 선택"></th>${skHead()}</tr></thead>
      <tbody>${rows||`<tr><td colspan="${off?16:11}" class="mapt">발주가 없습니다.</td></tr>`}</tbody>
      ${off&&list.length?`<tfoot><tr><th colspan="8">합계</th><th></th><th class="num">${won0(tot.sup)}</th><th class="num">${won0(tot.vat)}</th><th class="num">${won0(tot.tot)}</th><th colspan="3"></th><th class="num">${won0(tot.deduct)}</th></tr></tfoot>`:""}</table></div></div>`;
-  const re=()=>renderSinkView();cfBind("sk",re);{const cols=TCFG.sk.cols().map(c=>c[0]);applyColW(cols,null,"sk");bindColResize(cols,"sk")}
+  const re=()=>renderSinkView();cfBind("sk",re);view().querySelectorAll(".wt.sk thead th[data-ck]").forEach(th=>th.onclick=e=>{if(e.target.closest(".rz")||e.target.closest(".fbtn"))return;const c=th.dataset.ck;const so=ui.sksort||{c:"od",d:1};ui.sksort=so.c===c?(so.d===1?{c,d:-1}:(c==="od"?{c,d:1}:null)):{c,d:1};re()});{const cols=TCFG.sk.cols().map(c=>c[0]);applyColW(cols,null,"sk");bindColResize(cols,"sk")}
   const q=document.getElementById("skQ");q.oninput=()=>{ui.skq=q.value;clearTimeout(q._t);q._t=imeT(q,()=>{re().then(()=>{const n=document.getElementById("skQ");n.focus();n.setSelectionRange(n.value.length,n.value.length)})},250)};
   document.getElementById("skM1").onchange=e=>{ui.skm1=e.target.value;re()};document.getElementById("skM2").onchange=e=>{ui.skm2=e.target.value;re()};
   view().querySelectorAll("[data-sks]").forEach(b=>b.onclick=()=>{ui.skst=b.dataset.sks;re()});
