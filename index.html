@@ -3027,7 +3027,10 @@ function sinkDlg(o,pre){const off=isOffice();const isNew=!o;pre=pre||{};const st
     ${off?`<h3 class="ksec">진행 (사무실)</h3><div class="g3">${sel("status","진행사항",SK_ST,o.status)}${inp("in_date","입고일자",o.in_date||"","date")}${inp("out_date","출고일자",o.out_date||"","date")}</div>`
       :`<p class="mapt" style="margin:0">진행사항: <span class="tag sk-${esc(o.status)}">${esc(o.status)}</span>${o.in_date?" · 입고 "+esc(o.in_date):""}${o.out_date?" · 출고 "+esc(o.out_date):""}</p>`}
     <label class="f">비고·참조사항<textarea name="memo" rows="2" ${canEdit?"":"readonly"}>${esc(o.memo||"")}</textarea></label></div>`,
-   [["닫기"],...(!isNew&&(off||(o.status==="신규접수"&&o.owner===me.id))?[["삭제","danger",async()=>{if(!(await askConfirm("이 발주를 삭제할까요?")))return true;const {error}=await sb.from("sink_orders").delete().eq("id",o.id);if(error){toast("삭제하지 못했습니다: "+error.message);return true}toast("삭제했습니다");if(ui.view==="sink")renderSinkView()}]]:[]),
+   [...(()=>{/* 고객정보·계약정보 (연결된 고객이 있을 때) */const cc=(o&&o.customer_id&&custById(o.customer_id))||(o&&o.contract_id&&custById((ctrById(o.contract_id)||{}).customer_id))||(pre.c||null);if(!cc||me.role==="tech")return[];
+      const kk=(o&&o.contract_id&&ctrById(o.contract_id))||pre.k||custContracts(cc.id)[0]||null;
+      return [["고객정보","gocust",()=>{openCustPopup(cc,()=>{});return true}],...(kk?[["계약정보","gocust",()=>{contractDlg(cc,kk);return true}]]:[])]})(),
+    ["닫기"],...(!isNew&&(off||(o.status==="신규접수"&&o.owner===me.id))?[["삭제","danger",async()=>{if(!(await askConfirm("이 발주를 삭제할까요?")))return true;const {error}=await sb.from("sink_orders").delete().eq("id",o.id);if(error){toast("삭제하지 못했습니다: "+error.message);return true}toast("삭제했습니다");if(ui.view==="sink")renderSinkView()}]]:[]),
     ...(canEdit?[["저장","pri",async()=>{const f=fdata("skf");readItems();
       const its=items.filter(it=>it.name||it.w||it.d||it.h||it.opt1);if(!its.length){toast("품목을 하나 이상 입력하세요");return true}
       if(its.some(it=>!it.name)){toast("품명을 입력하세요");return true}
