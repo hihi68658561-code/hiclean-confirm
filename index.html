@@ -2599,13 +2599,18 @@ function xlsxWrite(wb,fname,wrapRefs){if(!wrapRefs||!wrapRefs.length)return XLSX
     const out=CFB.write(cfb,{fileType:"zip",type:"array"});const blob=new Blob([out],{type:"application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"});
     const url=URL.createObjectURL(blob);const a=document.createElement("a");a.href=url;a.download=fname;document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),2000)}
   catch(e){XLSX.writeFile(wb,fname)}}
+/* 엑셀용: 세로로 합친 칸(rowspan)을 풀고 줄마다 같은 글자를 넣음 */
+function unRowspan(tbl){[...tbl.querySelectorAll("tbody")].forEach(tb=>{const rows=[...tb.rows];const grid=rows.map(()=>[]);
+  rows.forEach((r,ri)=>{let ci=0;[...r.cells].forEach(cell=>{while(grid[ri][ci])ci++;const rs=cell.rowSpan||1,cs=cell.colSpan||1;for(let a=0;a<rs;a++)for(let b=0;b<cs;b++)if(grid[ri+a])grid[ri+a][ci+b]=a===0?cell:{src:cell,a};ci+=cs})});
+  rows.forEach((r,ri)=>{const g=grid[ri];const out=[];for(let ci=0;ci<g.length;ci++){const x=g[ci];if(!x)continue;if(x.src){if(out.length&&out[out.length-1]._src===x.src)continue;const cl=x.src.cloneNode(true);cl.rowSpan=1;cl._src=x.src;out.push(cl)}else{if(out.includes(x))continue;out.push(x)}}
+    out.forEach(c=>{if(!c._src)c.rowSpan=1});while(r.firstChild)r.removeChild(r.firstChild);out.forEach(c=>r.appendChild(c))})})}
 function exportView(){const v=ui.view;const sel=XSEL[v];if(!sel)return;toast("엑셀 파일을 만드는 중…");
   setTimeout(()=>{let tbl;ui.xAll=true;try{render();tbl=view().querySelector(sel);if(!tbl)return toast("내려받을 표가 없습니다");tbl=tbl.cloneNode(true)}finally{ui.xAll=false}
     try{tbl.querySelectorAll(".fbtn,.rz,button,svg").forEach(x=>{if(x.tagName==="BUTTON"&&x.closest("td")&&x.textContent.trim()&&!x.classList.contains("fbtn"))x.replaceWith(document.createTextNode(x.textContent));else x.remove()});
       /* 맨 앞 선택(체크) 칸은 제목·본문·합계 줄 모두에서 같이 빼서 칸이 밀리지 않게 */
       tbl.querySelectorAll(".skchk").forEach(c=>c.remove());tbl.querySelectorAll("tfoot th[colspan='8']").forEach(c=>c.colSpan=7);
       const fr=tbl.querySelector("tbody tr");if(fr&&fr.cells[0]&&fr.cells[0].querySelector('input[type=checkbox]'))tbl.querySelectorAll("tr").forEach(r=>{if(r.cells[0]&&(r.cells.length>1))r.deleteCell(0)});
-      tbl.querySelectorAll("input,select,textarea").forEach(x=>x.remove());tbl.querySelectorAll("[data-xwrap]").forEach(td=>{td.textContent=td.dataset.xwrap});
+      tbl.querySelectorAll("input,select,textarea").forEach(x=>x.remove());tbl.querySelectorAll("[data-xwrap]").forEach(td=>{td.textContent=td.dataset.xwrap});if(v==="sink")unRowspan(tbl);
       tbl.querySelectorAll("th").forEach(c=>{c.textContent=c.textContent.replace(/[▼▲]/g,"").trim()});
       const wrapRefs=[];const ws=XLSX.utils.table_to_sheet(tbl,{raw:true});const rg=XLSX.utils.decode_range(ws["!ref"]||"A1");const wid=[];
       for(let R=rg.s.r;R<=rg.e.r;R++)for(let C=rg.s.c;C<=rg.e.c;C++){const a=XLSX.utils.encode_cell({r:R,c:C}),cell=ws[a];if(!cell)continue;let s=String(cell.v??"").trim();
