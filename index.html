@@ -1280,7 +1280,8 @@ function renderCtrView0(){
   const rmBy=new Map();jobs.forEach(j=>{if(j.kind!=="remove"||j.status==="취소")return;const kk=rmCtrOf(j);if(!kk)return;const d=j.done_date||j.visit_date||j.request_date||"";const o=rmBy.get(kk.id);if(!o||d>o.d)rmBy.set(kk.id,{j,d})});
   /* 계약 연결·제품이 안 맞는 철거 작업: 철거예정·철거완료 계약이면 같은 고객의 철거 작업으로 */
   const rmByC=new Map();jobs.forEach(j=>{if(j.kind!=="remove"||j.status==="취소"||!j.customer_id)return;const d=j.done_date||j.visit_date||j.request_date||"";const o=rmByC.get(j.customer_id);if(!o||d>o.d)rmByC.set(j.customer_id,{j,d})});
-  const gOf2=x=>{const g=gOf(x);if(!x.a&&!x.k.settle_tag){const r=rmBy.get(x.k.id)||(["철거예정","철거완료","철거"].includes(x.k.stage)?rmByC.get(x.k.customer_id):null);if(r&&r.d){if(r.j.status==="완료"&&r.d>=st0&&r.d<en0)return 1.7;if(r.d>=en0)return 2.3}}
+  const gOf2=x=>{const g=gOf(x);if(!x.a&&!x.k.settle_tag){const r=rmBy.get(x.k.id)||(["철거예정","철거완료","철거"].includes(x.k.stage)?rmByC.get(x.k.customer_id):null);if(r&&r.d){if(r.j.status==="완료"&&r.d>=st0&&r.d<en0)return 1.7;if(r.d>=en0)return 2.3}
+      /* 철거예정인데 아직 철거가 안 끝난 건(철거 작업이 없거나 미완료) → 다음 달 철거 묶음 */if(x.k.stage==="철거예정"&&!(r&&r.j.status==="완료"))return 2.3}
     if(g!==2||x.a)return g;const ij=installOf(x.k);return ij&&(ij.done_date||ij.visit_date)?2:2.4};
   list.forEach(x=>{x.g=gOf2(x);x.gs=(x.g>=2&&x.g<3)||x.g===1.7?x.g:Math.floor(x.g*2)/2});/* gs = 소계 묶음 (익월마감·다음 달 추가설치·미배정은 따로) */
   sortCtrList(list,x=>x.g);
