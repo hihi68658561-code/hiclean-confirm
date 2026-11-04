@@ -4374,6 +4374,9 @@ function openDlg(h,b,btns){
   if(!d.open)d.showModal();
 }
 let tt;function toast(m){const t=document.getElementById("toast");t.textContent=m;t.classList.add("on");clearTimeout(tt);tt=setTimeout(()=>t.classList.remove("on"),3000);return true}
+/* 검색칸: 다시 누르면 적힌 글자를 모두 선택 → 바로 새로 입력 */
+(()=>{let just=null;document.addEventListener("focusin",e=>{const t=e.target;if(t&&t.tagName==="INPUT"&&t.type==="search"&&t.value){just=t;setTimeout(()=>{try{t.select()}catch(_){}},0)}},true);
+  document.addEventListener("mouseup",e=>{if(just&&e.target===just){e.preventDefault();just=null}},true);document.addEventListener("focusout",()=>{just=null},true)})();
 /* 날짜·월 칸은 어디를 눌러도 달력이 열리게 */
 document.addEventListener("click",e=>{const t=e.target;if(t&&t.tagName==="INPUT"&&(t.type==="date"||t.type==="month"||t.type==="datetime-local")&&!t.readOnly&&!t.disabled&&typeof t.showPicker==="function"){try{t.showPicker()}catch(_){}}},true);
 function imeT(el,fn,ms){return setTimeout(()=>{if(!el._ime)fn()},ms)}
