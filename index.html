@@ -3552,6 +3552,20 @@ function settleMenu(td,k,re){if(!("settle_tag" in k))return toast("마감 칸을
 function ctrRowCls(k){return k.stage==="철거완료"||k.stage==="철거"||(k.contract_type==="철거"&&k.stage==="완료")?"철거":k.stage}
 function trialCell(k){const d=k.trial_end;if(!d)return"";const td=today();const open=!["완료","취소","철거","철거예정","철거완료"].includes(k.stage)&&k.contract_type!=="철거";const days=Math.round((new Date(d)-new Date(td))/864e5);
   const cls=open&&days<0?"late":open&&days<=3?"soon":"";return `<span class="trial ${cls}" title="${open?(days<0?-days+"일 지남":days===0?"오늘 종료":days+"일 남음"):""}">${esc(ymd2(d))}</span>`}
+/* 계약을 다른 업체(고객)로 옮기기: 계약·연결된 설치/철거 작업·입금·싱크대 발주·채권을 함께 옮김 */
+function ctrMoveDlg(c,k){openDlg(`계약 고객 변경 · ${esc(c.name)}`,`<div style="display:grid;gap:10px"><p class="mapt" style="margin:0">이 계약(${esc([prodName(k.product),k.size,k.serial&&"SN "+k.serial].filter(Boolean).join(" "))} · 계약 ${esc(k.contract_date||"-")})을 옮길 업체를 고르세요. 연결된 설치·철거 작업, 입금 내역, 싱크대 발주, 채권도 함께 옮겨집니다.</p>
+    <label class="f">옮길 업체 검색<input id="jcQ" type="search" autocomplete="off" placeholder="업체명(상호)·대표자·전화번호·주소·시리얼"></label><input type="hidden" id="jcId"><div id="jcSel"></div><div id="jcRes" class="pickres"></div><p class="mapt" id="jcHint" style="margin:0">업체를 검색해서 고르세요.</p></div>`,
+   [["돌아가기","",()=>{contractDlg(c,k);return true}],["닫기"],["옮기기","pri",async()=>{const id=document.getElementById("jcId").value;const nc=id&&custById(id);if(!nc){toast("옮길 업체를 고르세요");return true}if(nc.id===c.id){toast("같은 업체입니다");return true}
+     if(!(await askConfirm(`이 계약을 ‘${c.name}’에서 ‘${nc.name}’(으)로 옮길까요?`)))return true;
+     const js=jobs.filter(j=>j.contract_id===k.id);
+     const steps=[sb.from("contracts").update({customer_id:nc.id}).eq("id",k.id),
+       ...(js.length?[sb.from("jobs").update({customer_id:nc.id,customer_name:nc.name,address:nc.address||""}).eq("contract_id",k.id)]:[]),
+       sb.from("payments").update({customer_id:nc.id}).eq("contract_id",k.id),
+       sb.from("sink_orders").update({customer_id:nc.id,site_name:nc.name}).eq("contract_id",k.id),
+       sb.from("recv_cases").update({customer_id:nc.id}).eq("ref_type","ctr").eq("ref_id",k.id)];
+     for(const st of steps){const {error}=await st;if(error&&!/relation|does not exist|schema cache/.test(error.message)){toast("옮기지 못했습니다: "+error.message);return true}}
+     toast(`계약을 ‘${nc.name}’(으)로 옮겼습니다`);await reload(["contracts","jobs","payments","recv"],true);const nk2=ctrById(k.id)||Object.assign({},k,{customer_id:nc.id});contractDlg(nc,nk2);return true}]]);
+  bindCustPicker(customers.filter(x=>x.id!==c.id))}
 function contractDlg(c,k,tpl,opts){ui.payEdit=null;
   const isNew=!k;const pickM=!!(opts&&opts.pick&&isNew&&!c);const intakeM=pickM||!!(opts&&opts.intake&&isNew&&!tpl);const pool=pickM?customers.filter(x=>isOffice()||x.owner===me.id):[];
   if(!k&&tpl){k=Object.assign({},tpl,{serial:"",trial_end:null,contract_date:today(),stage:"미정",contract_doc:"미수령",chk_cust:"",chk_slip:"",chk_sales:"",tax:{},settle_month:"",import_raw:null,memo:tpl.memo||""});delete k.id;delete k.created_at;delete k.updated_at;delete k.created_by}
@@ -3596,7 +3610,7 @@ function contractDlg(c,k,tpl,opts){ui.payEdit=null;
    <datalist id="s3List">${staff.filter(s=>s.active&&["admin","office","sales"].some(r=>hasRole(s,r))).map(s=>`<option value="${esc(s.name)}">${esc(ROLE[s.role])}</option>`).join("")}</datalist>
    <datalist id="stList">${staff.filter(s=>s.active).map(s=>`<option value="${esc(s.name)}">`).join("")}<option value="무료체험"></datalist>
    <datalist id="pdList">${[...new Set(contracts.map(x=>x.product).filter(Boolean))].map(x=>`<option value="${esc(x)}">`).join("")}</datalist></div>`,
-   ro?[["고객정보","gocust",()=>{openCustPopup(c,refreshK);return true}],...ctrJobBtn(c,k,isNew),["닫기"]]:[pickM?["새 고객 등록","gocust",()=>{newCustomer(null,nc=>contractDlg(nc,null));return true}]:["고객정보","gocust",()=>{if(!c)return toast("고객을 먼저 고르세요");openCustPopup(c,refreshK);return true}],...ctrJobBtn(c,k,isNew),...(!isNew&&canNewJob(c)?[["접수","",()=>{ctrIntake(c,k);return true}]]:[]),...(!isNew&&me.role!=="tech"?[["싱크대 발주","",()=>{sinkDlg(null,{c,k});return true}]]:[]),["취소"],...(!isNew?[["복사","",()=>{contractDlg(c,null,k);return true}]]:[]),...(!isNew&&isOffice()?[["양도","",()=>{transferDlg(c,k);return true}]]:[]),...(!isNew&&isAdmin()?[["삭제","danger",async()=>{await undoTransfers([k.id]);const {error}=await sb.from("contracts").delete().eq("id",k.id);toast(error?"삭제하지 못했습니다":"삭제했습니다");reload(["contracts","customers"])}]]:[]),["저장","pri",async()=>{
+   ro?[["고객정보","gocust",()=>{openCustPopup(c,refreshK);return true}],...ctrJobBtn(c,k,isNew),["닫기"]]:[pickM?["새 고객 등록","gocust",()=>{newCustomer(null,nc=>contractDlg(nc,null));return true}]:["고객정보","gocust",()=>{if(!c)return toast("고객을 먼저 고르세요");openCustPopup(c,refreshK);return true}],...ctrJobBtn(c,k,isNew),...(!isNew&&canNewJob(c)?[["접수","",()=>{ctrIntake(c,k);return true}]]:[]),...(!isNew&&me.role!=="tech"?[["싱크대 발주","",()=>{sinkDlg(null,{c,k});return true}]]:[]),["취소"],...(!isNew?[["복사","",()=>{contractDlg(c,null,k);return true}]]:[]),...(!isNew&&isOffice()?[["양도","",()=>{transferDlg(c,k);return true}],["고객 변경","",()=>{ctrMoveDlg(c,k);return true}]]:[]),...(!isNew&&isAdmin()?[["삭제","danger",async()=>{await undoTransfers([k.id]);const {error}=await sb.from("contracts").delete().eq("id",k.id);toast(error?"삭제하지 못했습니다":"삭제했습니다");reload(["contracts","customers"])}]]:[]),["저장","pri",async()=>{
      if(pickM&&!c){const cc=pool.find(x=>x.id===(document.getElementById("jcId")||{}).value);if(!cc)return toast("고객을 검색해서 목록에서 골라 주세요");c=cc}
      if(isNew){const gg=gradeOf(c);if(gg&&gg.g==="블랙"&&!(await askConfirm(`블랙(거래 중지) 고객입니다.${gg.reason?" ("+gg.reason+")":""} 계속 등록할까요?`)))return true}
      const f=fdata("kf");const n=x=>Number(f.get(x)||0)||0;
