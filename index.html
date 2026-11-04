@@ -1237,7 +1237,7 @@ function renderCtrView(){const _sv=snapScroll();renderCtrView0();restoreScroll(_
 /* 당월리스트 기준 달: 마감을 10일에 확정하므로 매월 1~10일은 전월, 11일부터 이번 달 */
 function ctrMonth(){const t=today();const [y,m,d]=t.split("-").map(Number);if(d>10)return t.slice(0,7);return m===1?`${y-1}-12`:`${y}-${String(m-1).padStart(2,"0")}`}
 function renderCtrView0(){
-  ui.cm=ctrMonth();ui.cmAll=false;if(ui.crow===undefined)ui.crow="";if(ui.cct===undefined)ui.cct="";if(ui.cq===undefined)ui.cq="";
+  /* 기본은 마감 기준 달(1~10일은 전월). 1~10일에는 이번 달로 바꿔 볼 수 있음 */ui.cm=(ui.cmPick&&ui.cmPick===thisMonth()&&ctrMonth()!==thisMonth())?thisMonth():ctrMonth();ui.cmAll=false;if(ui.crow===undefined)ui.crow="";if(ui.cct===undefined)ui.cct="";if(ui.cq===undefined)ui.cq="";
   const all=!!ui.cmAll;const [st0,en0]=monthRange(ui.cm);const inM=d=>all?!!d:(d&&d>=st0&&d<en0);
   const rows=[];
   contracts.forEach(k=>{const s=payStat(k);const b=[];if(all){if(!monthClosed(k))rows.push({k,c:custById(k.customer_id)||{},s,b:["전체"]});return}
@@ -1245,7 +1245,7 @@ function renderCtrView0(){
     if(inM(s.last))b.push("결제");
     if(k.stage==="미수"&&(!baseDate(k)||baseDate(k)<en0)&&!b.length)b.push("미수");
     /* 이번 달 화면: 날짜가 없거나 다음 달 이후로 잡힌 계약, 지난달 것 중 월마감 안 된 계약도 보이게 (어느 목록에도 안 나오는 일 방지) */
-    if(!b.length&&ui.cm===ctrMonth()&&k.stage!=="취소"){const bd=baseDate(k);b.push(!bd?"날짜 없음":bd>=en0?"예정":"이월")}
+    if(!b.length&&(ui.cm===ctrMonth()||ui.cm===thisMonth())&&k.stage!=="취소"){const bd=baseDate(k);b.push(!bd?"날짜 없음":bd>=en0?"예정":"이월")}
     if(b.length&&!monthClosed(k))rows.push({k,c:custById(k.customer_id)||{},s,b})});
   jobs.forEach(j=>{if(j.kind!=="addon")return;const k=addonRow(j);if((all||inM(baseDate(k)))&&!monthClosed(k))rows.push({k,c:custById(j.customer_id)||{},s:payStat(k),b:["설치"],a:j})});
   // 금액 요약
@@ -1292,7 +1292,7 @@ function renderCtrView0(){
     return `<tr class="subt">${isOffice()?"<td></td>":""}<td></td>${cols.map(c=>MONEYC.has(c)?`<td class="num">${won0(t[c])}</td>`:c===labC?`<td>${esc(GL[g])} <small>(${xs.length}건)</small></td>`:"<td></td>").join("")}</tr>`};
   const tot={amount:0,card:0,cash:0,paid:0,unpaid:0,a_ultra:0,a_wash:0,a_parts:0};shown.forEach(x=>{tot.amount+=Number(x.k.amount||0);tot.a_ultra+=Number(x.k.amt_ultra||0);tot.a_wash+=Number(x.k.amt_wash||0);tot.a_parts+=Number(x.k.amt_parts||0);tot.card+=x.s.card;tot.cash+=x.s.other;tot.paid+=x.s.paid;if(x.s.n||x.k.stage==="미수")tot.unpaid+=x.s.unpaid});
   view().innerHTML=`${ui.noPay?`<div class="sec" style="max-width:none"><p class="warnbox">입금 내역 칸이 아직 없습니다. Supabase SQL Editor에서 <b>phase1h.sql</b>을 실행하면 입금·미수금·마감 체크를 쓸 수 있습니다.</p></div>`:""}
-   <div class="sumwrap"><div style="display:grid;gap:8px;align-content:start"><div style="display:flex;gap:8px;align-items:center"><h2 style="margin:0;font-size:18px">당월리스트</h2>
+   <div class="sumwrap"><div style="display:grid;gap:8px;align-content:start"><div style="display:flex;gap:8px;align-items:center"><h2 style="margin:0;font-size:18px">당월리스트</h2>${ctrMonth()!==thisMonth()?`<div class="nav" role="group" aria-label="기준 달">${[ctrMonth(),thisMonth()].map(m=>`<button type="button" data-cmp="${m}" class="${ui.cm===m?"on":""}">${+m.slice(5)}월</button>`).join("")}</div>`:""}
       </div>
       <div class="kpis"><div class="kpi kc ${ui.ckpi==="ctr"?"on":""}" data-kpi="ctr" role="button" tabindex="0"><span>${all?"전체":"당월"} 계약</span><b>${mC.length}건 · ${won0(mC.reduce((a,k)=>a+Number(k.amount||0),0))}원</b></div>
        <div class="kpi kc ${ui.ckpi==="pay"?"on":""}" data-kpi="pay" role="button" tabindex="0"><span>${all?"전체":"당월"} 입금</span><b>${won0(mCard+mOther)}원</b><small>카드 ${won0(mCard)} · 현금+캐피탈 ${won0(mOther)}</small></div>
@@ -1315,6 +1315,7 @@ function renderCtrView0(){
   const ca=document.getElementById("cAll");if(ca)ca.onclick=()=>{ui.crow="";ui.cct="";ui.ckpi="";re()};
   view().querySelectorAll("[data-kpi]").forEach(el=>{const go=()=>{ui.ckpi=ui.ckpi===el.dataset.kpi?"":el.dataset.kpi;ui.crow="";ui.cct="";re()};el.onclick=go;el.onkeydown=e=>{if(e.key==="Enter"||e.key===" "){e.preventDefault();go()}}});
   document.getElementById("cCols").onclick=()=>colPicker(re);
+  view().querySelectorAll("[data-cmp]").forEach(b=>b.onclick=()=>{ui.cmPick=b.dataset.cmp;ui.csel=new Set();re()});
   document.getElementById("cSort").onclick=()=>sortPicker(re);{const x=document.getElementById("cSortX");if(x)x.onclick=()=>{setSort(null);re()}}cfBind("ctr",re);
   view().querySelectorAll(".wt.ct thead th[data-ck]").forEach(th=>{th.classList.add("sortable");const S=getSort();if(S[0]&&S[0].c===th.dataset.ck)th.dataset.sort=S[0].d===1?"asc":"desc";
     th.onclick=e=>{if(e.target.closest(".rz")||e.target.closest(".fbtn"))return;const c=th.dataset.ck;const S=getSort();const cust=sortCustom();if(cust&&S[0].c===c&&S[0].d===-1){setSort(null);return re()}const d=cust&&S[0].c===c?-S[0].d:1;setSort([{c,d},...DEFSORT.filter(x=>x.c!==c).slice(0,2)]);re()}});
@@ -2548,7 +2549,7 @@ function ensureSetTabs(){if(ui.view!=="settings"||!isAdmin()||document.getElemen
 const SETL_DEF={활성제:21000,수저랙:12000,세로바:27000,수전:22000,샴푸:21000,린스:21000,현판:0,사용안내판:0,설치비:400000,"설치비(수압식만)":200000,"설치비(추가설치)":50000};
 function setlPrices(){try{const o=JSON.parse(localStorage.getItem("hc.setl")||"{}");if("수저력" in o){if(!("수저랙" in o))o.수저랙=o.수저력;delete o.수저력}return Object.assign({},SETL_DEF,o)}catch(e){return{...SETL_DEF}}}
 function addSetlBtn(tb){if(ui.view!=="ctrm"||!isOffice()||document.getElementById("setlBtn"))return;const b=document.createElement("button");b.type="button";b.className="btn";b.id="setlBtn";b.textContent="정산 엑셀";b.title="싱크·부자재 정산 양식으로 내려받기";b.onclick=setlDlg;tb.appendChild(b)}
-function setlDlg(){const P=setlPrices();const ym=ctrMonth();
+function setlDlg(){const P=setlPrices();const ym=(ui.view==="ctrm"&&ui.cm)||ctrMonth();
   openDlg("싱크·부자재 정산 엑셀",`<div id="slf" style="display:grid;gap:10px"><div class="g3"><label class="f">설치 월<input type="month" name="ym" value="${ym}"></label><span></span><span></span></div>
     <p class="mapt" style="margin:0">그 달에 <b>설치 완료</b>된 건마다 제품 · 싱크대 발주 품목(출고가·공제가) · 제공 부자재 · 설치비 줄을 만듭니다. 재고에서 쓴 싱크는 비고에 ‘재고사용’.</p>
     <fieldset><legend>단가 (바꾸면 다음에도 기억)</legend><div class="g3">${Object.keys(SETL_DEF).map(k=>`<label class="f">${k}${k==="활성제"?" (세제)":""}<input type="number" data-sp="${k}" value="${P[k]}"></label>`).join("")}</div></fieldset></div>`,
