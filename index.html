@@ -2666,7 +2666,7 @@ function skSpec(it){const nm=String(it.name||"").replace(/^\d+\.\s*/,"");/* 직�
   const head=code==="벽"?["벽"+(it.opt1||"")]:[code,it.opt1];
   return [...head,/왕대/.test(nm)?"대배수구":"",o2,hole,wh,sz].filter(Boolean).join("/")}
 function skLine(o,i){const L=((skPrices[o.id]||{}).lines||[])[i]||{};const it=(o.items||[])[i]||{};const q=Number(it.qty||1)||1;let pr=Number(L.price||0),dd=Number(L.deduct||0),est=false;
-  let dEst=false;if((!pr||!dd)&&!it.from_stock&&isOffice()){const t=skPriceFor(it);if(t){if(!pr&&t.price){pr=t.price;est=true}if(!dd&&t.deduct){dd=t.deduct;dEst=true}}}const sup=pr*q,vat=Math.round(sup/10);return{price:pr,sup,vat,tot:sup+vat,deduct:dd,est,dEst}}
+  let dEst=false;if((!pr||!dd)&&!it.from_stock&&isOffice()){const t=skPriceFor(it);if(t){if(!pr&&t.price){pr=t.price;est=true}if(!dd&&t.deduct){dd=t.deduct;dEst=true}}if(!dd&&pr){const b=skBaseDeduct(pr);if(b){dd=b;dEst=true}}}const sup=pr*q,vat=Math.round(sup/10);return{price:pr,sup,vat,tot:sup+vat,deduct:dd,est,dEst}}
 /* 싱크대 발주 목록 열 (필터 ▼ · 너비 조절) */
 TCFG.sk={cols:()=>[["od","발주일자"],["st","진행사항"],["ow","담당자"],["site","업체명(상호)"],["spec","품명 및 규격"],["qty","수량"],["due","입고예정"],
   ...(isOffice()?[["price","단가"],["sup","공급가액"],["vat","부가세"],["tot","합계금액"]]:[]),["in","입고일자"],["out","출고일자"],["memo","비고"],...(isOffice()?[["ded","출고가"]]:[])],sel:".wt.sk",lead:()=>1,byCls:true};
@@ -2684,14 +2684,17 @@ function skTxt(c,o){const E=v=>v==null||v===""||v===0?"(빈 칸)":String(v);cons
     case"price":return per((it,i)=>{const L=skLine(o,i);return L.price?won0(L.price):""});case"sup":return per((it,i)=>{const L=skLine(o,i);return L.sup?won0(L.sup):""});
     case"vat":return per((it,i)=>{const L=skLine(o,i);return L.vat?won0(L.vat):""});case"tot":return per((it,i)=>{const L=skLine(o,i);return L.tot?won0(L.tot):""});
     case"in":return E(ymd2(o.in_date));case"out":return E(ymd2(o.out_date));case"memo":return E(o.memo);case"ded":return per((it,i)=>{const L=skLine(o,i);return L.deduct?won0(L.deduct):""})}return"(빈 칸)"}
+/* 싱크대 발주서: 단가를 넣었는데 출고가가 비어 있으면 기준가격표 출고가로 */
+document.addEventListener("input",e=>{const t=e.target;if(!t||!t.matches||!t.matches('#dlg input[data-p="price"]'))return;const row=t.closest(".skg")||t.parentElement.parentElement;const di=row&&row.querySelector('[data-p="deduct"]');if(!di)return;
+  if(!di.value||di.dataset.auto==="1"||di.dataset.auto==="b"){const v=skBaseDeduct(skNum(t.value));if(v){di.value=v;di.dataset.auto="b";di.dispatchEvent(new Event("change",{bubbles:true}))}else if(di.dataset.auto==="b")di.value=""}});
 /* 싱크대 발주서: 입고일자를 넣으면 '입고완료', 출고일자를 넣으면 '출고완료'로 진행사항 자동 변경 */
 document.addEventListener("change",e=>{const t=e.target;if(!t||!t.matches||!t.matches('#dlg input[name="in_date"],#dlg input[name="out_date"]')||!t.value)return;
   const st=document.querySelector('#dlg select[name="status"]');if(!st||![...st.options].some(o=>o.value==="재고등록"))return;
   if(t.name==="out_date"){if(st.value!=="취소")st.value="출고완료"}else if(["신규접수","주문완료"].includes(st.value))st.value="입고완료";
   st.dispatchEvent(new Event("change",{bubbles:true}))});
 async function renderSinkView(){const off=isOffice();if(!skOrders)view().innerHTML=`<p class="mapt" style="padding:20px">불러오는 중…</p>`;await fetchSink();
-  if(!off)ui.sktab="order";if(!ui.sktab)ui.sktab="order";XSEL.sink=ui.sktab==="stock"?".wt.skst":ui.sktab==="price"?".wt.spl":".wt.sk";XNAME.sink=ui.sktab==="stock"?"싱크대 재고현황":ui.sktab==="price"?"싱크대 단가표":"싱크대 발주";
-  if(off)await fetchSkPrice();if(ui.sktab==="stock")return renderSinkStock();if(ui.sktab==="price")return renderSinkPrice();
+  if(!off)ui.sktab="order";if(!ui.sktab)ui.sktab="order";XSEL.sink=ui.sktab==="stock"?".wt.skst":ui.sktab==="price"?".wt.spl":ui.sktab==="base"?".wt.skb":".wt.sk";XNAME.sink=ui.sktab==="stock"?"싱크대 재고현황":ui.sktab==="price"?"싱크대 단가표":"싱크대 발주";
+  if(off){await fetchSkPrice();await fetchSkMap()}if(ui.sktab==="stock")return renderSinkStock();if(ui.sktab==="price")return renderSinkPrice();if(ui.sktab==="base")return renderSinkBase();
   ["skq"].forEach(k=>{if(ui[k]===undefined)ui[k]=""});if(ui.skst===undefined)ui.skst="";/* 기본: 전체 *//* 기본: 지난달~이번 달 발주 중 아직 출고 안 된 것 */
   if(ui.skm1===undefined){const tm=thisMonth();const [y,m]=tm.split("-").map(Number);ui.skm1=m===1?`${y-1}-12`:`${y}-${String(m-1).padStart(2,"0")}`;ui.skm2=tm}if(!ui.sksel)ui.sksel=new Set();
   const canDel=o=>off||(o.owner===me.id&&o.status==="신규접수");[...ui.sksel].forEach(id=>{if(!skOrders.some(o=>o.id===id))ui.sksel.delete(id)});
@@ -2756,7 +2759,7 @@ let _skDlgOid=null;
 function r0Stock(its){/* 저장 전: 재고 수량을 넘지 않는지 확인 */const used=skUsedMap(_skDlgOid);const want={};its.forEach(it=>{if(it.from_stock)want[it.from_stock]=(want[it.from_stock]||0)+(Number(it.qty||1)||1)});
   for(const [k,q] of Object.entries(want)){const [oid,i]=k.split(":");const so=(skOrders||[]).find(o=>o.id===oid);const it=so&&(so.items||[])[+i];if(!it){toast("연결한 재고가 지워졌습니다. ‘재고에서 사용’을 다시 고르세요");return true}
     const left=(Number(it.qty||1)||1)-(used[k]||0);if(q>left){toast(`재고가 모자랍니다: ${skSpec(it)} (남은 ${left}개)`);return true}}return false}
-function skTabs(){return isOffice()?`<div class="nav" role="tablist">${[["order","싱크대발주"],["stock","재고현황"],["price","단가표"]].map(([k,l])=>`<button type="button" role="tab" class="${ui.sktab===k?"on":""}" data-sktab="${k}">${l}</button>`).join("")}</div>`:""}
+function skTabs(){return isOffice()?`<div class="nav" role="tablist">${[["order","싱크대발주"],["stock","재고현황"],["price","단가표"],["base","기준가격표"]].map(([k,l])=>`<button type="button" role="tab" class="${ui.sktab===k?"on":""}" data-sktab="${k}">${l}</button>`).join("")}</div>`:""}
 function bindSkTabs(){view().querySelectorAll("[data-sktab]").forEach(b=>b.onclick=()=>{ui.sktab=b.dataset.sktab;renderSinkView()})}
 /* 발주한 뒤 그 고객 설치가 끝났으면(설치 작업 완료) 출고대기에서 뺌 */
 /* 발주가 어느 작업(설치·추가설치) 것인지: 같은 고객의 설치·추가설치 중 발주일 이후 가장 먼저 하는 작업.
@@ -2871,6 +2874,33 @@ function skPriceFor(it){if(!skPList||!skPList.length)return null;
   const pick=strictD=>skPList.filter(r=>skCatOf(r.name)===n.cat&&(!r.opt1||skOptN(r.opt1)===n.opt1)&&(!r.opt2||skOpt2N(r.opt2)===n.opt2)&&(!strictD||!r.d||r.d===n.d)&&(!r.w_max||(n.w&&n.w<=r.w_max)));
   let c=pick(true);if(!c.length)c=pick(false);/* 깊이(D)가 같은 줄이 없으면 D는 보지 않음 */
   c.sort((a,b)=>((b.opt1?1:0)+(b.opt2?1:0)+(b.d?1:0))-((a.opt1?1:0)+(a.opt2?1:0)+(a.d?1:0))||(a.w_max??1e9)-(b.w_max??1e9));return c[0]||null}
+/* ---------- 기준가격표: 입고가 → 출고가(공제가) 1:1. 단가표·발주서에서 출고가가 비어 있을 때 채움 ---------- */
+let skMap=null;
+async function fetchSkMap(){const {data}=await sb.from("stock_settings").select("value").eq("key","sk_base_map").maybeSingle();try{skMap=JSON.parse((data&&data.value)||"{}")||{}}catch(e){skMap={}}}
+function skBaseDeduct(price){if(!skMap||!price)return 0;return Number(skMap[String(Math.round(price))]||0)}
+async function saveSkMap(m){const {error}=await sb.from("stock_settings").upsert({key:"sk_base_map",value:JSON.stringify(m)});if(error){toast("저장하지 못했습니다: "+error.message);return false}skMap=m;return true}
+function renderSinkBase(){const m=skMap||{};if(!ui.skb)ui.skb=Object.entries(m).map(([p,d])=>({p:+p,d:+d}));const rows=ui.skb.slice().sort((a,b)=>(a.p||1e12)-(b.p||1e12));ui.skb=rows;
+  const emptyN=(skPList||[]).filter(r=>Number(r.price||0)>0&&!Number(r.deduct||0)&&skBaseDeduct(Number(r.price))).length;
+  view().innerHTML=`<div class="toolbar" style="padding:16px 20px 0;flex-wrap:wrap"><h2 style="margin:0;font-size:18px">싱크대 발주</h2>${skTabs()}<span style="flex:1"></span>
+     <button class="btn" type="button" id="skbMake" title="지금 단가표에서 입고가별로 가장 많이 쓴 출고가로 채웁니다">단가표에서 만들기</button><button class="btn" type="button" id="skbApply" ${emptyN?"":"disabled"}>단가표 빈 출고가 채우기 (${emptyN})</button></div>
+   <p class="mapt" style="margin:6px 20px 0">입고가마다 출고가(공제가)를 정해 두면, 단가표·발주서에서 <b>출고가가 비어 있을 때</b> 이 금액이 자동으로 들어갑니다. 이미 적힌 출고가는 바꾸지 않습니다.</p>
+   <div class="toolbar"><button class="btn" type="button" id="skbAdd">+ 줄 추가</button><span class="mapt">${rows.length}줄</span><span style="flex:1"></span><button class="btn pri" type="button" id="skbSave">저장</button></div>
+   <div class="wrapx vis" style="padding-top:6px"><div class="wtbox" style="width:fit-content"><table class="wt skb"><thead><tr><th>입고가</th><th>출고가(공제가)</th><th>차액</th><th></th></tr></thead><tbody>
+   ${rows.map((r,i)=>`<tr data-i="${i}"><td><input data-f="p" inputmode="numeric" value="${r.p||""}" style="width:120px;text-align:right"></td><td><input data-f="d" inputmode="numeric" value="${r.d||""}" style="width:120px;text-align:right"></td><td class="num skbdiff">${r.p&&r.d?won0(r.d-r.p):""}</td><td><button type="button" class="btn sm danger" data-del="${i}">삭제</button></td></tr>`).join("")||`<tr><td colspan="4" class="mapt">기준가격이 없습니다. ‘단가표에서 만들기’나 ‘+ 줄 추가’로 넣으세요.</td></tr>`}</tbody></table></div></div>`;
+  bindSkTabs();const tb=view().querySelector(".wt.skb tbody");
+  const read=()=>{tb.querySelectorAll("tr[data-i]").forEach(tr=>{const r=ui.skb[+tr.dataset.i];if(!r)return;r.p=skNum(tr.querySelector('[data-f=p]').value)||0;r.d=skNum(tr.querySelector('[data-f=d]').value)||0})};
+  tb.querySelectorAll("input").forEach(x=>x.addEventListener("input",()=>{const tr=x.closest("tr");const p=skNum(tr.querySelector('[data-f=p]').value),d=skNum(tr.querySelector('[data-f=d]').value);tr.querySelector(".skbdiff").textContent=p&&d?won0(d-p):""}));
+  tb.querySelectorAll("[data-del]").forEach(b=>b.onclick=()=>{read();ui.skb.splice(+b.dataset.del,1);renderSinkBase()});
+  document.getElementById("skbAdd").onclick=()=>{read();ui.skb.push({p:0,d:0});renderSinkBase();const ins=view().querySelectorAll('.wt.skb [data-f=p]');const last=[...ins].find(x=>!x.value);if(last)last.focus()};
+  document.getElementById("skbSave").onclick=async()=>{read();const out={};for(const r of ui.skb){if(!r.p&&!r.d)continue;if(!r.p||!r.d)return toast("입고가와 출고가를 모두 넣으세요");if(out[r.p]&&out[r.p]!==r.d)return toast(`입고가 ${won0(r.p)}원이 두 번 있습니다`);out[r.p]=r.d}
+    if(await saveSkMap(out)){ui.skb=null;toast(`기준가격 ${Object.keys(out).length}줄을 저장했습니다`);renderSinkBase()}};
+  document.getElementById("skbMake").onclick=async()=>{read();const cnt={};(skPList||[]).forEach(r=>{const p=Number(r.price||0),d=Number(r.deduct||0);if(!p||!d)return;(cnt[p]=cnt[p]||{})[d]=(cnt[p][d]||0)+1});
+    const have=new Set(ui.skb.filter(r=>r.p).map(r=>r.p));let n=0;Object.entries(cnt).forEach(([p,ds])=>{p=+p;if(have.has(p))return;const d=+Object.entries(ds).sort((a,b)=>b[1]-a[1])[0][0];ui.skb.push({p,d});n++});
+    toast(n?`단가표에서 ${n}줄을 가져왔습니다. 확인 후 저장을 누르세요`:"새로 가져올 금액이 없습니다");renderSinkBase()};
+  document.getElementById("skbApply").onclick=async()=>{const t=(skPList||[]).filter(r=>Number(r.price||0)>0&&!Number(r.deduct||0)&&skBaseDeduct(Number(r.price)));if(!t.length)return;
+    if(!(await askConfirm(`단가표에서 출고가가 비어 있는 ${t.length}줄에 기준가격표 출고가를 넣을까요?`)))return;let n=0;
+    for(const r of t){const {error}=await sb.from("sink_price_list").update({deduct:skBaseDeduct(Number(r.price))}).eq("id",r.id);if(error){toast("저장하지 못했습니다: "+error.message);break}n++}
+    toast(`${n}줄에 출고가를 넣었습니다`);await fetchSkPrice();renderSinkBase()}}
 function renderSinkPrice(){const rows=skPList||[];if(ui.skpq===undefined)ui.skpq="";const qq=ui.skpq.trim().toLowerCase();
   const list=rows.filter(r=>!qq||[r.name,r.opt1,r.opt2,r.memo,r.w_max].join(" ").toLowerCase().includes(qq));
   const dl=(id,a)=>`<datalist id="${id}">${a.map(x=>`<option value="${esc(x)}">`).join("")}</datalist>`;
@@ -2887,7 +2917,8 @@ function renderSinkPrice(){const rows=skPList||[];if(ui.skpq===undefined)ui.skpq
    <div class="wrapx vis" style="padding-top:6px"><div class="wtbox"><table class="wt spl"><thead><tr><th></th><th>품명</th><th>옵션1</th><th>옵션2</th><th>W 이하</th><th>D</th><th>입고가</th><th>출고가(공제가)</th><th>차액</th><th>메모</th><th></th></tr></thead>
    <tbody>${list.map(tr).join("")||`<tr class="empty"><td colspan="11" class="mapt" data-x>단가표가 비어 있습니다. ‘+ 줄 추가’로 입력하거나, 나인주방 구매현황내역 엑셀로 만들 수 있습니다.</td></tr>`}</tbody></table></div></div>`;
   bindSkTabs();const tb=view().querySelector(".wt.spl tbody");const dirty=new Set(),gone=new Set();
-  const wire=row=>{row.querySelectorAll("input").forEach(el=>el.addEventListener("input",()=>{dirty.add(row);{const pv=skNum((row.querySelector('[data-f=price]')||{}).value),dv=skNum((row.querySelector('[data-f=deduct]')||{}).value),dc=row.querySelector(".spdiff");if(dc)dc.textContent=pv&&dv?won0(dv-pv):""}if(el.dataset.f==="price"||el.dataset.f==="deduct"){const n=skNum(el.value);if(n!=null&&String(el.value).replace(/,/g,"")===String(n))el.value=won0(n)}}));
+  const wire=row=>{{const pi=row.querySelector('[data-f=price]'),di=row.querySelector('[data-f=deduct]');if(pi&&di)pi.addEventListener("input",()=>{if(!di.value||di.dataset.auto==="1"){const v=skBaseDeduct(skNum(pi.value));di.value=v||"";di.dataset.auto=v?"1":""}});if(di)di.addEventListener("input",()=>{if(document.activeElement===di)di.dataset.auto=""})}
+    row.querySelectorAll("input").forEach(el=>el.addEventListener("input",()=>{dirty.add(row);{const pv=skNum((row.querySelector('[data-f=price]')||{}).value),dv=skNum((row.querySelector('[data-f=deduct]')||{}).value),dc=row.querySelector(".spdiff");if(dc)dc.textContent=pv&&dv?won0(dv-pv):""}if(el.dataset.f==="price"||el.dataset.f==="deduct"){const n=skNum(el.value);if(n!=null&&String(el.value).replace(/,/g,"")===String(n))el.value=won0(n)}}));
     /* 줄 삭제: 저장된 줄은 바로 지움 */
     row.querySelector("[data-pldel]").onclick=async()=>{const id=row.dataset.pl;if(id){if(!(await askConfirm("이 단가 줄을 삭제할까요?")))return;const {error}=await sb.from("sink_price_list").delete().eq("id",id);if(error)return toast("삭제하지 못했습니다: "+error.message);skPList=(skPList||[]).filter(x=>x.id!==id);toast("삭제했습니다")}dirty.delete(row);row.remove();updSel()};
     row.querySelector(".plsel").onchange=updSel};
