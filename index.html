@@ -404,7 +404,7 @@ header.top{position:relative}.tmore{display:none}.tacts{display:contents}
 <dialog id="cfm" aria-labelledby="cfmMsg"><div class="cfmb"><p id="cfmMsg"></p><div class="cfmf"><button type="button" class="btn" id="cfmNo">취소</button><button type="button" class="btn pri" id="cfmYes">확인</button></div></div></dialog>
 <dialog id="lbx" aria-label="사진 크게 보기"><div class="lbwrap"><div class="lbtop"><span class="lbcap"></span><span style="flex:1"></span><button type="button" class="btn sm" id="lbOpen">원본 열기</button><select id="lbKind" aria-label="분류 이동" title="분류 이동"></select><button type="button" class="btn sm danger" id="lbDel">삭제</button><button type="button" class="btn sm" id="lbClose">닫기</button></div>
 <div class="lbmid"><button type="button" class="lbnav" id="lbPrev" aria-label="이전">‹</button><div class="lbimg"></div><button type="button" class="lbnav" id="lbNext" aria-label="다음">›</button></div></div></dialog>
-<dialog id="cdlg" aria-labelledby="cdlgH"><div class="dh" id="cdlgH"></div><div class="db"><form id="cpf" style="display:grid;gap:10px"></form></div><div class="df"><button type="button" class="btn close" id="cdlgNo">닫기</button><button type="button" class="btn pri" id="cdlgOk">저장</button></div></dialog>
+<dialog id="cdlg" aria-labelledby="cdlgH"><div class="dh" id="cdlgH"></div><div class="db"><form id="cpf" style="display:grid;gap:10px"></form></div><div class="df"><span id="cdlgL" style="display:flex;gap:6px;margin-right:auto"></span><button type="button" class="btn close" id="cdlgNo">닫기</button><button type="button" class="btn pri" id="cdlgOk">저장</button></div></dialog>
 <dialog id="dlg"><form method="dialog" id="dlgForm"><div class="dh" id="dlgH"></div><div class="db" id="dlgB"></div><div class="df" id="dlgF"></div></form></dialog>
 <div class="toast" id="toast" role="status"></div>
 
@@ -3402,6 +3402,15 @@ function custS3(c){const o=staffName(c.owner)||c.owner_name||"",cl=staffName(c.c
 /* 계약·작업 창 위에 고객정보 팝업 (그 자리에서 수정) */
 function openCustPopup(c,after){c=custById(c.id)||c;const d=document.getElementById("cdlg"),f=document.getElementById("cpf");const ro=!canEditCust(c);
   document.getElementById("cdlgH").textContent="고객정보 · "+c.name;
+  /* 하단 왼쪽: 계약정보 · 설치·A/S */
+  {const L=document.getElementById("cdlgL");if(L){L.innerHTML="";const ks=me.role==="tech"?[]:custContracts(c.id).slice().sort((a,b)=>String(b.contract_date||"").localeCompare(String(a.contract_date||"")));
+    const js=jobs.filter(j=>j.customer_id===c.id).sort((a,b)=>String(b.visit_date||b.request_date||"").localeCompare(String(a.visit_date||a.request_date||"")));
+    const mk=(t,fn)=>{const b=document.createElement("button");b.type="button";b.className="btn gocust";b.textContent=t;b.onclick=()=>{d.close();fn()};L.appendChild(b)};
+    if(ks.length)mk("계약정보",()=>{if(ks.length===1)return contractDlg(c,ks[0]);
+      openDlg(`계약 선택 · ${esc(c.name)}`,`<div class="cards">${ks.map(k=>`<div class="card click" data-pk="${k.id}"><div class="t"><span class="tag st-${esc(k.stage)}">${esc(k.stage)}</span>${esc([prodName(k.product),k.size].filter(Boolean).join(" "))}${k.serial?` · SN ${esc(k.serial)}`:""}</div><div class="d"><span>계약 ${esc(k.contract_date||"-")}</span><span class="money">${won0(k.amount)}원</span></div></div>`).join("")}</div>`,[["닫기"]]);
+      document.querySelectorAll("#dlgB [data-pk]").forEach(el=>el.onclick=()=>contractDlg(c,ctrById(el.dataset.pk)))});
+    if(js.length)mk("설치·A/S",()=>{if(js.length===1)return jobDlg(js[0],c,js[0].kind);
+      openDlg(`설치·A/S · ${esc(c.name)}`,`<div class="cards">${js.map(j=>jobCard(j,false)).join("")}</div>`,[["닫기"]]);bindJobCards(document.getElementById("dlgB"))})}}
   const docOK=!ro&&!ui.noFiles&&me.role!=="tech";
   f.innerHTML=(docOK?`<div class="nav cptabs" role="tablist"><button type="button" role="tab" class="on" data-cpt="info">고객정보</button><button type="button" role="tab" data-cpt="docs">사업자등록증·계약서</button></div>`:"")
     +`<div id="cpInfo" style="display:grid;gap:10px">${custFieldsHtml(c,ro)}</div>`+(docOK?`<div id="cpDocs" style="display:none;gap:12px"></div>`:"");
