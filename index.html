@@ -1247,7 +1247,9 @@ function renderCtrView0(){
     /* 이번 달 화면: 날짜가 없거나 다음 달 이후로 잡힌 계약, 지난달 것 중 월마감 안 된 계약도 보이게 (어느 목록에도 안 나오는 일 방지) */
     if(!b.length&&ui.cm===ctrMonth()&&k.stage!=="취소"){const bd=baseDate(k);b.push(!bd?"날짜 없음":bd>=en0?"예정":"이월")}
     if(b.length&&!monthClosed(k))rows.push({k,c:custById(k.customer_id)||{},s,b})});
-  jobs.forEach(j=>{if(j.kind!=="addon")return;const k=addonRow(j);if((all||inM(baseDate(k)))&&!monthClosed(k))rows.push({k,c:custById(j.customer_id)||{},s:payStat(k),b:["설치"],a:j})});
+  jobs.forEach(j=>{if(j.kind!=="addon")return;const k=addonRow(j);const sd=j.done_date||j.visit_date||"";
+    /* 기준 달 화면에는 다음 달 이후로 잡힌 추가설치·날짜 없는 추가설치(미완료)도 같이 */
+    const later=!all&&ui.cm===ctrMonth()&&!["완료","취소"].includes(j.status)&&(!sd||sd>=en0);if((all||inM(baseDate(k))||later)&&!monthClosed(k))rows.push({k,c:custById(j.customer_id)||{},s:payStat(k),b:["설치"],a:j})});
   // 금액 요약
   const mC=contracts.filter(k=>inM(k.contract_date)&&k.stage!=="취소"&&k.contract_type!=="양도");
   const mP=payments.filter(p=>inM(p.pay_date));const mCard=mP.filter(p=>p.method==="카드").reduce((a,p)=>a+Number(p.amount||0),0),mOther=mP.filter(p=>p.method!=="카드").reduce((a,p)=>a+Number(p.amount||0),0);
@@ -1268,12 +1270,14 @@ function renderCtrView0(){
     const oldDone=!x.a&&(x.k.contract_type||"구매")==="구매"&&bd&&bd<st0&&x.k.stage==="완료"&&!(x.s.unpaid>0);/* 구매 건 중 결제 완료된 것만 */
     if(oldDone&&(!tg||tg==="전기마감"))return 0;
     const ti=SETTLE.indexOf(tg);if(ti>=0)return ti;if(!x.a&&(x.k.stage==="취소"||x.k.stage==="보류"))return 3;
-    if(x.a)return bd&&bd>=en0?2:1.5;/* 추가설치는 당월마감 밑에 따로 */
+    if(x.a){const sd=x.a.done_date||x.a.visit_date||"";return !sd?(bd&&bd>=st0&&bd<en0?1.5:2.4):sd>=en0?2.2:1.5}/* 추가설치는 당월마감 밑에 따로 · 다음 달 추가설치도 익월마감 밑에 따로 */
     /* 지난달 이전 건이지만 아직 설치·철거 전(미정·확정·철거예정) → 익월마감 묶음의 당월 미정 건들 아래 */
-    if(["미정","확정","철거예정"].includes(x.k.stage)&&(!bd||bd<st0))return 2.1;
+    if(["미정","확정","철거예정"].includes(x.k.stage)&&(!bd||bd<st0))return 2.4;
     if((x.b||[]).includes("설치")||(x.b||[]).includes("당월 계약"))return bd&&bd>=en0?2:bd&&bd<st0?4:1;
     if((x.b||[]).some(t=>t==="예정"||t==="날짜 없음"))return 2;return 4};
-  list.forEach(x=>{x.g=gOf(x);x.gs=Math.floor(x.g*2)/2});/* gs = 소계 묶음 (2.1 → 2 익월마감) */
+  /* 익월마감 묶음: 설치일이 잡힌 건(설치일 순) · 다음 달 추가설치 · 미배정(설치일 없음)을 각각 따로 */
+  const gOf2=x=>{const g=gOf(x);if(g!==2||x.a)return g;const ij=installOf(x.k);return ij&&(ij.done_date||ij.visit_date)?2:2.4};
+  list.forEach(x=>{x.g=gOf2(x);x.gs=x.g>=2&&x.g<3?x.g:Math.floor(x.g*2)/2});/* gs = 소계 묶음 (익월마감·다음 달 추가설치·미배정은 따로) */
   sortCtrList(list,x=>x.g);
   list=cfApply("ctr",list,(c,x)=>cfText(ctrCell(c,x.k,x.c,x.s,x.b)));
   ui.csel=ui.csel||new Set();[...ui.csel].forEach(id=>{if(!list.some(x=>x.k.id===id))ui.csel.delete(id)});
@@ -1286,7 +1290,7 @@ function renderCtrView0(){
   const shown=list.slice(0,ui.xAll?1e9:500);
   /* 묶음별 소계 줄 (진한 초록) */
   const [cy,cmn]=ui.cm.split("-").map(Number);const nx=cmn===12?`${cy+1}년 01월`:`${cy}년 ${String(cmn+1).padStart(2,"0")}월`;
-  const GL={0:"전월미수채권",1:`${cy}년 ${String(cmn).padStart(2,"0")}월 당월마감`,1.5:`${cy}년 ${String(cmn).padStart(2,"0")}월 추가설치`,2:`${nx} 익월마감`,3:"취소,보류",4:"전기마감 (미수)"};
+  const GL={0:"전월미수채권",1:`${cy}년 ${String(cmn).padStart(2,"0")}월 당월마감`,1.5:`${cy}년 ${String(cmn).padStart(2,"0")}월 추가설치`,2:`${nx} 익월마감`,2.2:`${nx} 추가설치`,2.4:"미배정",3:"취소,보류",4:"전기마감 (미수)"};
   const labC=cols.includes("name")?"name":cols[0];
   const subRow=g=>{const xs=shown.filter(x=>x.gs===g);const t={amount:0,card:0,cash:0,paid:0,unpaid:0,a_ultra:0,a_wash:0,a_parts:0};xs.forEach(x=>{t.amount+=Number(x.k.amount||0);t.a_ultra+=Number(x.k.amt_ultra||0);t.a_wash+=Number(x.k.amt_wash||0);t.a_parts+=Number(x.k.amt_parts||0);t.card+=x.s.card;t.cash+=x.s.other;t.paid+=x.s.paid;if(x.s.n||x.k.stage==="미수")t.unpaid+=x.s.unpaid});
     return `<tr class="subt">${isOffice()?"<td></td>":""}<td></td>${cols.map(c=>MONEYC.has(c)?`<td class="num">${won0(t[c])}</td>`:c===labC?`<td>${esc(GL[g])} <small>(${xs.length}건)</small></td>`:"<td></td>").join("")}</tr>`};
