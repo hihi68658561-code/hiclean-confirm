@@ -1068,7 +1068,13 @@ const CROWS=[["done","설치완료",k=>k.stage==="완료"],["open","미완료",k
 let instIdx=null;
 function buildInstIdx(){instIdx={byCtr:new Map(),byCust:new Map()};for(const x of jobs){if(x.kind!=="install"||x.status==="취소")continue;
   if(x.contract_id){if(!instIdx.byCtr.has(x.contract_id))instIdx.byCtr.set(x.contract_id,x)}else if(!instIdx.byCust.has(x.customer_id))instIdx.byCust.set(x.customer_id,x)}}
-function installOf(k){if(k.__job)return k.__job;if(!instIdx)buildInstIdx();return instIdx.byCtr.get(k.id)||instIdx.byCust.get(k.customer_id)||null}
+function installOf(k){if(k.__job)return k.__job;if(!instIdx)buildInstIdx();return instIdx.byCtr.get(k.id)||(custContracts(k.customer_id).length<=1?instIdx.byCust.get(k.customer_id):null)||null}/* 계약 연결 없는 설치 작업은 고객 계약이 하나뿐일 때만 그 계약 것으로 봄 */
+/* 작업에 연결할 계약: 설치는 아직 설치 작업이 없는 계약(최근 계약일 순)만 — 이미 설치된 예전 계약을 끌어오지 않음. 그 밖의 작업은 고객의 첫 계약 */
+/* 작업 창: 연결 계약 고르기 (사무실) */
+function jobCtrPick(j,c){if(!c||!isOffice())return"";const ks=custContracts(c.id);if(!ks.length)return"";
+  return `<label class="f" style="max-width:520px">연결 계약<select name="ctr_pick">${[["","(연결 안 함)"],...ks.slice().sort((a,b)=>String(b.contract_date||"").localeCompare(String(a.contract_date||""))).map(k=>[k.id,[k.contract_date||"-",prodName(k.product),k.size,k.serial&&"SN "+k.serial,k.stage].filter(Boolean).join(" · ")])].map(([v,l])=>`<option value="${v}" ${v===(j.contract_id||"")?"selected":""}>${esc(l)}</option>`).join("")}</select></label>`}
+function pickCtrFor(custId,kind){const ks=custContracts(custId);if(kind!=="install")return ks[0]||null;if(!instIdx)buildInstIdx();
+  return ks.filter(k=>k.stage!=="취소"&&!instIdx.byCtr.has(k.id)).sort((a,b)=>String(b.contract_date||"").localeCompare(String(a.contract_date||"")))[0]||null}
 /* 목록 열: 넣고 빼기·순서 바꾸기 (브라우저별로 기억) */
 const CCOLS=[
  ["basis","기준",1],["ctype","구분",1],["stage","진행단계",1],["trial","무료체험 종료일",1],["name","업체명(상호)",1],["ceo","대표자",1],["phone","전화번호",1],["addr","상점주소",0],
@@ -3909,7 +3915,7 @@ function jobDlg(j,c,kind,tpl,preset){
   const isNew=!j;c=c||(j&&custById(j.customer_id))||null;
   if(isNew&&tpl){j=Object.assign({},tpl,{status:"접수",request_date:today(),visit_date:null,done_date:null,result:"",pay_status:"",pay_method:"",pay_date:null,pay_name:"",pay_memo:"",closed:false});
     ["id","created_at","updated_at","created_by"].forEach(x=>delete j[x]);kind=j.kind}
-  else if(isNew){const k=c?custContracts(c.id)[0]:null;j={kind,customer_id:c?c.id:null,contract_id:k?k.id:null,customer_name:c?c.name:"",address:c?c.address:"",product:productOf(k),status:"접수",request_date:today(),techs:[],tech_names:"",symptom:"",result:"",cost:0,sink_status:"",sink_memo:"",parts:"",visit_time:""}}
+  else if(isNew){const k=c?pickCtrFor(c.id,kind):null;j={kind,customer_id:c?c.id:null,contract_id:k?k.id:null,customer_name:c?c.name:"",address:c?c.address:"",product:productOf(k),status:"접수",request_date:today(),techs:[],tech_names:"",symptom:"",result:"",cost:0,sink_status:"",sink_memo:"",parts:"",visit_time:""}}
   if(isNew&&preset)Object.assign(j,preset);
   const can=isNew||canEditJob(j);const off=isOffice();const p=asLike(j)?asProd(j):(j.product||{});const asx=hasAsx();const he=hasEnd();
   const techs=staff.filter(s=>s.active&&hasRole(s,"tech"));
@@ -3920,7 +3926,7 @@ function jobDlg(j,c,kind,tpl,preset){
   const pick=isNew&&!c?`<label class="f">고객 검색<input id="jcQ" type="search" autocomplete="off" placeholder="업체명(상호)·대표자·전화번호·주소·시리얼"></label>
      <input type="hidden" name="custId" id="jcId"><div id="jcSel"></div><div id="jcRes" class="pickres"></div>
      <p class="mapt" id="jcHint">두 글자 이상 입력하면 고객 목록이 나옵니다. 없는 고객은 아래 ‘새 고객 등록’으로 먼저 등록하세요.</p>`
-    :`<div id="jcWrap"><p class="mapt dsum"><b>${esc(j.customer_name)}</b> · ${esc(j.address||"")}${c&&c.phone?" · "+esc(c.phone):""} · 제품: ${esc([p.product,p.size,p.options&&"("+p.options+")",p.serial&&"SN "+p.serial].filter(Boolean).join(" ")||"-")}${(()=>{const kk=ctrById(j.contract_id);return kk?` · <b>연결 계약</b> ${esc([kk.contract_date,kk.contract_type&&kk.contract_type!=="구매"?kk.contract_type:"",kk.stage].filter(Boolean).join(" · "))}`:""})()}${isNew||isOffice()?` <button type="button" class="btn sm" id="jcChange">고객 변경</button>`:""}</p>${c?gradeWarn(c):""}</div>`;
+    :`<div id="jcWrap"><p class="mapt dsum"><b>${esc(j.customer_name)}</b> · ${esc(j.address||"")}${c&&c.phone?" · "+esc(c.phone):""} · 제품: ${esc([p.product,p.size,p.options&&"("+p.options+")",p.serial&&"SN "+p.serial].filter(Boolean).join(" ")||"-")}${(()=>{const kk=ctrById(j.contract_id);return kk?` · <b>연결 계약</b> ${esc([kk.contract_date,kk.contract_type&&kk.contract_type!=="구매"?kk.contract_type:"",kk.stage].filter(Boolean).join(" · "))}`:""})()}${isNew||isOffice()?` <button type="button" class="btn sm" id="jcChange">고객 변경</button>`:""}</p>${c?gradeWarn(c):""}</div>${jobCtrPick(j,c)}`;
   openDlg(`${nTitle?"신규접수":kl(j)+" "+(isNew?(tpl?"접수 (복사)":"접수"):"작업")}${j.customer_name?" · "+esc(j.customer_name):""}`,`<div id="jf" style="display:grid;gap:10px">${tpl?`<p class="warnbox" style="margin:0">복사한 접수입니다. 방문일·상태·처리 내용은 새로 입력하세요. 사진은 복사되지 않습니다.</p>`:""}
    ${pick}
    ${isNew||off?`<div class="kpick chk" role="radiogroup" aria-label="구분">${canCtr?`<label><input type="radio" name="kind" value="ctr" ${wantCtr?"checked":""}>계약</label>`:""}${KINDS.filter(k=>!(nTitle&&k==="install")).map(k=>`<label><input type="radio" name="kind" value="${k}" ${!wantCtr&&j.kind===k?"checked":""}>${KLABEL[k]}</label>`).join("")}<input name="kind_label" id="jKL" value="${esc(j.kind_label||"")}" placeholder="기타 구분 직접 입력 (예: 점검)" aria-label="기타 구분" style="display:${!wantCtr&&j.kind==="etc"?"inline-block":"none"};min-width:200px"></div>`:""}
@@ -3966,7 +3972,7 @@ function jobDlg(j,c,kind,tpl,preset){
      const nk_=f.get("kind")||j.kind;if(nk_!==j.kind&&!isNew){j=Object.assign({},j,{kind:nk_})}else j.kind=nk_;
      if(j.kind==="addon"&&(off||isNew)){j.product={product:(f.get("add_item")||"").trim(),size:(f.get("add_size")||"").trim()}}
      if(j.kind==="etc"&&!(f.get("kind_label")||"").trim()){toast("기타 구분 이름을 입력하세요 (예: 점검)");return true}
-     const pt={kind:j.kind,...("kind_label" in j||j.kind==="etc"?{kind_label:j.kind==="etc"?(f.get("kind_label")||"").trim():""}:{}),...(j.kind==="addon"&&(off||isNew)?{product:j.product}:{}),status:f.get("status")||j.status,done_date:f.get("done_date")||null,result:f.get("result")||""};
+     const ctrSel=document.querySelector('#jf select[name="ctr_pick"]');const pt={...(ctrSel&&ctrSel.value!==(j.contract_id||"")?{contract_id:ctrSel.value||null,...(["install","remove"].includes(j.kind)&&ctrSel.value?{product:productOf(ctrById(ctrSel.value))}:{})}:{}),kind:j.kind,...("kind_label" in j||j.kind==="etc"?{kind_label:j.kind==="etc"?(f.get("kind_label")||"").trim():""}:{}),...(j.kind==="addon"&&(off||isNew)?{product:j.product}:{}),status:f.get("status")||j.status,done_date:f.get("done_date")||null,result:f.get("result")||""};
      if(pt.status==="완료"&&!pt.done_date)pt.done_date=today();
      if(pt.done_date&&pt.status!=="완료"&&pt.status!=="취소")pt.status="완료";
      if(asLike(j)){Object.assign(pt,{paid_type:f.get("paid_type")||"",cost:Number(f.get("cost")||0)||0,pay_status:f.get("pay_status")||"",pay_method:f.get("pay_method")||"",pay_date:f.get("pay_date")||null,pay_name:(f.get("pay_name")||"").trim(),pay_memo:(f.get("pay_memo")||"").trim()});
@@ -4033,13 +4039,13 @@ function jobDlg(j,c,kind,tpl,preset){
   let chgTo=null;const c0=c;
   const chg=document.getElementById("jcChange");if(chg)chg.onclick=()=>{const w=document.getElementById("jcWrap");
     w.innerHTML=`<label class="f">고객 검색<input id="jcQ" type="search" autocomplete="off" placeholder="업체명(상호)·대표자·전화번호·주소·시리얼"></label><input type="hidden" name="custId" id="jcId"><div id="jcSel"></div><div id="jcRes" class="pickres"></div><p class="mapt" id="jcHint" style="margin:0">바꿀 고객을 검색해서 고르세요.</p>`;
-    bindCustPicker(pickable);const h=document.getElementById("jcId");h.addEventListener("change",()=>{const cc=pickable.find(x=>x.id===h.value);if(!cc)return;c=cc;const k=custContracts(cc.id)[0];
+    bindCustPicker(pickable);const h=document.getElementById("jcId");h.addEventListener("change",()=>{const cc=pickable.find(x=>x.id===h.value);if(!cc)return;c=cc;const k=pickCtrFor(cc.id,j.kind);
       const upd={customer_id:cc.id,contract_id:k?k.id:null,customer_name:cc.name,address:cc.address};if(isNew)Object.assign(j,upd,j.kind==="addon"?{}:{product:productOf(k)});else chgTo=upd;
       const jf=document.getElementById("jf");const q=n=>jf.querySelector(`[name="${n}"]`);[["as_product",k&&k.product],["as_size",k&&k.size],["as_serial",k&&k.serial]].forEach(([n,v])=>{const el=q(n);if(el)el.value=v||""});
       _instMap=null;const di=q("as_idate");if(di)di.value=asInstDate({customer_id:cc.id,product:{}})||"";
       const H=document.getElementById("dlgH");H.textContent=H.textContent.replace(/ · [^·]*$/,"")+" · "+cc.name})};
   if(isNew&&!c){bindCustPicker(pickable);const h=document.getElementById("jcId");if(h)h.addEventListener("change",()=>{const cc=pickable.find(x=>x.id===h.value);if(!cc)return;
-    if((document.querySelector('#jf input[name=kind]:checked')||{}).value==="ctr"){setTimeout(()=>contractDlg(cc,null,null,{intake:true}),0);return}const k=custContracts(cc.id)[0];const jf=document.getElementById("jf");const q=n=>jf.querySelector(`[name="${n}"]`);
+    if((document.querySelector('#jf input[name=kind]:checked')||{}).value==="ctr"){setTimeout(()=>contractDlg(cc,null,null,{intake:true}),0);return}const k=pickCtrFor(cc.id,(document.querySelector('#jf input[name=kind]:checked')||{}).value||j.kind);const jf=document.getElementById("jf");const q=n=>jf.querySelector(`[name="${n}"]`);
     if(k){[["as_product",k.product],["as_size",k.size],["as_serial",k.serial]].forEach(([n,v])=>{const el=q(n);if(el&&!el.value)el.value=v||""})}
     _instMap=null;const d=asInstDate({customer_id:cc.id,product:{}});const di=q("as_idate");if(di&&!di.value&&d)di.value=d})}
   document.querySelectorAll('#jf input[name=kind]').forEach(x=>x.onchange=()=>{const isC=x.value==="ctr";document.getElementById("jBody").style.display=isC?"none":"grid";document.getElementById("jCtrHint").style.display=isC?"block":"none";
