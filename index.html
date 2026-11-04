@@ -4053,7 +4053,9 @@ function bindCustPicker(pool){
   const q=document.getElementById("jcQ"),res=document.getElementById("jcRes"),selBox=document.getElementById("jcSel"),hid=document.getElementById("jcId"),hint=document.getElementById("jcHint");
   const show=()=>{const t=q.value.trim().toLowerCase().replace(/[-\s]/g,"");
     if(t.length<2){res.innerHTML="";return}
-    const hits=pool.filter(x=>custSearchText(x).includes(t)).slice(0,8);
+    /* 업체명(상호)에 들어 있는 고객을 먼저, 그다음 전화·주소·시리얼 등으로 맞는 고객 */
+    const nm=x=>String(x.name||"").toLowerCase().replace(/[-\s]/g,"");const all=pool.filter(x=>custSearchText(x).includes(t));
+    const hits=[...all.filter(x=>nm(x).startsWith(t)),...all.filter(x=>!nm(x).startsWith(t)&&nm(x).includes(t)),...all.filter(x=>!nm(x).includes(t))].slice(0,20);
     res.innerHTML=hits.map(x=>{const k=custContracts(x.id)[0];return `<button type="button" data-id="${x.id}"><b>${esc(x.name)}</b><small>${esc([x.ceo,x.phone||x.phone2,x.address].filter(Boolean).join(" · "))}</small>${k||instTxt(x)?`<small>${esc([k&&k.product,k&&k.size,k&&k.serial&&"SN "+k.serial].filter(Boolean).join(" "))}${instTxt(x)?`${k?" · ":""}<b class="instd">${esc(instTxt(x))}</b>`:""}</small>`:""}</button>`}).join("")||`<p class="mapt">찾는 고객이 없습니다.</p>`;
     res.querySelectorAll("[data-id]").forEach(b=>b.onclick=()=>pickIt(pool.find(x=>x.id===b.dataset.id)))};
   const pickIt=x=>{hid.value=x.id;hid.dispatchEvent(new Event("change"));res.innerHTML="";q.parentElement.hidden=true;hint.hidden=true;const k=custContracts(x.id)[0];
