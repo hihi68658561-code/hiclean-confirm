@@ -768,7 +768,7 @@ function sel(name,label,opts,v,ro=false){return `<label class="f">${label}<selec
 function hasRole(s,r){return !!s&&(s.role===r||(Array.isArray(s.extra_roles)&&s.extra_roles.includes(r))||(s===me&&(me.extra||[]).includes(r)))}
 function meHas(r){return !!me&&(me.role===r||(me.extra||[]).includes(r))}
 function staffOpts(roles){return [["","(없음)"],...staff.filter(s=>s.active&&(!roles||roles.some(r=>hasRole(s,r)))).map(s=>[s.user_id,`${s.name} (${ROLE[s.role]})`])]}
-function custFieldsHtml(c,ro){return `    <div class="g2">${inp("name","업체명(상호)",c.name,"text",ro)}${inp("biz_name","사업장명",c.biz_name,"text",ro)}</div>
+function custFieldsHtml(c,ro){return `    <div class="g2">${inp("name","업체명(상호)",c.name,"text",ro)}<span></span></div><input type="hidden" name="biz_name" value="${esc(c.biz_name||"")}">
     <div class="g2">${inp("ceo","대표자",c.ceo,"text",ro)}${inp("biz_no","사업자등록번호",c.biz_no,"text",ro)}</div>
     <div class="g2">${inp("phone","전화번호",c.phone,"text",ro)}${inp("phone2","일반전화",c.phone2,"text",ro)}</div>
     ${inp("address","상점주소",c.address,"text",ro)}
