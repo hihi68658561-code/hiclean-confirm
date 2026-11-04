@@ -3235,7 +3235,8 @@ function stkTxt(c,x){const u=x.u;const v={y:u.mfg_y,m:u.mfg_m,d:u.mfg_d,model:u.
 function stockListHtml(units,usedOnly){if(!ui.sst)ui.sst="in";if(ui.sq===undefined)ui.sq="";
   const f=ui.sfil;const qq=ui.sq.trim().toLowerCase();
   if(ui.sst==="x"&&false)ui.sst="in";const stOk=(x,s)=>s==="all"||(s==="x"?(x.s.st==="x"&&x.s.label==="생산예정"):s==="used"?((x.u.used&&x.s.st==="in")||x.s.st==="uc"):x.s.st===s);
-  let list=units.filter(x=>(!usedOnly||x.u.used)&&stOk(x,ui.sst)
+  if(ui.soutm===undefined)ui.soutm=thisMonth();const outM=x=>ui.sst!=="out"||!ui.soutm||String(x.s.date||"").slice(0,7)===ui.soutm;/* 출고: 월별로 보기 */
+  let list=units.filter(x=>(!usedOnly||x.u.used)&&stOk(x,ui.sst)&&outM(x)
     &&(!f||(f.spec?(x.u.used&&(f.spec==="대광"?x.u.model==="DK":stkSpec(x.u)===f.spec)):(x.u.model===f.m&&x.u.size===f.s&&x.u.ty===f.t&&(f.lip==null||x.u.lip===f.lip)&&(f.dr==null||x.u.drain===f.dr)&&!x.u.used)))
     &&(!qq||[x.u.serial,x.u.no,x.u.remark,stkSiteLabel(x.s,x.u),stkSpec(x.u),x.u.grade].join(" ").toLowerCase().includes(qq)));
   list.sort((a,b)=>{const na=Number(a.u.no),nb=Number(b.u.no),fa=isFinite(na)&&String(a.u.no??"").trim()!=="",fb=isFinite(nb)&&String(b.u.no??"").trim()!=="";if(fa&&fb&&na!==nb)return na-nb;if(fa!==fb)return fa?-1:1;return String(a.u.no??"").localeCompare(String(b.u.no??""),"ko",{numeric:true})});
@@ -3244,6 +3245,7 @@ function stockListHtml(units,usedOnly){if(!ui.sst)ui.sst="in";if(ui.sq===undefin
   const shown=list.slice(0,ui.xAll?1e9:500);
   return `<div class="toolbar" style="flex-wrap:wrap"><input id="sQ" type="search" placeholder="시리얼·번호·업장·메모 검색" value="${esc(ui.sq)}">
      <div class="nav" role="group">${[["all","전체"],["in","재고"],["rsv","출고예정"],["out","출고"],["used","중고"],["x","생산예정"]].map(([k,l])=>`<button type="button" data-sst="${k}" class="${ui.sst===k?"on":""}">${l} ${cntSt(k)}</button>`).join("")}</div>
+     ${ui.sst==="out"?`<span style="display:inline-flex;align-items:center;gap:6px"><input id="sOutM" type="month" value="${esc(ui.soutm||"")}" aria-label="출고 월" style="padding:5px 8px;border:1px solid var(--line);border-radius:6px;background:var(--field)"><button type="button" class="btn sm ${ui.soutm?"":"pri"}" id="sOutAll">전체 기간</button><span class="mapt">${ui.soutm?`${+ui.soutm.slice(5)}월 출고 ${list.length}대`:`전체 출고 ${list.length}대`}</span></span>`:""}
      ${f?`<span class="chip on">${f.spec?"중고 · "+esc(f.spec):`${esc((STK_MODELS[f.m]||{}).short||f.m)} ${f.s}${f.t}`}${f.lip===1?" 유턱":f.lip===0?" 무턱":""}${f.spec?"":f.dr==="R"?" 우":f.dr==="L"?" 좌":""} <button type="button" class="btn sm" id="sFx">✕</button></span>`:""}${cfClearBtn("stk")}<span style="flex:1"></span>
      <button class="btn" type="button" id="sImp">엑셀 가져오기</button><button class="btn" type="button" id="sNewU">+ 중고 입고</button><button class="btn pri" type="button" id="sNew">+ 입고 등록</button><input type="file" id="sImpIn" accept=".xlsx,.xls" hidden></div>
    <div class="wrapx vis" style="padding-top:6px"><div class="wtbox"><table class="wt su"><thead>
@@ -3261,6 +3263,7 @@ function bindStockUnits(){const re=()=>renderStockView();cfBind("stk",re);
     const qty=Math.max(0,parseInt(v,10)||0);const {error}=await sb.from("stock_targets").upsert({model,size:+size,ty,qty});if(error)return toast("저장하지 못했습니다: "+error.message);re()});
   const q=document.getElementById("sQ");if(q)q.oninput=()=>{ui.sq=q.value;clearTimeout(q._t);q._t=imeT(q,()=>re().then(()=>{const n=document.getElementById("sQ");if(n){n.focus();n.setSelectionRange(n.value.length,n.value.length)}}),250)};
   view().querySelectorAll("[data-sst]").forEach(b=>b.onclick=()=>{ui.sst=b.dataset.sst;re()});
+  {const om=document.getElementById("sOutM");if(om)om.onchange=()=>{ui.soutm=om.value;re()};const oa=document.getElementById("sOutAll");if(oa)oa.onclick=()=>{ui.soutm="";re()}}
   const fx=document.getElementById("sFx");if(fx)fx.onclick=()=>{ui.sfil=null;re()};
   const nb=document.getElementById("sNew");if(nb)nb.onclick=()=>stockUnitDlg(null,false);const nu=document.getElementById("sNewU");if(nu)nu.onclick=()=>stockUnitDlg(null,true);
   view().querySelectorAll("[data-uspec]").forEach(el=>{const go=()=>{const k=el.dataset.uspec;ui.sst="used";ui.sfil=k?(ui.sfil&&ui.sfil.spec===k?null:{spec:k}):null;re().then(()=>{const t=view().querySelector(".wt.su");if(t)t.scrollIntoView({behavior:"smooth",block:"start"})})};el.onclick=go;el.onkeydown=e=>{if(e.key==="Enter"||e.key===" "){e.preventDefault();go()}}});
