@@ -3661,7 +3661,7 @@ function jobFromContract(c,k){return{kind:"install",customer_id:c.id,contract_id
 
 /* ================= 설치·A/S ================= */
 function jobCard(j,sel_){
-  const c=custById(j.customer_id);const p=j.product||{};
+  const c=custById(j.customer_id);const p=liveProd(j);
   const tn=(j.techs||[]).map(staffName).filter(Boolean);const extra=String(j.tech_names||"").split(/[\s,/]+/).filter(t=>t&&!tn.includes(t)&&!staff.some(x=>tn.includes(x.name)&&(x.aliases||[]).includes(t))).join(" ");const who=[tn.join(", "),extra].filter(Boolean).join(" · ");
   return `<div class="card click" data-j="${j.id}"><div class="t">${sel_?`<input type="checkbox" class="jsel" data-js="${j.id}" ${ui.jsel.has(j.id)?"checked":""} aria-label="선택" style="width:18px;height:18px">`:""}<span class="badge ${j.kind}">${kl(j)||j.kind}</span><span class="badge s-${j.status}">${j.status}</span>${esc(j.customer_name||(c&&c.name)||"")}${c?gradeBadge(c):""}${(n=>n?` <span class="badge" title="이 건의 사진">사진 ${n}</span>`:"")(jobFiles(j).length)}</div>
    <div class="d"><span>${esc(j.visit_date?("방문 "+j.visit_date+(j.visit_time?" "+j.visit_time:"")):"접수 "+(j.request_date||""))}</span><span>${esc(j.kind==="addon"?(a=>[a.product&&"추가: "+a.product,a.size].filter(Boolean).join(" "))(addonItem(j)):[p.product,p.size,p.options&&"("+p.options+")"].filter(Boolean).join(" "))}</span><span>기사 ${esc(who||"미배정")}</span>${j.address?`<span>${esc(j.address)}</span>`:""}</div>
@@ -3764,7 +3764,9 @@ const WCOLS=[["rmon","접수월",1],["kind","구분",1],["name","업체명(상�
  ["product","제품",1],["size","규격",1],["serial","시리얼",1],["wash","수압식",1],["sink","싱크대",1],["sinkm","싱크대 품명 및 규격",1],["parts","제공 부자재",0],["symptom","접수내용",1],["result","처리내용",0],["sales","영업담당",1],["tech","배정",1],["status","처리현황",1],["done","완료일",0],["photo","사진",0]];
 /* 설치 접수내용 = 계약 비고 (+ 작업에 적은 요청 사항) */
 function jobNote(j,k){if(j.kind!=="install")return j.symptom||"";const kk=(k&&k.id?k:ctrById(j.contract_id))||{};return [kk.memo,j.symptom].map(x=>String(x||"").trim()).filter(Boolean).filter((x,i,a)=>a.indexOf(x)===i).join(" / ")}
-function wCell(col,j,c,k,td){let p=asLike(j)?asProd(j):(j.product||{});
+/* 설치·철거 작업의 제품·규격·시리얼은 연결된 계약의 지금 값으로 (계약에서 지우거나 고치면 목록에도 바로 반영) */
+function liveProd(j){const p=j.product||{};if(j.kind==="install"||j.kind==="remove"){const k=j.contract_id&&ctrById(j.contract_id);if(k)return Object.assign({},p,{product:k.product||"",size:k.size||"",serial:k.serial||"",options:k.options||p.options||""})}return asLike(j)?asProd(j):p}
+function wCell(col,j,c,k,td){let p=liveProd(j);
   /* 설치·철거 작업은 연결 계약의 제품·사이즈·시리얼을 우선 (계약에서 시리얼을 고치면 바로 보이게) */
   if(j.kind==="install"||j.kind==="remove"){const kk=j.contract_id&&ctrById(j.contract_id);if(kk)p={...p,product:kk.product||p.product,size:kk.size||p.size,serial:kk.serial||p.serial}}const rd=rdOf(j);const vd=j.visit_date;const openJ=!["완료","취소"].includes(j.status);
   switch(col){
