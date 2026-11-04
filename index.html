@@ -3520,7 +3520,7 @@ function sortCtrList(list,gf){const S=getSort();const G=gf||(()=>0);const cache=
   const grp=true;const bo=x=>!x.b?0:x.a?0.5:x.b.includes("설치")?0:x.b.includes("결제")?1:2;
   /* 각 묶음 안에서 보류·취소 → 철거완료는 맨 뒤로 */
   const sb_=x=>{const t=x.a?"":x.k.stage;return t==="보류"||t==="취소"?1:(t==="철거완료"||t==="철거")&&!(x.b&&x.b.includes("설치"))?3:0};/* 철거예정, 당월 설치 후 철거완료는 날짜 순서대로 함께 */
-  list.sort((a,b)=>{if(G(a)!==G(b))return G(a)-G(b);if(grp&&bo(a)!==bo(b))return bo(a)-bo(b);if(sb_(a)!==sb_(b))return sb_(a)-sb_(b);for(const {c,d} of S){const A=v(a,c),B=v(b,c);const ea=A===""||A==null,eb=B===""||B==null;if(ea&&eb)continue;if(ea)return 1;if(eb)return -1;
+  list.sort((a,b)=>{if(G(a)!==G(b))return G(a)-G(b);/* 익월마감 이후 묶음은 결제 여부와 상관없이 설치일 순 */if(grp&&G(a)<2&&bo(a)!==bo(b))return bo(a)-bo(b);if(sb_(a)!==sb_(b))return sb_(a)-sb_(b);for(const {c,d} of S){const A=v(a,c),B=v(b,c);const ea=A===""||A==null,eb=B===""||B==null;if(ea&&eb)continue;if(ea)return 1;if(eb)return -1;
     const r=typeof A==="number"&&typeof B==="number"?A-B:KO.compare(String(A),String(B));if(r)return r*d}return regCmp(a.k,b.k)})}
 function sortPicker(onDone){let cur=getSort().map(x=>({...x}));
   const opts=v=>`<option value="">(없음)</option><option value="reg" ${v==="reg"?"selected":""}>접수한 순서 (등록순)</option>`+CCOLS.map(c=>`<option value="${c[0]}" ${c[0]===v?"selected":""}>${esc(c[1])}</option>`).join("");
