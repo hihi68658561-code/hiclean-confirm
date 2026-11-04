@@ -1273,6 +1273,7 @@ function renderCtrView0(){
     if(x.a){const sd=x.a.done_date||x.a.visit_date||"";return !sd?(bd&&bd>=st0&&bd<en0?1.5:2.4):sd>=en0?2.2:1.5}/* 추가설치는 당월마감 밑에 따로 · 다음 달 추가설치도 익월마감 밑에 따로 */
     /* 지난달 이전 건이지만 아직 설치·철거 전(미정·확정·철거예정) → 익월마감 묶음의 당월 미정 건들 아래 */
     if(["미정","확정","철거예정"].includes(x.k.stage)&&(!bd||bd<st0))return 2.4;
+    /* 설치가 다음 달 이후로 잡힌 미정·확정 건은 이 달에 계약금이 들어왔어도 익월마감 */if(["미정","확정"].includes(x.k.stage)&&bd&&bd>=en0)return 2;
     if((x.b||[]).includes("설치")||(x.b||[]).includes("당월 계약"))return bd&&bd>=en0?2:bd&&bd<st0?4:1;
     if((x.b||[]).some(t=>t==="예정"||t==="날짜 없음"))return 2;return 4};
   /* 익월마감 묶음: 설치일이 잡힌 건(설치일 순) · 다음 달 추가설치 · 미배정(설치일 없음)을 각각 따로 */
