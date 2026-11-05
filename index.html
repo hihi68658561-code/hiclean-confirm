@@ -2678,6 +2678,10 @@ function skLine(o,i){const L=((skPrices[o.id]||{}).lines||[])[i]||{};const it=(o
 TCFG.sk={cols:()=>[["od","발주일자"],["st","진행사항"],["ow","담당자"],["site","업체명(상호)"],["spec","품명 및 규격"],["qty","수량"],["due","입고예정"],
   ...(isOffice()?[["price","단가"],["sup","공급가액"],["vat","부가세"],["tot","합계금액"]]:[]),["in","입고일자"],["out","출고일자"],["memo","비고"],...(isOffice()?[["ded","출고가"]]:[])],sel:".wt.sk",lead:()=>1,byCls:true};
 /* 싱크대 발주 정렬: 열 제목 클릭 (오름 → 내림 → 기본). 기본은 발주일자 빠른 순 */
+/* 재고에서 쓴 품목이 있는 발주: 출고 전까지 진행사항에 '재고사용'(중고 재고면 '중고사용')으로 표시 */
+function skStLabel(o){if(!["신규접수","주문완료","입고완료"].includes(o.status))return o.status;const its=(o.items||[]).filter(it=>it.from_stock);if(!its.length)return o.status;
+  const used=its.some(it=>{const [oid,i]=String(it.from_stock).split(":");const so=(skOrders||[]).find(x=>x.id===oid);const sit=so&&(so.items||[])[+i];return /중고/.test([sit&&sit.sup,sit&&sit.note,so&&so.memo,so&&so.site_name,it.note].join(" "))});
+  return used?"중고사용":"재고사용"}
 function skSortList(list){const so=ui.sksort||{c:"od",d:1};const N=new Set(["qty","price","sup","vat","tot","ded"]);
   const key=o=>{if(so.c==="od")return o.order_date||"";if(so.c==="due")return o.due_date||"";if(so.c==="in")return o.in_date||"";if(so.c==="out")return o.out_date||"";if(so.c==="st")return SK_ST.indexOf(o.status);
     if(N.has(so.c)){const its=(o.items||[]).length?o.items:[{}];return its.reduce((a,it,i)=>{const L=skLine(o,i);return a+(so.c==="qty"?Number(it.qty||1):so.c==="price"?L.price:so.c==="sup"?L.sup:so.c==="vat"?L.vat:so.c==="tot"?L.tot:L.deduct)},0)}
@@ -2686,7 +2690,7 @@ function skSortList(list){const so=ui.sksort||{c:"od",d:1};const N=new Set(["qty
     return r*so.d||String(a.order_date||"").localeCompare(String(b.order_date||""))||String(a.created_at||"").localeCompare(String(b.created_at||""))})}
 function skHead(){const F=cfF("sk"),N=new Set(["qty","price","sup","vat","tot","ded"]);const so=ui.sksort||{c:"od",d:1};return TCFG.sk.cols().map(([k,l])=>`<th class="c-${k}${N.has(k)?" num":""} sortable" ${so.c===k?`data-sort="${so.d===1?"asc":"desc"}"`:""} data-ck="${k}">${esc(l)}<span class="fbtn${F[k]?" on":""}" data-fc="${k}" role="button" title="${esc(l)} 필터" aria-label="${esc(l)} 필터">▼</span><span class="rz" data-rz="${k}" title="끌어서 너비 조절 · 두 번 클릭하면 원래대로"></span></th>`).join("")}
 function skTxt(c,o){const E=v=>v==null||v===""||v===0?"(빈 칸)":String(v);const its=(o.items||[]).length?o.items:[{}];const per=f=>its.map((it,i)=>E(f(it,i)));
-  switch(c){case"od":return E(ymd2(o.order_date));case"st":return E(o.status);case"ow":return E(o.owner_name);case"site":return E(o.site_name);
+  switch(c){case"od":return E(ymd2(o.order_date));case"st":return E(skStLabel(o));case"ow":return E(o.owner_name);case"site":return E(o.site_name);
     case"spec":return per(it=>skStar(it.sup)||skSpec(it));case"qty":return per(it=>it.qty||1);case"due":return E(ymd2(o.due_date));
     case"price":return per((it,i)=>{const L=skLine(o,i);return L.price?won0(L.price):""});case"sup":return per((it,i)=>{const L=skLine(o,i);return L.sup?won0(L.sup):""});
     case"vat":return per((it,i)=>{const L=skLine(o,i);return L.vat?won0(L.vat):""});case"tot":return per((it,i)=>{const L=skLine(o,i);return L.tot?won0(L.tot):""});
@@ -2716,7 +2720,7 @@ async function renderSinkView(){const off=isOffice();if(!skOrders)view().innerHT
   const rows=list.map((o,oi)=>{const its=(o.items||[]).length?o.items:[{}];const n=its.length;
     return its.map((it,i)=>{const L=skLine(o,i);if(o.status!=="취소"){tot.sup+=L.sup;tot.vat+=L.vat;tot.tot+=L.tot;tot.deduct+=L.deduct}
       const head=i===0;const rs=n>1?` rowspan="${n}"`:"";
-      return `<tr data-sk="${o.id}" class="skr${oi%2?" alt":""}${o.status==="취소"?" cx":""}">${head?`<td${rs} class="skchk">${canDel(o)?`<input type="checkbox" class="sksel" data-id="${o.id}" ${ui.sksel.has(o.id)?"checked":""} aria-label="선택">`:""}</td><td${rs}${cc("od")}>${esc(ymd2(o.order_date))}</td><td${rs}${cc("st")}><span class="tag sk-${esc(o.status)}">${esc(o.status)}</span></td><td${rs}${cc("ow")}>${esc(o.owner_name)}</td><td${rs}${cc("site")}><b>${esc(o.site_name||"")}</b></td>`:""}
+      return `<tr data-sk="${o.id}" class="skr${oi%2?" alt":""}${o.status==="취소"?" cx":""}">${head?`<td${rs} class="skchk">${canDel(o)?`<input type="checkbox" class="sksel" data-id="${o.id}" ${ui.sksel.has(o.id)?"checked":""} aria-label="선택">`:""}</td><td${rs}${cc("od")}>${esc(ymd2(o.order_date))}</td><td${rs}${cc("st")}>${(()=>{const l=skStLabel(o);return l!==o.status?`<span class="tag sk-재고등록" title="진행사항: ${esc(o.status)}">${esc(l)}</span>`:`<span class="tag sk-${esc(o.status)}">${esc(o.status)}</span>`})()}</td><td${rs}${cc("ow")}>${esc(o.owner_name)}</td><td${rs}${cc("site")}><b>${esc(o.site_name||"")}</b></td>`:""}
         <td class="skspec c-spec">${it.from_stock?`<span class="tag sk-재고등록" title="재고에서 사용">재고</span> `:""}${esc(skStar(it.sup)||skSpec(it))}${it.note&&it.note!==it.sup?` <small class="mapt">(${esc(it.note)})</small>`:""}${it.in_date&&o.status!=="입고완료"&&o.status!=="출고완료"&&o.status!=="재고등록"?` <span class="tag sk-입고완료" title="${esc(it.sup||"")}">입고 ${esc(ymd2(it.in_date))}</span>`:""}</td><td class="num c-qty">${esc(it.qty||1)}</td>
         ${head?`<td${rs}${cc("due")}>${esc(ymd2(o.due_date))}</td>`:""}
         ${off?`<td class="num c-price${L.est?" skest":""}" ${L.est?'title="단가표 기준 (발주서를 저장하면 확정)"':""}>${L.price?won0(L.price):""}</td><td class="num c-sup${L.est?" skest":""}">${L.sup?won0(L.sup):""}</td><td class="num c-vat${L.est?" skest":""}">${L.vat?won0(L.vat):""}</td><td class="num c-tot${L.est?" skest":""}">${L.tot?won0(L.tot):""}</td>`:""}
