@@ -3614,7 +3614,8 @@ function contractDlg(c,k,tpl,opts){ui.payEdit=null;
   k=k||{stage:"미정",contract_type:"구매",contract_date:today(),sales3:me.role==="sales"?me.id:((c&&c.owner)||null),contract_doc:"미수령",pay_method:"",capital:{},cms:{},tax:{}};
   const ro=c?!canEditCust(c):!(isOffice()||me.role==="sales");const cap=k.capital||{},cms=k.cms||{};
   const refreshK=c2=>{const el=document.querySelector("#kf .dsum");if(el)el.outerHTML=custSummary(c2,isNew?null:k);document.getElementById("dlgH").textContent=(isNew?(tpl?"신규계약 (복사)":"신규계약"):"계약")+" · "+c2.name;
-    const s3=document.querySelector('#kf [name="sales3"]');if(s3&&!isNew&&(custContracts(c2.id)[0]||{}).id===k.id){const v=custS3(c2);if(v)s3.value=v}};
+    const s3=document.querySelector('#kf [name="sales3"]');if(s3&&!isNew&&(custContracts(c2.id)[0]||{}).id===k.id){const v=custS3(c2);if(v)s3.value=v};kMove(c2)};
+  const kMove=cc=>{if(isNew||!isOffice()||ro)return;const el=document.querySelector("#kf .dsum");if(!el||el.querySelector("#kcMove"))return;el.insertAdjacentHTML("beforeend",' <button type="button" class="btn sm" id="kcMove">고객 변경</button>');el.querySelector("#kcMove").onclick=()=>ctrMoveDlg(cc||c,k)};
   const ij=isNew?null:installOf(k);const sinkRo=ro||!isOffice()||(!isNew&&!ij);const srcJ=ij||(tpl?installOf(tpl):null);
   const pickHtml=pickM?`<label class="f">고객 검색<input id="jcQ" type="search" autocomplete="off" placeholder="업체명(상호)·대표자·전화번호·주소·시리얼"></label>
      <input type="hidden" id="jcId"><div id="jcSel"></div><div id="jcRes" class="pickres"></div>
@@ -3652,7 +3653,7 @@ function contractDlg(c,k,tpl,opts){ui.payEdit=null;
    <datalist id="s3List">${staff.filter(s=>s.active&&["admin","office","sales"].some(r=>hasRole(s,r))).map(s=>`<option value="${esc(s.name)}">${esc(ROLE[s.role])}</option>`).join("")}</datalist>
    <datalist id="stList">${staff.filter(s=>s.active).map(s=>`<option value="${esc(s.name)}">`).join("")}<option value="무료체험"></datalist>
    <datalist id="pdList">${[...new Set(contracts.map(x=>x.product).filter(Boolean))].map(x=>`<option value="${esc(x)}">`).join("")}</datalist></div>`,
-   ro?[["고객정보","gocust",()=>{openCustPopup(c,refreshK);return true}],...ctrJobBtn(c,k,isNew),["닫기"]]:[pickM?["새 고객 등록","gocust",()=>{newCustomer(null,nc=>contractDlg(nc,null));return true}]:["고객정보","gocust",()=>{if(!c)return toast("고객을 먼저 고르세요");openCustPopup(c,refreshK);return true}],...ctrJobBtn(c,k,isNew),...(!isNew&&canNewJob(c)?[["접수","",()=>{ctrIntake(c,k);return true}]]:[]),...(!isNew&&me.role!=="tech"?[["싱크대 발주","",()=>{sinkDlg(null,{c,k});return true}]]:[]),["취소"],...(!isNew?[["복사","",()=>{contractDlg(c,null,k);return true}]]:[]),...(!isNew&&isOffice()?[["양도","",()=>{transferDlg(c,k);return true}],["고객 변경","",()=>{ctrMoveDlg(c,k);return true}]]:[]),...(!isNew&&isAdmin()?[["삭제","danger",async()=>{await undoTransfers([k.id]);const {error}=await sb.from("contracts").delete().eq("id",k.id);toast(error?"삭제하지 못했습니다":"삭제했습니다");reload(["contracts","customers"])}]]:[]),["저장","pri",async()=>{
+   ro?[["고객정보","gocust",()=>{openCustPopup(c,refreshK);return true}],...ctrJobBtn(c,k,isNew),["닫기"]]:[pickM?["새 고객 등록","gocust",()=>{newCustomer(null,nc=>contractDlg(nc,null));return true}]:["고객정보","gocust",()=>{if(!c)return toast("고객을 먼저 고르세요");openCustPopup(c,refreshK);return true}],...ctrJobBtn(c,k,isNew),...(!isNew&&canNewJob(c)?[["접수","",()=>{ctrIntake(c,k);return true}]]:[]),...(!isNew&&me.role!=="tech"?[["싱크대 발주","",()=>{sinkDlg(null,{c,k});return true}]]:[]),["취소"],...(!isNew?[["복사","",()=>{contractDlg(c,null,k);return true}]]:[]),...(!isNew&&isOffice()?[["양도","",()=>{transferDlg(c,k);return true}]]:[]),...(!isNew&&isAdmin()?[["삭제","danger",async()=>{await undoTransfers([k.id]);const {error}=await sb.from("contracts").delete().eq("id",k.id);toast(error?"삭제하지 못했습니다":"삭제했습니다");reload(["contracts","customers"])}]]:[]),["저장","pri",async()=>{
      if(pickM&&!c){const cc=pool.find(x=>x.id===(document.getElementById("jcId")||{}).value);if(!cc)return toast("고객을 검색해서 목록에서 골라 주세요");c=cc}
      if(isNew){const gg=gradeOf(c);if(gg&&gg.g==="블랙"&&!(await askConfirm(`블랙(거래 중지) 고객입니다.${gg.reason?" ("+gg.reason+")":""} 계속 등록할까요?`)))return true}
      const f=fdata("kf");const n=x=>Number(f.get(x)||0)||0;
@@ -3679,6 +3680,7 @@ function contractDlg(c,k,tpl,opts){ui.payEdit=null;
     h.addEventListener("change",()=>{const cc=pool.find(x=>x.id===h.value);if(!cc)return;document.getElementById("dlgH").textContent="신규접수 · 계약 · "+cc.name;
       const s3=document.querySelector('#kf [name="sales3"]');if(s3&&!s3.value){const v=custS3(cc);if(v)s3.value=v}});
 }
+  kMove(c);
   if(intakeM)document.querySelectorAll('#kf input[name=kkind]').forEach(r=>r.onchange=()=>{if(r.value==="ctr")return;const cc=c||pool.find(x=>x.id===(document.getElementById("jcId")||{}).value)||null;jobDlg(null,cc,r.value)});
   /* 초음파·워시·부자재를 고치면 합계금액 자동 계산 */
   (()=>{const f=document.getElementById("kf");if(!f||ro)return;const q=n=>f.querySelector(`[name="${n}"]`);const parts=["amt_ultra","amt_wash","amt_parts"].map(q);const tot=q("amount");if(!tot)return;
