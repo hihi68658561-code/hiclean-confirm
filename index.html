@@ -298,6 +298,16 @@ dialog{max-width:720px}dialog .db{position:relative}
 .picked{border:1px solid var(--accent);background:var(--accent-weak);border-radius:6px;padding:8px 10px;display:flex;gap:10px;align-items:center;justify-content:space-between;flex-wrap:wrap}
 .sec{padding:16px 20px;display:grid;gap:12px;max-width:900px}
 header.top{position:relative}.tmore{display:none}.tacts{display:contents}
+.nav .nic,.nav .nls,.nav .nmore{display:none}
+@media (max-width:760px){header.top .nav{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px 4px;padding:6px 0 4px}
+.nav button{display:flex;flex-direction:column;align-items:center;gap:6px;padding:0;border:0;background:none!important;color:#3b4450;font-weight:500;font-size:12.5px;line-height:1.25;text-align:center;position:relative;min-width:0}
+.nav button .nll{display:none}.nav button .nls{display:block;word-break:keep-all}
+.nav .nic{display:flex;align-items:center;justify-content:center;width:52px;height:52px;border-radius:16px;background:#eef3f9;color:var(--accent);transition:background .15s}
+.nav .nic svg{width:24px;height:24px;stroke:currentColor;fill:none;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+.nav button.on{color:var(--accent);font-weight:700}.nav button.on .nic{background:var(--accent);color:#fff;box-shadow:0 4px 10px rgba(29,95,168,.28)}
+#nav button.ndot::after{position:absolute;top:-2px;left:calc(50% + 20px);margin:0;width:9px;height:9px;border:2px solid #fff;box-sizing:content-box}
+.nav button.nx{display:none}.nav.nopen button.nx{display:flex}
+.nav .nmore{display:block;grid-column:1/-1;text-align:center;color:var(--accent);font-size:13px;padding:10px 0 2px;border-top:1px dashed #d9e0e8;margin-top:2px;cursor:pointer}.nav .nmore small{font-size:12px;color:var(--mute)}}
 @media (max-width:760px){header.top h1{order:1}.tmore{display:inline-flex;order:2;margin-left:auto}header.top .sp{display:none}header.top .nav{order:3;width:100%}
   .tacts{display:none;order:4;position:absolute;right:max(16px,env(safe-area-inset-right,0px));top:52px;z-index:50;background:var(--panel);border:1px solid var(--line);border-radius:10px;box-shadow:0 8px 24px rgba(0,0,0,.15);padding:8px;flex-direction:column;align-items:stretch;gap:4px;min-width:180px}
   .tacts.open{display:flex}.tacts .mode{padding:6px 10px;border-bottom:1px solid var(--line);margin-bottom:4px}.tacts .btn{justify-content:flex-start;text-align:left}}
@@ -691,11 +701,19 @@ function restoreScroll(s){if(!s||s.v!==ui.view)return;const els=[...document.que
   s.els.forEach((p,i)=>{const e=els[i];if(e){e.scrollTop=p[0];e.scrollLeft=p[1]}});window.scrollTo(s.x,s.y);
   document.querySelectorAll(".hbar").forEach(b=>{const box=b.previousElementSibling;if(box)b.scrollLeft=box.scrollLeft})}
 function render(){if(ui._fresh){ui._fresh=false;render0();window.scrollTo(0,0);return}const _sv=snapScroll();try{render0()}finally{restoreScroll(_sv)}}
+const NAVI={home:'<path d="M3 11l9-7 9 7"/><path d="M5 10v10h14V10"/>',cust:'<circle cx="12" cy="8" r="4"/><path d="M4 21c1-4 4-6 8-6s7 2 8 6"/>',leads:'<ellipse cx="12" cy="5" rx="8" ry="3"/><path d="M4 5v6c0 1.7 3.6 3 8 3s8-1.3 8-3V5"/><path d="M4 11v6c0 1.7 3.6 3 8 3s8-1.3 8-3v-6"/>',
+work:'<rect x="3" y="5" width="18" height="16" rx="2"/><path d="M3 10h18M8 3v4M16 3v4"/><path d="M8 15l2 2 4-4"/>',ctrm:'<rect x="5" y="3" width="14" height="18" rx="2"/><path d="M9 8h6M9 12h6M9 16h4"/>',allm:'<path d="M4 6h16M4 12h16M4 18h16"/>',asm:'<path d="M14 7l3-3 3 3-3 3"/><path d="M17 7L7 17"/><circle cx="6" cy="18" r="2.5"/>',
+recv:'<rect x="3" y="6" width="18" height="13" rx="2"/><path d="M3 10h18"/><circle cx="16" cy="15" r="1.5"/>',sched:'<rect x="3" y="5" width="18" height="16" rx="2"/><path d="M3 10h18M8 3v4M16 3v4"/>',sink:'<path d="M3 11h18v3a5 5 0 0 1-5 5H8a5 5 0 0 1-5-5z"/><path d="M12 11V6a2 2 0 0 1 4 0"/>',
+stock:'<path d="M21 8l-9-5-9 5 9 5 9-5z"/><path d="M3 8v8l9 5 9-5V8"/><path d="M12 13v8"/>',sms:'<path d="M4 5h16v11H8l-4 4z"/>',notice:'<path d="M3 11v2a1 1 0 0 0 1 1h3l6 4V6L7 10H4a1 1 0 0 0-1 1z"/><path d="M17 9a4 4 0 0 1 0 6"/>',settings:'<circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.6 1.6 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.6 1.6 0 0 0-2.7 1.1V21a2 2 0 0 1-4 0v-.1a1.6 1.6 0 0 0-2.7-1.1l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1A1.6 1.6 0 0 0 3.5 14H3a2 2 0 0 1 0-4h.1a1.6 1.6 0 0 0 1.1-2.7l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1A1.6 1.6 0 0 0 9.7 4V3a2 2 0 0 1 4 0v.1a1.6 1.6 0 0 0 2.7 1.1l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.6 1.6 0 0 0 1.1 2.7H21a2 2 0 0 1 0 4h-.1a1.6 1.6 0 0 0-1.5 1.3z"/>'};
 function render0(){
   ui.dirty=false;
   if(me.role==="sales"&&((ui.view==="work"&&!meHas("tech"))||ui.view==="asm"))ui.view="home";
   const tabs=[["home","홈"],["cust","고객"]];if(me.role!=="tech")tabs.push(["leads","DB관리"]);if(me.role!=="sales"||meHas("tech"))tabs.push(["work","당월 설치·A/S 전체리스트"]);if(me.role!=="tech")tabs.push(["ctrm","당월리스트"],["allm","전체리스트"],...(me.role==="sales"?[]:[["asm","A/S관리"]]),["recv","미수·채권관리"]);tabs.push(["sched","담당자별 일정표"]);if(me.role!=="tech")tabs.push(["sink","싱크대발주"]);if(isOffice())tabs.push(["stock","재고관리"]);if(me.role!=="tech")tabs.push(["sms","문자"]);tabs.push(["notice","공지사항"]);if(isAdmin())tabs.push(["settings","설정"]);
-  document.getElementById("nav").innerHTML=tabs.map(([k,l])=>`<button type="button" class="${ui.view===k?"on":""}${k==="notice"&&ui.view!=="notice"&&noticeUnread()?" ndot":""}" data-v="${k}">${l}</button>`).join("");
+  const NS={home:"홈",cust:"고객조회",leads:"DB관리",work:"당월<br>설치·A/S",ctrm:"당월리스트",allm:"전체리스트",asm:"A/S관리",recv:"미수채권",sched:"일정표",sink:"싱크대발주",stock:"재고관리",sms:"문자",notice:"공지사항",settings:"설정"};
+  const NF=8,hid=tabs.slice(NF).map(t=>t[0]);if(hid.includes(ui.view))ui.navOpen=true;
+  document.getElementById("nav").className="nav"+(ui.navOpen?" nopen":"");
+  document.getElementById("nav").innerHTML=tabs.map(([k,l],i)=>`<button type="button" class="${ui.view===k?"on":""}${k==="notice"&&ui.view!=="notice"&&noticeUnread()?" ndot":""}${i>=NF?" nx":""}" data-v="${k}"><i class="nic"><svg viewBox="0 0 24 24">${NAVI[k]||""}</svg></i><span class="nll">${l}</span><span class="nls">${NS[k]||l}</span></button>`).join("")+(tabs.length>NF?`<a class="nmore" role="button">${ui.navOpen?"메뉴 접기 ▴":`전체 메뉴 ▾ <small>(나머지 ${tabs.length-NF}개)</small>`}</a>`:"");
+  const nm=document.querySelector("#nav .nmore");if(nm)nm.onclick=()=>{ui.navOpen=!ui.navOpen;render0()};
   document.querySelectorAll("#nav button").forEach(b=>b.onclick=()=>{ui.view=b.dataset.v;if(ui.view==="sched")ui.schJump=true;ui.jsel=new Set();ui._fresh=true;render()});
   if(ui.view==="install"||ui.view==="as")ui.view="work";
   if(ui.view==="home")renderHomeView();else if(ui.view==="cust")renderCustView();else if(ui.view==="work")renderWorkView();else if(ui.view==="ctrm")renderCtrView();else if(ui.view==="asm")renderAsView();else if(ui.view==="leads")renderLeadView();else if(ui.view==="recv")renderRecvView();else if(ui.view==="allm")renderAllView();else if(ui.view==="sched")renderSchedView();else if(ui.view==="sms")renderSmsView();else if(ui.view==="notice")renderNoticeView();else if(ui.view==="sink")renderSinkView();else if(ui.view==="stock")renderStockView();else if(ui.view==="staff"){ui.view="settings";ui.settab="perm";render()}else if(ui.view==="delete")renderDeleteView();else{if(ui.settab==="etc"||!isAdmin())renderSettings();else renderStaffView()}
