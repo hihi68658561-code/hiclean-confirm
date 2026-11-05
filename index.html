@@ -1931,7 +1931,7 @@ function renderLeadView0(){
       <p class="mapt" style="margin:0">접수일자 기준으로 그달 상담 건이 나옵니다. ‘다음 연락일’이 오늘이거나 지난 건은 ‘연락할 건’에 모입니다.<br>숫자를 누르면 아래 목록이 그 건들로 바뀝니다.</p></div>
      <div class="sumbox">${sumT}</div></div>
    <div class="toolbar"><input id="lQ" type="search" placeholder="업장명·대표자·연락처·주소·소속·상담내용 검색" value="${esc(ui.lq)}">
-     <div class="nav" role="group"><button type="button" id="lAll" class="${label?"":"on"}">전체</button></div><span class="mapt">${label?esc(label)+" · ":""}${list.length}건</span>
+     <div class="nav" role="group"><button type="button" id="lAll" class="${label||cfActive("lead")?"":"on"}" title="표·카드·열 필터를 모두 풀고 전체를 봅니다">전체</button></div><span class="mapt">${label?esc(label)+" · ":""}${list.length}건</span>
      <span style="flex:1"></span>${isAdmin()?`<label class="chip"><input type="checkbox" id="lSelAll">전체 선택</label><button class="btn danger" type="button" id="lDel" disabled>선택 삭제 (0)</button>`:""}
      ${cfClearBtn("lead")}<button class="btn" type="button" id="lCols">입력화면설정</button>${isOffice()?`<button class="btn" type="button" id="lImp">엑셀 가져오기</button>`:""}<button class="btn pri" type="button" id="lNew">+ 상담 등록</button></div>
    <div class="wrapx vis" style="padding-top:10px"><div class="wtbox"><table class="wt ld"><thead><tr>${isAdmin()?"<th></th>":""}<th>순번</th>${colHead(cols,"lead",new Set(["ccount"]))}</tr></thead><tbody>
@@ -1943,7 +1943,7 @@ function renderLeadView0(){
   document.getElementById("lM").onchange=e=>{if(e.target.value){ui.lm=e.target.value;re()}};
   const ln=document.getElementById("lNow");if(ln)ln.onclick=()=>{ui.lm=thisMonth();re()};
   document.getElementById("lAllP").onchange=e=>{ui.lall=e.target.checked;re()};
-  document.getElementById("lAll").onclick=()=>{ui.lrow="";ui.lsrc="";ui.lkpi="";re()};
+  document.getElementById("lAll").onclick=()=>{ui.lrow="";ui.lsrc="";ui.lkpi="";if(ui.cf)ui.cf.lead={};re()};
   view().querySelectorAll("[data-lkpi]").forEach(el=>{const go=()=>{ui.lkpi=ui.lkpi===el.dataset.lkpi?"":el.dataset.lkpi;ui.lrow="";ui.lsrc="";re()};el.onclick=go;el.onkeydown=e=>{if(e.key==="Enter"||e.key===" "){e.preventDefault();go()}}});
   document.getElementById("lCols").onclick=()=>colPicker(re,"lead");cfBind("lead",re);
   const im=document.getElementById("lImp");if(im)im.onclick=()=>document.getElementById("fileIn").click();
