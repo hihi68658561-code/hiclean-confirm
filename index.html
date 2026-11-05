@@ -298,16 +298,16 @@ dialog{max-width:720px}dialog .db{position:relative}
 .picked{border:1px solid var(--accent);background:var(--accent-weak);border-radius:6px;padding:8px 10px;display:flex;gap:10px;align-items:center;justify-content:space-between;flex-wrap:wrap}
 .sec{padding:16px 20px;display:grid;gap:12px;max-width:900px}
 header.top{position:relative}.tmore{display:none}.tacts{display:contents}
-.nav .nic,.nav .nls,.nav .nmore{display:none}
-@media (max-width:760px){header.top .nav{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px 4px;padding:6px 0 4px}
-.nav button{display:flex;flex-direction:column;align-items:center;gap:6px;padding:0;border:0;background:none!important;color:#3b4450;font-weight:500;font-size:12.5px;line-height:1.25;text-align:center;position:relative;min-width:0}
-.nav button .nll{display:none}.nav button .nls{display:block;word-break:keep-all}
-.nav .nic{display:flex;align-items:center;justify-content:center;width:52px;height:52px;border-radius:16px;background:#eef3f9;color:var(--accent);transition:background .15s}
-.nav .nic svg{width:24px;height:24px;stroke:currentColor;fill:none;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
-.nav button.on{color:var(--accent);font-weight:700}.nav button.on .nic{background:var(--accent);color:#fff;box-shadow:0 4px 10px rgba(29,95,168,.28)}
+#nav .nic,#nav .nls,#nav .nmore{display:none}
+@media (max-width:760px){header.top #nav{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px 4px;padding:6px 0 4px}
+#nav button{display:flex;flex-direction:column;align-items:center;gap:6px;padding:0;border:0;background:none!important;color:#3b4450;font-weight:500;font-size:12.5px;line-height:1.25;text-align:center;position:relative;min-width:0}
+#nav button .nll{display:none}#nav button .nls{display:block;word-break:keep-all}
+#nav .nic{display:flex;align-items:center;justify-content:center;width:52px;height:52px;border-radius:16px;background:#eef3f9;color:var(--accent);transition:background .15s}
+#nav .nic svg{width:24px;height:24px;stroke:currentColor;fill:none;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+#nav button.on{color:var(--accent);font-weight:700}#nav button.on .nic{background:var(--accent);color:#fff;box-shadow:0 4px 10px rgba(29,95,168,.28)}
 #nav button.ndot::after{position:absolute;top:-2px;left:calc(50% + 20px);margin:0;width:9px;height:9px;border:2px solid #fff;box-sizing:content-box}
-.nav button.nx{display:none}.nav.nopen button.nx{display:flex}
-.nav .nmore{display:block;grid-column:1/-1;text-align:center;color:var(--accent);font-size:13px;padding:10px 0 2px;border-top:1px dashed #d9e0e8;margin-top:2px;cursor:pointer}.nav .nmore small{font-size:12px;color:var(--mute)}}
+#nav button.nx{display:none}#nav.nopen button.nx{display:flex}
+#nav .nmore{display:block;grid-column:1/-1;text-align:center;color:var(--accent);font-size:13px;padding:10px 0 2px;border-top:1px dashed #d9e0e8;margin-top:2px;cursor:pointer}#nav .nmore small{font-size:12px;color:var(--mute)}}
 @media (max-width:760px){header.top h1{order:1}.tmore{display:inline-flex;order:2;margin-left:auto}header.top .sp{display:none}header.top .nav{order:3;width:100%}
   .tacts{display:none;order:4;position:absolute;right:max(16px,env(safe-area-inset-right,0px));top:52px;z-index:50;background:var(--panel);border:1px solid var(--line);border-radius:10px;box-shadow:0 8px 24px rgba(0,0,0,.15);padding:8px;flex-direction:column;align-items:stretch;gap:4px;min-width:180px}
   .tacts.open{display:flex}.tacts .mode{padding:6px 10px;border-bottom:1px solid var(--line);margin-bottom:4px}.tacts .btn{justify-content:flex-start;text-align:left}}
@@ -394,7 +394,6 @@ header.top{position:relative}.tmore{display:none}.tacts{display:contents}
     <div class="tacts" id="tacts">
     <span class="mode" id="modeLabel"></span>
     <button class="btn" id="bImport" hidden>엑셀 이관</button>
-    <button class="btn ghost" id="bBlank">빈 확인서</button>
     <button class="btn ghost" id="bPw" hidden>비밀번호 변경</button>
     <button class="btn ghost" id="bLogout" hidden>로그아웃</button>
     </div>
@@ -4114,7 +4113,7 @@ function instTxt(c){const i=jobs.filter(x=>x.customer_id===c.id&&x.kind==="insta
 function installDate(cid){const i=jobs.filter(x=>x.customer_id===cid&&x.kind==="install"&&x.status!=="취소").sort((a,b)=>(b.done_date||"").localeCompare(a.done_date||""))[0];return i?(i.done_date||i.visit_date||""):transInst(cid)}
 async function doPrint(html){const pr=document.getElementById("printRoot");pr.innerHTML=html;const imgs=[...pr.querySelectorAll("img")];await Promise.all(imgs.map(i=>i.complete?1:new Promise(z=>{i.onload=i.onerror=z})));window.print()}
 window.addEventListener("afterprint",()=>{document.getElementById("printRoot").innerHTML=""});
-document.getElementById("bBlank").onclick=()=>openDlg("빈 확인서 인쇄",`<p>손으로 적을 빈 양식을 인쇄합니다.</p>`,[["닫기"],["설치확인서","",()=>doPrint(sheetIS({},{}))],["A/S 확인서","pri",()=>doPrint(sheetAS({},{}))]]);
+function blankDlg(){openDlg("빈 확인서 인쇄",`<p>손으로 적을 빈 양식을 인쇄합니다.</p>`,[["닫기"],["설치확인서","",()=>doPrint(sheetIS({},{}))],["A/S 확인서","pri",()=>doPrint(sheetAS({},{}))]])}
 
 /* ================= 확인서 (기존 기능 유지) ================= */
 function renderConf(c){
@@ -4211,7 +4210,8 @@ function renderDeleteView(){
 
 /* ================= 설정 (관리자) ================= */
 function renderSettings(){
-  view().innerHTML=`<div class="sec"><fieldset><legend>확인서 설정</legend><label class="f">입금계좌 안내 문구<input id="sBank" value="${esc(S.bank)}"></label><div class="actions"><button class="btn pri" id="bSaveSet" type="button">저장</button></div></fieldset></div>`;
+  view().innerHTML=`<div class="sec"><fieldset><legend>확인서 설정</legend><label class="f">입금계좌 안내 문구<input id="sBank" value="${esc(S.bank)}"></label><div class="actions"><button class="btn pri" id="bSaveSet" type="button">저장</button></div></fieldset><fieldset><legend>빈 확인서</legend><p class="mapt" style="margin:0 0 8px">손으로 적을 빈 설치확인서 · A/S 확인서 양식을 인쇄합니다.</p><div class="actions" style="justify-content:flex-start"><button class="btn" type="button" id="bBlankIS">설치확인서 인쇄</button><button class="btn" type="button" id="bBlankAS">A/S 확인서 인쇄</button></div></fieldset></div>`;
+  document.getElementById("bBlankIS").onclick=()=>doPrint(sheetIS({},{}));document.getElementById("bBlankAS").onclick=()=>doPrint(sheetAS({},{}));
   document.getElementById("bSaveSet").onclick=async()=>{const b=val("sBank").trim();if(!b)return;const {error}=await sb.from("settings").update({bank:b}).eq("id",1);if(error)return toast("저장하지 못했습니다");S.bank=b;toast("저장했습니다")};
 }
 
