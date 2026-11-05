@@ -299,6 +299,16 @@ dialog{max-width:720px}dialog .db{position:relative}
 .sec{padding:16px 20px;display:grid;gap:12px;max-width:900px}
 header.top{position:relative}.tmore{display:none}.tacts{display:contents}
 #nav .nic,#nav .nls,#nav .nmore{display:none}
+@media (min-width:761px){header.top{padding-bottom:0;row-gap:8px}header.top h1{order:1}header.top .sp{order:2}header.top .tacts>*{order:3}
+header.top #nav{order:4;flex:0 0 auto;width:calc(100% + 2*max(16px,env(safe-area-inset-left,0px)));margin:0 calc(-1*max(16px,env(safe-area-inset-left,0px))) -1px;background:#ebedf0;border-top:1px solid #e1e4e8;padding:6px 12px 0;gap:0;flex-wrap:wrap;align-items:flex-end}
+#nav button{position:relative;border:0;border-radius:8px 8px 0 0;background:none;padding:9px 14px 10px;color:#4b5563;font-weight:500;font-size:13.5px;display:inline-flex;align-items:center;gap:6px;white-space:nowrap}
+#nav button:not(.on)::before{content:"";position:absolute;right:0;top:11px;bottom:11px;width:1px;background:#cfd3d9}
+#nav button:last-of-type::before,#nav button:has(+ button.on)::before{display:none}
+#nav button:not(.on):hover{background:#e1e4e8}
+#nav button.on{background:var(--panel);color:#1b2430;font-weight:700;border-top:3px solid #156fec;padding-top:7px;box-shadow:1px 0 0 #dfe2e6,-1px 0 0 #dfe2e6;z-index:1}
+#nav button.on .nic{display:inline-flex;color:#156fec}#nav button.on .nic svg{width:15px;height:15px;stroke:currentColor;fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+#nav button.ndot::after{margin-left:0;align-self:flex-start;margin-top:2px;width:6px;height:6px}}
+
 @media (max-width:760px){header.top #nav{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px 4px;padding:6px 0 4px}
 #nav button{display:flex;flex-direction:column;align-items:center;gap:6px;padding:0;border:0;background:none!important;color:#3b4450;font-weight:500;font-size:12.5px;line-height:1.25;text-align:center;position:relative;min-width:0}
 #nav button .nll{display:none}#nav button .nls{display:block;word-break:keep-all}
@@ -707,7 +717,7 @@ stock:'<path d="M21 8l-9-5-9 5 9 5 9-5z"/><path d="M3 8v8l9 5 9-5V8"/><path d="M
 function render0(){
   ui.dirty=false;
   if(me.role==="sales"&&((ui.view==="work"&&!meHas("tech"))||ui.view==="asm"))ui.view="home";
-  const tabs=[["home","홈"],["cust","고객"]];if(me.role!=="tech")tabs.push(["leads","DB관리"]);if(me.role!=="sales"||meHas("tech"))tabs.push(["work","당월 설치·A/S 전체리스트"]);if(me.role!=="tech")tabs.push(["ctrm","당월리스트"],["allm","전체리스트"],...(me.role==="sales"?[]:[["asm","A/S관리"]]),["recv","미수·채권관리"]);tabs.push(["sched","담당자별 일정표"]);if(me.role!=="tech")tabs.push(["sink","싱크대발주"]);if(isOffice())tabs.push(["stock","재고관리"]);if(me.role!=="tech")tabs.push(["sms","문자"]);tabs.push(["notice","공지사항"]);if(isAdmin())tabs.push(["settings","설정"]);
+  const tabs=[["home","홈"],["cust","고객조회"]];if(me.role!=="tech")tabs.push(["leads","DB관리"]);if(me.role!=="sales"||meHas("tech"))tabs.push(["work","당월 설치·A/S 전체리스트"]);if(me.role!=="tech")tabs.push(["ctrm","당월리스트"],["allm","전체리스트"],...(me.role==="sales"?[]:[["asm","A/S관리"]]),["recv","미수·채권관리"]);tabs.push(["sched","담당자별 일정표"]);if(me.role!=="tech")tabs.push(["sink","싱크대발주"]);if(isOffice())tabs.push(["stock","재고관리"]);if(me.role!=="tech")tabs.push(["sms","문자"]);tabs.push(["notice","공지사항"]);if(isAdmin())tabs.push(["settings","설정"]);
   const NS={home:"홈",cust:"고객조회",leads:"DB관리",work:"당월<br>설치·A/S",ctrm:"당월리스트",allm:"전체리스트",asm:"A/S관리",recv:"미수채권",sched:"일정표",sink:"싱크대발주",stock:"재고관리",sms:"문자",notice:"공지사항",settings:"설정"};
   const NF=8,hid=tabs.slice(NF).map(t=>t[0]);if(hid.includes(ui.view))ui.navOpen=true;
   document.getElementById("nav").className="nav"+(ui.navOpen?" nopen":"");
