@@ -586,7 +586,7 @@ const DOCS=["미수령","사진","원본","전자서명"];
 const SINKS=["해당없음","발주대기","발주완료","중고사용","재고사용","기타"];
 const JST=["접수","배정","보류","완료","취소"];
 const KINDS=["as","install","remove","addon","move","etc"];
-let sb=null, me=null, staff=[], customers=[], contracts=[], jobs=[], payments=[], files=[], grades=[];
+let sb=null, me=null, staff=[], customers=[], contracts=[], jobs=[], payments=[], jpays=[], files=[], grades=[];
 let ui={view:"home", sel:null, ctab:"info", q:"", stage:"", ctype:"", jscope:"mine", jkind:"", jpay:"", jview:"card", dkind:"as", dq:"", dsel:new Set(), jsel:new Set(), jst:"open", jq:"", draft:null, conf:null};
 const isAdmin=()=>me&&me.role==="admin", isOffice=()=>me&&(me.role==="admin"||me.role==="office");
 /* 고객 찾기: 색인(Map) 사용 */
@@ -665,28 +665,29 @@ async function incFetch(tb,cur,full,withCount){const since=maxUpd(cur);if(!cur.l
 async function loadAll(){
   view().innerHTML=`<div class="empty"><h2>불러오는 중…</h2></div>`;
   try{
-    [staff,customers,contracts,jobs,payments,files,grades,notes,leads,rcases,rlogs]=await Promise.all([fetchAll("staff"),fetchAll("customers"),fetchCtr(),fetchAll("jobs"),fetchPays(),fetchFiles(),fetchGrades(),fetchNotes(),fetchLeads(),fetchRCases(),fetchRLogs()]);
+    [staff,customers,contracts,jobs,payments,jpays,files,grades,notes,leads,rcases,rlogs]=await Promise.all([fetchAll("staff"),fetchAll("customers"),fetchCtr(),fetchAll("jobs"),fetchPays(),fetchJPays(),fetchFiles(),fetchGrades(),fetchNotes(),fetchLeads(),fetchRCases(),fetchRLogs()]);
     const st=await sb.from("settings").select("bank").eq("id",1).maybeSingle();if(st.data&&st.data.bank)S.bank=st.data.bank;
   }catch(e){view().innerHTML=`<div class="empty"><h2>데이터를 불러오지 못했습니다</h2><p>${esc(e.message||"")}</p><p>1단계 데이터베이스 설정(phase1.sql)을 실행했는지 확인해 주세요.</p></div>`;return}
   if(ui.sel&&!custById(ui.sel))ui.sel=null;
   buildIdx();render();checkNoticeNew();
 }
 async function fetchPays(){if(me&&me.role==="tech")return[];try{const r=await fetchAll("payments");ui.noPay=false;return r}catch(e){ui.noPay=true;return[]}}
+async function fetchJPays(){try{const r=await fetchAll("job_payments");ui.noJPay=false;return r}catch(e){ui.noJPay=true;return[]}}
 async function fetchFiles(){try{const r=await fetchAll("customer_files");ui.noFiles=false;return r}catch(e){ui.noFiles=true;return[]}}
 async function fetchGrades(){if(me&&me.role==="tech")return[];try{const r=await fetchAll("customer_grades");ui.noGrades=false;return r}catch(e){ui.noGrades=true;return[]}}
-const TBL={recv:fetchRCases,rlogs:fetchRLogs,leads:fetchLeads,notes:fetchNotes,grades:fetchGrades,files:fetchFiles,payments:fetchPays,customers:()=>fetchAll("customers"),contracts:fetchCtr,jobs:()=>fetchAll("jobs"),staff:()=>fetchAll("staff")};
+const TBL={recv:fetchRCases,rlogs:fetchRLogs,leads:fetchLeads,notes:fetchNotes,grades:fetchGrades,files:fetchFiles,payments:fetchPays,jpays:fetchJPays,customers:()=>fetchAll("customers"),contracts:fetchCtr,jobs:()=>fetchAll("jobs"),staff:()=>fetchAll("staff")};
 let reloadSeq=0;
 async function reload(tables,quiet){
   const seq=++reloadSeq;let res;
-  const INC={customers:()=>customers,contracts:()=>contracts,jobs:()=>jobs,payments:()=>(me.role==="tech"||ui.noPay)?null:payments,leads:()=>(me.role==="tech"||ui.noLeads)?null:leads};
+  const INC={customers:()=>customers,contracts:()=>contracts,jobs:()=>jobs,payments:()=>(me.role==="tech"||ui.noPay)?null:payments,jpays:()=>ui.noJPay?null:jpays,leads:()=>(me.role==="tech"||ui.noLeads)?null:leads};
   const chg=[];ui.rtick=(ui.rtick||0)+1;const forceFull=quiet&&ui.rtick%10===0;
-  try{res=await Promise.all(tables.map(async(t,i)=>{const cur=!forceFull&&INC[t]&&INC[t]();if(cur){const r=await incFetch(t,cur,TBL[t],!quiet);chg[i]=r.changed;return r.rows}
-    const d=await TBL[t]();const old={customers,contracts,jobs,staff,payments,files,grades,notes,leads,recv:rcases,rlogs}[t];chg[i]=JSON.stringify(old)!==JSON.stringify(d);return d}))}
+  try{res=await Promise.all(tables.map(async(t,i)=>{const cur=!forceFull&&INC[t]&&INC[t]();if(cur){const r=await incFetch(({jpays:"job_payments"})[t]||t,cur,TBL[t],!quiet);chg[i]=r.changed;return r.rows}
+    const d=await TBL[t]();const old={customers,contracts,jobs,staff,payments,jpays,files,grades,notes,leads,recv:rcases,rlogs}[t];chg[i]=JSON.stringify(old)!==JSON.stringify(d);return d}))}
   catch(e){if(!quiet)toast("최신 내용을 불러오지 못했습니다. 인터넷 연결을 확인해 주세요.");return false}
   if(seq!==reloadSeq&&quiet)return false;
   let changed=chg.some(Boolean);
   tables.forEach((t,i)=>{const d=res[i];
-    if(t==="customers")customers=d;if(t==="contracts")contracts=d;if(t==="jobs")jobs=d;if(t==="staff")staff=d;if(t==="payments")payments=d;if(t==="files")files=d;if(t==="grades")grades=d;if(t==="notes")notes=d;if(t==="leads")leads=d;if(t==="recv")rcases=d;if(t==="rlogs")rlogs=d});
+    if(t==="customers")customers=d;if(t==="contracts")contracts=d;if(t==="jobs")jobs=d;if(t==="staff")staff=d;if(t==="payments")payments=d;if(t==="jpays")jpays=d;if(t==="files")files=d;if(t==="grades")grades=d;if(t==="notes")notes=d;if(t==="leads")leads=d;if(t==="recv")rcases=d;if(t==="rlogs")rlogs=d});
   if(tables.includes("staff")&&me){const s=staff.find(x=>x.user_id===me.id);if(s){me.name=s.name;me.role=s.role;document.getElementById("modeLabel").textContent=`${me.name||me.email} · ${ROLE[me.role]}`}}
   if(ui.sel&&!custById(ui.sel))ui.sel=null;
   buildIdx();if(!quiet||changed)render();return true;
@@ -695,7 +696,7 @@ async function reload(tables,quiet){
 function bgRefresh(){
   if(!me||!me.role||document.hidden||ui.dirty||document.getElementById("dlg").open)return;
   const a=document.activeElement;if(a&&a.closest&&a.closest("#view form,#view .stafft,#view fieldset"))return;
-  reload(["customers","contracts","jobs","staff","payments","files","grades","notes","leads","recv","rlogs"],true);
+  reload(["customers","contracts","jobs","staff","payments","jpays","files","grades","notes","leads","recv","rlogs"],true);
 }
 setInterval(bgRefresh,30000);
 window.addEventListener("focus",bgRefresh);
@@ -731,7 +732,7 @@ function render0(){
 
 /* ================= 고객 ================= */
 let ctrIdx={},jobIdx={};
-function buildIdx(){instIdx=null;buildPayIdx();buildFileIdx();const cm=new Map(customers.map(c=>[c.id,c]));jobs.forEach(j=>{const c=cm.get(j.customer_id);if(c){j.customer_name=c.name;if(c.address)j.address=c.address}});ctrIdx={};jobIdx={};contracts.forEach(k=>(ctrIdx[k.customer_id]=ctrIdx[k.customer_id]||[]).push(k));jobs.forEach(j=>(jobIdx[j.customer_id]=jobIdx[j.customer_id]||[]).push(j));
+function buildIdx(){instIdx=null;buildPayIdx();buildJPayIdx();buildFileIdx();const cm=new Map(customers.map(c=>[c.id,c]));jobs.forEach(j=>{const c=cm.get(j.customer_id);if(c){j.customer_name=c.name;if(c.address)j.address=c.address}});ctrIdx={};jobIdx={};contracts.forEach(k=>(ctrIdx[k.customer_id]=ctrIdx[k.customer_id]||[]).push(k));jobs.forEach(j=>(jobIdx[j.customer_id]=jobIdx[j.customer_id]||[]).push(j));
   Object.values(ctrIdx).forEach(a=>a.sort((a,b)=>(b.contract_date||"").localeCompare(a.contract_date||"")));Object.values(jobIdx).forEach(a=>a.sort((a,b)=>(b.visit_date||b.request_date||"").localeCompare(a.visit_date||a.request_date||"")))}
 function custContracts(id){return ctrIdx[id]||[]}
 function custJobs(id){return jobIdx[id]||[]}
@@ -1086,7 +1087,22 @@ const CHKV=["OK","임시코드","기존고객","소매마감","소매매출","�
 let payIdx={};
 function buildPayIdx(){payIdx={};payments.forEach(p=>(payIdx[p.contract_id]=payIdx[p.contract_id]||[]).push(p));Object.values(payIdx).forEach(a=>a.sort((x,y)=>(x.pay_date||"").localeCompare(y.pay_date||"")))}
 function paysOf(k){return payIdx[k.id]||[]}
-function payStat(k){if(k.__job){const j=k.__job;const c_=Number(j.cost||0);const pd=j.pay_status==="완료"?c_:0;const card=j.pay_method==="카드"?pd:0;return{card,other:pd-card,paid:pd,last:pd?(j.pay_date||""):"",unpaid:c_-pd,n:pd?1:0}}
+/* A/S·추가설치 입금 내역 (job_payments) */
+const JPMETH=["카드","현금","계좌이체","승인취소"];const jpCard=m=>m==="카드"||m==="승인취소";
+let jpIdx={};function buildJPayIdx(){jpIdx={};(jpays||[]).forEach(p=>(jpIdx[p.job_id]=jpIdx[p.job_id]||[]).push(p));Object.values(jpIdx).forEach(a=>a.sort((x,y)=>(x.pay_date||"").localeCompare(y.pay_date||"")||String(x.created_at||"").localeCompare(String(y.created_at||""))))}
+function jpaysOf(j){return (j&&j.id&&jpIdx[j.id])||[]}
+/* 입금 내역이 없는 예전 건은 납부 여부·청구방법·입금일 칸으로 한 줄을 만든다 */
+function asLegacyRow(j){const c=Number(j.cost||0);const pd=j.pay_status==="완료"||(j.pay_date&&j.pay_status!=="미수");return pd&&c?{legacy:true,pay_date:j.pay_date||null,method:j.pay_method==="카드"?"카드":"현금",payer:j.pay_name||"",amount:c,memo:"기존 기록"}:null}
+function asPayRows(j){const r=jpaysOf(j);if(r.length)return r;const l=asLegacyRow(j);return l?[l]:[]}
+function asPay(j){const rows=asPayRows(j);const c=Number(j.cost||0);let paid=0,card=0;rows.forEach(p=>{const a=Number(p.amount||0);paid+=a;if(jpCard(p.method))card+=a});
+  const last=rows.filter(p=>Number(p.amount||0)>0).map(p=>p.pay_date||"").filter(Boolean).sort().pop()||"";const hasRows=jpaysOf(j).length>0;
+  const unpaid=j.status==="취소"||j.paid_type==="무상"?0:hasRows?Math.max(0,c-paid):(j.pay_status==="미수"?c:0);
+  return{rows,paid,card,cash:paid-card,unpaid,last,hasRows}}
+/* 입금 내역 → 납부 여부·청구방법·입금일·카드사(입금자) */
+function jpDerive(rows,cost,cur){let paid=0,card=0,cash=0;const names=[];rows.forEach(p=>{const a=Number(p.amount||0);paid+=a;if(jpCard(p.method))card+=a;else cash+=a;if(p.payer&&!names.includes(p.payer))names.push(p.payer)});
+  const last=rows.filter(p=>Number(p.amount||0)>0).map(p=>p.pay_date||"").filter(Boolean).sort().pop()||null;
+  return{pay_status:cost>0?(paid>=cost?"완료":"미수"):(paid>0?"완료":cur||""),pay_method:card>0&&cash>0?"카드+현금":card>0?"카드":cash>0?"현금":"",pay_date:last,pay_name:names.join(", ")}}
+function payStat(k){if(k.__job){const j=k.__job;const c_=Number(j.cost||0);const p=asPay(j);return{card:p.card,other:p.cash,paid:p.paid,last:p.last,unpaid:c_-p.paid,n:p.rows.length}}
   const ps=paysOf(k);let card=0,other=0,last="";ps.forEach(p=>{const a=Number(p.amount||0);if(p.method==="카드")card+=a;else other+=a;if(p.pay_date&&p.pay_date>last)last=p.pay_date});
   const paid=card+other;return{card,other,paid,last,unpaid:Number(k.amount||0)-paid,n:ps.length}}
 function monthRange(ym){const [y,m]=ym.split("-").map(Number);return[ym+"-01",(m===12?(y+1)+"-01":y+"-"+String(m+1).padStart(2,"0"))+"-01"]}
@@ -1489,8 +1505,7 @@ let _instMap=null;
 function asProd(j){const p=j.product||{};if(p.product||p.size||p.serial)return p;const k=ctrById(j.contract_id)||custContracts(j.customer_id)[0];return k?Object.assign({},p,{product:k.product||"",size:k.size||"",serial:k.serial||""}):p}
 function asInstDate(j){if(!_instMap){_instMap={};jobs.forEach(x=>{if(x.kind!=="install"||x.status==="취소")return;const d=x.done_date||x.visit_date||"";if(d&&(!_instMap[x.customer_id]||d>_instMap[x.customer_id]))_instMap[x.customer_id]=d})}
   return (j.product||{}).install_date||_instMap[j.customer_id]||transInst(j.customer_id)||""}
-function asMoney(j){const c=Number(j.cost||0);const pay=j.pay_status==="완료"||(j.pay_date&&j.pay_status!=="미수");const card=j.pay_method==="카드";
-  return{cost:c,card:pay&&card?c:0,cash:pay&&!card?c:0,unpaid:j.pay_status==="미수"?c:0}}
+function asMoney(j){const p=asPay(j);return{cost:Number(j.cost||0),card:p.card,cash:p.cash,unpaid:p.unpaid}}
 const ACOLS=[
  ["basis","접수월",1],["rdate","접수일자",1],["kind","구분",1],["name","업체명(상호)",1],["ceo","대표자",0],["phone","전화번호",1],["addr","주소",1],["symptom","접수내용",1],["result","내용",1],
  ["visit","예정일",1],["wday","요일",1],["time","시간",0],["status","처리현황",1],["done","완료일",0],["idate","설치일",1],["product","제품",1],["size","규격",1],["serial","시리얼",1],["parts","교체부품",1],
@@ -1575,12 +1590,12 @@ function renderAsView0(){
   all.forEach(j=>{const b=[];
     if(inM(j.request_date))b.push("접수");
     if(inM(j.done_date))b.push("처리");
-    if(inM(j.pay_date))b.push("입금");
+    if(asPayRows(j).some(p=>inM(p.pay_date)))b.push("입금");
     if(!b.length&&(j.request_date||"")<st0){if(["접수","배정","보류"].includes(j.status))b.push("미처리");else if(j.pay_status==="미수"&&j.status!=="취소")b.push("미수")}
     if(b.length)rows.push({j,c:custById(j.customer_id)||{},m:asMoney(j),b})});
   const mR=all.filter(j=>inM(j.request_date));
-  const mP=all.filter(j=>inM(j.pay_date)&&j.pay_status!=="미수"&&j.status!=="취소");const mCard=mP.filter(j=>j.pay_method==="카드").reduce((a,j)=>a+Number(j.cost||0),0),mCash=mP.filter(j=>j.pay_method!=="카드").reduce((a,j)=>a+Number(j.cost||0),0);
-  const un=all.filter(j=>j.pay_status==="미수"&&j.status!=="취소");const unSum=un.reduce((a,j)=>a+Number(j.cost||0),0);
+  const mP=all.filter(j=>j.status!=="취소"&&asPayRows(j).some(p=>inM(p.pay_date)));let mCard=0,mCash=0;mP.forEach(j=>asPayRows(j).forEach(p=>{if(!inM(p.pay_date))return;const a=Number(p.amount||0);if(jpCard(p.method))mCard+=a;else mCash+=a}));
+  const un=all.filter(j=>j.pay_status==="미수"&&j.status!=="취소");const unSum=un.reduce((a,j)=>a+asPay(j).unpaid,0);
   const op=all.filter(j=>["접수","배정","보류"].includes(j.status));
   const KPI={rcv:["당월 접수",mR],pay:["당월 입금",mP],unpaid:["미수",un],open:["미처리",op]};
   const src=ui.akpi&&KPI[ui.akpi]?KPI[ui.akpi][1].map(j=>({j,c:custById(j.customer_id)||{},m:asMoney(j),b:[KPI[ui.akpi][0]==="당월 접수"?"접수":KPI[ui.akpi][0]==="당월 입금"?"입금":KPI[ui.akpi][0]]})):rows;
@@ -2088,8 +2103,8 @@ function recvItems(){const out=[];const byRef=new Map(rcases.filter(c=>c.ref_id)
     const ij=installOf(k);const idate=(ij&&(ij.done_date||ij.visit_date))||k.contract_date||"";
     out.push({t:"ctr",id:k.id,k,ij,c:custById(k.customer_id)||{},amount:Number(k.amount||0),card:s.card,cash:s.other,paid:s.paid,unpaid:Math.max(0,s.unpaid),last:s.last,idate,cs,open})});
   /* A/S·이전설치 미수는 A/S관리에서 관리 → 채권 목록에는 추가설치만 */
-  jobs.forEach(j=>{if(j.kind!=="addon")return;const cs=byRef.get("as|"+j.id)||null;const open=j.pay_status==="미수"&&j.status!=="취소"&&Number(j.cost||0)>0;if(!open&&!cs)return;
-    const p=open?0:Number(j.cost||0);out.push({t:"as",id:j.id,j,c:custById(j.customer_id)||{},amount:Number(j.cost||0),card:j.pay_method==="카드"?p:0,cash:j.pay_method==="카드"?0:p,paid:p,unpaid:open?Number(j.cost||0):0,last:j.pay_date||"",idate:j.done_date||j.visit_date||j.request_date||"",cs,open})});
+  jobs.forEach(j=>{if(j.kind!=="addon")return;const cs=byRef.get("as|"+j.id)||null;const ap=asPay(j);const open=j.pay_status==="미수"&&j.status!=="취소"&&ap.unpaid>0;if(!open&&!cs)return;
+    out.push({t:"as",id:j.id,j,c:custById(j.customer_id)||{},amount:Number(j.cost||0),card:ap.card,cash:ap.cash,paid:ap.paid,unpaid:open?ap.unpaid:0,last:ap.last||j.pay_date||"",idate:j.done_date||j.visit_date||j.request_date||"",cs,open})});
   rcases.filter(c=>c.ref_type==="etc").forEach(cs=>{const L=ledgerOf(cs);const add=L.reduce((a,x)=>a+Number(x.add||0),0)||Number(cs.amount||0);const paid=L.reduce((a,x)=>a+Number(x.pay||0),0);
     const last=L.filter(x=>Number(x.pay||0)>0).map(x=>x.d).filter(Boolean).sort().pop()||"";const c=(cs.customer_id&&custById(cs.customer_id))||{name:cs.title};
     out.push({t:"etc",id:cs.id,c,amount:add,card:0,cash:paid,paid,unpaid:Math.max(0,add-paid),last,idate:cs.issue_date||"",cs,open:add-paid>0})});
@@ -2254,7 +2269,7 @@ function recvDlg(x){const cs=x.cs||{stage:"정상관리",transfer:{}};const off=
    <table class="stafft"><thead><tr><th>날짜</th><th>내역</th><th class="num">채권발생</th><th class="num">입금액</th><th class="num">미수금</th>${ledEd?"<th></th>":""}</tr></thead><tbody>
     ${L.map((r,i)=>ui.lgEdit===lgKey(i)&&x.t==="etc"&&off?`<tr class="pedit"><td><input type="date" id="leD" value="${esc(r.d||"")}"></td><td><input id="leT" value="${esc(r.t)}"></td><td><input type="number" id="leA" value="${r.add||""}" style="text-align:right"></td><td><input type="number" id="leP" value="${r.pay||""}" style="text-align:right"></td><td></td><td style="white-space:nowrap"><button type="button" class="btn sm pri" id="leSave">저장</button> <button type="button" class="btn sm" id="leNo">닫기</button></td></tr>`
       :`<tr><td>${esc(r.d||"")}</td><td>${esc(r.t)}</td><td class="num">${r.add?won0(r.add):""}</td><td class="num">${r.pay?won0(r.pay):""}</td><td class="num">${won0(r.bal)}</td>${ledEd?`<td style="white-space:nowrap">${x.t==="ctr"?(r.pid?`<button type="button" class="btn sm" data-lpe="${r.pid}">수정</button>`:""):`<button type="button" class="btn sm" data-lge="${i}">수정</button> <button type="button" class="btn sm danger" data-lgx="${i}">삭제</button>`}</td>`:""}</tr>`).join("")||`<tr><td colspan="5" class="mapt">내역이 없습니다.</td></tr>`}</tbody></table>
-   ${x.t==="ctr"?`<details id="payDet"><summary class="mapt" style="cursor:pointer">입금 추가</summary><div id="paySec"></div></details>`:x.t==="as"?`<p class="mapt" style="margin:0">A/S 입금은 A/S 창에서 납부 여부를 ‘완료’로 바꾸면 회수완료가 됩니다. <button type="button" class="btn sm" id="rOpenJob">A/S 창 열기</button></p>`
+   ${x.t==="ctr"?`<details id="payDet"><summary class="mapt" style="cursor:pointer">입금 추가</summary><div id="paySec"></div></details>`:x.t==="as"?`<p class="mapt" style="margin:0">입금은 A/S 창의 ‘입금 내역’에 넣으면 됩니다. 다 받으면 회수완료가 됩니다. <button type="button" class="btn sm" id="rOpenJob">A/S 창 열기</button></p>`
      :off?`<div class="payadd"><input type="date" id="lgD" value="${today()}" aria-label="날짜"><input id="lgT" placeholder="내역 (예: 현금 입금)" aria-label="내역"><input type="number" id="lgA" placeholder="채권발생" aria-label="채권발생"><input type="number" id="lgP" placeholder="입금액" aria-label="입금액"><button type="button" class="btn" id="lgAdd">내역 추가</button></div>`:""}
    <h3 class="ksec">3. 채권관리이력</h3>
    <div class="rlrow"><label class="f">날짜<input type="date" id="rlD" value="${today()}"></label>
@@ -3603,6 +3618,7 @@ function ctrMoveDlg(c,k){openDlg(`계약 고객 변경 · ${esc(c.name)}`,`<div 
      const steps=[sb.from("contracts").update({customer_id:nc.id}).eq("id",k.id),
        ...(js.length?[sb.from("jobs").update({customer_id:nc.id,customer_name:nc.name,address:nc.address||""}).eq("contract_id",k.id)]:[]),
        sb.from("payments").update({customer_id:nc.id}).eq("contract_id",k.id),
+       ...(js.length?[sb.from("job_payments").update({customer_id:nc.id}).in("job_id",js.map(x=>x.id))]:[]),
        sb.from("sink_orders").update({customer_id:nc.id,site_name:nc.name}).eq("contract_id",k.id),
        sb.from("recv_cases").update({customer_id:nc.id}).eq("ref_type","ctr").eq("ref_id",k.id)];
      for(const st of steps){const {error}=await st;if(error&&!/relation|does not exist|schema cache/.test(error.message)){toast("옮기지 못했습니다: "+error.message);return true}}
@@ -3896,14 +3912,12 @@ function renderWorkView0(){
 }
 function payTable(list){
   const rows=list.slice(0,500);
-  const sumCard=rows.filter(j=>j.pay_method==="카드"&&j.pay_status==="완료").reduce((a,j)=>a+Number(j.cost||0),0);
-  const sumCash=rows.filter(j=>j.pay_method!=="카드"&&j.pay_status==="완료").reduce((a,j)=>a+Number(j.cost||0),0);
-  const sumUn=rows.filter(j=>j.pay_status==="미수").reduce((a,j)=>a+Number(j.cost||0),0);
+  const PM=new Map(rows.map(j=>[j.id,asPay(j)]));const sumCard=rows.reduce((a,j)=>a+PM.get(j.id).card,0),sumCash=rows.reduce((a,j)=>a+PM.get(j.id).cash,0),sumUn=rows.reduce((a,j)=>a+PM.get(j.id).unpaid,0);
   return `<div class="wrapx" style="padding-top:12px"><table class="stafft paytable"><thead><tr>${isAdmin()?`<th style="width:30px"></th>`:""}<th>결제수단</th><th>유상</th><th>결제일</th><th>카드사·입금자</th><th style="text-align:right">카드</th><th style="text-align:right">현금·입금</th><th>업체명(상호)</th><th>메모</th><th>상태</th></tr></thead><tbody>
-   ${rows.map(j=>{const amt=won0(j.cost);const card=j.pay_method==="카드";return `<tr data-j="${j.id}" style="cursor:pointer">${isAdmin()?`<td><input type="checkbox" class="jsel" data-js="${j.id}" ${ui.jsel.has(j.id)?"checked":""} aria-label="선택"></td>`:""}<td>${esc(j.pay_method||"-")}</td><td>${esc(j.paid_type||"")}</td><td>${esc(j.pay_date?j.pay_date.slice(5).replace("-","/"):"")}</td><td>${esc(j.pay_name||"")}</td>
-     <td class="money" style="text-align:right">${card&&j.cost?amt:""}</td><td class="money" style="text-align:right">${!card&&j.cost?amt:""}</td><td>${esc(j.customer_name)}</td><td>${esc(j.pay_memo||"")}</td>
+   ${rows.map(j=>{const pm=PM.get(j.id);return `<tr data-j="${j.id}" style="cursor:pointer">${isAdmin()?`<td><input type="checkbox" class="jsel" data-js="${j.id}" ${ui.jsel.has(j.id)?"checked":""} aria-label="선택"></td>`:""}<td>${esc(j.pay_method||"-")}</td><td>${esc(j.paid_type||"")}</td><td>${esc(j.pay_date?j.pay_date.slice(5).replace("-","/"):"")}</td><td>${esc(j.pay_name||"")}</td>
+     <td class="money" style="text-align:right">${pm.card?won0(pm.card):""}</td><td class="money" style="text-align:right">${pm.cash?won0(pm.cash):""}</td><td>${esc(j.customer_name)}</td><td>${esc(j.pay_memo||"")}</td>
      <td>${j.pay_status==="미수"?`<span class="badge s-미수">미수</span>`:j.closed?`<span class="badge">마감 OK</span>`:j.pay_status==="완료"?`<span class="badge s-완료">납부</span>`:""}</td></tr>`}).join("")||`<tr><td colspan="10" class="mapt">해당하는 A/S 건이 없습니다.</td></tr>`}</tbody>
-   <tfoot><tr><th colspan="${isAdmin()?5:4}">합계 (납부 완료 기준)</th><th class="money" style="text-align:right">${won0(sumCard)}</th><th class="money" style="text-align:right">${won0(sumCash)}</th><th colspan="3">미수 ${won0(sumUn)}원</th></tr></tfoot></table></div>`;
+   <tfoot><tr><th colspan="${isAdmin()?5:4}">합계 (입금 기준)</th><th class="money" style="text-align:right">${won0(sumCard)}</th><th class="money" style="text-align:right">${won0(sumCash)}</th><th colspan="3">미수 ${won0(sumUn)}원</th></tr></tfoot></table></div>`;
 }
 function custLabel(c){return `${c.name} · ${c.phone||c.phone2||"전화 없음"}`}
 /* A/S 신규접수 확인요청 문자 (기사에게 보내는 카톡용) — 접수 창 안에 펼쳐서, 입력 중인 내용으로 바로 만듦 */
@@ -3948,6 +3962,58 @@ async function visitNotifyDlg(j,c){c=c||custById(j.customer_id);if(!c)return;con
      const {data,error}=await sb.functions.invoke("send-sms",{body:{messages:[{to,text:tx,customer_id:c.id,ref_type:"job",ref_id:j.id||null,kakao:{template:"visit",variables:{업체명:vars.업체명,일자:vars.일자,기사:vars.기사,연락처:vars.연락처||"-"}}}]}});
      if(error||(data&&data.error)){toast("보내지 못했습니다: "+((data&&data.error)||error.message||""));return true}
      const f=data&&data.failed&&Object.keys(data.failed).length;toast(f?"보내지 못했습니다: "+Object.values(data.failed)[0]:"방문 안내를 보냈습니다");}]])}
+/* A/S·추가설치 창 안의 입금 내역 (계약 입금 내역과 같은 틀) */
+function jpSec(j,can,isNew){
+  const box=document.getElementById("jpSec"),jf=document.getElementById("jf");if(!box||!jf)return null;
+  const q=n=>jf.querySelector(`[name="${n}"]`);const st={pend:[],edit:null};st.rows=()=>isNew?st.pend:jpaysOf(j);
+  const costNow=()=>{if(q("paid_type")&&q("paid_type").value==="무상")return 0;const n=x=>Number((q(x)||{}).value||0)||0;return n("cost")||(n("trip_fee")+n("part_fee")+n("det_fee"))};
+  const shown=()=>{const r=st.rows();if(r.length)return r;const l=!isNew&&asLegacyRow(j);return l?[l]:[]};
+  box.innerHTML=`<div class="payin"><div class="paysum" id="jpSum"></div><div id="jpTbl"></div>
+   ${can?`<div class="payadd"><input id="jpD" type="date" value="${today()}" aria-label="입금일"><select id="jpM" aria-label="수단">${JPMETH.map(m=>`<option>${m}</option>`).join("")}</select>
+     <input id="jpN" list="cardList" placeholder="카드사·입금자" aria-label="카드사·입금자"><input id="jpA" type="number" placeholder="금액" aria-label="금액"><input id="jpMemo" placeholder="메모" aria-label="메모">
+     <button type="button" class="btn pri" id="jpAdd">입금 추가</button></div>
+     <p class="mapt" style="margin:0">일부만 받았으면 받은 금액만 넣으세요. 나머지는 미수로 남습니다. 카드와 현금으로 나눠 받으면 한 줄씩 넣으세요. 승인취소는 음수로 넣습니다. ${isNew?"입금은 저장할 때 함께 저장됩니다.":"입금은 바로 저장됩니다."}</p>`:""}</div>`;
+  const drawSum=()=>{const real=st.rows(),rows=shown();const cost=costNow();let paid=0;rows.forEach(p=>paid+=Number(p.amount||0));const un=Math.max(0,cost-paid);
+    const last=rows.filter(p=>Number(p.amount||0)>0).map(p=>p.pay_date||"").filter(Boolean).sort().pop()||"-";
+    if(real.length){const d=jpDerive(real,cost,q("pay_status").value);["pay_status","pay_method","pay_date","pay_name"].forEach(k=>{q(k).value=d[k]||""})}
+    const ps=q("pay_status").value;
+    document.getElementById("jpSum").innerHTML=`<span>청구금액 <b>${won0(cost)}</b></span><span>입금합계 <b>${won0(paid)}</b></span><span>미수금 <b class="${un>0?"neg":""}">${won0(un)}</b></span><span>최종결제일 <b>${esc(last)}</b></span>
+      <span>납부 여부 ${real.length?`<span class="badge ${ps==="미수"?"s-미수":ps==="완료"?"s-완료":""}">${esc(ps||"-")}</span> <small class="mapt">(입금 내역으로 자동)</small>`:`<select id="jpSt" ${can?"":"disabled"} aria-label="납부 여부" style="padding:3px 6px"><option value="">(선택)</option><option value="미수" ${ps==="미수"?"selected":""}>미수</option>${ps==="완료"?`<option value="완료" selected>완료</option>`:""}</select>`}</span>`;
+    const ss=document.getElementById("jpSt");if(ss)ss.onchange=()=>{q("pay_status").value=ss.value;drawSum()};
+    const a=document.getElementById("jpA");if(a&&!a.value&&!a.dataset.touched)a.placeholder=un>0?`남은 ${won0(un)}`:"금액"};
+  const drawTbl=()=>{const rows=shown();const ed=!isNew&&can;
+    document.getElementById("jpTbl").innerHTML=`<table class="stafft"><thead><tr><th>날짜</th><th>수단</th><th>카드사·입금자</th><th class="num">금액</th><th>메모</th>${can?"<th></th>":""}</tr></thead><tbody>
+     ${rows.map((p,i)=>st.edit&&st.edit===p.id&&ed?`<tr class="pedit"><td><input type="date" data-f="pay_date" value="${esc(p.pay_date||"")}" aria-label="날짜"></td><td><select data-f="method" aria-label="수단">${JPMETH.map(m=>`<option ${m===p.method?"selected":""}>${m}</option>`).join("")}</select></td>
+       <td><input data-f="payer" value="${esc(p.payer||"")}" list="cardList" aria-label="카드사·입금자"></td><td><input type="number" data-f="amount" value="${esc(p.amount)}" aria-label="금액" style="text-align:right"></td><td><input data-f="memo" value="${esc(p.memo||"")}" aria-label="메모"></td>
+       <td style="white-space:nowrap"><button type="button" class="btn sm pri" data-jpsave="${p.id}">저장</button> <button type="button" class="btn sm" data-jpcancel>취소</button></td></tr>`
+     :`<tr><td>${esc(p.pay_date||"")}</td><td>${esc(p.method)}</td><td>${esc(p.payer||"")}</td><td class="num ${p.amount<0?"neg":""}">${won0(p.amount)}</td><td>${esc(p.memo||"")}</td>${can?`<td style="white-space:nowrap">${p.legacy?`<small class="mapt">예전 칸</small>`:`${ed?`<button type="button" class="btn sm" data-jpedit="${p.id}">수정</button> `:""}<button type="button" class="btn sm danger" data-jpdel="${isNew?i:p.id}">삭제</button>`}</td>`:""}</tr>`).join("")||`<tr><td colspan="6" class="mapt">입금 기록이 없습니다.${!isNew&&(j.pay_date||j.pay_name)?` (예전 기록: ${esc([j.pay_date,j.pay_method,j.pay_name].filter(Boolean).join(" · "))}, 금액 없음)`:""}</td></tr>`}</tbody></table>`;
+    bindTbl()};
+  const draw=()=>{drawTbl();drawSum()};
+  const sync=async()=>{await reload(["jpays"]);const real=jpaysOf(j);const d=real.length?jpDerive(real,Number(j.cost||0),j.pay_status):null;
+    if(d&&["pay_status","pay_method","pay_date","pay_name"].some(k=>(j[k]||"")!==(d[k]||""))){const {error}=await sb.from("jobs").update(d).eq("id",j.id);if(!error){Object.assign(j,d);const jj=jobs.find(x=>x.id===j.id);if(jj)Object.assign(jj,d)}}
+    st.edit=null;draw()};
+  const err=e=>toast(/job_payments|schema cache|relation/.test(e.message||"")?"입금 내역을 쓰려면 Supabase에서 phase1zr.sql을 실행해 주세요.":/method_check/.test(e.message||"")?"이 수단을 쓰려면 Supabase에서 phase1zr.sql을 다시 실행해 주세요.":"입금을 저장하지 못했습니다: "+e.message);
+  const rowOf=(g)=>{let a=Number(g("amount")||0);const m=g("method");if(!a){toast("금액을 입력하세요");return null}if(m==="승인취소"&&a>0)a=-a;return{pay_date:g("pay_date")||null,method:m,payer:(g("payer")||"").trim(),amount:a,memo:(g("memo")||"").trim()}};
+  const bindTbl=()=>{const t=document.getElementById("jpTbl");
+    t.querySelectorAll("[data-jpedit]").forEach(b=>b.onclick=()=>{st.edit=b.dataset.jpedit;drawTbl();const f=t.querySelector('.pedit [data-f="amount"]');if(f)f.focus()});
+    t.querySelectorAll("[data-jpcancel]").forEach(b=>b.onclick=()=>{st.edit=null;drawTbl()});
+    t.querySelectorAll("[data-jpsave]").forEach(b=>b.onclick=async()=>{const tr=b.closest("tr");const r=rowOf(n=>tr.querySelector(`[data-f="${n}"]`).value);if(!r)return;
+      const {error}=await sb.from("job_payments").update(r).eq("id",b.dataset.jpsave);if(error)return err(error);toast("입금 기록을 수정했습니다");await sync()});
+    t.querySelectorAll(".pedit input").forEach(x=>x.addEventListener("keydown",e=>{if(e.key==="Enter"&&!e.isComposing){e.preventDefault();e.stopPropagation();t.querySelector("[data-jpsave]").click()}if(e.key==="Escape"){e.preventDefault();e.stopPropagation();st.edit=null;drawTbl()}}));
+    t.querySelectorAll("[data-jpdel]").forEach(b=>b.onclick=async()=>{if(isNew){st.pend.splice(+b.dataset.jpdel,1);draw();return}
+      if(!await askConfirm("이 입금 기록을 삭제할까요?"))return;const {error}=await sb.from("job_payments").delete().eq("id",b.dataset.jpdel);if(error)return err(error);toast("삭제했습니다");await sync()})};
+  const add=document.getElementById("jpAdd");
+  if(add){const A=document.getElementById("jpA");A.addEventListener("input",()=>{A.dataset.touched="1"});
+    add.onclick=async()=>{const r=rowOf(n=>({pay_date:"jpD",method:"jpM",payer:"jpN",amount:"jpA",memo:"jpMemo"})[n]&&document.getElementById(({pay_date:"jpD",method:"jpM",payer:"jpN",amount:"jpA",memo:"jpMemo"})[n]).value);if(!r)return;
+      const clr=()=>{A.value="";delete A.dataset.touched;document.getElementById("jpN").value="";document.getElementById("jpMemo").value=""};
+      if(isNew){st.pend.push(r);clr();draw();return}
+      const ins=[];const leg=!jpaysOf(j).length&&asLegacyRow(j);if(leg)ins.push({job_id:j.id,customer_id:j.customer_id,pay_date:leg.pay_date,method:leg.method,payer:leg.payer,amount:leg.amount,memo:"기존 기록"});
+      ins.push(Object.assign({job_id:j.id,customer_id:j.customer_id},r));
+      const {error}=await sb.from("job_payments").insert(ins);if(error)return err(error);clr();toast("입금을 추가했습니다");await sync()}}
+  ["cost","trip_fee","part_fee","det_fee","det_qty"].forEach(n=>{const el=q(n);if(el)el.addEventListener("input",()=>setTimeout(drawSum,0))});
+  jf.querySelectorAll("[data-dq]").forEach(b=>b.addEventListener("click",()=>setTimeout(drawSum,0)));
+  if(q("paid_type"))q("paid_type").addEventListener("change",()=>setTimeout(drawSum,0));
+  draw();return st}
 function jobDlg(j,c,kind,tpl,preset){
   let wantCtr=false;if(kind==="ctr"){wantCtr=true;kind="as"}
   /* 신규접수에는 '설치'가 없음 (설치는 계약으로 접수) */
@@ -3989,8 +4055,11 @@ function jobDlg(j,c,kind,tpl,preset){
    <fieldset id="payBox" style="padding:10px 12px" ${asLike(j)||j.kind==="addon"?"":"hidden"}><legend>비용·결제</legend>
      <div class="g3">${sel("paid_type","유상/무상",[["","(선택)"],["유상","유상"],["무상","무상"]],j.paid_type||"",!can)}${asx?inp("trip_fee","출장비",j.trip_fee||"","number",!can)+inp("part_fee","부품비",j.part_fee||"","number",!can):"<span></span><span></span>"}</div>
      <div class="g3">${hasDet()?`<label class="f">세제 구매 (1통 ${won0(DET_PRICE)}원)<span class="detq"><button type="button" class="btn sm" data-dq="-1" ${can?"":"disabled"} aria-label="세제 한 통 빼기">−</button><input name="det_qty" type="number" min="0" inputmode="numeric" value="${j.det_qty||0}" ${can?"":"readonly"} aria-label="세제 수량"><span>통</span><button type="button" class="btn sm" data-dq="1" ${can?"":"disabled"} aria-label="세제 한 통 더하기">+</button></span></label>${inp("det_fee","세제 금액",j.det_fee||"","number",!can)}`:"<span></span><span></span>"}${inp("cost","청구금액 (총합계)",j.cost||"","number",!can)}</div>
-     <div class="g3">${sel("pay_status","납부 여부",[["","(선택)"],["완료","완료"],["미수","미수"]],j.pay_status||"",!can)}${sel("pay_method","청구방법",[["","(선택)"],["카드","카드"],["현금","현금"]],j.pay_method==="입금"?"현금":(j.pay_method||""),!can)}${inp("pay_date","입금일",j.pay_date,"date",!can)}</div>
+     ${ui.noJPay?`<div class="g3">${sel("pay_status","납부 여부",[["","(선택)"],["완료","완료"],["미수","미수"]],j.pay_status||"",!can)}${sel("pay_method","청구방법",[["","(선택)"],["카드","카드"],["현금","현금"]],j.pay_method==="입금"?"현금":(j.pay_method||""),!can)}${inp("pay_date","입금일",j.pay_date,"date",!can)}</div>
      <div class="g3">${inp("pay_name","카드사 / 입금자명",j.pay_name,"text",!can,'list="cardList"')}<span></span><span></span></div>
+     <p class="mapt" style="margin:0">입금을 여러 번 나눠 적으려면 Supabase에서 phase1zr.sql을 실행해 주세요.</p>`
+     :`<input type="hidden" name="pay_status" value="${esc(j.pay_status||"")}"><input type="hidden" name="pay_method" value="${esc(j.pay_method==="입금"?"현금":(j.pay_method||""))}"><input type="hidden" name="pay_date" value="${esc(j.pay_date||"")}"><input type="hidden" name="pay_name" value="${esc(j.pay_name||"")}">
+     <div id="jpSec"></div>`}
      <label class="f">입금 메모<input name="pay_memo" value="${esc(j.pay_memo||"")}" ${can?"":"readonly"} placeholder="예: 10/14 이애경 명의로 입금, 2건 합산"></label>
      <label class="chip" style="justify-self:start"><input type="checkbox" name="closed" ${j.closed?"checked":""} ${off?"":"disabled"}>매출마감 ${off?"":"(사무실에서 처리)"}</label>
      <datalist id="cardList">${["농협카드","비씨카드","국민카드","신한카드","삼성카드","현대카드","롯데카드","하나카드","우리카드","네이버페이"].map(x=>`<option value="${x}">`).join("")}</datalist></fieldset>
@@ -4030,6 +4099,7 @@ function jobDlg(j,c,kind,tpl,preset){
          if(asx){const nn=x=>Number(f.get(x)||0)||0;pt.trip_fee=nn("trip_fee");pt.part_fee=nn("part_fee");if(off&&f.has("tax_date"))pt.tax_date=f.get("tax_date")||null;if(hasDet()&&f.has("det_qty")){pt.det_qty=nn("det_qty");pt.det_fee=nn("det_fee")}if(!pt.cost&&pt.paid_type!=="무상")pt.cost=pt.trip_fee+pt.part_fee+(pt.det_fee||0)}
          if(pt.paid_type==="무상"){pt.cost=0;pt.pay_status="";pt.pay_method=""}else{if(pt.cost&&!pt.paid_type)pt.paid_type="유상";if(pt.pay_method&&!pt.pay_status&&pt.cost)pt.pay_status="완료";if(pt.pay_status==="완료"&&!pt.pay_date)pt.pay_date=today()}
          if(off)pt.closed=!!f.get("closed")}}
+     if(jpS&&(asLike(j)||j.kind==="addon")){const rr=jpS.rows();if(rr.length&&pt.paid_type!=="무상")Object.assign(pt,jpDerive(rr,Number(pt.cost||0),pt.pay_status))}
      if(off||isNew){Object.assign(pt,{request_date:f.get("request_date")||today(),visit_date:f.get("visit_date")||null,visit_time:fmtTime(f.get("visit_time")),symptom:f.get("symptom")||""})}
      if(he&&can)pt.end_time=fmtTime(f.get("end_time"));
      if(off){pt.techs=f.getAll("tech");pt.tech_names=f.get("tech_names")||"";if(pt.status==="접수"&&(pt.techs.length||pt.tech_names))pt.status="배정"}
@@ -4038,7 +4108,8 @@ function jobDlg(j,c,kind,tpl,preset){
      if(!r.error&&!isNew&&pt.customer_id&&pt.customer_id!==j.customer_id)await sb.from("customer_files").update({customer_id:pt.customer_id}).eq("job_id",j.id);
      if(r.error&&/jobs_kind_check/.test(r.error.message))return toast(j.kind==="etc"?"기타 구분을 쓰려면 Supabase에서 phase1zl.sql을 실행해 주세요.":j.kind==="move"?"이전설치 구분이 아직 없습니다. Supabase에서 phase1t.sql을 실행해 주세요.":"철거·추가설치 구분이 아직 없습니다. Supabase에서 phase1e.sql을 실행해 주세요.");
      if(r.error)return toast(/pay_status|pay_method/.test(r.error.message)?"납부 칸이 아직 없습니다. Supabase에서 phase1b.sql을 실행해 주세요.":/paid_type|pay_date|pay_name|pay_memo|closed/.test(r.error.message)?"결제 상세 칸이 아직 없습니다. Supabase에서 phase1c.sql을 실행해 주세요.":"저장하지 못했습니다: "+r.error.message);
-     let pmsg="";if(isNew&&jpSel.length&&r.data){const up={ok:0,fail:[]};const gr={};jpSel.forEach(x=>(gr[x.kind]=gr[x.kind]||[]).push(x.file));
+     let pmsg="";if(isNew&&jpS&&jpS.pend.length&&r.data&&(asLike(j)||j.kind==="addon")){const {error:eJ}=await sb.from("job_payments").insert(jpS.pend.map(p=>Object.assign({job_id:r.data.id,customer_id:r.data.customer_id},p)));pmsg+=eJ?" · 입금 내역을 저장하지 못했습니다: "+eJ.message:` · 입금 ${jpS.pend.length}건`}
+     if(isNew&&jpSel.length&&r.data){const up={ok:0,fail:[]};const gr={};jpSel.forEach(x=>(gr[x.kind]=gr[x.kind]||[]).push(x.file));
        for(const k of Object.keys(gr)){const u=await uploadCustFiles(r.data.customer_id,gr[k],k,m=>toast(m),r.data.id);up.ok+=u.ok;up.fail=up.fail.concat(u.fail)}
        pmsg=up.fail.length?` · 사진 ${up.ok}개 올림, ${up.fail.length}개 실패${fileErrHint(up.fail)}`:` · 사진 ${up.ok}개`;jpSel.forEach(x=>x.url&&URL.revokeObjectURL(x.url))}
      /* 설치 완료 → 계약 진행단계: 남은 금액이 있으면 '미수', 다 받았으면 '완료' (미정·확정일 때만) */
@@ -4049,11 +4120,12 @@ function jobDlg(j,c,kind,tpl,preset){
        const {error:e4}=await sb.from("contracts").update({stage:ns}).eq("id",kk.id);if(!e4){kk.stage=ns;pmsg+=` · 계약 진행단계를 ‘${ns}’(으)로 바꿈`}}}}
      /* 철거 완료 → 그 계약 진행단계를 '철거완료'로 */
      {const jj=Object.assign({},j,pt,r.data||{});if(jj.kind==="remove"&&jj.status==="완료"&&isOffice()){const kk=rmCtrOf(jj);if(kk&&!["철거완료","취소"].includes(kk.stage)){const {error:e3}=await sb.from("contracts").update({stage:"철거완료"}).eq("id",kk.id);if(!e3){kk.stage="철거완료";pmsg+=" · 계약을 철거완료로 바꿈"}}}}
-     toast((isNew?`${kl(j)} 접수했습니다`:"저장했습니다")+pmsg);reload(["jobs","customers","files","contracts"]);
+     toast((isNew?`${kl(j)} 접수했습니다`:"저장했습니다")+pmsg);reload(["jobs","customers","files","contracts","jpays"]);
      /* 배정(기사·방문일)이 새로 잡히거나 바뀌면 → 고객 방문 안내 보내기 확인창 */
      {const nj=Object.assign({},j,pt,r.data||{});const chg=isNew||String(j.visit_date||"")!==String(nj.visit_date||"")||String(j.visit_time||"")!==String(nj.visit_time||"")||JSON.stringify(j.techs||[])!==JSON.stringify(nj.techs||[]);
        if(chg&&nj.visit_date&&((nj.techs||[]).length||String(nj.tech_names||"").trim())&&!["완료","취소","보류"].includes(nj.status)&&me.role!=="tech")setTimeout(()=>visitNotifyDlg(nj,c),350)}}]]:[])]);
   const jpSel=isNew?bindNewCustFiles("jp"):[];if(!isNew)renderJobFiles(j,c);
+  const jpS=ui.noJPay?null:jpSec(j,can,isNew);
   /* 중고구매 체크하면 설치일 비움 */
   (()=>{const jf=document.getElementById("jf");const u=jf&&jf.querySelector('[name="as_used"]'),d=jf&&jf.querySelector('[name="as_idate"]');if(!u||!d||u.disabled)return;
     u.addEventListener("change",()=>{if(u.checked){d.dataset.prev=d.value;d.value="";d.readOnly=true}else{d.readOnly=false;if(d.dataset.prev)d.value=d.dataset.prev}})})();
