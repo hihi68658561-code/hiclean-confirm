@@ -1238,10 +1238,17 @@ function bulkMonthClose(){const ym=ctrMonth();const ids=contracts.filter(k=>k.ch
     [["취소"],["월마감 처리","pri",async()=>{for(let i=0;i<ids.length;i+=200){toast(`월마감 처리 중… ${Math.min(i+200,ids.length)}/${ids.length}`);const {error}=await sb.from("contracts").update({chk_month:"OK"}).in("id",ids.slice(i,i+200));if(error)return toast("처리하지 못했습니다: "+error.message)}
       toast(`${ids.length}건을 월마감했습니다`);reload(["contracts"])}]])}
 function hasMonthCol(){return contracts.some(k=>"chk_month" in k)}
-function monthClosed(k){if(k.__job){const p=ctrById(k.__job.contract_id);return !!p&&p.chk_month==="OK"}return k.chk_month==="OK"}
+/* 추가설치(작업)에도 고객등록·전표·매출·월마감 칸이 있는지 (phase1zs) */
+function jobChk(){return jobs.some(j=>"chk_month" in j)}
+function monthClosed(k){if(k.__job){if(jobChk())return k.__job.chk_month==="OK";const p=ctrById(k.__job.contract_id);return !!p&&p.chk_month==="OK"}return k.chk_month==="OK"}
+/* 당월·전체리스트에서 추가설치 줄 누르기: OK 칸이면 OK↔빈칸, 아니면 작업 창 */
+function addonRowClick(tr,e,re){const j=jobs.find(x=>x.id===tr.dataset.ck.slice(2));if(!j)return;const cell=e.target.closest("td[data-chk]");
+  if(cell&&isOffice()&&jobChk()&&(!j[cell.dataset.chk]||j[cell.dataset.chk]==="OK")){const f=cell.dataset.chk,v=j[f]==="OK"?"":"OK";
+    sb.from("jobs").update({[f]:v}).eq("id",j.id).then(({error})=>{if(error)return toast("저장하지 못했습니다: "+error.message);j[f]=v;if(f==="chk_month")toast(v==="OK"?"월마감했습니다 · 전체리스트로 옮겼습니다":"월마감을 풀었습니다 · 당월리스트로 돌아갑니다");re()});return}
+  jobDlg(j,custById(j.customer_id),j.kind)}
 function addonRow(j){const k0=ctrById(j.contract_id)||custContracts(j.customer_id)[0]||{};const a=addonItem(j);
   return{id:"a:"+j.id,__job:j,customer_id:j.customer_id,contract_type:"추가설치",stage:j.status,contract_date:j.request_date,product:a.product,size:a.size,serial:"",memo:j.symptom||"",amount:Number(j.cost||0),
-    sales3:k0.sales3||null,sales3_name:k0.sales3_name||"",channel:k0.channel||"",created_at:j.created_at,tax:{}}}
+    sales3:k0.sales3||null,sales3_name:k0.sales3_name||"",channel:k0.channel||"",created_at:j.created_at,tax:{},chk_cust:j.chk_cust||"",chk_slip:j.chk_slip||"",chk_sales:j.chk_sales||"",chk_month:j.chk_month||""}}
 function ctrCell(col,k,c,st,basis){
   const ij=installOf(k);
   switch(col){
@@ -1280,7 +1287,7 @@ function ctrCell(col,k,c,st,basis){
     case"approval":return `<td>${esc(k.approval||k.pay_method||"")}</td>`;
     case"tax":{const t=k.tax||{};return `<td>${esc(t.date?ymd2(t.date):t.type||"")}</td>`}
     case"settle":{if(k.__job)return "<td></td>";const v=k.settle_tag||"";return `<td class="stc ${v?"on":""}" data-settle="${k.id}" title="${isOffice()?"눌러서 마감 묶음 직접 지정 (비우면 자동)":""}">${esc(v)}</td>`}
-    case"chk_cust":case"chk_slip":case"chk_sales":case"chk_month":{if(k.__job)return "<td></td>";const v=k[col]||"";return `<td class="ckc ${v==="OK"?"ok":v?"note":""}" data-chk="${col}" data-kid="${k.id}" title="${isOffice()?"누르면 OK ↔ 빈칸":""}">${esc(v)}</td>`}
+    case"chk_cust":case"chk_slip":case"chk_sales":case"chk_month":{if(k.__job&&!jobChk())return "<td></td>";const v=k[col]||"";return `<td class="ckc ${v==="OK"?"ok":v?"note":""}" data-chk="${col}" data-kid="${k.id}" title="${isOffice()?"누르면 OK ↔ 빈칸":""}">${esc(v)}</td>`}
     case"memo":return `<td class="wrap memo" title="${esc(k.memo||"")}"><div class="clamp">${esc(k.memo||"")}</div></td>`;
   }
   return "<td></td>";
@@ -1384,14 +1391,16 @@ function renderCtrView0(){
   view().querySelectorAll(".wt.ct thead th[data-ck]").forEach(th=>{th.classList.add("sortable");const S=getSort();if(S[0]&&S[0].c===th.dataset.ck)th.dataset.sort=S[0].d===1?"asc":"desc";
     th.onclick=e=>{if(e.target.closest(".rz")||e.target.closest(".fbtn"))return;const c=th.dataset.ck;const S=getSort();const cust=sortCustom();if(cust&&S[0].c===c&&S[0].d===-1){setSort(null);return re()}const d=cust&&S[0].c===c?-S[0].d:1;setSort([{c,d},...DEFSORT.filter(x=>x.c!==c).slice(0,2)]);re()}});
   const nk_=document.getElementById("cNewK");if(nk_)nk_.onclick=()=>jobDlg(null,null,"ctr");
-  if(isOffice()){bindRowSel(ui.csel,"csel","cSelAll","cDel",delContracts,set=>{const b=document.getElementById("cMonth");if(b){const n=[...set].filter(id=>!id.startsWith("a:")).length;b.disabled=!n;b.textContent=`월마감 (${n})`}});
-    const mb=document.getElementById("cMonth");if(mb)mb.onclick=async()=>{const ids=[...ui.csel].filter(id=>!id.startsWith("a:"));if(!ids.length)return;
-      if(!(await askConfirm(`선택한 ${ids.length}건을 월마감하시겠습니까?`)))return;
+  if(isOffice()){bindRowSel(ui.csel,"csel","cSelAll","cDel",delContracts,set=>{const b=document.getElementById("cMonth");if(b){const n=[...set].filter(id=>!id.startsWith("a:")||jobChk()).length;b.disabled=!n;b.textContent=`월마감 (${n})`}});
+    const mb=document.getElementById("cMonth");if(mb)mb.onclick=async()=>{const all_=[...ui.csel];const ids=all_.filter(id=>!id.startsWith("a:")),aids=jobChk()?all_.filter(id=>id.startsWith("a:")).map(id=>id.slice(2)):[];if(!ids.length&&!aids.length)return;
+      if(!(await askConfirm(`선택한 ${ids.length+aids.length}건을 월마감하시겠습니까?`)))return;
       for(let i=0;i<ids.length;i+=200){const {error}=await sb.from("contracts").update({chk_month:"OK"}).in("id",ids.slice(i,i+200));if(error)return toast("월마감하지 못했습니다: "+error.message)}
-      ui.csel.clear();toast(`${ids.length}건을 월마감했습니다 · 전체리스트로 옮겼습니다`);reload(["contracts"])}}
+      for(let i=0;i<aids.length;i+=200){const {error}=await sb.from("jobs").update({chk_month:"OK"}).in("id",aids.slice(i,i+200));if(error)return toast("추가설치를 월마감하지 못했습니다: "+error.message)}
+      if(aids.length)aids.forEach(id=>{const j=jobs.find(x=>x.id===id);if(j)j.chk_month="OK"});
+      ui.csel.clear();toast(`${ids.length+aids.length}건을 월마감했습니다 · 전체리스트로 옮겼습니다`);reload(aids.length?["contracts","jobs"]:["contracts"])}}
   const cq=document.getElementById("cQ");cq.oninput=e=>{ui.cq=e.target.value;clearTimeout(cq._t);cq._t=imeT(cq,()=>{re();const n=document.getElementById("cQ");n.focus();n.setSelectionRange(n.value.length,n.value.length)},250)};
   view().querySelectorAll("tr[data-ck]").forEach(tr=>tr.onclick=e=>{const tdc=e.target.closest("td");if(tdc&&tdc.querySelector(".csel")){const x=tdc.querySelector(".csel");if(e.target!==x)x.click();return}
-    if(tr.dataset.ck.startsWith("a:")){const j=jobs.find(x=>x.id===tr.dataset.ck.slice(2));if(j)jobDlg(j,custById(j.customer_id),j.kind);return}
+    if(tr.dataset.ck.startsWith("a:")){addonRowClick(tr,e,re);return}
     const cell=e.target.closest("td[data-chk]");const k=ctrById(tr.dataset.ck);if(!k)return;
     {const sc=e.target.closest("td[data-settle]");if(sc&&isOffice()){settleMenu(sc,k,re);return}}
     if(cell&&isOffice()&&!ui.noPay&&(!k[cell.dataset.chk]||k[cell.dataset.chk]==="OK")){const f=cell.dataset.chk,v=k[f]==="OK"?"":"OK";
@@ -1418,6 +1427,7 @@ function renderAllView(){const _sv=snapScroll();renderAllView0();restoreScroll(_
 function renderAllView0(){
   if(ui.aq2===undefined)ui.aq2="";if(!ui.allN)ui.allN=300;
   const rows=contracts.filter(monthClosed).map(k=>({k,c:custById(k.customer_id)||{},s:payStat(k),b:[]}));
+  if(jobChk())jobs.forEach(j=>{if(j.kind!=="addon"||j.chk_month!=="OK")return;const k=addonRow(j);rows.push({k,c:custById(j.customer_id)||{},s:payStat(k),b:[],a:j})});
   const qq=ui.aq2.trim().toLowerCase();
   let list=rows.filter(x=>!qq||[x.c.name,x.c.search_text,x.c.ceo,x.c.phone,x.c.phone2,x.c.address,x.k.serial,x.k.memo,x.k.approval,staffName(x.k.sales3),x.k.sales3_name].join(" ").toLowerCase().includes(qq));
   sortCtrList(list);
@@ -1445,7 +1455,7 @@ function renderAllView0(){
   const nk_=document.getElementById("caNewK");if(nk_)nk_.onclick=()=>jobDlg(null,null,"ctr");
   const q=document.getElementById("caQ");q.oninput=e=>{ui.aq2=e.target.value;ui.allN=300;clearTimeout(q._t);q._t=imeT(q,()=>{re();const n=document.getElementById("caQ");n.focus();n.setSelectionRange(n.value.length,n.value.length)},250)};
   function bindRows(){view().querySelectorAll(".wt.ca tr[data-ck]").forEach(tr=>tr.onclick=e=>{
-    if(tr.dataset.ck.startsWith("a:")){const j=jobs.find(x=>x.id===tr.dataset.ck.slice(2));if(j)jobDlg(j,custById(j.customer_id),j.kind);return}
+    if(tr.dataset.ck.startsWith("a:")){addonRowClick(tr,e,re);return}
     const cell=e.target.closest("td[data-chk]");const k=ctrById(tr.dataset.ck);if(!k)return;
     {const sc=e.target.closest("td[data-settle]");if(sc&&isOffice()){settleMenu(sc,k,re);return}}
     if(cell&&isOffice()&&!ui.noPay&&(!k[cell.dataset.chk]||k[cell.dataset.chk]==="OK")){const f=cell.dataset.chk,v=k[f]==="OK"?"":"OK";
