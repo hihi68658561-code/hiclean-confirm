@@ -1116,6 +1116,9 @@ function installOf(k){if(k.__job)return k.__job;if(!instIdx)buildInstIdx();retur
 /* 작업 창: 연결 계약 고르기 (사무실) */
 function jobCtrPick(j,c){if(!c||!isOffice())return"";const ks=custContracts(c.id);if(!ks.length)return"";
   return `<label class="f" style="max-width:520px">연결 계약<select name="ctr_pick">${[["","(연결 안 함)"],...ks.slice().sort((a,b)=>String(b.contract_date||"").localeCompare(String(a.contract_date||""))).map(k=>[k.id,[k.contract_date||"-",prodName(k.product),k.size,k.serial&&"SN "+k.serial,k.stage].filter(Boolean).join(" · ")])].map(([v,l])=>`<option value="${v}" ${v===(j.contract_id||"")?"selected":""}>${esc(l)}</option>`).join("")}</select></label>`}
+/* 고객 변경·고객 고르기에서: 계약이 여러 개면 연결할 계약을 고르게 한다 */
+function jobCtrPickAfter(host,cc,k,onSet){let box=document.getElementById("jcKbox");if(!box){box=document.createElement("div");box.id="jcKbox";host.appendChild(box)}
+  box.innerHTML=custContracts(cc.id).length>1?jobCtrPick({contract_id:k?k.id:""},cc):"";const sel=box.querySelector("select");if(sel)sel.onchange=()=>onSet(sel.value?ctrById(sel.value):null)}
 function pickCtrFor(custId,kind){const ks=custContracts(custId);if(kind!=="install")return ks[0]||null;if(!instIdx)buildInstIdx();
   return ks.filter(k=>k.stage!=="취소"&&!instIdx.byCtr.has(k.id)).sort((a,b)=>String(b.contract_date||"").localeCompare(String(a.contract_date||"")))[0]||null}
 /* 목록 열: 넣고 빼기·순서 바꾸기 (브라우저별로 기억) */
@@ -4035,7 +4038,7 @@ function jobDlg(j,c,kind,tpl,preset){
   const pick=isNew&&!c?`<label class="f">고객 검색<input id="jcQ" type="search" autocomplete="off" placeholder="업체명(상호)·대표자·전화번호·주소·시리얼"></label>
      <input type="hidden" name="custId" id="jcId"><div id="jcSel"></div><div id="jcRes" class="pickres"></div>
      <p class="mapt" id="jcHint">두 글자 이상 입력하면 고객 목록이 나옵니다. 없는 고객은 아래 ‘새 고객 등록’으로 먼저 등록하세요.</p>`
-    :`<div id="jcWrap"><p class="mapt dsum"><b>${esc(j.customer_name)}</b> · ${esc(j.address||"")}${c&&c.phone?" · "+esc(c.phone):""} · 제품: ${esc([p.product,p.size,p.options&&"("+p.options+")",p.serial&&"SN "+p.serial].filter(Boolean).join(" ")||"-")}${(()=>{const kk=ctrById(j.contract_id);return kk?` · <b>연결 계약</b> ${esc([kk.contract_date,kk.contract_type&&kk.contract_type!=="구매"?kk.contract_type:"",kk.stage].filter(Boolean).join(" · "))}`:""})()}${isNew||isOffice()?` <button type="button" class="btn sm" id="jcChange">고객 변경</button>`:""}</p>${c?gradeWarn(c):""}</div>${jobCtrPick(j,c)}`;
+    :`<div id="jcWrap"><p class="mapt dsum"><b>${esc(j.customer_name)}</b> · ${esc(j.address||"")}${c&&c.phone?" · "+esc(c.phone):""} · 제품: ${esc([p.product,p.size,p.options&&"("+p.options+")",p.serial&&"SN "+p.serial].filter(Boolean).join(" ")||"-")}${(()=>{const kk=ctrById(j.contract_id);return kk?` · <b>연결 계약</b> ${esc([kk.contract_date,kk.contract_type&&kk.contract_type!=="구매"?kk.contract_type:"",kk.stage].filter(Boolean).join(" · "))}`:""})()}${isNew||isOffice()?` <button type="button" class="btn sm" id="jcChange">고객 변경</button>`:""}</p>${c?gradeWarn(c):""}</div>`;
   openDlg(`${nTitle?"신규접수":kl(j)+" "+(isNew?(tpl?"접수 (복사)":"접수"):"작업")}${j.customer_name?" · "+esc(j.customer_name):""}`,`<div id="jf" style="display:grid;gap:10px">${tpl?`<p class="warnbox" style="margin:0">복사한 접수입니다. 방문일·상태·처리 내용은 새로 입력하세요. 사진은 복사되지 않습니다.</p>`:""}
    ${pick}
    ${isNew||off?`<div class="kpick chk" role="radiogroup" aria-label="구분">${canCtr?`<label><input type="radio" name="kind" value="ctr" ${wantCtr?"checked":""}>계약</label>`:""}${KINDS.filter(k=>!(nTitle&&k==="install")).map(k=>`<label><input type="radio" name="kind" value="${k}" ${!wantCtr&&j.kind===k?"checked":""}>${KLABEL[k]}</label>`).join("")}<input name="kind_label" id="jKL" value="${esc(j.kind_label||"")}" placeholder="기타 구분 직접 입력 (예: 점검)" aria-label="기타 구분" style="display:${!wantCtr&&j.kind==="etc"?"inline-block":"none"};min-width:200px"></div>`:""}
@@ -4156,6 +4159,8 @@ function jobDlg(j,c,kind,tpl,preset){
     w.innerHTML=`<label class="f">고객 검색<input id="jcQ" type="search" autocomplete="off" placeholder="업체명(상호)·대표자·전화번호·주소·시리얼"></label><input type="hidden" name="custId" id="jcId"><div id="jcSel"></div><div id="jcRes" class="pickres"></div><p class="mapt" id="jcHint" style="margin:0">바꿀 고객을 검색해서 고르세요.</p>`;
     bindCustPicker(pickable);const h=document.getElementById("jcId");h.addEventListener("change",()=>{const cc=pickable.find(x=>x.id===h.value);if(!cc)return;c=cc;const k=pickCtrFor(cc.id,j.kind);
       const upd={customer_id:cc.id,contract_id:k?k.id:null,customer_name:cc.name,address:cc.address};if(isNew)Object.assign(j,upd,j.kind==="addon"?{}:{product:productOf(k)});else chgTo=upd;
+      jobCtrPickAfter(w,cc,k,kk=>{if(isNew){j.contract_id=kk?kk.id:null;if(j.kind!=="addon")j.product=productOf(kk)}else if(chgTo)chgTo.contract_id=kk?kk.id:null;
+        const jf2=document.getElementById("jf");[["as_product",kk&&kk.product],["as_size",kk&&kk.size],["as_serial",kk&&kk.serial]].forEach(([n,v])=>{const el=jf2.querySelector(`[name="${n}"]`);if(el)el.value=v||""})});
       const jf=document.getElementById("jf");const q=n=>jf.querySelector(`[name="${n}"]`);[["as_product",k&&k.product],["as_size",k&&k.size],["as_serial",k&&k.serial]].forEach(([n,v])=>{const el=q(n);if(el)el.value=v||""});
       _instMap=null;const di=q("as_idate");if(di)di.value=asInstDate({customer_id:cc.id,product:{}})||"";
       const H=document.getElementById("dlgH");H.textContent=H.textContent.replace(/ · [^·]*$/,"")+" · "+cc.name})};
