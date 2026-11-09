@@ -1117,7 +1117,7 @@ function installOf(k){if(k.__job)return k.__job;if(!instIdx)buildInstIdx();retur
 function jobCtrPick(j,c){if(!c||!isOffice())return"";const ks=custContracts(c.id);if(!ks.length)return"";
   return `<label class="f" style="max-width:520px">연결 계약<select name="ctr_pick">${[["","(연결 안 함)"],...ks.slice().sort((a,b)=>String(b.contract_date||"").localeCompare(String(a.contract_date||""))).map(k=>[k.id,[k.contract_date||"-",prodName(k.product),k.size,k.serial&&"SN "+k.serial,k.stage].filter(Boolean).join(" · ")])].map(([v,l])=>`<option value="${v}" ${v===(j.contract_id||"")?"selected":""}>${esc(l)}</option>`).join("")}</select></label>`}
 /* 고객 변경·고객 고르기에서: 계약이 여러 개면 연결할 계약을 고르게 한다 */
-function jobCtrPickAfter(host,cc,k,onSet){let box=document.getElementById("jcKbox");if(!box){box=document.createElement("div");box.id="jcKbox";host.appendChild(box)}
+function jobCtrPickAfter(host,cc,k,onSet){let box=document.getElementById("jcKbox");if(!box){box=document.createElement("div");box.id="jcKbox";if(host.id==="jcSel")host.after(box);else host.appendChild(box)}
   box.innerHTML=custContracts(cc.id).length>1?jobCtrPick({contract_id:k?k.id:""},cc):"";const sel=box.querySelector("select");if(sel)sel.onchange=()=>onSet(sel.value?ctrById(sel.value):null)}
 function pickCtrFor(custId,kind){const ks=custContracts(custId);if(kind!=="install")return ks[0]||null;if(!instIdx)buildInstIdx();
   return ks.filter(k=>k.stage!=="취소"&&!instIdx.byCtr.has(k.id)).sort((a,b)=>String(b.contract_date||"").localeCompare(String(a.contract_date||"")))[0]||null}
@@ -4081,7 +4081,7 @@ function jobDlg(j,c,kind,tpl,preset){
      const f=fdata("jf");
      if(f.get("kind")==="ctr"){const cc=c||pickable.find(x=>x.id===f.get("custId"));if(!cc)return toast("고객을 검색해서 목록에서 골라 주세요");contractDlg(cc,null);return true}
      if(isNew&&!c){const cc=pickable.find(x=>x.id===f.get("custId"));
-       if(!cc)return toast("고객을 검색해서 목록에서 골라 주세요");c=cc;const k=custContracts(cc.id)[0];
+       if(!cc)return toast("고객을 검색해서 목록에서 골라 주세요");c=cc;const ks0=document.querySelector('#jcKbox select[name="ctr_pick"]');const ksv=ks0&&(ks0.value?ctrById(ks0.value):null);const k=ks0&&(!ksv||ksv.customer_id===cc.id)&&custContracts(cc.id).length>1?ksv:pickCtrFor(cc.id,f.get("kind")||j.kind);
        Object.assign(j,{customer_id:cc.id,contract_id:k?k.id:null,customer_name:cc.name,address:cc.address,product:productOf(k)})}
      if(isNew){const gg=gradeOf(c);if(gg&&gg.g==="블랙"&&!(await askConfirm(`블랙(거래 중지) 고객입니다.${gg.reason?" ("+gg.reason+")":""} 계속 접수할까요?`)))return true}
      const nk_=f.get("kind")||j.kind;if(nk_!==j.kind&&!isNew){j=Object.assign({},j,{kind:nk_})}else j.kind=nk_;
@@ -4167,6 +4167,7 @@ function jobDlg(j,c,kind,tpl,preset){
   if(isNew&&!c){bindCustPicker(pickable);const h=document.getElementById("jcId");if(h)h.addEventListener("change",()=>{const cc=pickable.find(x=>x.id===h.value);if(!cc)return;
     if((document.querySelector('#jf input[name=kind]:checked')||{}).value==="ctr"){setTimeout(()=>contractDlg(cc,null,null,{intake:true}),0);return}const k=pickCtrFor(cc.id,(document.querySelector('#jf input[name=kind]:checked')||{}).value||j.kind);const jf=document.getElementById("jf");const q=n=>jf.querySelector(`[name="${n}"]`);
     if(k){[["as_product",k.product],["as_size",k.size],["as_serial",k.serial]].forEach(([n,v])=>{const el=q(n);if(el&&!el.value)el.value=v||""})}
+    jobCtrPickAfter(document.getElementById("jcSel"),cc,k,kk=>{[["as_product",kk&&kk.product],["as_size",kk&&kk.size],["as_serial",kk&&kk.serial]].forEach(([n,v])=>{const el=q(n);if(el)el.value=v||""})});
     _instMap=null;const d=asInstDate({customer_id:cc.id,product:{}});const di=q("as_idate");if(di&&!di.value&&d)di.value=d})}
   document.querySelectorAll('#jf input[name=kind]').forEach(x=>x.onchange=()=>{const isC=x.value==="ctr";document.getElementById("jBody").style.display=isC?"none":"grid";document.getElementById("jCtrHint").style.display=isC?"block":"none";
     if(isC){const cc=c||pickable.find(y=>y.id===(document.getElementById("jcId")||{}).value)||null;contractDlg(cc,null,null,{pick:!cc,intake:true});return}
