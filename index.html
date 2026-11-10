@@ -2468,7 +2468,7 @@ async function smsDlg(opts){opts=opts||{};let c=opts.c||null;const pick=!c;let v
 }
 /* 상단 '문자' 메뉴: 보내기 + 최근 보낸 문자 */
 async function renderSmsView(){const tpls=await loadSmsTpl(true);const off=isOffice();
-  view().innerHTML=`<div class="toolbar" style="padding:16px 20px 0"><h2 style="margin:0;font-size:18px">문자</h2><span style="flex:1"></span><button class="btn pri" type="button" id="smGo">+ 문자 보내기</button></div>
+  view().innerHTML=`<div class="toolbar" style="padding:16px 20px 0"><h2 style="margin:0;font-size:18px">문자</h2><input id="smQ" type="search" style="width:270px" placeholder="문구·업체명·번호·내용 검색" value="${esc(ui.smq||"")}" aria-label="문자 검색"><span class="mapt" id="smQn"></span><span style="flex:1"></span><button class="btn pri" type="button" id="smGo">+ 문자 보내기</button></div>
    <div style="padding:12px 20px 0"><div style="display:flex;align-items:center;gap:8px;margin-bottom:8px"><b>자주 쓰는 문구</b><span class="mapt">누르면 그 문구로 문자 창이 열립니다${off?" · ✎로 수정":""}</span><span style="flex:1"></span>${off&&!ui.noSms?`<button class="btn sm" type="button" id="smTAdd">+ 문구 추가</button>`:""}</div>
     <div class="smtpls">${tpls.map(x=>`<div class="smtpl" role="button" tabindex="0" data-tp="${x.id}"><div class="smt-h"><b>${esc(x.title)}</b>${off?`<button type="button" class="btn sm" data-te="${x.id}" title="수정" aria-label="${esc(x.title)} 수정">✎</button>`:""}</div><div class="smt-c">${esc(x.content)}</div></div>`).join("")||`<span class="mapt">${ui.noSms?"Supabase에서 phase1zc.sql을 실행하면 문구를 저장할 수 있습니다.":"저장된 문구가 없습니다."}</span>`}</div></div>
    <div id="smAll" class="mapt" style="padding:12px 20px">불러오는 중…</div>`;
@@ -2476,11 +2476,22 @@ async function renderSmsView(){const tpls=await loadSmsTpl(true);const off=isOff
   view().querySelectorAll("[data-tp]").forEach(el=>{const go=e=>{if(e.target.closest("[data-te]"))return;const x=tpls.find(y=>y.id===el.dataset.tp);smsDlg({tpl:x&&x.title})};el.onclick=go;el.onkeydown=e=>{if(e.key==="Enter"||e.key===" "){e.preventDefault();go(e)}}});
   view().querySelectorAll("[data-te]").forEach(b=>b.onclick=e=>{e.stopPropagation();smsTplDlg(tpls.find(y=>y.id===b.dataset.te))});
   const ta_=document.getElementById("smTAdd");if(ta_)ta_.onclick=()=>smsTplDlg(null);
-  const {data,error}=await sb.from("sms_logs").select("*").order("created_at",{ascending:false}).limit(300);const box=document.getElementById("smAll");if(!box)return;
-  if(error){box.textContent="문자 기록 칸이 아직 없습니다. Supabase에서 phase1zc.sql을 실행해 주세요.";return}
-  box.outerHTML=`<div class="wrapx" style="padding:12px 20px 20px"><p class="mapt" style="margin:0 0 8px">최근 보낸 문자 ${data.length}건${isOffice()?"":" (본인이 보냈거나 담당 고객에게 보낸 문자)"}</p><table class="stafft"><thead><tr><th style="width:130px">보낸 시각</th><th style="width:70px">보낸 사람</th><th style="width:170px">업체명(상호)</th><th style="width:120px">받는 번호</th><th>내용</th><th style="width:60px">결과</th></tr></thead><tbody>
-    ${data.map(l=>{const cu=l.customer_id&&custById(l.customer_id);return `<tr><td>${esc(fmtDT(l.created_at))}</td><td>${esc(l.by_name)}</td><td>${cu?`<a href="#" data-gocust="${cu.id}">${esc(cu.name)}</a>`:""}</td><td>${esc(fmtPhone(l.to_phone))}</td><td style="white-space:pre-wrap">${esc(l.content)}</td><td>${l.status==="실패"?`<span class="neg" title="${esc(l.error)}">실패</span>`:esc(l.msg_type||"보냄")}</td></tr>`}).join("")||`<tr><td colspan="6" class="mapt">보낸 문자가 없습니다.</td></tr>`}</tbody></table></div>`;
-  view().querySelectorAll("[data-gocust]").forEach(a=>a.onclick=e=>{e.preventDefault();goCust(custById(a.dataset.gocust))})}
+  /* 검색: 자주 쓰는 문구(제목·내용)와 보낸 문자(업체명·번호·내용·보낸 사람)를 함께 거른다. 보낸 문자는 서버에서 전체 기록을 찾는다 */
+  let seq=0;
+  const run=async()=>{const q=(ui.smq||"").trim(),ql=q.toLowerCase(),my=++seq;
+    let nT=0;view().querySelectorAll("[data-tp]").forEach(el=>{const x=tpls.find(y=>y.id===el.dataset.tp)||{};const ok=!ql||(x.title+" "+x.content).toLowerCase().includes(ql);el.style.display=ok?"":"none";if(ok)nT++});
+    let rq=sb.from("sms_logs").select("*").order("created_at",{ascending:false}).limit(300);
+    if(q){const safe=q.replace(/[,()%*\\]/g," ").trim();const dg=q.replace(/\D/g,"");const ids=customers.filter(c=>String(c.name||"").toLowerCase().includes(ql)).slice(0,60).map(c=>c.id);
+      const ors=[`content.ilike.%${safe}%`,`by_name.ilike.%${safe}%`];if(dg.length>=3)ors.push(`to_phone.ilike.%${dg}%`);if(ids.length)ors.push(`customer_id.in.(${ids.join(",")})`);rq=rq.or(ors.join(","))}
+    const {data,error}=await rq;if(my!==seq)return;const box=document.getElementById("smAll");if(!box)return;
+    if(error){box.textContent=q?"찾지 못했습니다: "+error.message:"문자 기록 칸이 아직 없습니다. Supabase에서 phase1zc.sql을 실행해 주세요.";return}
+    const qn=document.getElementById("smQn");if(qn)qn.textContent=q?`문구 ${nT}개 · 보낸 문자 ${data.length}건`:"";
+    box.className="wrapx";box.style.padding="12px 20px 20px";
+    box.innerHTML=`<p class="mapt" style="margin:0 0 8px">${q?`‘${esc(q)}’ 검색 결과 ${data.length}건${data.length>=300?" (최근 300건까지)":""}`:`최근 보낸 문자 ${data.length}건`}${isOffice()?"":" (본인이 보냈거나 담당 고객에게 보낸 문자)"}</p><table class="stafft"><thead><tr><th style="width:130px">보낸 시각</th><th style="width:70px">보낸 사람</th><th style="width:170px">업체명(상호)</th><th style="width:120px">받는 번호</th><th>내용</th><th style="width:60px">결과</th></tr></thead><tbody>
+    ${data.map(l=>{const cu=l.customer_id&&custById(l.customer_id);return `<tr><td>${esc(fmtDT(l.created_at))}</td><td>${esc(l.by_name)}</td><td>${cu?`<a href="#" data-gocust="${cu.id}">${esc(cu.name)}</a>`:""}</td><td>${esc(fmtPhone(l.to_phone))}</td><td style="white-space:pre-wrap">${esc(l.content)}</td><td>${l.status==="실패"?`<span class="neg" title="${esc(l.error)}">실패</span>`:esc(l.msg_type||"보냄")}</td></tr>`}).join("")||`<tr><td colspan="6" class="mapt">${q?"찾는 문자가 없습니다.":"보낸 문자가 없습니다."}</td></tr>`}</tbody></table>`;
+    box.querySelectorAll("[data-gocust]").forEach(a=>a.onclick=e=>{e.preventDefault();goCust(custById(a.dataset.gocust))})};
+  const qi=document.getElementById("smQ");let qt;if(qi)qi.addEventListener("input",()=>{ui.smq=qi.value;clearTimeout(qt);qt=setTimeout(run,300)});
+  await run()}
 /* 고객 화면 '문자' 탭: 보낸 기록 */
 async function renderCustSms(c){const tb=document.getElementById("tabBody");tb.innerHTML=`<div class="toolbar"><button class="btn pri" type="button" id="smNew">문자 보내기</button></div><div id="smLog" class="mapt" style="padding:0 20px">불러오는 중…</div>`;
   document.getElementById("smNew").onclick=()=>smsDlg({c});
