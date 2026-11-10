@@ -299,6 +299,10 @@ dialog{max-width:720px}dialog .db{position:relative}
 .picked{border:1px solid var(--accent);background:var(--accent-weak);border-radius:6px;padding:8px 10px;display:flex;gap:10px;align-items:center;justify-content:space-between;flex-wrap:wrap}
 .sec{padding:16px 20px;display:grid;gap:12px;max-width:900px}
 header.top{position:relative}.tmore{display:none}.tacts{display:contents}
+.tinfo{display:grid;grid-template-columns:118px minmax(0,1fr);border:1px solid var(--line);border-radius:10px;overflow:hidden;font-size:14px}
+.tinfo>div{padding:9px 11px;border-bottom:1px solid #edf0f3}.tinfo>div:nth-last-child(-n+2){border-bottom:0}.tinfo .l{background:#f4f6f9;color:#4b5563;font-weight:600;white-space:nowrap}.tinfo .l b,.tnum{color:var(--accent);margin-right:5px;font-weight:800}
+.tinfo .v{display:flex;align-items:center;gap:8px;flex-wrap:wrap;word-break:break-all}.tinfo .v a:not(.btn){color:var(--accent);font-weight:600}
+#jf .treq:not(.tfill){background:#fff7d6!important;border-color:#e6b422!important}.treqsw{display:inline-block;width:24px;height:14px;border-radius:4px;background:#fff7d6;border:1px solid #e6b422;vertical-align:-2px}
 #nav .nic,#nav .nls,#nav .nmore{display:none}
 @media (min-width:761px){header.top{padding-bottom:0;row-gap:8px}header.top h1{order:1}header.top .sp{order:2}header.top .tacts>*{order:3}
 header.top #nav{order:4;flex:0 0 auto;width:calc(100% + 2*max(16px,env(safe-area-inset-left,0px)));margin:0 calc(-1*max(16px,env(safe-area-inset-left,0px))) -1px;background:#ebedf0;border-top:1px solid #e1e4e8;padding:6px 12px 0;gap:0;flex-wrap:wrap;align-items:flex-end}
@@ -4039,6 +4043,44 @@ function jpSec(j,can,isNew){
   jf.querySelectorAll("[data-dq]").forEach(b=>b.addEventListener("click",()=>setTimeout(drawSum,0)));
   if(q("paid_type"))q("paid_type").addEventListener("change",()=>setTimeout(drawSum,0));
   draw();return st}
+/* 기사 화면 (A/S·이전설치·설치): 위에는 접수 정보 1~8번을 표로, 아래에는 기사가 적는 칸만. 노란 칸 = 완료하려면 꼭 적는 칸 */
+function jf_mark(){const jf=document.getElementById("jf");const e=jf&&[...jf.querySelectorAll(".treq")].find(x=>!String(x.value||"").trim());if(e){e.scrollIntoView({block:"center"});e.focus()}}
+function techMode(j,isNew){return !isNew&&me.role==="tech"&&!isOffice()&&(asLike(j)||j.kind==="install")}
+function techInfoHtml(j,c){const as=asLike(j);const k=ctrById(j.contract_id)||(as?custContracts(j.customer_id)[0]:null);const p=as?asProd(j):liveProd(j);
+  const prod=[[p.product,p.size,p.options&&"("+p.options+")"].filter(Boolean).join(" "),p.serial&&"SN "+p.serial,k&&k.wash_added&&"수압식 추가",!as&&k&&k.contract_type&&k.contract_type!=="구매"&&k.contract_type].filter(Boolean).join(" · ");
+  const ph=[c&&c.phone,c&&c.phone2].filter(Boolean);const E=v=>v?esc(v):`<span class="mapt">(없음)</span>`;
+  const addr=j.address||(c&&c.address)||"";const wd=d=>d?"일월화수목금토"[new Date(d+"T00:00:00").getDay()]:"";
+  let idate="";if(as){_instMap=null;idate=asInstDate(j)||(/중고/.test(p.install_note||"")?"중고구매":"")}
+  const fee=[j.paid_type,Number(j.trip_fee)?"출장비 "+won0(j.trip_fee)+"원":"",Number(j.part_fee)?"부품비 "+won0(j.part_fee)+"원":""].filter(Boolean).join(" · ");
+  const rows=as?[["업체명",`<b>${esc(j.customer_name||"")}</b>`],["전화번호",ph.map(x=>`<a href="tel:${esc(x.replace(/[^0-9+]/g,""))}">${esc(x)}</a>`).join(" · ")||E("")],
+     ["주소",addr?`${esc(addr)} <a class="btn sm" target="_blank" rel="noopener" href="https://map.naver.com/v5/search/${encodeURIComponent(addr)}">지도</a>`:E("")],["제품명",E(prod)],["설치일자",E(idate)],["고장내용",`<span style="white-space:pre-wrap">${E(j.symptom)}</span>`],["AS비용",E(fee)],["특이사항",`<span style="white-space:pre-wrap">${E(c&&c.memo)}</span>`]]
+    :[["업체명",`<b>${esc(j.customer_name||"")}</b>`],["전화번호",ph.map(x=>`<a href="tel:${esc(x.replace(/[^0-9+]/g,""))}">${esc(x)}</a>`).join(" · ")||E("")],
+     ["주소",addr?`${esc(addr)} <a class="btn sm" target="_blank" rel="noopener" href="https://map.naver.com/v5/search/${encodeURIComponent(addr)}">지도</a>`:E("")],["제품명",E(prod)],["설치 예정일",E([j.visit_date&&`${j.visit_date} (${wd(j.visit_date)})`,fmtTime(j.visit_time)].filter(Boolean).join(" "))],
+     ["싱크대 사이즈",E([j.sink_memo,j.sink_status&&"("+j.sink_status+")"].filter(Boolean).join(" "))],["추가 부자재",E(j.parts)],["특이사항",`<span style="white-space:pre-wrap">${E([j.symptom,c&&c.memo].filter(Boolean).join("\n"))}</span>`]];
+  return `<h3 class="ksec" style="margin:0">접수 정보 <small class="mapt" style="font-weight:400">사무실 입력</small></h3><div class="tinfo">${rows.map(([l,v],i)=>`<div class="l"><b>${i+1}</b>${l}</div><div class="v">${v}</div>`).join("")}</div>${c?gradeWarn(c):""}`}
+function techLayout(j,c){const jf=document.getElementById("jf");if(!jf)return;const q=n=>jf.querySelector(`[name="${n}"]`);const as=asLike(j);
+  const fOf=n=>{const e=q(n);return e&&(e.closest("label.f")||e.closest(".f"))};const hide=el=>{if(el)el.style.display="none"};const body=document.getElementById("jBody");
+  const w=document.getElementById("jcWrap");if(w)w.innerHTML=techInfoHtml(j,c);
+  ["request_date","visit_date","tech_names","symptom"].forEach(n=>hide(fOf(n)));
+  {const t=jf.querySelector('input[name="tech"]');const ch=t&&t.closest(".chk");if(ch){hide(ch);hide(ch.previousElementSibling)}else [...jf.querySelectorAll(".f.mapt")].forEach(x=>{if(/담당 기사/.test(x.textContent)){hide(x);hide(x.nextElementSibling)}})}
+  hide(document.getElementById("asBox"));hide(document.getElementById("sinkBox"));hide(document.getElementById("addonBox"));{const cl=q("closed");if(cl)hide(cl.closest("label"))}
+  const h=document.createElement("div");h.innerHTML=`<h3 class="ksec" style="margin:4px 0 0">${as?"처리 결과":"설치 결과"} <small class="mapt" style="font-weight:400">기사 입력</small></h3><p class="mapt" style="margin:4px 0 0"><span class="treqsw"></span> 노란 칸은 아직 비어 있는 필수 칸입니다. ‘완료’로 저장하려면 모두 적어 주세요.</p>`;body.insertBefore(h,body.firstChild);
+  const num=(el,n,t)=>{if(!el)return;const tn=[...el.childNodes].find(x=>x.nodeType===3&&x.textContent.trim());const b=`<b class="tnum">${n}</b>`;if(tn){const sp=document.createElement("span");sp.innerHTML=b+esc(t);el.replaceChild(sp,tn)}else el.insertAdjacentHTML("afterbegin",`<span>${b}${esc(t)}</span>`)};
+  const req=n=>{const e=typeof n==="string"?q(n):n;if(!e)return;e.classList.add("treq");const f=()=>e.classList.toggle("tfill",!!String(e.value||"").trim());e.addEventListener("input",f);e.addEventListener("change",f);f()};
+  const rl=fOf("result");num(rl,9,as?"처리내용":"설치내용");req("result");
+  const tl=fOf("end_time")||fOf("visit_time");
+  if(as){const pb=document.getElementById("payBox");const lg=pb&&pb.querySelector("legend");if(lg)lg.innerHTML=`<b class="tnum">10</b>수리비용`;{const sum=()=>{const n=x=>Number((q(x)||{}).value||0)||0;const c=q("cost");if(c){c.value=(n("trip_fee")+n("part_fee")+n("det_fee"))||"";c.dispatchEvent(new Event("input",{bubbles:true}))}};["trip_fee","part_fee","det_fee","det_qty"].forEach(x=>{const e=q(x);if(e)e.addEventListener("input",()=>setTimeout(sum,0))});jf.querySelectorAll("[data-dq]").forEach(b=>b.addEventListener("click",()=>setTimeout(sum,0)));const cl=fOf("cost");if(cl){const tn=[...cl.childNodes].find(x=>x.nodeType===3);if(tn)tn.textContent="수리비용 합계"}}req("paid_type");{const a=q("trip_fee"),b=q("part_fee");const f=()=>{const ok=(Number(a&&a.value||0)||0)+(Number(b&&b.value||0)||0)>0||(q("paid_type")&&q("paid_type").value==="무상");[a,b].forEach(e=>{if(e){e.classList.add("treq");e.classList.toggle("tfill",ok)}})};[a,b,q("paid_type")].forEach(e=>{if(e){e.addEventListener("input",f);e.addEventListener("change",f)}});f()}if(tl&&pb)pb.after(tl)}
+  else if(tl&&rl)rl.after(tl);
+  if(tl){num(tl,as?11:10,"작업시간 (시작 ~ 종료)");const vt=q("visit_time"),et=q("end_time");if(vt){vt.readOnly=false;req(vt)}if(et)req(et)}}
+/* 기사 화면의 결제 칸: 현금/카드/미수 + 입금자명·카드사명 (입금 기록이 아직 없을 때). 저장하면 입금 내역 한 줄로 들어간다 */
+function techPaySec(j){const box=document.getElementById("jpSec");if(!box)return null;
+  box.innerHTML=`<div class="g3"><label class="f">결제방법<select id="tpM" class="treq"><option value="">(선택)</option><option>현금</option><option>카드</option><option value="미수">미수 (아직 못 받음)</option></select></label>
+    <label class="f"><span id="tpL">입금자명 / 카드사명</span><input id="tpN" autocomplete="off" placeholder="결제방법을 먼저 고르세요"></label><span></span></div>
+    <p class="mapt" style="margin:0">일부만 받았거나 카드·현금으로 나눠 받았으면, 저장한 뒤 다시 열어 ‘입금 내역’에서 나눠 적을 수 있습니다.</p>`;
+  const m=document.getElementById("tpM"),n=document.getElementById("tpN"),l=document.getElementById("tpL");
+  if(j.pay_status==="미수")m.value="미수";
+  const up=()=>{const v=m.value;l.textContent=v==="카드"?"카드사명":v==="현금"?"입금자명":"입금자명 / 카드사명";n.placeholder=v==="카드"?"예: 삼성카드":v==="현금"?"예: 홍길동":v==="미수"?"":"결제방법을 먼저 고르세요";n.disabled=v==="미수";if(v==="카드")n.setAttribute("list","cardList");else n.removeAttribute("list")};m.onchange=up;up();m.addEventListener("change",()=>m.classList.toggle("tfill",!!m.value));m.classList.toggle("tfill",!!m.value);
+  return{tech:true,pend:[],rows:()=>[],get:()=>({method:m.value,name:n.value.trim()})}}
 function jobDlg(j,c,kind,tpl,preset){
   let wantCtr=false;if(kind==="ctr"){wantCtr=true;kind="as"}
   /* 신규접수에는 '설치'가 없음 (설치는 계약으로 접수) */
@@ -4048,7 +4090,7 @@ function jobDlg(j,c,kind,tpl,preset){
     ["id","created_at","updated_at","created_by"].forEach(x=>delete j[x]);kind=j.kind}
   else if(isNew){const k=c?pickCtrFor(c.id,kind):null;j={kind,customer_id:c?c.id:null,contract_id:k?k.id:null,customer_name:c?c.name:"",address:c?c.address:"",product:productOf(k),status:"접수",request_date:today(),techs:[],tech_names:"",symptom:"",result:"",cost:0,sink_status:"",sink_memo:"",parts:"",visit_time:""}}
   if(isNew&&preset)Object.assign(j,preset);
-  const can=isNew||canEditJob(j);const off=isOffice();const p=asLike(j)?asProd(j):(j.product||{});const asx=hasAsx();const he=hasEnd();
+  const can=isNew||canEditJob(j);const off=isOffice();const tm=techMode(j,isNew);const p=asLike(j)?asProd(j):(j.product||{});const asx=hasAsx();const he=hasEnd();
   const techs=staff.filter(s=>s.active&&hasRole(s,"tech"));
   const pickable=customers.filter(x=>isOffice()||x.owner===me.id);
   const canCtr=isNew&&!tpl&&(isOffice()||me.role==="sales");if(!canCtr)wantCtr=false;
@@ -4127,13 +4169,22 @@ function jobDlg(j,c,kind,tpl,preset){
      if(jpS&&(asLike(j)||j.kind==="addon")){const rr=jpS.rows();if(rr.length&&pt.paid_type!=="무상")Object.assign(pt,jpDerive(rr,Number(pt.cost||0),pt.pay_status))}
      if(off||isNew){Object.assign(pt,{request_date:f.get("request_date")||today(),visit_date:f.get("visit_date")||null,visit_time:fmtTime(f.get("visit_time")),symptom:f.get("symptom")||""})}
      if(he&&can)pt.end_time=fmtTime(f.get("end_time"));
+     let tpRow=null;
+     if(tm&&can){if(f.has("visit_time"))pt.visit_time=fmtTime(f.get("visit_time"));
+       const tp=jpS&&jpS.tech?jpS.get():null;const paidJob=asLike(j)&&pt.paid_type!=="무상";
+       if(pt.status==="완료"){const miss=[];if(!String(pt.result||"").trim())miss.push(asLike(j)?"처리내용":"설치내용");
+         if(asLike(j)){if(!pt.paid_type)miss.push("유상/무상");else if(paidJob&&!pt.cost)miss.push("출장비·부품비");if(paidJob&&pt.cost&&tp&&!tp.method)miss.push("결제방법")}
+         if(!pt.visit_time)miss.push("작업 시작 시간");if(he&&!pt.end_time)miss.push("작업 종료 시간");
+         if(miss.length){jf_mark(miss);return toast("노란 칸을 적어 주세요: "+miss.join(", "))}}
+       if(tp&&paidJob&&pt.cost>0){if(tp.method==="미수"){pt.pay_status="미수"}else if(tp.method){tpRow={pay_date:pt.done_date||today(),method:tp.method,payer:tp.name,amount:pt.cost,memo:""};Object.assign(pt,jpDerive([tpRow],pt.cost,""))}}}
      if(off){pt.techs=f.getAll("tech");pt.tech_names=f.get("tech_names")||"";if(pt.status==="접수"&&(pt.techs.length||pt.tech_names))pt.status="배정"}
      if(!isNew&&chgTo&&chgTo.customer_id!==j.customer_id){if(!(await askConfirm(`이 작업의 고객을 ‘${j.customer_name}’에서 ‘${chgTo.customer_name}’(으)로 바꿔 저장할까요?`)))return true;Object.assign(pt,chgTo)}
      let r;if(isNew){const row=Object.assign({},j,pt);delete row.id;r=await sb.from("jobs").insert(row).select().single()}else r=await sb.from("jobs").update(pt).eq("id",j.id);
      if(!r.error&&!isNew&&pt.customer_id&&pt.customer_id!==j.customer_id)await sb.from("customer_files").update({customer_id:pt.customer_id}).eq("job_id",j.id);
      if(r.error&&/jobs_kind_check/.test(r.error.message))return toast(j.kind==="etc"?"기타 구분을 쓰려면 Supabase에서 phase1zl.sql을 실행해 주세요.":j.kind==="move"?"이전설치 구분이 아직 없습니다. Supabase에서 phase1t.sql을 실행해 주세요.":"철거·추가설치 구분이 아직 없습니다. Supabase에서 phase1e.sql을 실행해 주세요.");
      if(r.error)return toast(/pay_status|pay_method/.test(r.error.message)?"납부 칸이 아직 없습니다. Supabase에서 phase1b.sql을 실행해 주세요.":/paid_type|pay_date|pay_name|pay_memo|closed/.test(r.error.message)?"결제 상세 칸이 아직 없습니다. Supabase에서 phase1c.sql을 실행해 주세요.":"저장하지 못했습니다: "+r.error.message);
-     let pmsg="";if(isNew&&jpS&&jpS.pend.length&&r.data&&(asLike(j)||j.kind==="addon")){const {error:eJ}=await sb.from("job_payments").insert(jpS.pend.map(p=>Object.assign({job_id:r.data.id,customer_id:r.data.customer_id},p)));pmsg+=eJ?" · 입금 내역을 저장하지 못했습니다: "+eJ.message:` · 입금 ${jpS.pend.length}건`}
+     let pmsg="";if(tpRow&&!r.error){const {error:eT}=await sb.from("job_payments").insert(Object.assign({job_id:j.id,customer_id:j.customer_id},tpRow));pmsg+=eT?" · 입금을 저장하지 못했습니다: "+eT.message:" · 입금 1건"}
+     if(isNew&&jpS&&jpS.pend.length&&r.data&&(asLike(j)||j.kind==="addon")){const {error:eJ}=await sb.from("job_payments").insert(jpS.pend.map(p=>Object.assign({job_id:r.data.id,customer_id:r.data.customer_id},p)));pmsg+=eJ?" · 입금 내역을 저장하지 못했습니다: "+eJ.message:` · 입금 ${jpS.pend.length}건`}
      if(isNew&&jpSel.length&&r.data){const up={ok:0,fail:[]};const gr={};jpSel.forEach(x=>(gr[x.kind]=gr[x.kind]||[]).push(x.file));
        for(const k of Object.keys(gr)){const u=await uploadCustFiles(r.data.customer_id,gr[k],k,m=>toast(m),r.data.id);up.ok+=u.ok;up.fail=up.fail.concat(u.fail)}
        pmsg=up.fail.length?` · 사진 ${up.ok}개 올림, ${up.fail.length}개 실패${fileErrHint(up.fail)}`:` · 사진 ${up.ok}개`;jpSel.forEach(x=>x.url&&URL.revokeObjectURL(x.url))}
@@ -4150,7 +4201,8 @@ function jobDlg(j,c,kind,tpl,preset){
      {const nj=Object.assign({},j,pt,r.data||{});const chg=isNew||String(j.visit_date||"")!==String(nj.visit_date||"")||String(j.visit_time||"")!==String(nj.visit_time||"")||JSON.stringify(j.techs||[])!==JSON.stringify(nj.techs||[]);
        if(chg&&nj.visit_date&&((nj.techs||[]).length||String(nj.tech_names||"").trim())&&!["완료","취소","보류"].includes(nj.status)&&me.role!=="tech")setTimeout(()=>visitNotifyDlg(nj,c),350)}}]]:[])]);
   const jpSel=isNew?bindNewCustFiles("jp"):[];if(!isNew)renderJobFiles(j,c);
-  const jpS=ui.noJPay?null:jpSec(j,can,isNew);
+  const jpS=ui.noJPay?null:(tm&&can&&asLike(j)&&!jpaysOf(j).length&&!asLegacyRow(j)?techPaySec(j):jpSec(j,can,isNew));
+  if(tm)techLayout(j,c);
   /* 중고구매 체크하면 설치일 비움 */
   (()=>{const jf=document.getElementById("jf");const u=jf&&jf.querySelector('[name="as_used"]'),d=jf&&jf.querySelector('[name="as_idate"]');if(!u||!d||u.disabled)return;
     u.addEventListener("change",()=>{if(u.checked){d.dataset.prev=d.value;d.value="";d.readOnly=true}else{d.readOnly=false;if(d.dataset.prev)d.value=d.dataset.prev}})})();
