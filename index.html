@@ -261,7 +261,8 @@ body.resizing,body.resizing *{cursor:col-resize!important;user-select:none}
 .paysum{display:flex;gap:14px;flex-wrap:wrap;margin-bottom:8px;font-size:13px}
 .payadd{display:grid;grid-template-columns:140px 100px 1fr 120px 1fr auto;gap:6px;margin-top:8px}
 .payadd input,.payadd select{padding:6px 8px;border:1px solid var(--line);border-radius:6px;background:var(--field);min-width:0}
-@media (max-width:760px){.payadd{grid-template-columns:1fr 1fr}}
+.payadd.lcadd{grid-template-columns:140px minmax(0,1fr) auto;align-items:start}
+@media (max-width:760px){.payadd{grid-template-columns:1fr 1fr}.payadd.lcadd{grid-template-columns:1fr auto}.payadd.lcadd textarea{grid-column:1/-1;grid-row:2}}
 .cplist{display:grid;gap:4px;max-height:60vh;overflow:auto}.cprow{display:flex;justify-content:space-between;align-items:center;gap:8px;border-bottom:1px solid var(--line2);padding:2px 0}
 .cprow span{display:flex;gap:4px}.sumbox{max-width:100%;overflow-x:auto}
 @media (max-width:760px){.sumwrap{padding:12px 16px 0}.sumt{font-size:12px}.sumt th,.sumt td{padding:4px 6px;min-width:0}}
@@ -2013,7 +2014,7 @@ function leadDlg(l,pre){const isNew=!l;l=l||Object.assign({status:"",recv_date:t
    <div class="g3">${inp("next_date","다음 연락일",l.next_date,"date",ro)}<span></span><span></span></div>
    <h3 class="ksec">상담 이력</h3>
    <div id="lCons"></div>
-   ${ro?"":`<div class="payadd"><input id="lcD" type="date" value="${today()}" aria-label="상담일자"><input id="lcT" placeholder="상담 내용 (예: 사장님께 상담 후 오더, 기물 측정 요청)" aria-label="상담 내용" style="flex:1;min-width:240px"><button type="button" class="btn" id="lcAdd">상담 추가</button></div>
+   ${ro?"":`<div class="payadd lcadd"><input id="lcD" type="date" value="${today()}" aria-label="상담일자"><textarea id="lcT" rows="3" placeholder="상담 내용 (예: 사장님께 상담 후 오더, 기물 측정 요청)" aria-label="상담 내용" style="padding:8px 10px;border:1px solid var(--line);border-radius:6px;background:var(--field);font:inherit;resize:vertical;min-width:0"></textarea><button type="button" class="btn pri" id="lcAdd">상담 추가</button></div>
    <p class="mapt" style="margin:0">상담을 추가한 뒤 ‘저장’을 눌러야 반영됩니다.</p>`}
    <datalist id="lItem">${LITEM.map(x=>`<option value="${x}">`).join("")}</datalist><datalist id="lSrc">${LSRC.map(x=>`<option value="${x}">`).join("")}</datalist>
    <datalist id="lProg">${LPROG.map(x=>`<option value="${x}">`).join("")}</datalist><datalist id="stList2">${staff.filter(s=>s.active&&(s.role!=="tech"||hasRole(s,"sales")||hasRole(s,"office"))).map(s=>`<option value="${esc(s.name)}">`).join("")}</datalist></div>`,
@@ -2023,7 +2024,7 @@ function leadDlg(l,pre){const isNew=!l;l=l||Object.assign({status:"",recv_date:t
     box.querySelectorAll("[data-cx]").forEach(b=>b.onclick=()=>{cons.splice(+b.dataset.cx,1);draw()})};
   draw();
   const add=document.getElementById("lcAdd");if(add){const go=()=>{const t=val("lcT").trim();if(!t)return toast("상담 내용을 입력하세요");cons.push({d:val("lcD")||today(),t,by:me.name||""});document.getElementById("lcT").value="";draw()};add.onclick=go;
-    document.getElementById("lcT").addEventListener("keydown",e=>{if(e.key==="Enter"&&!e.isComposing){e.preventDefault();e.stopPropagation();go()}})}
+    document.getElementById("lcT").addEventListener("keydown",e=>{if(e.key==="Enter"&&!e.shiftKey&&!e.isComposing){e.preventDefault();e.stopPropagation();go()}})}
   const lg=document.getElementById("lGo");if(lg)lg.onclick=e=>{e.preventDefault();goCust(c0)};
 }
 async function leadSave(l,isNew,cons){const f=fdata("lf");const s=k=>(f.get(k)||"").trim();
