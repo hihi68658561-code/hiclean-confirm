@@ -4087,7 +4087,7 @@ function techMode(j,isNew){return !isNew&&me.role==="tech"&&!isOffice()&&(asLike
 function asFeeRule(j,c){_instMap=null;const d=asInstDate(j);if(!d)return null;const base=j.request_date||today();const lim=new Date(d+"T00:00:00");lim.setFullYear(lim.getFullYear()+1);
   if(new Date(base+"T00:00:00")<=lim)return{over:false};const jeju=/제주/.test([j.address,c&&c.address].filter(Boolean).join(" "));return{over:true,jeju,trip:jeju?100000:50000}}
 function techInfoHtml(j,c){const as=asLike(j);const k=ctrById(j.contract_id)||(as?custContracts(j.customer_id)[0]:null);const ad=j.kind==="addon";const p=as?asProd(j):ad?addonItem(j):liveProd(j);
-  const prod=ad?[p.product,p.size].filter(Boolean).join(" "):[[p.product,p.size,p.options&&"("+p.options+")"].filter(Boolean).join(" "),p.serial&&"SN "+p.serial,k&&k.wash_added&&"수압식 추가",!as&&k&&k.contract_type&&k.contract_type!=="구매"&&k.contract_type].filter(Boolean).join(" · ");
+  const prod=ad?[p.product,p.size].filter(Boolean).join(" "):[[p.product,p.size,p.options&&"("+p.options+")"].filter(Boolean).join(" "),p.serial&&"SN "+p.serial,(k?k.wash_added:p.wash)&&"수압식 추가",!as&&(k?k.contract_type:p.ctype)&&(k?k.contract_type:p.ctype)!=="구매"&&(k?k.contract_type:p.ctype)].filter(Boolean).join(" · ");
   const ph=[c&&c.phone,c&&c.phone2].filter(Boolean);const E=v=>v?esc(v):`<span class="mapt">(없음)</span>`;
   const addr=j.address||(c&&c.address)||"";const wd=d=>d?"일월화수목금토"[new Date(d+"T00:00:00").getDay()]:"";
   let idate="";if(as){_instMap=null;idate=asInstDate(j)||(/중고/.test(p.install_note||"")?"중고구매":"")}
@@ -4389,8 +4389,8 @@ function printJobs(list){const hs=list.filter(Boolean).map(([j,c])=>jobSheet(j,c
 function jobSheet(j,c){const {r,cu}=jobSheetData(j,c);return j.kind==="as"?sheetAS(r,cu):sheetIS(r,cu)}
 function jobSheetData(j,c){
   const p0=j.product||{};const k=ctrById(j.contract_id);const p=asLike(j)?asProd(j):liveProd(j)||p0;
-  const cu={상호:(c&&c.name)||j.customer_name,사업장명:(c&&c.biz_name)||"",고객명:(c&&c.ceo)||"",전화:(c&&(c.phone||c.phone2))||"",사업자번호:(c&&c.biz_no)||"",설치장소:(c&&c.address)||j.address,모델명:p.product,사이즈:p.size,옵션:p.options,SN:p.serial,구매일자:k?k.contract_date:"",설치일자:j.kind==="install"?(j.done_date||j.visit_date||""):installDate(j.customer_id)};
-  const r={접수일자:j.request_date,불편사항:j.symptom,신청일자:k?k.contract_date:"",설치일자:j.done_date||j.visit_date||"",업장명:cu.사업장명||cu.상호};
+  const cu={상호:(c&&c.name)||j.customer_name,사업장명:(c&&c.biz_name)||"",고객명:(c&&c.ceo)||"",전화:(c&&(c.phone||c.phone2))||"",사업자번호:(c&&c.biz_no)||"",설치장소:(c&&c.address)||j.address,모델명:p.product,사이즈:p.size,옵션:p.options,SN:p.serial,구매일자:k?k.contract_date:(p0.cdate||""),설치일자:j.kind==="install"?(j.done_date||j.visit_date||""):installDate(j.customer_id)};
+  const r={접수일자:j.request_date,불편사항:j.symptom,신청일자:k?k.contract_date:(p0.cdate||""),설치일자:j.done_date||j.visit_date||"",업장명:cu.사업장명||cu.상호};
   return{r,cu};
 }
 function instTxt(c){const i=jobs.filter(x=>x.customer_id===c.id&&x.kind==="install"&&x.status!=="취소").sort((a,b)=>((b.done_date||b.visit_date||"")).localeCompare(a.done_date||a.visit_date||""))[0];
