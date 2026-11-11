@@ -1793,6 +1793,11 @@ function renderSchedView0(){
   const hid=schHidden();
   const allGroups=[...people.map(s=>({id:s.user_id,name:s.name})),...nameKeys.map(k=>({id:k,name:k.slice(2)}))];
   if(used.has("_out"))allGroups.push({id:"_out",name:"외부"});
+  /* A/S 기사만 맡은 계정(추가 업무 없음): 공장출고·외부(외주)·계정 없는 담당 칸은 안 보임 */
+  const techOnly=me.role==="tech"&&!isOffice()&&!((me.extra||[]).length);
+  if(techOnly)for(let i=allGroups.length-1;i>=0;i--){const g=allGroups[i];if(g.id!==me.id&&(g.id==="_out"||String(g.id).startsWith("n:")||/공장\s*출고|외주/.test(g.name)))allGroups.splice(i,1)}
+  /* 접속한 기사의 일정을 맨 앞에 */
+  {const mi=allGroups.findIndex(g=>g.id===me.id);if(mi>0)allGroups.unshift(allGroups.splice(mi,1)[0])}
   const ext=[];
   const groups=allGroups.filter(g=>!hid.has(g.id));
   const off=isOffice();
@@ -1830,7 +1835,7 @@ function renderSchedView0(){
   (()=>{const tb=view().querySelector(".wt.sch");if(!tb)return;const w=[".sf1",".sf2"].map(s=>tb.querySelector("thead "+s).getBoundingClientRect().width);
     let st=document.getElementById("frzSch");if(!st){st=document.createElement("style");st.id="frzSch";document.head.appendChild(st)}
     /* 휴대폰 등 좁은 화면: 일자·요일만 고정하고 참조는 같이 밀려 나가게 */
-    st.textContent=window.innerWidth<768?`.wt.sch .sf1{left:0}.wt.sch .sf2{left:${w[0]}px;box-shadow:inset -3px 0 0 #555}.wt.sch .sf3{position:static!important;box-shadow:none;max-width:90px;overflow:hidden;text-overflow:ellipsis}`
+    st.textContent=window.innerWidth<768?`.wt.sch .sf1{left:0}.wt.sch .sf2{left:${w[0]}px;box-shadow:inset -3px 0 0 #555}.wt.sch .sf3{display:none}`
       :`.wt.sch .sf1{left:0}.wt.sch .sf2{left:${w[0]}px}.wt.sch .sf3{left:${w[0]+w[1]}px}`})();
   const re=()=>renderSchedView();
   document.getElementById("sM").onchange=e=>{if(e.target.value){ui.sm=e.target.value;if(ui.sm===thisMonth())ui.schJump=true;re()}};
