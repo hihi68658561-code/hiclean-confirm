@@ -2451,7 +2451,7 @@ async function smsDlg(opts){opts=opts||{};let c=opts.c||null;const pick=!c;let v
     <label class="f">자주 쓰는 문구<select id="smTpl"><option value="">(직접 입력)</option>${tpls.map(t=>`<option value="${t.id}" ${t0&&t0.id===t.id?"selected":""}>${esc(t.title)}</option>`).join("")}</select></label>
     <label class="f">내용<textarea id="smText" rows="6" style="min-height:130px">${esc(t0?smsFill(t0.content,v):"")}</textarea></label>
     <p class="mapt" id="smInfo" style="margin:0"></p>
-    <div class="f"><span>이미지 첨부 (선택)</span><div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap"><input type="file" id="smImg" accept="image/*" hidden><button type="button" class="btn" id="smImgB">이미지 고르기</button><span id="smImgP" class="mapt">한 장만 붙일 수 있습니다. 크기는 자동으로 줄여서 보냅니다 (그림문자 요금).</span></div></div>
+    <div class="f"><span>이미지 첨부 (선택)</span><div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap"><input type="file" id="smImg" accept="image/*" hidden><button type="button" class="btn" id="smImgB">이미지</button><span id="smImgP" class="mapt">한 장만 붙일 수 있습니다. 크기는 자동으로 줄여서 보냅니다 (포토문자 요금).</span></div></div>
     <p class="mapt" style="margin:0">{업체명}·{방문일} 같은 칸은 문구를 고를 때 자동으로 채워집니다. 채워지지 않은 칸은 지우거나 직접 고쳐 주세요.</p></div>`,
    [["닫기"],["보내기","pri",async()=>{
      const text=val("smText").trim();if(!text){toast("내용을 입력하세요");return true}
@@ -2460,7 +2460,7 @@ async function smsDlg(opts){opts=opts||{};let c=opts.c||null;const pick=!c;let v
      const uniq=[...new Set(to)];if(!uniq.length){toast("받는 번호를 고르거나 입력하세요");return true}
      const bad=uniq.filter(x=>!/^0\d{8,10}$/.test(x));if(bad.length){toast("번호를 확인해 주세요: "+bad.join(", "));return true}
      if(img&&!ui.smsMms){const pr=await sb.functions.invoke("send-sms",{body:{probe:true}});if(pr.data&&pr.data.mms)ui.smsMms=true;else{toast("이미지를 보내려면 Supabase의 문자 기능(send-sms)을 새 버전으로 다시 배포해야 합니다. 이미지를 빼고 보내거나, 배포 후 다시 시도하세요.");return true}}
-     if(!(await askConfirm(`${uniq.length}명에게 ${img?"이미지가 붙은 그림문자(MMS)":smsBytes(text)>90?"장문(LMS)":"단문(SMS)"}를 보낼까요?`)))return true;
+     if(!(await askConfirm(`${uniq.length}명에게 ${img?"이미지가 붙은 포토문자(MMS)":smsBytes(text)>90?"장문(LMS)":"단문(SMS)"}를 보낼까요?`)))return true;
      const dg_=x=>String(x||"").replace(/\D/g,"");const cid=p=>{if(c&&[c.phone,c.phone2].some(x=>dg_(x)===p))return c.id;const f=customers.find(x=>dg_(x.phone)===p||dg_(x.phone2)===p);return f?f.id:(c?c.id:null)};
      toast("보내는 중…");
      const {data,error}=await sb.functions.invoke("send-sms",{body:{...(img?{image:{data:img.data,name:img.name}}:{}),messages:uniq.map(p=>({to:p,text,customer_id:cid(p),ref_type:opts.ref_type||"",ref_id:opts.ref_id||null}))}});
@@ -2469,11 +2469,11 @@ async function smsDlg(opts){opts=opts||{};let c=opts.c||null;const pick=!c;let v
      if(data&&data.failed&&data.failed.length){toast(`${data.sent}건 보냄, ${data.failed.length}건 실패: ${data.failed.map(f=>f.to+" "+f.error).join(", ")}`);return true}
      toast(`문자를 보냈습니다 (${uniq.length}건)`);if(ui.view==="sms")renderSmsView();else if(ui.ctab==="sms"&&c&&ui.sel===c.id)renderCustSms(c)}]]);
   const ta=document.getElementById("smText"),info=document.getElementById("smInfo"),sel_=document.getElementById("smTpl");
-  const upd=()=>{const b=smsBytes(ta.value);info.textContent=`${b}바이트 · ${img?"그림문자(MMS)":b>90?"장문(LMS)":"단문(SMS)"}${b>2000?" — 2000바이트를 넘어 보낼 수 없습니다":""}`};ta.addEventListener("input",upd);upd();
+  const upd=()=>{const b=smsBytes(ta.value);info.textContent=`${b}바이트 · ${img?"포토문자(MMS)":b>90?"장문(LMS)":"단문(SMS)"}${b>2000?" — 2000바이트를 넘어 보낼 수 없습니다":""}`};ta.addEventListener("input",upd);upd();
   /* 이미지 첨부: JPG로 바꾸고 200KB 아래로 줄인다 (솔라피 MMS 기준: JPG · 200KB · 1500×1440 이하) */
   {const fi=document.getElementById("smImg"),bt=document.getElementById("smImgB"),pv=document.getElementById("smImgP");const tip=pv.textContent;
-    const show=()=>{if(!img){pv.textContent=tip;bt.textContent="이미지 고르기";upd();return}
-      pv.innerHTML=`<img src="data:image/jpeg;base64,${img.data}" alt="첨부 이미지" style="height:64px;border:1px solid var(--line);border-radius:6px;vertical-align:middle"> ${esc(img.name)} · ${Math.round(img.kb)}KB <button type="button" class="btn sm danger" id="smImgX">빼기</button>`;bt.textContent="다른 이미지";
+    const show=()=>{if(!img){pv.textContent=tip;bt.textContent="이미지";upd();return}
+      pv.innerHTML=`<img src="data:image/jpeg;base64,${img.data}" alt="첨부 이미지" style="height:64px;border:1px solid var(--line);border-radius:6px;vertical-align:middle"> ${esc(img.name)} · ${Math.round(img.kb)}KB <button type="button" class="btn sm danger" id="smImgX">삭제</button>`;bt.textContent="이미지";
       document.getElementById("smImgX").onclick=()=>{img=null;fi.value="";show()};upd()};
     bt.onclick=()=>fi.click();
     fi.onchange=async()=>{const f=fi.files&&fi.files[0];if(!f)return;pv.textContent="이미지를 줄이는 중…";
