@@ -3205,7 +3205,7 @@ function sinkInMatch(all){const open=[];(skOrders||[]).forEach(o=>{if(!["신규�
   bind();document.getElementById("dlg").classList.add("wide")}
 /* 발주서 창 (신규·수정). pre: {c, k} 계약에서 열 때 */
 function sinkDlg(o,pre){const off=isOffice();const isNew=!o;pre=pre||{};const stSrc=pre.stock?skStockItems().find(x=>x.key===pre.stock):null;
-  o=o||{order_date:today(),owner:me.role==="sales"?me.id:null,owner_name:me.role==="sales"?(me.name||""):"",customer_id:pre.c?pre.c.id:null,contract_id:pre.k?pre.k.id:null,site_name:pre.c?pre.c.name:"",due_date:"",status:stSrc?"입고완료":"신규접수",in_date:stSrc?today():null,items:[stSrc?{...JSON.parse(JSON.stringify(stSrc.it)),qty:1,from_stock:stSrc.key}:{name:"",opt1:"",opt2:"",w:"",d:"",h:"",hole:"",wheel:"",qty:1,note:""}],memo:"",site_name:pre.site||(pre.c?pre.c.name:"")};
+  const ow0=off&&pre.c?skOwnerOf(pre.c.id,pre.k&&pre.k.id):null;o=o||{order_date:today(),owner:me.role==="sales"?me.id:(ow0?ow0.owner:null),owner_name:me.role==="sales"?(me.name||""):(ow0?ow0.owner_name:""),customer_id:pre.c?pre.c.id:null,contract_id:pre.k?pre.k.id:null,site_name:pre.c?pre.c.name:"",due_date:"",status:stSrc?"입고완료":"신규접수",in_date:stSrc?today():null,items:[stSrc?{...JSON.parse(JSON.stringify(stSrc.it)),qty:1,from_stock:stSrc.key}:{name:"",opt1:"",opt2:"",w:"",d:"",h:"",hole:"",wheel:"",qty:1,note:""}],memo:"",site_name:pre.site||(pre.c?pre.c.name:"")};
   const canEdit=off||(isNew||(o.status==="신규접수"&&o.owner===me.id));
   const items=JSON.parse(JSON.stringify(o.items&&o.items.length?o.items:[{qty:1}]));const lines=JSON.parse(JSON.stringify(((skPrices[o.id]||{}).lines)||[]));
   let cust=o.customer_id?custById(o.customer_id):null,ctrId=o.contract_id;
@@ -3583,6 +3583,9 @@ function renderContracts(c){
 function s3Text(k){return k.sales3_name||staffName(k.sales3)||""}
 function whoIs(v){v=String(v||"").trim();const s=v&&staff.find(x=>x.name===v||(x.aliases||[]).includes(v));return{id:s?s.user_id:null,name:s?s.name:v}}
 function splitS3(txt){const a=String(txt||"").split(/\s*[\/,·]\s*/).map(x=>x.trim()).filter(Boolean);return{owner:whoIs(a[0]),coll:whoIs(a[1]||"")}}
+/* 싱크대 발주의 담당자: 그 계약의 3차 계약자(담당자). 없으면 고객의 다른 계약 → 고객 담당 */
+function skOwnerOf(custId,ctrId){const ks=[ctrId&&ctrById(ctrId),...custContracts(custId||"")].filter(Boolean);const k=ks.find(x=>x.sales3||x.sales3_name);
+  if(k)return{owner:k.sales3||null,owner_name:staffName(k.sales3)||k.sales3_name||""};const c=custById(custId);if(c&&(c.owner||c.owner_name))return{owner:c.owner||null,owner_name:staffName(c.owner)||c.owner_name||""};return null}
 function custS3(c){const o=staffName(c.owner)||c.owner_name||"",cl=staffName(c.collector)||c.collector_name||"";return o&&cl&&cl!==o?o+"/"+cl:o}
 /* 계약·작업 창 위에 고객정보 팝업 (그 자리에서 수정) */
 function openCustPopup(c,after){c=custById(c.id)||c;const d=document.getElementById("cdlg"),f=document.getElementById("cpf");const ro=!canEditCust(c);
@@ -4271,11 +4274,12 @@ function jobDlg(j,c,kind,tpl,preset){
       if(isOffice()&&!ui.noSink&&(jj.kind==="install"||jj.kind==="addon")&&jj.status!=="취소"&&memo&&["발주대기","발주완료"].includes(jj.sink_status)&&jj.customer_id){
         const {data:os,error:eS}=await sb.from("sink_orders").select("*").eq("customer_id",jj.customer_id).neq("status","취소");
         if(!eS){const byJob=o=>(o.items||[]).some(it=>it.job===jj.id);const mine=(os||[]).filter(o=>String(o.spec_text||"").trim()===memo||byJob(o)||(!isNew&&(skJobOf(o)||{}).id===jj.id));
-          if(!mine.length){const p={order_date:today(),owner:me.id,owner_name:me.name||"",customer_id:jj.customer_id,contract_id:jj.contract_id||null,site_name:jj.customer_name||(c&&c.name)||"",status:jj.sink_status==="발주완료"?"주문완료":"신규접수",items:[{name:"99. 직접입력",sup:memo,qty:1,job:jj.id}],memo:AUTO,spec_text:memo};
+          if(!mine.length){const ow=skOwnerOf(jj.customer_id,jj.contract_id)||{owner:me.id,owner_name:me.name||""};const p={order_date:today(),owner:ow.owner,owner_name:ow.owner_name,customer_id:jj.customer_id,contract_id:jj.contract_id||null,site_name:jj.customer_name||(c&&c.name)||"",status:jj.sink_status==="발주완료"?"주문완료":"신규접수",items:[{name:"99. 직접입력",sup:memo,qty:1,job:jj.id}],memo:AUTO,spec_text:memo};
             let ri=await sb.from("sink_orders").insert(p);if(ri.error&&/spec_text/.test(ri.error.message)){const {spec_text,...p2}=p;ri=await sb.from("sink_orders").insert(p2)}
             if(ri.error)pmsg+=" · 싱크대 발주 탭에 올리지 못했습니다: "+ri.error.message;else{skOrders=null;pmsg+=` · 싱크대 발주 탭에 ‘${skLbl(p.status)}’(으)로 올렸습니다`}}
-          else{const o=mine.find(o=>byJob(o)&&String(o.spec_text||"").trim()!==memo&&(o.items||[]).length===1&&["신규접수","주문완료"].includes(o.status));
-            if(o){const {error:eU}=await sb.from("sink_orders").update({items:[Object.assign({},o.items[0],{sup:memo})],spec_text:memo}).eq("id",o.id);if(!eU){skOrders=null;pmsg+=" · 싱크대 발주 내용도 고쳤습니다"}}}}}}
+          else{const o=mine.find(o=>byJob(o)&&(o.items||[]).length===1&&["신규접수","주문완료"].includes(o.status));const ow=o&&o.memo===AUTO?skOwnerOf(jj.customer_id,jj.contract_id):null;
+            const up={};if(o&&String(o.spec_text||"").trim()!==memo){up.items=[Object.assign({},o.items[0],{sup:memo})];up.spec_text=memo}if(o&&ow&&ow.owner_name&&ow.owner_name!==(o.owner_name||"")){up.owner=ow.owner;up.owner_name=ow.owner_name}
+            if(o&&Object.keys(up).length){const {error:eU}=await sb.from("sink_orders").update(up).eq("id",o.id);if(!eU){skOrders=null;pmsg+=up.items?" · 싱크대 발주 내용도 고쳤습니다":" · 싱크대 발주 담당자를 3차 담당자로 맞췄습니다"}}}}}}
      toast((isNew?`${kl(j)} 접수했습니다`:"저장했습니다")+pmsg);reload(["jobs","customers","files","contracts","jpays"]);
      /* 기사가 A/S·설치를 완료로 저장하면 → 확인서 작성(고객 서명) 물어보기 */
      if(tm&&c&&!ui.noFiles&&pt.status==="완료"&&j.status!=="완료"&&(j.kind==="as"||j.kind==="install")){const nj=Object.assign({},j,pt);setTimeout(async()=>{if(await askConfirm("완료 처리했습니다. 확인서를 작성해 고객 서명을 받을까요?"))confDlg(nj,c)},500)}
