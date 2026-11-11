@@ -4079,12 +4079,12 @@ function jpSec(j,can,isNew){
   draw();return st}
 /* 기사 화면 (A/S·이전설치·설치): 위에는 접수 정보 1~8번을 표로, 아래에는 기사가 적는 칸만. 노란 칸 = 완료하려면 꼭 적는 칸 */
 function jf_mark(){const jf=document.getElementById("jf");const e=jf&&[...jf.querySelectorAll(".treq")].find(x=>!String(x.value||"").trim());if(e){e.scrollIntoView({block:"center"});e.focus()}}
-function techMode(j,isNew){return !isNew&&me.role==="tech"&&!isOffice()&&(asLike(j)||j.kind==="install")}
+function techMode(j,isNew){return !isNew&&me.role==="tech"&&!isOffice()&&(asLike(j)||j.kind==="install"||j.kind==="addon")}
 /* A/S 비용 기준: 설치한 지 1년이 지났으면 유상 — 내륙 출장비 5만원, 제주 10만원 (+ 부품비) */
 function asFeeRule(j,c){_instMap=null;const d=asInstDate(j);if(!d)return null;const base=j.request_date||today();const lim=new Date(d+"T00:00:00");lim.setFullYear(lim.getFullYear()+1);
   if(new Date(base+"T00:00:00")<=lim)return{over:false};const jeju=/제주/.test([j.address,c&&c.address].filter(Boolean).join(" "));return{over:true,jeju,trip:jeju?100000:50000}}
-function techInfoHtml(j,c){const as=asLike(j);const k=ctrById(j.contract_id)||(as?custContracts(j.customer_id)[0]:null);const p=as?asProd(j):liveProd(j);
-  const prod=[[p.product,p.size,p.options&&"("+p.options+")"].filter(Boolean).join(" "),p.serial&&"SN "+p.serial,k&&k.wash_added&&"수압식 추가",!as&&k&&k.contract_type&&k.contract_type!=="구매"&&k.contract_type].filter(Boolean).join(" · ");
+function techInfoHtml(j,c){const as=asLike(j);const k=ctrById(j.contract_id)||(as?custContracts(j.customer_id)[0]:null);const ad=j.kind==="addon";const p=as?asProd(j):ad?addonItem(j):liveProd(j);
+  const prod=ad?[p.product,p.size].filter(Boolean).join(" "):[[p.product,p.size,p.options&&"("+p.options+")"].filter(Boolean).join(" "),p.serial&&"SN "+p.serial,k&&k.wash_added&&"수압식 추가",!as&&k&&k.contract_type&&k.contract_type!=="구매"&&k.contract_type].filter(Boolean).join(" · ");
   const ph=[c&&c.phone,c&&c.phone2].filter(Boolean);const E=v=>v?esc(v):`<span class="mapt">(없음)</span>`;
   const addr=j.address||(c&&c.address)||"";const wd=d=>d?"일월화수목금토"[new Date(d+"T00:00:00").getDay()]:"";
   let idate="";if(as){_instMap=null;idate=asInstDate(j)||(/중고/.test(p.install_note||"")?"중고구매":"")}
@@ -4093,7 +4093,7 @@ function techInfoHtml(j,c){const as=asLike(j);const k=ctrById(j.contract_id)||(a
   const rows=as?[["업체명",`<b>${esc(j.customer_name||"")}</b>`],["전화번호",ph.map(x=>`<a href="tel:${esc(x.replace(/[^0-9+]/g,""))}">${esc(x)}</a>`).join(" · ")||E("")],
      ["주소",addr?`${esc(addr)} <a class="btn sm" target="_blank" rel="noopener" href="https://map.naver.com/v5/search/${encodeURIComponent(addr)}">지도</a>`:E("")],["제품명",E(prod)],["설치일자",E(idate)],["고장내용",`<span style="white-space:pre-wrap">${E(j.symptom)}</span>`],["AS비용",fee?`<b>${esc(fee)}</b>`:E("")],["특이사항",`<span style="white-space:pre-wrap">${E(c&&c.memo)}</span>`]]
     :[["업체명",`<b>${esc(j.customer_name||"")}</b>`],["전화번호",ph.map(x=>`<a href="tel:${esc(x.replace(/[^0-9+]/g,""))}">${esc(x)}</a>`).join(" · ")||E("")],
-     ["주소",addr?`${esc(addr)} <a class="btn sm" target="_blank" rel="noopener" href="https://map.naver.com/v5/search/${encodeURIComponent(addr)}">지도</a>`:E("")],["제품명",E(prod)],["설치 예정일",E([j.visit_date&&`${j.visit_date} (${wd(j.visit_date)})`,fmtTime(j.visit_time)].filter(Boolean).join(" "))],
+     ["주소",addr?`${esc(addr)} <a class="btn sm" target="_blank" rel="noopener" href="https://map.naver.com/v5/search/${encodeURIComponent(addr)}">지도</a>`:E("")],[ad?"추가 품목":"제품명",E(prod)],["설치 예정일",E([j.visit_date&&`${j.visit_date} (${wd(j.visit_date)})`,fmtTime(j.visit_time)].filter(Boolean).join(" "))],
      ["싱크대 사이즈",E(j.sink_memo)],["추가 부자재",E(j.parts)],["특이사항",`<span style="white-space:pre-wrap">${E([j.symptom,c&&c.memo].filter(Boolean).join("\n"))}</span>`]];
   return `<h3 class="ksec" style="margin:0">접수 정보 <small class="mapt" style="font-weight:400">사무실 입력</small></h3><div class="tinfo">${rows.map(([l,v],i)=>`<div class="l"><b>${i+1}</b>${l}</div><div class="v">${v}</div>`).join("")}</div>${c?gradeWarn(c):""}`}
 function techLayout(j,c){const jf=document.getElementById("jf");if(!jf)return;const q=n=>jf.querySelector(`[name="${n}"]`);const as=asLike(j);
@@ -4103,7 +4103,7 @@ function techLayout(j,c){const jf=document.getElementById("jf");if(!jf)return;co
   if(as){const ss=q("status");if(ss){const cur=j.status;[...ss.options].forEach(o=>{if(!["보류","취소","완료",cur].includes(o.value))o.remove()})}}
   {const dl=fOf("done_date");if(dl){const tn=[...dl.childNodes].find(x=>x.nodeType===3&&x.textContent.trim());if(tn)tn.textContent="완료일";if(!as){dl.parentElement.style.gridTemplateColumns="minmax(0,1fr) minmax(0,2fr)";dl.insertAdjacentHTML("afterend",`<p class="mapt" style="margin:0;align-self:end;padding-bottom:8px">작업을 마치면 완료일을 넣고 저장하세요. 완료 처리됩니다.</p>`)}}}
   {const t=jf.querySelector('input[name="tech"]');const ch=t&&t.closest(".chk");if(ch){hide(ch);hide(ch.previousElementSibling)}else [...jf.querySelectorAll(".f.mapt")].forEach(x=>{if(/담당 기사/.test(x.textContent)){hide(x);hide(x.nextElementSibling)}})}
-  hide(document.getElementById("asBox"));hide(document.getElementById("sinkBox"));hide(document.getElementById("addonBox"));{const cl=q("closed");if(cl)hide(cl.closest("label"))}
+  hide(document.getElementById("asBox"));hide(document.getElementById("sinkBox"));hide(document.getElementById("addonBox"));if(!as)hide(document.getElementById("payBox"));{const cl=q("closed");if(cl)hide(cl.closest("label"))}
   const h=document.createElement("div");h.innerHTML=`<h3 class="ksec" style="margin:4px 0 0">${as?"처리 결과":"설치 결과"} <small class="mapt" style="font-weight:400">기사 입력</small> <small style="font-weight:600;font-size:12.5px;color:#a15c00;margin-left:6px"><span class="treqsw"></span> 필수</small></h3>`;body.insertBefore(h,body.firstChild);
   const num=(el,n,t)=>{if(!el)return;const tn=[...el.childNodes].find(x=>x.nodeType===3&&x.textContent.trim());const b=`<b class="tnum">${n}</b>`;if(tn){const sp=document.createElement("span");sp.innerHTML=b+esc(t);el.replaceChild(sp,tn)}else el.insertAdjacentHTML("afterbegin",`<span>${b}${esc(t)}</span>`)};
   const req=n=>{const e=typeof n==="string"?q(n):n;if(!e)return;e.classList.add("treq");const f=()=>e.classList.toggle("tfill",!!String(e.value||"").trim());e.addEventListener("input",f);e.addEventListener("change",f);f()};
