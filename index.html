@@ -567,7 +567,7 @@ function sheetIS(r,c){
    <tr><td class="sec" rowspan="5">1. 고객정보\n및\n접수내용</td><td class="lb" style="font-size:88%;letter-spacing:-.5px">업체명(상호)</td><td class="v" colspan="3">${v(c.상호)}</td><td class="lb" colspan="2">전화번호</td><td class="v" colspan="3">${v(c.전화)}</td></tr>
    <tr><td class="lb">대 표 자</td><td class="v" colspan="3">${v(c.고객명)}</td><td class="lb" colspan="2">사업자번호</td><td class="v" colspan="3">${v(c.사업자번호)}</td></tr>
    <tr><td class="lb">설치장소</td><td class="v" colspan="8">${v(c.설치장소)}</td></tr>
-   <tr><td class="lb">모 델 명</td><td class="v" colspan="3">${v(modelText(c))}</td><td class="lb" colspan="2">제품 SN.</td><td class="v" colspan="3">${v(c.SN)}</td></tr>
+   <tr><td class="lb">제 품 명</td><td class="v" colspan="8">${v([modelText(c),c.SN].filter(Boolean).join(" "))}</td></tr>
    <tr><td class="lb">신청일자</td><td class="v" colspan="3">${v(kdate(r.신청일자))}</td><td class="lb" colspan="2">설치일자</td><td class="v" colspan="3">${v(kdate(r.설치일자))}</td></tr>
   </table>
   <table class="ft">${col}
