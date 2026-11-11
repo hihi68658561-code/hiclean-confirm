@@ -304,8 +304,10 @@ header.top{position:relative}.tmore{display:none}.tacts{display:contents}
 .tinfo .v{display:flex;align-items:center;gap:8px;flex-wrap:wrap;word-break:break-all}.tinfo .v a:not(.btn){color:var(--accent);font-weight:600}
 #jf.tmode .g3{grid-template-columns:repeat(3,minmax(0,1fr))}#jf.tmode .detq input{min-width:0;width:100%}
 #jf .treq{background:#fff7d6!important;border-color:#e6b422!important}.treqsw{display:inline-block;width:24px;height:14px;border-radius:4px;background:#fff7d6;border:1px solid #e6b422;vertical-align:-2px}
+/* 모든 팝업: 닫기·저장은 맨 아래 가운데 */
+dialog .df{justify-content:center}#dlgF:has(.btn:not(.close):not(.pri))::after{content:"";flex-basis:100%;order:1;height:0;margin:-4px 0}#dlgF .btn.close,#dlgF .btn.pri{order:2;min-width:112px}
 @media (max-width:560px){
-dialog .df{justify-content:center}#dlgF::after{content:"";flex-basis:100%;order:1;height:0;margin:-4px 0}#dlgF .btn.close,#dlgF .btn.pri{order:2;min-width:112px}#dlgF .gocust{margin-right:0}
+#dlgF .gocust{margin-right:0}
 #jf fieldset{min-width:0}#jf.tmode fieldset{padding-left:8px!important;padding-right:8px!important}
 #jf.tmode .g3{gap:6px}#jf.tmode .g3>*{min-width:0}#jf.tmode .g3 input,#jf.tmode .g3 select{width:100%;min-width:0;box-sizing:border-box;padding-left:6px;padding-right:6px}
 #jf.tmode label.f:has(.detq){grid-column:1/-1}#jf.tmode .detq input{width:90px;flex:0 0 90px}
