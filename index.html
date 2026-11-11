@@ -4260,7 +4260,7 @@ function jobDlg(j,c,kind,tpl,preset){
      /* 설치 상태 → 계약 진행단계: 접수(미배정)→미정 · 배정→확정 · 보류→보류 · 취소→취소 (계약이 미정·확정·보류·취소일 때만) */
      {const jj=Object.assign({},j,pt,r.data||{});const MAP={"접수":"미정","배정":"확정","보류":"보류","취소":"취소"};if(jj.kind==="install"&&MAP[jj.status]&&isOffice()){const kk=jj.contract_id&&ctrById(jj.contract_id);const ns=MAP[jj.status];
        if(kk&&["미정","확정","보류","취소"].includes(kk.stage)&&kk.stage!==ns){const {error:e5}=await sb.from("contracts").update({stage:ns}).eq("id",kk.id);if(!e5){kk.stage=ns;pmsg+=` · 계약 진행단계를 ‘${ns}’(으)로 바꿈`}}}}
-     {const jj=Object.assign({},j,pt,r.data||{});if(jj.kind==="install"&&jj.status==="완료"&&isOffice()){const kk=jj.contract_id&&ctrById(jj.contract_id);if(kk&&["미정","확정","보류"].includes(kk.stage)){const st=payStat(kk);const ns=Number(kk.amount||0)>0&&st.unpaid>0?"미수":"완료";
+     {const jj=Object.assign({},j,pt,r.data||{});if(jj.kind==="install"&&jj.status==="완료"&&isOffice()){const kk=jj.contract_id&&ctrById(jj.contract_id);if(kk&&["미정","확정","보류"].includes(kk.stage)){const st=payStat(kk);/* 다 받은 건만 완료. 무료체험처럼 금액이 아직 없거나 덜 받은 건은 미수 */const ns=Number(kk.amount||0)>0&&st.unpaid<=0?"완료":"미수";
        const {error:e4}=await sb.from("contracts").update({stage:ns}).eq("id",kk.id);if(!e4){kk.stage=ns;pmsg+=` · 계약 진행단계를 ‘${ns}’(으)로 바꿈`}}}}
      /* 철거 완료 → 그 계약 진행단계를 '철거완료'로 */
      {const jj=Object.assign({},j,pt,r.data||{});if(jj.kind==="remove"&&jj.status==="완료"&&isOffice()){const kk=rmCtrOf(jj);if(kk&&!["철거완료","취소"].includes(kk.stage)){const {error:e3}=await sb.from("contracts").update({stage:"철거완료"}).eq("id",kk.id);if(!e3){kk.stage="철거완료";pmsg+=" · 계약을 철거완료로 바꿈"}}}}
