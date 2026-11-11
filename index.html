@@ -2437,7 +2437,7 @@ async function smsImgPrep(file){const url=URL.createObjectURL(file);try{const im
       for(const q of [0.85,0.7,0.55,0.4]){const d=cv.toDataURL("image/jpeg",q).split(",")[1];const kb=d.length*0.75/1024;if(kb<=190)return{data:d,kb,name:(file.name||"image").replace(/\.[^.]+$/,"")+".jpg",w:cw,h:ch}}
       sc*=0.8}
     throw new Error("200KB 아래로 줄이지 못했습니다")}finally{URL.revokeObjectURL(url)}}
-async function smsDlg(opts){opts=opts||{};let c=opts.c||null;const pick=!c;let v={};let img=null;
+async function smsDlg(opts){opts=opts||{};let c=opts.c||null;const pick=!c;let v={};let imgs=[];
   const setV=()=>{const un=c?custUnpaid(c.id):0;v=Object.assign({업체명:(c&&c.name)||"",대표자:(c&&c.ceo)||"",계좌:S.bank||"",...(un>0?{미수금:won0(un)}:{})},opts.vars||{})};setV();
   const tpls=await loadSmsTpl();const pool=customers.filter(x=>isOffice()||x.owner===me.id||x.collector===me.id);
   const phonesOf=cc=>cc?[...new Set([cc.phone,cc.phone2].map(x=>String(x||"").trim()).filter(x=>/^0\d/.test(x.replace(/\D/g,""))))]:[];
@@ -2451,7 +2451,7 @@ async function smsDlg(opts){opts=opts||{};let c=opts.c||null;const pick=!c;let v
     <label class="f">자주 쓰는 문구<select id="smTpl"><option value="">(직접 입력)</option>${tpls.map(t=>`<option value="${t.id}" ${t0&&t0.id===t.id?"selected":""}>${esc(t.title)}</option>`).join("")}</select></label>
     <label class="f">내용<textarea id="smText" rows="6" style="min-height:130px">${esc(t0?smsFill(t0.content,v):"")}</textarea></label>
     <p class="mapt" id="smInfo" style="margin:0"></p>
-    <div class="f"><span>이미지 첨부 (선택)</span><div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap"><input type="file" id="smImg" accept="image/*" hidden><button type="button" class="btn" id="smImgB">이미지</button><span id="smImgP" class="mapt">한 장만 붙일 수 있습니다. 크기는 자동으로 줄여서 보냅니다 (포토문자 요금).</span></div></div>
+    <div class="f"><span>이미지 첨부 (선택)</span><div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap"><input type="file" id="smImg" accept="image/*" multiple hidden><button type="button" class="btn" id="smImgB">이미지</button><span id="smImgP" class="mapt" style="display:flex;flex-wrap:wrap;align-items:center;flex:1;min-width:0">여러 장을 고르면 한 통에 한 장씩 나눠 보냅니다 (최대 5장 · 장수만큼 포토문자 요금). 크기는 자동으로 줄입니다.</span></div></div>
     <p class="mapt" style="margin:0">{업체명}·{방문일} 같은 칸은 문구를 고를 때 자동으로 채워집니다. 채워지지 않은 칸은 지우거나 직접 고쳐 주세요.</p></div>`,
    [["닫기"],["보내기","pri",async()=>{
      const text=val("smText").trim();if(!text){toast("내용을 입력하세요");return true}
@@ -2459,25 +2459,30 @@ async function smsDlg(opts){opts=opts||{};let c=opts.c||null;const pick=!c;let v
      const to=[...document.querySelectorAll('#smf input[name=to]:checked')].map(x=>x.value).concat(val("smTo2").split(/[,\s]+/)).map(x=>x.replace(/\D/g,"")).filter(Boolean);
      const uniq=[...new Set(to)];if(!uniq.length){toast("받는 번호를 고르거나 입력하세요");return true}
      const bad=uniq.filter(x=>!/^0\d{8,10}$/.test(x));if(bad.length){toast("번호를 확인해 주세요: "+bad.join(", "));return true}
-     if(img&&!ui.smsMms){const pr=await sb.functions.invoke("send-sms",{body:{probe:true}});if(pr.data&&pr.data.mms)ui.smsMms=true;else{toast("이미지를 보내려면 Supabase의 문자 기능(send-sms)을 새 버전으로 다시 배포해야 합니다. 이미지를 빼고 보내거나, 배포 후 다시 시도하세요.");return true}}
-     if(!(await askConfirm(`${uniq.length}명에게 ${img?"이미지가 붙은 포토문자(MMS)":smsBytes(text)>90?"장문(LMS)":"단문(SMS)"}를 보낼까요?`)))return true;
+     if(imgs.length&&!ui.smsMms){const pr=await sb.functions.invoke("send-sms",{body:{probe:true}});if(pr.data&&pr.data.mms)ui.smsMms=true;else{toast("이미지를 보내려면 Supabase의 문자 기능(send-sms)을 새 버전으로 다시 배포해야 합니다. 이미지를 빼고 보내거나, 배포 후 다시 시도하세요.");return true}}
+     if(!(await askConfirm(imgs.length>1?`${uniq.length}명에게 이미지 ${imgs.length}장을 포토문자(MMS) ${imgs.length}통으로 나눠 보낼까요?`:`${uniq.length}명에게 ${imgs.length?"이미지가 붙은 포토문자(MMS)":smsBytes(text)>90?"장문(LMS)":"단문(SMS)"}를 보낼까요?`)))return true;
      const dg_=x=>String(x||"").replace(/\D/g,"");const cid=p=>{if(c&&[c.phone,c.phone2].some(x=>dg_(x)===p))return c.id;const f=customers.find(x=>dg_(x.phone)===p||dg_(x.phone2)===p);return f?f.id:(c?c.id:null)};
      toast("보내는 중…");
-     const {data,error}=await sb.functions.invoke("send-sms",{body:{...(img?{image:{data:img.data,name:img.name}}:{}),messages:uniq.map(p=>({to:p,text,customer_id:cid(p),ref_type:opts.ref_type||"",ref_id:opts.ref_id||null}))}});
-     if(error){let msg="";try{const b=await error.context.json();msg=b.error||(b.failed||[]).map(f=>f.to+" "+f.error).join(", ")}catch(e){}
-       if(!msg)msg=/Failed to send|404|not found/i.test(error.message||"")?"Supabase에 문자 기능(send-sms)이 아직 설치되지 않았습니다":(error.message||"");toast("보내지 못했습니다: "+msg);return true}
-     if(data&&data.failed&&data.failed.length){toast(`${data.sent}건 보냄, ${data.failed.length}건 실패: ${data.failed.map(f=>f.to+" "+f.error).join(", ")}`);return true}
-     toast(`문자를 보냈습니다 (${uniq.length}건)`);if(ui.view==="sms")renderSmsView();else if(ui.ctab==="sms"&&c&&ui.sel===c.id)renderCustSms(c)}]]);
+     /* 이미지가 여러 장이면 한 통에 한 장씩 차례로 보낸다 (글은 첫 통에, 나머지는 (2/3) 표시만) */
+     const parts=imgs.length?imgs:[null];
+     for(let i=0;i<parts.length;i++){const im=parts[i];const tx=i===0?(parts.length>1?text+`\n(1/${parts.length})`:text):`(${i+1}/${parts.length})`;if(parts.length>1)toast(`보내는 중… (${i+1}/${parts.length})`);
+       const {data,error}=await sb.functions.invoke("send-sms",{body:{...(im?{image:{data:im.data,name:im.name}}:{}),messages:uniq.map(p=>({to:p,text:tx,customer_id:cid(p),ref_type:opts.ref_type||"",ref_id:opts.ref_id||null}))}});
+       const done=i?` (${parts.length}통 중 ${i}통은 이미 보냈습니다)`:"";
+       if(error){let msg="";try{const b=await error.context.json();msg=b.error||(b.failed||[]).map(f=>f.to+" "+f.error).join(", ")}catch(e){}
+         if(!msg)msg=/Failed to send|404|not found/i.test(error.message||"")?"Supabase에 문자 기능(send-sms)이 아직 설치되지 않았습니다":(error.message||"");toast("보내지 못했습니다: "+msg+done);if(i){imgs=imgs.slice(i);imgShow()}return true}
+       if(data&&data.failed&&data.failed.length){toast(`${data.sent}건 보냄, ${data.failed.length}건 실패: ${data.failed.map(f=>f.to+" "+f.error).join(", ")}${done}`);return true}}
+     toast(parts.length>1?`포토문자 ${parts.length}통을 보냈습니다 (받는 사람 ${uniq.length}명)`:`문자를 보냈습니다 (${uniq.length}건)`);if(ui.view==="sms")renderSmsView();else if(ui.ctab==="sms"&&c&&ui.sel===c.id)renderCustSms(c)}]]);
   const ta=document.getElementById("smText"),info=document.getElementById("smInfo"),sel_=document.getElementById("smTpl");
-  const upd=()=>{const b=smsBytes(ta.value);info.textContent=`${b}바이트 · ${img?"포토문자(MMS)":b>90?"장문(LMS)":"단문(SMS)"}${b>2000?" — 2000바이트를 넘어 보낼 수 없습니다":""}`};ta.addEventListener("input",upd);upd();
+  const upd=()=>{const b=smsBytes(ta.value);info.textContent=`${b}바이트 · ${imgs.length?"포토문자(MMS)"+(imgs.length>1?` ${imgs.length}통`:""):b>90?"장문(LMS)":"단문(SMS)"}${b>2000?" — 2000바이트를 넘어 보낼 수 없습니다":""}`};ta.addEventListener("input",upd);upd();
   /* 이미지 첨부: JPG로 바꾸고 200KB 아래로 줄인다 (솔라피 MMS 기준: JPG · 200KB · 1500×1440 이하) */
-  {const fi=document.getElementById("smImg"),bt=document.getElementById("smImgB"),pv=document.getElementById("smImgP");const tip=pv.textContent;
-    const show=()=>{if(!img){pv.textContent=tip;bt.textContent="이미지";upd();return}
-      pv.innerHTML=`<img src="data:image/jpeg;base64,${img.data}" alt="첨부 이미지" style="height:64px;border:1px solid var(--line);border-radius:6px;vertical-align:middle"> ${esc(img.name)} · ${Math.round(img.kb)}KB <button type="button" class="btn sm danger" id="smImgX">삭제</button>`;bt.textContent="이미지";
-      document.getElementById("smImgX").onclick=()=>{img=null;fi.value="";show()};upd()};
+  let imgShow=()=>{};
+  {const fi=document.getElementById("smImg"),bt=document.getElementById("smImgB"),pv=document.getElementById("smImgP");const tip=pv.textContent;const MAXI=5;
+    const show=imgShow=()=>{if(!imgs.length){pv.textContent=tip;upd();return}
+      pv.innerHTML=imgs.map((im,i)=>`<span style="display:inline-flex;align-items:center;gap:6px;margin:0 10px 6px 0"><img src="data:image/jpeg;base64,${im.data}" alt="첨부 이미지 ${i+1}" style="height:64px;border:1px solid var(--line);border-radius:6px"><span>${esc(im.name)} · ${Math.round(im.kb)}KB</span><button type="button" class="btn sm danger" data-imx="${i}">삭제</button></span>`).join("")+(imgs.length>1?`<span style="flex-basis:100%">이미지 ${imgs.length}장 → 포토문자 ${imgs.length}통으로 나눠 보냅니다.</span>`:"");
+      pv.querySelectorAll("[data-imx]").forEach(b=>b.onclick=()=>{imgs.splice(+b.dataset.imx,1);show()});upd()};
     bt.onclick=()=>fi.click();
-    fi.onchange=async()=>{const f=fi.files&&fi.files[0];if(!f)return;pv.textContent="이미지를 줄이는 중…";
-      try{img=await smsImgPrep(f);show()}catch(e){img=null;pv.textContent=tip;toast("이 이미지는 쓸 수 없습니다: "+(e.message||e))}}}
+    fi.onchange=async()=>{const fs=[...(fi.files||[])];fi.value="";if(!fs.length)return;const room=MAXI-imgs.length;if(room<=0)return toast(`이미지는 ${MAXI}장까지 붙일 수 있습니다`);if(fs.length>room)toast(`이미지는 ${MAXI}장까지 붙일 수 있어 ${room}장만 넣었습니다`);
+      pv.textContent="이미지를 줄이는 중…";for(const f of fs.slice(0,room)){try{imgs.push(await smsImgPrep(f))}catch(e){toast(`‘${f.name}’은(는) 쓸 수 없습니다: `+(e.message||e))}}show()}}
   const drawPh=()=>{const ps=phonesOf(c);document.getElementById("smPh").innerHTML=ps.map((p,i)=>`<label><input type="checkbox" name="to" value="${esc(p)}" ${i===0?"checked":""}>${esc(p)}</label>`).join("")||(pick?`<span class="mapt">고객을 고르면 그 고객의 번호가 여기에 나옵니다.</span>`:"")};drawPh();
   sel_.onchange=()=>{const t=tpls.find(x=>x.id===sel_.value);if(t){ta.value=smsFill(t.content,v);upd()}};
   if(pick){bindCustPicker(pool);const h=document.getElementById("jcId");h.addEventListener("change",()=>{c=pool.find(x=>x.id===h.value)||null;setV();drawPh();
