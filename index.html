@@ -4264,6 +4264,16 @@ function jobDlg(j,c,kind,tpl,preset){
        const {error:e4}=await sb.from("contracts").update({stage:ns}).eq("id",kk.id);if(!e4){kk.stage=ns;pmsg+=` · 계약 진행단계를 ‘${ns}’(으)로 바꿈`}}}}
      /* 철거 완료 → 그 계약 진행단계를 '철거완료'로 */
      {const jj=Object.assign({},j,pt,r.data||{});if(jj.kind==="remove"&&jj.status==="완료"&&isOffice()){const kk=rmCtrOf(jj);if(kk&&!["철거완료","취소"].includes(kk.stage)){const {error:e3}=await sb.from("contracts").update({stage:"철거완료"}).eq("id",kk.id);if(!e3){kk.stage="철거완료";pmsg+=" · 계약을 철거완료로 바꿈"}}}}
+     /* 작업 창에 적은 싱크대(발주대기·발주완료 + 품명 및 규격) → 싱크대 발주 탭에 자동 등록. 이미 그 작업의 발주가 있으면 만들지 않는다 */
+     {const jj=Object.assign({},j,pt,r.data||{});const memo=String(jj.sink_memo||"").trim();const AUTO="작업 창에서 자동 등록";
+      if(isOffice()&&!ui.noSink&&(jj.kind==="install"||jj.kind==="addon")&&jj.status!=="취소"&&memo&&["발주대기","발주완료"].includes(jj.sink_status)&&jj.customer_id){
+        const {data:os,error:eS}=await sb.from("sink_orders").select("*").eq("customer_id",jj.customer_id).neq("status","취소");
+        if(!eS){const byJob=o=>(o.items||[]).some(it=>it.job===jj.id);const mine=(os||[]).filter(o=>String(o.spec_text||"").trim()===memo||byJob(o)||(!isNew&&(skJobOf(o)||{}).id===jj.id));
+          if(!mine.length){const p={order_date:today(),owner:me.id,owner_name:me.name||"",customer_id:jj.customer_id,contract_id:jj.contract_id||null,site_name:jj.customer_name||(c&&c.name)||"",status:jj.sink_status==="발주완료"?"주문완료":"신규접수",items:[{name:"99. 직접입력",sup:memo,qty:1,job:jj.id}],memo:AUTO,spec_text:memo};
+            let ri=await sb.from("sink_orders").insert(p);if(ri.error&&/spec_text/.test(ri.error.message)){const {spec_text,...p2}=p;ri=await sb.from("sink_orders").insert(p2)}
+            if(ri.error)pmsg+=" · 싱크대 발주 탭에 올리지 못했습니다: "+ri.error.message;else{skOrders=null;pmsg+=` · 싱크대 발주 탭에 ‘${skLbl(p.status)}’(으)로 올렸습니다`}}
+          else{const o=mine.find(o=>byJob(o)&&String(o.spec_text||"").trim()!==memo&&(o.items||[]).length===1&&["신규접수","주문완료"].includes(o.status));
+            if(o){const {error:eU}=await sb.from("sink_orders").update({items:[Object.assign({},o.items[0],{sup:memo})],spec_text:memo}).eq("id",o.id);if(!eU){skOrders=null;pmsg+=" · 싱크대 발주 내용도 고쳤습니다"}}}}}}
      toast((isNew?`${kl(j)} 접수했습니다`:"저장했습니다")+pmsg);reload(["jobs","customers","files","contracts","jpays"]);
      /* 기사가 A/S·설치를 완료로 저장하면 → 확인서 작성(고객 서명) 물어보기 */
      if(tm&&c&&!ui.noFiles&&pt.status==="완료"&&j.status!=="완료"&&(j.kind==="as"||j.kind==="install")){const nj=Object.assign({},j,pt);setTimeout(async()=>{if(await askConfirm("완료 처리했습니다. 확인서를 작성해 고객 서명을 받을까요?"))confDlg(nj,c)},500)}
