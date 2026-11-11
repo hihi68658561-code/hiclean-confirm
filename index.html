@@ -373,6 +373,9 @@ header.top #nav{order:4;flex:0 0 auto;width:calc(100% + 2*max(16px,env(safe-area
   #printRoot .sheet:last-child{page-break-after:auto;break-after:auto}
 }
 
+.sign .sg{height:12mm;max-width:40mm;object-fit:contain;vertical-align:bottom;margin:0 0 -1.5mm 3mm}
+.sheet td.sec{display:table-cell}
+
 .sheet{font-family:"Malgun Gothic","맑은 고딕","Apple SD Gothic Neo","Noto Sans KR",sans-serif}
 #printRoot{display:none}
 @media print{
@@ -512,9 +515,9 @@ function footer(){return `<div class="foot"><img class="logo" src="${LOGO}" alt=
 function stmtDate(text,date){const [y,m,d]=ymd(date);return `<div class="stmt"><span>${text}</span><span class="d"><span>${y}</span>년<span>${m}</span>월<span>${d}</span>일</span></div>`}
 function signs(c,r){return `<div class="sign">
   <div>업장명 :<span class="ln">${v(r.업장명)}</span></div>
-  <div>고 객 명 :<span class="ln"></span><span class="in">(인)</span></div>
+  <div>고 객 명 :<span class="ln">${v(r.custName||"")}${r.custSign?`<img class="sg" src="${r.custSign}" alt="">`:""}</span><span class="in">(인)</span></div>
   <div></div>
-  <div>출장기사 :<span class="ln"></span><span class="in">(인)</span></div></div>`}
+  <div>출장기사 :<span class="ln">${v(r.techName||"")}</span><span class="in">(인)</span></div></div>`}
 
 function sheetAS(r,c){
   r=r||{};c=c||{};const items=r.items||[];
@@ -982,7 +985,7 @@ function bindBizUpload(id,onRead){
 }
 
 /* ================= 고객 사진·서류 ================= */
-const FKINDS=[["계약서","ctr"],["사업자등록증","biz"],["설치사진","inst"],["A/S사진","as"],["채권","debt"],["기타","etc"]];
+const FKINDS=[["계약서","ctr"],["확인서","conf"],["사업자등록증","biz"],["설치사진","inst"],["A/S사진","as"],["채권","debt"],["기타","etc"]];
 const JOBPHOTO={install:"설치사진",addon:"설치사진",move:"설치사진",remove:"설치사진",as:"A/S사진"};
 function jobFiles(j){return files.filter(f=>f.job_id===j.id).sort((a,b)=>(b.created_at||"").localeCompare(a.created_at||""))}
 function jobLabel(id){const j=jobs.find(x=>x.id===id);return j?`${kl(j)||""} ${(j.visit_date||j.request_date||"").slice(5).replace("-","/")}`:""}
@@ -2437,7 +2440,7 @@ async function smsImgPrep(file){const url=URL.createObjectURL(file);try{const im
       for(const q of [0.85,0.7,0.55,0.4]){const d=cv.toDataURL("image/jpeg",q).split(",")[1];const kb=d.length*0.75/1024;if(kb<=190)return{data:d,kb,name:(file.name||"image").replace(/\.[^.]+$/,"")+".jpg",w:cw,h:ch}}
       sc*=0.8}
     throw new Error("200KB 아래로 줄이지 못했습니다")}finally{URL.revokeObjectURL(url)}}
-async function smsDlg(opts){opts=opts||{};let c=opts.c||null;const pick=!c;let v={};let imgs=[];
+async function smsDlg(opts){opts=opts||{};let c=opts.c||null;const pick=!c;let v={};let imgs=(opts.images||[]).slice();
   const setV=()=>{const un=c?custUnpaid(c.id):0;v=Object.assign({업체명:(c&&c.name)||"",대표자:(c&&c.ceo)||"",계좌:S.bank||"",...(un>0?{미수금:won0(un)}:{})},opts.vars||{})};setV();
   const tpls=await loadSmsTpl();const pool=customers.filter(x=>isOffice()||x.owner===me.id||x.collector===me.id);
   const phonesOf=cc=>cc?[...new Set([cc.phone,cc.phone2].map(x=>String(x||"").trim()).filter(x=>/^0\d/.test(x.replace(/\D/g,""))))]:[];
@@ -2449,7 +2452,7 @@ async function smsDlg(opts){opts=opts||{};let c=opts.c||null;const pick=!c;let v
     <div class="f"><span>받는 번호</span><div class="chk" id="smPh"></div>
       <input id="smTo2" placeholder="번호 직접 입력 (여러 개는 쉼표로)" aria-label="번호 직접 입력"></div>
     <label class="f">자주 쓰는 문구<select id="smTpl"><option value="">(직접 입력)</option>${tpls.map(t=>`<option value="${t.id}" ${t0&&t0.id===t.id?"selected":""}>${esc(t.title)}</option>`).join("")}</select></label>
-    <label class="f">내용<textarea id="smText" rows="6" style="min-height:130px">${esc(t0?smsFill(t0.content,v):"")}</textarea></label>
+    <label class="f">내용<textarea id="smText" rows="6" style="min-height:130px">${esc(t0?smsFill(t0.content,v):(opts.text||""))}</textarea></label>
     <p class="mapt" id="smInfo" style="margin:0"></p>
     <div class="f"><span>이미지 첨부 (선택)</span><div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap"><input type="file" id="smImg" accept="image/*" multiple hidden><button type="button" class="btn" id="smImgB">이미지</button><span id="smImgP" class="mapt" style="display:flex;flex-wrap:wrap;align-items:center;flex:1;min-width:0">여러 장을 고르면 한 통에 한 장씩 나눠 보냅니다 (최대 5장 · 장수만큼 포토문자 요금). 크기는 자동으로 줄입니다.</span></div></div>
     <p class="mapt" style="margin:0">{업체명}·{방문일} 같은 칸은 문구를 고를 때 자동으로 채워집니다. 채워지지 않은 칸은 지우거나 직접 고쳐 주세요.</p></div>`,
@@ -2482,7 +2485,7 @@ async function smsDlg(opts){opts=opts||{};let c=opts.c||null;const pick=!c;let v
       pv.querySelectorAll("[data-imx]").forEach(b=>b.onclick=()=>{imgs.splice(+b.dataset.imx,1);show()});upd()};
     bt.onclick=()=>fi.click();
     fi.onchange=async()=>{const fs=[...(fi.files||[])];fi.value="";if(!fs.length)return;const room=MAXI-imgs.length;if(room<=0)return toast(`이미지는 ${MAXI}장까지 붙일 수 있습니다`);if(fs.length>room)toast(`이미지는 ${MAXI}장까지 붙일 수 있어 ${room}장만 넣었습니다`);
-      pv.textContent="이미지를 줄이는 중…";for(const f of fs.slice(0,room)){try{imgs.push(await smsImgPrep(f))}catch(e){toast(`‘${f.name}’은(는) 쓸 수 없습니다: `+(e.message||e))}}show()}}
+      pv.textContent="이미지를 줄이는 중…";for(const f of fs.slice(0,room)){try{imgs.push(await smsImgPrep(f))}catch(e){toast(`‘${f.name}’은(는) 쓸 수 없습니다: `+(e.message||e))}}show()};if(imgs.length)show()}
   const drawPh=()=>{const ps=phonesOf(c);document.getElementById("smPh").innerHTML=ps.map((p,i)=>`<label><input type="checkbox" name="to" value="${esc(p)}" ${i===0?"checked":""}>${esc(p)}</label>`).join("")||(pick?`<span class="mapt">고객을 고르면 그 고객의 번호가 여기에 나옵니다.</span>`:"")};drawPh();
   sel_.onchange=()=>{const t=tpls.find(x=>x.id===sel_.value);if(t){ta.value=smsFill(t.content,v);upd()}};
   if(pick){bindCustPicker(pool);const h=document.getElementById("jcId");h.addEventListener("change",()=>{c=pool.find(x=>x.id===h.value)||null;setV();drawPh();
@@ -4179,7 +4182,7 @@ function jobDlg(j,c,kind,tpl,preset){
    [...(c?[["고객정보","gocust",()=>{openCustPopup(c,c2=>{const el=document.querySelector("#jf .dsum");if(el){const pp=j.product||{};el.outerHTML=custSummary(c2,j.kind==="addon"?null:{product:pp.product,size:pp.size,serial:pp.serial})}j.customer_name=c2.name;j.address=c2.address||j.address;
        document.getElementById("dlgH").textContent=`${nTitle?"신규접수":kl(j)+" "+(isNew?"접수":"작업")} · ${c2.name}`});return true}]]:[]),
     ...(!isNew&&c&&me.role!=="tech"&&(ctrById(j.contract_id)||custContracts(c.id)[0])?[["계약정보","gocust",()=>{contractDlg(c,ctrById(j.contract_id)||custContracts(c.id)[0]);return true}]]:[]),
-    ...(isNew&&!c&&!tpl?[["새 고객 등록","gocust",()=>{const kv=(document.querySelector('#jf input[name=kind]:checked')||{}).value||j.kind;newCustomer(null,nc=>kv==="ctr"?contractDlg(nc,null):jobDlg(null,nc,kv));return true}]]:[]),...(asLike(j)&&me.role!=="tech"?[["확인요청 문자","gocust",()=>{asReqToggle(j,c);return true}]]:[]),["닫기"],...(!isNew&&j.kind==="install"&&j.contract_id&&me.role!=="tech"?[["싱크대 발주","",async()=>{if(!skOrders)await fetchSink();const ex=(skOrders||[]).find(o=>o.contract_id===j.contract_id&&o.status!=="취소");sinkDlg(ex||null,ex?null:{c,k:ctrById(j.contract_id)});return true}]]:[]),...(!isNew&&c&&(c.phone||c.phone2)?[["문자","",()=>{smsDlg({c,vars:{방문일:smsDate(j.visit_date),시간:j.visit_time||"",제품:[(j.product||{}).product,(j.product||{}).size].filter(Boolean).join(" "),금액:j.cost?won0(j.cost):"",...(asLike(j)&&asPay(j).unpaid>0?{미수금:won0(asPay(j).unpaid)}:{})},ref_type:"job",ref_id:j.id,tpl:j.visit_date&&j.status!=="완료"?"방문 안내":j.status==="완료"&&j.kind==="install"?"설치 완료":j.kind==="as"?"A/S 접수":""});return true}]]:[]),...(!isNew&&canNewJob(c)?[["복사","",()=>{jobDlg(null,c,j.kind,j);return true}]]:[]),...(!isNew&&isAdmin()?[["삭제","danger",()=>{delJobs([j.id]);return true}]]:[]),...(can?[["저장","pri",async()=>{
+    ...(isNew&&!c&&!tpl?[["새 고객 등록","gocust",()=>{const kv=(document.querySelector('#jf input[name=kind]:checked')||{}).value||j.kind;newCustomer(null,nc=>kv==="ctr"?contractDlg(nc,null):jobDlg(null,nc,kv));return true}]]:[]),...(asLike(j)&&me.role!=="tech"?[["확인요청 문자","gocust",()=>{asReqToggle(j,c);return true}]]:[]),["닫기"],...(!isNew&&j.kind==="install"&&j.contract_id&&me.role!=="tech"?[["싱크대 발주","",async()=>{if(!skOrders)await fetchSink();const ex=(skOrders||[]).find(o=>o.contract_id===j.contract_id&&o.status!=="취소");sinkDlg(ex||null,ex?null:{c,k:ctrById(j.contract_id)});return true}]]:[]),...(!isNew&&c&&(c.phone||c.phone2)?[["문자","",()=>{smsDlg({c,vars:{방문일:smsDate(j.visit_date),시간:j.visit_time||"",제품:[(j.product||{}).product,(j.product||{}).size].filter(Boolean).join(" "),금액:j.cost?won0(j.cost):"",...(asLike(j)&&asPay(j).unpaid>0?{미수금:won0(asPay(j).unpaid)}:{})},ref_type:"job",ref_id:j.id,tpl:j.visit_date&&j.status!=="완료"?"방문 안내":j.status==="완료"&&j.kind==="install"?"설치 완료":j.kind==="as"?"A/S 접수":""});return true}]]:[]),...(!isNew&&c&&(j.kind==="as"||j.kind==="install")&&!ui.noFiles&&(isOffice()||canEditJob(j))?[["확인서 작성","",()=>{confDlg(j,c);return true}]]:[]),...(!isNew&&canNewJob(c)?[["복사","",()=>{jobDlg(null,c,j.kind,j);return true}]]:[]),...(!isNew&&isAdmin()?[["삭제","danger",()=>{delJobs([j.id]);return true}]]:[]),...(can?[["저장","pri",async()=>{
      const f=fdata("jf");
      if(f.get("kind")==="ctr"){const cc=c||pickable.find(x=>x.id===f.get("custId"));if(!cc)return toast("고객을 검색해서 목록에서 골라 주세요");contractDlg(cc,null);return true}
      if(isNew&&!c){const cc=pickable.find(x=>x.id===f.get("custId"));
@@ -4239,6 +4242,8 @@ function jobDlg(j,c,kind,tpl,preset){
      /* 철거 완료 → 그 계약 진행단계를 '철거완료'로 */
      {const jj=Object.assign({},j,pt,r.data||{});if(jj.kind==="remove"&&jj.status==="완료"&&isOffice()){const kk=rmCtrOf(jj);if(kk&&!["철거완료","취소"].includes(kk.stage)){const {error:e3}=await sb.from("contracts").update({stage:"철거완료"}).eq("id",kk.id);if(!e3){kk.stage="철거완료";pmsg+=" · 계약을 철거완료로 바꿈"}}}}
      toast((isNew?`${kl(j)} 접수했습니다`:"저장했습니다")+pmsg);reload(["jobs","customers","files","contracts","jpays"]);
+     /* 기사가 A/S·설치를 완료로 저장하면 → 확인서 작성(고객 서명) 물어보기 */
+     if(tm&&c&&!ui.noFiles&&pt.status==="완료"&&j.status!=="완료"&&(j.kind==="as"||j.kind==="install")){const nj=Object.assign({},j,pt);setTimeout(async()=>{if(await askConfirm("완료 처리했습니다. 확인서를 작성해 고객 서명을 받을까요?"))confDlg(nj,c)},500)}
      /* 배정(기사·방문일)이 새로 잡히거나 바뀌면 → 고객 방문 안내 보내기 확인창 */
      {const nj=Object.assign({},j,pt,r.data||{});const chg=isNew||String(j.visit_date||"")!==String(nj.visit_date||"")||String(j.visit_time||"")!==String(nj.visit_time||"")||JSON.stringify(j.techs||[])!==JSON.stringify(nj.techs||[]);
        if(chg&&nj.visit_date&&((nj.techs||[]).length||String(nj.tech_names||"").trim())&&!["완료","취소","보류"].includes(nj.status)&&me.role!=="tech")setTimeout(()=>visitNotifyDlg(nj,c),350)}}]]:[])]);
@@ -4305,15 +4310,86 @@ function bindCustPicker(pool){
   q.addEventListener("input",show);q.addEventListener("keydown",e=>{if(e.key==="Enter"){e.preventDefault();const b=res.querySelector("[data-id]");if(b)b.click()}});
   setTimeout(()=>q.focus(),50);
 }
+/* ================= 전자 확인서: 작성 → 고객 서명 → 이미지로 저장 → 포토문자 ================= */
+/* 작업 내용으로 확인서 칸 채우기 */
+function confData(j,c){const base=jobSheetData(j,c);const tn=(()=>{const ns=(j.techs||[]).map(id=>(staff.find(s=>s.user_id===id)||{}).name).filter(Boolean);if(me.role==="tech"&&!isOffice())return me.name||ns.join(", ");return ns.join(", ")||j.tech_names||me.name||""})();
+  const r=Object.assign({},base.r,{기사:tn,techName:tn,완료일자:j.done_date||today(),custName:(c&&c.ceo)||""});
+  if(j.kind==="as"){r.점검일자=j.done_date||today();const free=j.paid_type==="무상";const items=[{name:"출장비 및 기본 점검비",cost:free?0:Number(j.trip_fee||0),note:free?"무상":""}];
+    const pf=Number(j.part_fee||0);if(j.parts||pf)items.push({name:"부품 교체"+(j.parts?": "+j.parts:""),cost:free?0:pf});
+    if(Number(j.det_fee||0))items.push({name:`세제 ${j.det_qty||""}통`,cost:Number(j.det_fee)});
+    const sum=items.reduce((a,x)=>a+Number(x.cost||0),0);if(!free&&Number(j.cost||0)>sum)items.push({name:"기타",cost:Number(j.cost)-sum});
+    if(String(j.result||"").trim())items.push({name:"조치: "+String(j.result).trim().replace(/\s+/g," ").slice(0,60),cost:0});
+    r.items=items;r.causes=AS_CAUSES.map(()=>false);r.confirm=AS_CONFIRM.map(()=>true);
+    const ms=jpaysOf(j).map(p=>p.method);r.pay=ms.includes("카드")||j.pay_method==="카드"?"카드":ms.includes("계좌이체")?"입금":ms.includes("현금")||j.pay_method==="현금"?"현금":""}
+  else{r.checks=IS_CHECKS.map(()=>({s:"ok",note:""}));r.edu=IS_EDU.map(()=>true);r.ok=IS_OK.map(()=>true);r.서비스품목=j.parts||""}
+  return{r,cu:base.cu}}
+/* 서명 칸 (손가락·마우스) */
+function signPad(cv){const g=cv.getContext("2d");let down=false,drawn=false,lx=0,ly=0;const fit=()=>{const w=cv.clientWidth,h=cv.clientHeight,dpr=Math.min(3,window.devicePixelRatio||1);cv.width=Math.round(w*dpr);cv.height=Math.round(h*dpr);g.setTransform(dpr,0,0,dpr,0,0);g.lineWidth=2.6;g.lineCap="round";g.lineJoin="round";g.strokeStyle="#111";drawn=false};fit();
+  const pos=e=>{const b=cv.getBoundingClientRect();return[e.clientX-b.left,e.clientY-b.top]};
+  cv.addEventListener("pointerdown",e=>{e.preventDefault();cv.setPointerCapture(e.pointerId);down=true;[lx,ly]=pos(e);g.beginPath();g.arc(lx,ly,1.2,0,7);g.fillStyle="#111";g.fill();drawn=true});
+  cv.addEventListener("pointermove",e=>{if(!down)return;e.preventDefault();const [x,y]=pos(e);g.beginPath();g.moveTo(lx,ly);g.lineTo(x,y);g.stroke();lx=x;ly=y});
+  const up=()=>{down=false};cv.addEventListener("pointerup",up);cv.addEventListener("pointercancel",up);
+  return{clear:fit,empty:()=>!drawn,
+    /* 여백을 잘라낸 투명 PNG */
+    png:()=>{const d=g.getImageData(0,0,cv.width,cv.height).data;let x0=cv.width,y0=cv.height,x1=0,y1=0;for(let y=0;y<cv.height;y+=2)for(let x=0;x<cv.width;x+=2){if(d[(y*cv.width+x)*4+3]>20){if(x<x0)x0=x;if(x>x1)x1=x;if(y<y0)y0=y;if(y>y1)y1=y}}
+      if(x1<=x0||y1<=y0)return"";const pad=6;x0=Math.max(0,x0-pad);y0=Math.max(0,y0-pad);x1=Math.min(cv.width,x1+pad);y1=Math.min(cv.height,y1+pad);const o=document.createElement("canvas");o.width=x1-x0;o.height=y1-y0;o.getContext("2d").drawImage(cv,x0,y0,o.width,o.height,0,0,o.width,o.height);return o.toDataURL("image/png")}}}
+/* 확인서 HTML → 이미지 (A4 한 장) */
+async function confRender(html){await loadScript("https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js");
+  const host=document.createElement("div");host.style.cssText="position:fixed;left:-10000px;top:0;background:#fff;z-index:-1";host.innerHTML=html;document.body.appendChild(host);
+  try{const el=host.querySelector(".sheet");await Promise.all([...host.querySelectorAll("img")].map(i=>i.complete?1:new Promise(z=>{i.onload=i.onerror=z})));if(document.fonts&&document.fonts.ready)await document.fonts.ready;
+    return await html2canvas(el,{scale:2,backgroundColor:"#ffffff",useCORS:true,logging:false})}finally{host.remove()}}
+function confDlg(j,c){if(!c)return toast("고객 정보가 없는 작업입니다");const as=j.kind==="as";const {r,cu}=confData(j,c);const title=as?"A/S 확인서":"설치확인서";
+  const ck=(n,i,on,t)=>`<label style="display:flex;gap:8px;align-items:flex-start;padding:6px 0"><input type="checkbox" data-cf="${n}" data-i="${i}" ${on?"checked":""} style="margin-top:3px"><span style="white-space:pre-line">${esc(t)}</span></label>`;
+  openDlg(`${title} 작성 · ${esc(j.customer_name||c.name)}`,`<div id="cfF" style="display:grid;gap:12px">
+    <p class="mapt" style="margin:0">작업 창에 저장된 내용(고객정보·비용·완료일)이 확인서에 자동으로 들어갑니다. 아래 항목을 확인하고 고객 서명을 받으세요.</p>
+    ${as?`<fieldset style="padding:10px 12px"><legend>A/S 원인판정</legend><div class="chk">${AS_CAUSES.map((t,i)=>`<label><input type="checkbox" data-cf="causes" data-i="${i}">${t}</label>`).join("")}</div></fieldset>
+     <fieldset style="padding:10px 12px"><legend>수리내역 · 비용</legend><table class="stafft"><tbody>${r.items.map(x=>`<tr><td>${esc(x.name)}</td><td class="num" style="white-space:nowrap">${x.cost?won0(x.cost)+"원":esc(x.note||"")}</td></tr>`).join("")}<tr><td><b>합계</b></td><td class="num"><b>${won0(r.items.reduce((a,x)=>a+Number(x.cost||0),0))}원</b></td></tr></tbody></table>
+      <div class="f" style="margin-top:8px"><span>결제방법</span><div class="chk">${PAYS.map(p=>`<label><input type="radio" name="cfPay" value="${p}" ${r.pay===p?"checked":""}>${p}</label>`).join("")}<label><input type="radio" name="cfPay" value="" ${r.pay?"":"checked"}>표시 안 함</label></div></div></fieldset>
+     <fieldset style="padding:10px 12px"><legend>고객확인</legend>${AS_CONFIRM.map((t,i)=>ck("confirm",i,true,t)).join("")}</fieldset>`
+    :`<fieldset style="padding:10px 12px"><legend>설치환경 및 작동점검</legend>${IS_CHECKS.map((t,i)=>`<div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;padding:5px 0;border-bottom:1px solid #edf0f3"><span style="flex:1;min-width:150px">${i+1}. ${esc(t)}</span><span class="chk" style="padding:0"><label><input type="radio" name="cfC${i}" value="ok" checked>정상</label><label><input type="radio" name="cfC${i}" value="ng">이상</label></span><input data-cn="${i}" placeholder="비고" style="flex-basis:100%;display:none"></div>`).join("")}
+      <label class="f" style="margin-top:8px">세척기 외 서비스 품목<input id="cfSvc" value="${esc(r.서비스품목||"")}"></label></fieldset>
+     <fieldset style="padding:10px 12px"><legend>사용교육</legend>${IS_EDU.map((t,i)=>ck("edu",i,true,t)).join("")}</fieldset>
+     <fieldset style="padding:10px 12px"><legend>설치확인</legend>${IS_OK.map((t,i)=>ck("ok",i,true,t)).join("")}</fieldset>`}
+    <fieldset style="padding:10px 12px"><legend>고객 서명</legend>
+      <div class="g3" style="grid-template-columns:1fr 1fr"><label class="f">고객명<input id="cfName" value="${esc(r.custName||"")}" autocomplete="off"></label><label class="f">업장명<input id="cfBiz" value="${esc(r.업장명||"")}" autocomplete="off"></label></div>
+      <div style="position:relative;margin-top:8px"><canvas id="cfPad" style="width:100%;height:170px;border:1.5px dashed #9aa3ae;border-radius:10px;background:#fff;touch-action:none;display:block"></canvas><span class="mapt" id="cfPadTip" style="position:absolute;left:0;right:0;top:72px;text-align:center;pointer-events:none">여기에 손가락으로 서명해 주세요</span></div>
+      <div class="actions" style="justify-content:space-between;margin-top:6px"><span class="mapt">출장기사: ${esc(r.techName||"-")}</span><button type="button" class="btn sm" id="cfClr">서명 다시 쓰기</button></div></fieldset>
+    <details id="cfPvD"><summary style="cursor:pointer;color:var(--accent)">확인서 미리보기</summary><div id="cfPvW" style="overflow:hidden;margin-top:8px;border:1px solid var(--line)"><div id="cfPv"></div></div></details>
+   </div>`,
+   [["닫기"],["서명 완료 · 저장","pri",async()=>{
+     if(pad.empty())return toast("고객 서명을 받아 주세요");const rr=collect();if(!String(rr.custName||"").trim())return toast("고객명을 적어 주세요");
+     toast("확인서를 만드는 중…");let cv;
+     try{cv=await confRender(as?sheetAS(rr,cu):sheetIS(rr,cu))}catch(e){return toast("확인서 이미지를 만들지 못했습니다. 인터넷 연결을 확인하고 다시 시도하세요.")}
+     const blob=await new Promise(z=>cv.toBlob(z,"image/jpeg",0.9));const fname=`${title.replace("/","")}_${(j.customer_name||c.name||"").replace(/[\\/:*?"<>|]/g,"")}_${rr.완료일자||today()}.jpg`;
+     toast("서버에 저장하는 중…");const path=`${c.id}/f/conf/${Date.now()}-${Math.random().toString(36).slice(2,7)}.jpg`;
+     const up=await sb.storage.from("bizdocs").upload(path,blob,{contentType:"image/jpeg",upsert:false});if(up.error)return toast("저장하지 못했습니다: "+up.error.message);
+     const row={customer_id:c.id,path,kind:"확인서",name:fname.slice(0,120),mime:"image/jpeg",size:blob.size,job_id:j.id};let ins=await sb.from("customer_files").insert(row);let note="";
+     if(ins.error&&/kind_check/.test(ins.error.message)){ins=await sb.from("customer_files").insert(Object.assign({},row,{kind:"기타"}));note=" (‘기타’로 저장됨 — Supabase에서 phase1zt.sql을 실행하면 ‘확인서’로 분류됩니다)"}
+     if(ins.error)return toast("저장하지 못했습니다: "+ins.error.message);
+     toast("확인서를 저장했습니다"+note);reload(["files"],true);
+     /* 고객에게 포토문자로 보내기 */
+     let mm=null;try{mm=await smsImgPrep(new File([blob],fname,{type:"image/jpeg"}))}catch(e){}
+     if(mm&&(c.phone||c.phone2)&&await askConfirm("확인서를 저장했습니다. 고객에게 포토문자로 보낼까요?")){smsDlg({c,images:[mm],text:`[하이클린] ${c.name} 고객님, ${title}를 보내드립니다. 이용해 주셔서 감사합니다.`,ref_type:"job",ref_id:j.id});return true}
+     if(document.getElementById("jobFiles"))renderJobFiles(j,c)}]]);
+  const pad=signPad(document.getElementById("cfPad"));const tip=document.getElementById("cfPadTip");document.getElementById("cfPad").addEventListener("pointerdown",()=>{tip.style.display="none"});
+  document.getElementById("cfClr").onclick=()=>{pad.clear();tip.style.display=""};
+  const F=document.getElementById("cfF");
+  if(!as)F.querySelectorAll('input[type=radio][name^="cfC"]').forEach(x=>x.addEventListener("change",()=>{const i=x.name.slice(3);const n=F.querySelector(`[data-cn="${i}"]`);const ng=F.querySelector(`input[name="cfC${i}"]:checked`).value==="ng";n.style.display=ng?"":"none";if(ng)n.focus()}));
+  const collect=()=>{const rr=Object.assign({},r,{custName:val("cfName").trim(),업장명:val("cfBiz").trim(),custSign:pad.empty()?"":pad.png()});const arr=n=>[...F.querySelectorAll(`[data-cf="${n}"]`)].sort((a,b)=>a.dataset.i-b.dataset.i).map(x=>x.checked);
+    if(as){rr.causes=arr("causes");rr.confirm=arr("confirm");rr.pay=(F.querySelector('input[name="cfPay"]:checked')||{}).value||""}
+    else{rr.checks=IS_CHECKS.map((t,i)=>({s:(F.querySelector(`input[name="cfC${i}"]:checked`)||{}).value||"ok",note:(F.querySelector(`[data-cn="${i}"]`)||{}).value||""}));rr.edu=arr("edu");rr.ok=arr("ok");rr.서비스품목=val("cfSvc")}
+    return rr};
+  const pvD=document.getElementById("cfPvD");pvD.addEventListener("toggle",()=>{if(!pvD.open)return;const el=document.getElementById("cfPv"),w=document.getElementById("cfPvW");const rr=collect();el.innerHTML=as?sheetAS(rr,cu):sheetIS(rr,cu);el.style.zoom=1;const sh=el.firstElementChild;el.style.zoom=Math.min(1,w.clientWidth/sh.offsetWidth)})}
 /* 작업에서 확인서 인쇄: 1번 고객정보와 업장명만 */
 function printJob(j,c){doPrint(jobSheet(j,c))}
 /* 여러 건 확인서 한 번에 인쇄 (한 장에 한 건) */
 function printJobs(list){const hs=list.filter(Boolean).map(([j,c])=>jobSheet(j,c));if(!hs.length)return toast("인쇄할 건을 체크하세요");doPrint(hs.join(""))}
-function jobSheet(j,c){
-  const p=j.product||{};const k=ctrById(j.contract_id);
+function jobSheet(j,c){const {r,cu}=jobSheetData(j,c);return j.kind==="as"?sheetAS(r,cu):sheetIS(r,cu)}
+function jobSheetData(j,c){
+  const p0=j.product||{};const k=ctrById(j.contract_id);const p=asLike(j)?asProd(j):liveProd(j)||p0;
   const cu={상호:(c&&c.name)||j.customer_name,사업장명:(c&&c.biz_name)||"",고객명:(c&&c.ceo)||"",전화:(c&&(c.phone||c.phone2))||"",사업자번호:(c&&c.biz_no)||"",설치장소:(c&&c.address)||j.address,모델명:p.product,사이즈:p.size,옵션:p.options,SN:p.serial,구매일자:k?k.contract_date:"",설치일자:j.kind==="install"?(j.done_date||j.visit_date||""):installDate(j.customer_id)};
   const r={접수일자:j.request_date,불편사항:j.symptom,신청일자:k?k.contract_date:"",설치일자:j.done_date||j.visit_date||"",업장명:cu.사업장명||cu.상호};
-  return j.kind==="as"?sheetAS(r,cu):sheetIS(r,cu);
+  return{r,cu};
 }
 function instTxt(c){const i=jobs.filter(x=>x.customer_id===c.id&&x.kind==="install"&&x.status!=="취소").sort((a,b)=>((b.done_date||b.visit_date||"")).localeCompare(a.done_date||a.visit_date||""))[0];
   if(!i)return"";if(i.status==="완료")return "설치 "+(i.done_date||i.visit_date||"");return i.visit_date?"설치예정 "+i.visit_date:"설치 미정"}
