@@ -2843,9 +2843,11 @@ async function renderSinkView(){const off=isOffice();if(!skOrders)view().innerHT
   const qq=ui.skq.trim().toLowerCase();
   const SK_NOTOUT=o=>!["출고완료","취소","재고등록"].includes(o.status);
   const inP=o=>{const m=String(o.order_date||"").slice(0,7);return (!ui.skm1||m>=ui.skm1)&&(!ui.skm2||m<=ui.skm2)};const per=skOrders.filter(inP);
-  let list=per.filter(o=>(!ui.skst||(ui.skst==="미출고"?SK_NOTOUT(o):o.status===ui.skst))
+  /* 재고에서 쓴 발주(재고사용·중고사용)는 신규접수·발주완료가 아니라 ‘재고’ 칩에서 본다 */
+  const chipSt=o=>/사용$/.test(skStLabel(o))?"재고등록":o.status;
+  let list=per.filter(o=>(!ui.skst||(ui.skst==="미출고"?SK_NOTOUT(o):chipSt(o)===ui.skst))
     &&(!qq||[o.site_name,o.owner_name,o.memo,...(o.items||[]).map(skSpec)].join(" ").toLowerCase().includes(qq)));
-  const cnt=s=>per.filter(o=>o.status===s).length;const owners=[...new Set(skOrders.map(o=>o.owner_name).filter(Boolean))].sort(KO.compare);
+  const cnt=s=>per.filter(o=>chipSt(o)===s).length;const owners=[...new Set(skOrders.map(o=>o.owner_name).filter(Boolean))].sort(KO.compare);
   list=cfApply("sk",list,skTxt);skSortList(list);
   const tot={sup:0,vat:0,tot:0,deduct:0};const cc=k=>` class="c-${k}"`;
   const rows=list.map((o,oi)=>{const its=(o.items||[]).length?o.items:[{}];const n=its.length;
