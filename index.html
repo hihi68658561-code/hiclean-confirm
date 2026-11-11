@@ -3086,7 +3086,7 @@ async function fetchSkPrice(){const {data,error}=await sb.from("sink_price_list"
 /* 단가표 줄 중 품명이 '01. …' 꼴이 아니면 나인주방 품목명 그대로 적은 줄 (엑셀 단가표 방식) */
 const skTxtN=v=>String(v||"").replace(/^(씽|싱|쌩)크대\s*:\s*/,"").replace(/[×xX＊]/g,"*").replace(/\s+/g,"").toLowerCase();
 let _skTxtC=null,_skTxtSrc=null;
-function skTxtRows(){if(_skTxtSrc!==skPList){_skTxtSrc=skPList;_skTxtC=(skPList||[]).filter(r=>!skCatOf(r.name)&&String(r.name||"").trim()).map(r=>({r,t:skTxtN(r.name),p:skParseSup(r.name)}))}return _skTxtC}
+function skTxtRows(){if(_skTxtSrc!==skPList){_skTxtSrc=skPList;_skTxtC=(skPList||[]).filter(r=>!skCatOf(r.name)&&String(r.name||"").trim()).map(r=>({r,t:skTxtN(r.name),p:skParseSup(r.name)}))}return _skTxtC||[]}
 function skPriceFor(it){if(!skPList||!skPList.length)return null;
   const T=skTxtRows();
   if(T.length){/* 1) 나인주방 품목명 글자가 같은 줄 (품목명이 없으면 S/1조/대배수구/… 모양으로 만들어서) */{const t=skTxtN(it.sup||skSpec(it));const h=t&&T.find(x=>x.t===t);if(h)return h.r}
