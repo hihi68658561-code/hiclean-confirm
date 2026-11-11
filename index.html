@@ -316,6 +316,8 @@ dialog .df{justify-content:center}#dlgF::after{content:"";flex-basis:100%;order:
 #jpTbl tr.pedit{grid-template-columns:minmax(0,1fr) minmax(0,1fr);grid-template-areas:"d m" "p a" "n n" "b b"}#jpTbl tr.pedit input,#jpTbl tr.pedit select{width:100%;box-sizing:border-box}#jpTbl tr.pedit td:nth-child(6){text-align:right}
 .payin .payadd>*{min-width:0;width:100%;box-sizing:border-box}.paysum{gap:6px 14px}
 }
+.schips{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+@media (max-width:760px){.schips{flex-basis:100%}}
 #nav .nic,#nav .nls,#nav .nmore{display:none}
 @media (min-width:761px){header.top{padding-bottom:0;row-gap:8px}header.top h1{order:1}header.top .sp{order:2}header.top .tacts>*{order:3}
 header.top #nav{order:4;flex:0 0 auto;width:calc(100% + 2*max(16px,env(safe-area-inset-left,0px)));margin:0 calc(-1*max(16px,env(safe-area-inset-left,0px))) -1px;background:#ebedf0;border-top:1px solid #e1e4e8;padding:6px 12px 0;gap:0;flex-wrap:wrap;align-items:flex-end}
@@ -1825,7 +1827,7 @@ function renderSchedView0(){
   view().innerHTML=`${ui.noNotes||!hasEnd()?`<div class="sec" style="max-width:none"><p class="warnbox">일정표의 작업종료 시간과 메모(연차·참조)를 쓰려면 Supabase SQL Editor에서 <b>phase1r.sql</b>을 실행해 주세요.</p></div>`:""}
    <div class="toolbar" style="flex-wrap:wrap"><h2 style="margin:0;font-size:18px">${y}년 ${m}월 설치팀 업무일정표</h2>
      <input id="sM" type="month" value="${esc(ui.sm)}" aria-label="기준 월" style="padding:5px 8px;border:1px solid var(--line);border-radius:6px;background:var(--field)">${ui.sm!==thisMonth()?`<button class="btn sm" type="button" id="sNow">이번 달</button>`:""}
-     <span style="flex:1"></span>${allGroups.map(g=>[g.id,g.name]).map(([id,n])=>`<label class="chip"><input type="checkbox" data-shide="${id}" ${hid.has(id)?"":"checked"}>${esc(n)}</label>`).join("")}</div>
+     <span style="flex:1"></span><div class="schips">${allGroups.map(g=>[g.id,g.name]).map(([id,n])=>`<label class="chip"><input type="checkbox" data-shide="${id}" ${hid.has(id)?"":"checked"}>${esc(n)}</label>`).join("")}</div></div>
    <p class="mapt" style="margin:6px 0 6px;padding:0 20px">${off?"빈 칸을 누르면 그 날짜·기사로 작업을 접수하거나 연차 같은 메모를 넣을 수 있습니다. 참조 칸을 누르면 그날 메모(휴일근로·회사 휴무 등)를 적습니다.":"작업을 누르면 내용을 볼 수 있습니다."}</p>
    <div class="wrapx vis"><div class="wtbox"><table class="wt sch"><thead><tr><th rowspan="2" class="sf1">일자</th><th rowspan="2" class="sf2">요일</th><th rowspan="2" class="sf3">참조</th>${groups.map((g,i)=>`<th colspan="7" class="sgh gs sg${i%4}">${esc(g.name)}</th>`).join("")}</tr>
      <tr>${groups.map(()=>sub.map((s,i)=>`<th class="${i===2||i===3?"stm":""} ${i===0?"gs":""}">${s}</th>`).join("")).join("")}</tr></thead><tbody>${body}</tbody></table></div></div>
