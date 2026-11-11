@@ -534,8 +534,8 @@ function sheetAS(r,c){
    <tr><td class="sec" rowspan="6">1. 고객정보\n및\n접수내용</td><td class="lb" style="font-size:88%;letter-spacing:-.5px">업체명(상호)</td><td class="v" colspan="2">${v(c.상호)}</td><td class="lb">전화번호</td><td class="v" colspan="2">${v(c.전화)}</td></tr>
    <tr><td class="lb">대 표 자</td><td class="v" colspan="2">${v(c.고객명)}</td><td class="lb">사업자번호</td><td class="v" colspan="2">${v(c.사업자번호)}</td></tr>
    <tr><td class="lb">설치장소</td><td class="v" colspan="5">${v(c.설치장소)}</td></tr>
-   <tr><td class="lb">접수일자</td><td class="v" colspan="2">${v(kdate(r.접수일자))}</td><td class="lb">제품 SN.</td><td class="v" colspan="2">${v(c.SN)}</td></tr>
-   <tr><td class="lb">구매일자</td><td class="v" colspan="2">${v(kdate(c.구매일자))}</td><td class="lb">설치일자</td><td class="v" colspan="2">${v(kdate(c.설치일자))}</td></tr>
+   <tr><td class="lb">접수일자</td><td class="v" colspan="5">${v(kdate(r.접수일자))}</td></tr>
+   <tr><td class="lb">설치일자</td><td class="v" colspan="2">${v(kdate(c.설치일자))}</td><td class="lb">제 품 명</td><td class="v" colspan="2">${v([c.모델명,c.사이즈,c.SN].filter(Boolean).join(" "))}</td></tr>
    <tr><td class="lb">불편사항</td><td class="v multi" colspan="5">${v(r.불편사항)}</td></tr>
   </table>
   <table class="ft"><colgroup><col style="width:15%"><col style="width:13%"><col style="width:15%"><col style="width:14%"><col style="width:14%"><col style="width:14.5%"><col style="width:14.5%"></colgroup>
@@ -4414,7 +4414,7 @@ function renderConf(c){
    <div class="work"><div class="formcol" id="fcol"><fieldset><legend>1. 고객정보 및 접수내용</legend><p class="mapt">여기서 고친 내용은 이번 확인서에만 들어갑니다.</p>
     <div class="g2">${fl("c.상호","업체명(상호)",d.cust.상호)}${fl("c.전화","전화번호",d.cust.전화)}</div>
     <div class="g2">${fl("c.고객명","대표자",d.cust.고객명)}${fl("c.사업자번호","사업자번호",d.cust.사업자번호)}</div>${fl("c.설치장소","설치장소",d.cust.설치장소)}
-    ${d.type==="as"?`<div class="g2">${fl("접수일자","접수일자",d.접수일자,"date")}${fl("c.SN","제품 SN",d.cust.SN)}</div><div class="g2">${fl("c.구매일자","구매일자",d.cust.구매일자,"date")}${fl("c.설치일자","설치일자",d.cust.설치일자,"date")}</div><label class="f">불편사항<textarea data-k="불편사항" rows="2">${esc(d.불편사항)}</textarea></label>`
+    ${d.type==="as"?`<div class="g2">${fl("접수일자","접수일자",d.접수일자,"date")}${fl("c.설치일자","설치일자",d.cust.설치일자,"date")}</div><div class="g3">${fl("c.모델명","제품",d.cust.모델명)}${fl("c.사이즈","사이즈",d.cust.사이즈)}${fl("c.SN","제품 SN",d.cust.SN)}</div><label class="f">불편사항<textarea data-k="불편사항" rows="2">${esc(d.불편사항)}</textarea></label>`
      :`<div class="g2">${fl("c.모델명","제품",d.cust.모델명)}${fl("c.SN","제품 SN",d.cust.SN)}</div><div class="g2">${fl("c.사이즈","사이즈",d.cust.사이즈)}${fl("c.옵션","옵션",d.cust.옵션)}</div><div class="g2">${fl("신청일자","신청일자",d.신청일자,"date")}${fl("설치일자","설치일자",d.설치일자,"date")}</div>`}
     </fieldset><fieldset><legend>서명란</legend>${fl("업장명","업장명",d.업장명)}</fieldset>
     <p class="mapt">2번·3번 항목, 확인 날짜, 고객명과 출장기사 서명은 빈칸으로 인쇄되어 현장에서 직접 적습니다.</p>
