@@ -293,6 +293,8 @@ dialog{max-width:720px}dialog .db{position:relative}
 .stafft input,.stafft select{padding:4px 6px;border:1px solid var(--line);border-radius:5px;background:var(--field);width:100%;min-width:70px}
 .wrapx{overflow-x:auto;padding:0 20px}
 .pickres{display:grid;gap:4px;max-height:240px;overflow:auto}
+.smrc{display:flex;flex-wrap:wrap;gap:6px}.smrc:empty{display:none}.smchip{display:inline-flex;align-items:center;gap:4px;background:var(--accent-weak,#e8f0ff);border:1px solid #b9cdf8;border-radius:16px;padding:3px 4px 3px 10px;font-size:13px}.smchip.n{background:var(--line2);border-color:var(--line)}.smchip button{border:0;background:none;color:var(--muted,#777);font-size:15px;line-height:1;padding:2px 6px;cursor:pointer;border-radius:10px}.smchip button:hover{background:rgba(0,0,0,.08)}
+#smf .smq{background:#fff7d6;border-color:#e6b422;color:#1b1b1b}.pickres .smnum{border-color:#9bb8f5;background:#e8f0ff;color:#1d4ed8}.btn.smib{background:#dbe7ff;border-color:#9bb8f5;color:#1d4ed8;font-weight:700}
 .pickres button{text-align:left;border:1px solid var(--line);background:var(--field);border-radius:6px;padding:7px 10px;display:grid;gap:2px}
 .pickres button:hover,.pickres button:focus-visible{border-color:var(--accent);background:var(--accent-weak)}
 .pickres small{color:var(--mute)}
@@ -2464,41 +2466,44 @@ async function smsImgPrep(file){const url=URL.createObjectURL(file);try{const im
       for(const q of [0.85,0.7,0.55,0.4]){const d=cv.toDataURL("image/jpeg",q).split(",")[1];const kb=d.length*0.75/1024;if(kb<=190)return{data:d,kb,name:(file.name||"image").replace(/\.[^.]+$/,"")+".jpg",w:cw,h:ch}}
       sc*=0.8}
     throw new Error("200KB 아래로 줄이지 못했습니다")}finally{URL.revokeObjectURL(url)}}
-async function smsDlg(opts){opts=opts||{};let c=opts.c||null;const pick=!c;let v={};let imgs=(opts.images||[]).slice();
-  const setV=()=>{const un=c?custUnpaid(c.id):0;v=Object.assign({업체명:(c&&c.name)||"",대표자:(c&&c.ceo)||"",계좌:S.bank||"",...(un>0?{미수금:won0(un)}:{})},opts.vars||{})};setV();
+async function smsDlg(opts){opts=opts||{};let c=opts.c||null;let v={};let imgs=(opts.images||[]).slice();const c0=c;
+  /* 받는 사람: {p:숫자만, c:고객(없으면 직접 입력 번호)}. 고객이 한 명이면 문구를 바로 채우고, 여러 명이면 보낼 때 사람마다 채운다 */
+  const dg_=x=>String(x||"").replace(/\D/g,"");let rcp=[];
+  const varsOf=cc=>{const un=cc?custUnpaid(cc.id):0;return Object.assign({계좌:S.bank||""},cc?{업체명:cc.name||"",대표자:cc.ceo||"",...(un>0?{미수금:won0(un)}:{})}:{},opts.vars||{})};
+  const setV=()=>{const cs=[...new Set(rcp.map(r=>r.c).filter(Boolean))];c=cs.length===1?cs[0]:(cs.length?null:c0&&!rcp.length?c0:null);v=cs.length>1?varsOf(null):varsOf(c)};
+  {const p0=c0&&[c0.phone,c0.phone2].map(dg_).find(x=>/^0\d{8,10}$/.test(x));if(p0)rcp.push({p:p0,c:c0})}setV();
   const tpls=await loadSmsTpl();const pool=customers.filter(x=>isOffice()||x.owner===me.id||x.collector===me.id);
   const phonesOf=cc=>cc?[...new Set([cc.phone,cc.phone2].map(x=>String(x||"").trim()).filter(x=>/^0\d/.test(x.replace(/\D/g,""))))]:[];
   const t0=opts.tpl&&tpls.find(t=>t.title===opts.tpl);
   openDlg("문자 보내기"+(c?" · "+esc(c.name):""),`<div id="smf" style="display:grid;gap:10px">
     ${ui.noSms?`<p class="warnbox" style="margin:0">문자 문구·기록 칸이 아직 없습니다. Supabase에서 <b>phase1zc.sql</b>을 실행해 주세요.</p>`:""}
-    ${pick?`<label class="f">고객 찾기 (선택)<input id="jcQ" type="search" autocomplete="off" placeholder="업체명(상호)·대표자·전화번호·주소·시리얼"></label>
-      <input type="hidden" id="jcId"><div id="jcSel"></div><div id="jcRes" class="pickres"></div><p class="mapt" id="jcHint" style="margin:0">고객을 찾아 고르거나, 아래 ‘받는 번호’에 번호를 직접 입력하세요.</p>`:""}
-    <div class="f"><span>받는 번호</span><div class="chk" id="smPh"></div>
-      <input id="smTo2" placeholder="번호 직접 입력 (여러 개는 쉼표로)" aria-label="번호 직접 입력"></div>
+    <div class="f"><span>받는 사람</span><div id="smRc" class="smrc"></div>
+      <input id="smQ" type="search" autocomplete="off" class="smq" placeholder="업체명·전화번호 검색, 또는 번호 직접 입력" aria-label="받는 사람 검색 또는 번호 입력"><div id="smRes" class="pickres"></div></div>
     <label class="f">자주 쓰는 문구<select id="smTpl"><option value="">(직접 입력)</option>${tpls.map(t=>`<option value="${t.id}" ${t0&&t0.id===t.id?"selected":""}>${esc(t.title)}</option>`).join("")}</select></label>
     <label class="f">내용<textarea id="smText" rows="6" style="min-height:130px">${esc(t0?smsFill(t0.content,v):(opts.text||""))}</textarea></label>
     <p class="mapt" id="smInfo" style="margin:0"></p>
-    <div class="f"><span>이미지 첨부 (선택)</span><div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap"><input type="file" id="smImg" accept="image/*" multiple hidden><button type="button" class="btn" id="smImgB">이미지</button><span id="smImgP" class="mapt" style="display:flex;flex-wrap:wrap;align-items:center;flex:1;min-width:0">여러 장을 고르면 한 통에 한 장씩 나눠 보냅니다 (최대 5장 · 장수만큼 포토문자 요금). 크기는 자동으로 줄입니다.</span></div></div>
+    <div class="f"><span>이미지 첨부 (선택)</span><div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap"><input type="file" id="smImg" accept="image/*" multiple hidden><button type="button" class="btn smib" id="smImgB">이미지</button><span id="smImgP" class="mapt" style="display:flex;flex-wrap:wrap;align-items:center;flex:1;min-width:0">최대 5장 · 장수만큼 포토문자 요금</span></div></div>
     <p class="mapt" style="margin:0">{업체명}·{방문일} 같은 칸은 문구를 고를 때 자동으로 채워집니다. 채워지지 않은 칸은 지우거나 직접 고쳐 주세요.</p></div>`,
    [["닫기"],["보내기","pri",async()=>{
      const text=val("smText").trim();if(!text){toast("내용을 입력하세요");return true}
-     if(/\{(업체명|대표자|방문일|시간|미수금|금액|제품|계좌)\}/.test(text)&&!(await askConfirm("채워지지 않은 {칸}이 남아 있습니다. 그대로 보낼까요?")))return true;
-     const to=[...document.querySelectorAll('#smf input[name=to]:checked')].map(x=>x.value).concat(val("smTo2").split(/[,\s]+/)).map(x=>x.replace(/\D/g,"")).filter(Boolean);
-     const uniq=[...new Set(to)];if(!uniq.length){toast("받는 번호를 고르거나 입력하세요");return true}
-     const bad=uniq.filter(x=>!/^0\d{8,10}$/.test(x));if(bad.length){toast("번호를 확인해 주세요: "+bad.join(", "));return true}
+     /* 칸에 치다 만 번호가 있으면 받는 사람에 넣고, 번호가 아니면 알려 준다 */
+     {const q=val("smQ").trim();if(q){if(!addNums(q)){toast("받는 사람 칸에 입력 중인 글자가 있습니다. 목록에서 고르거나 지워 주세요");return true}}}
+     if(!rcp.length){toast("받는 사람을 고르거나 번호를 입력하세요");return true}
+     const multi=new Set(rcp.map(r=>r.c).filter(Boolean)).size>1;const textOf=r=>multi?smsFill(text,varsOf(r.c)):text;const uniq=rcp.map(r=>r.p);
+     if(rcp.some(r=>/\{(업체명|대표자|방문일|시간|미수금|금액|제품|계좌)\}/.test(textOf(r)))&&!(await askConfirm("채워지지 않은 {칸}이 남아 있습니다. 그대로 보낼까요?")))return true;
      if(imgs.length&&!ui.smsMms){const pr=await sb.functions.invoke("send-sms",{body:{probe:true}});if(pr.data&&pr.data.mms)ui.smsMms=true;else{toast("이미지를 보내려면 Supabase의 문자 기능(send-sms)을 새 버전으로 다시 배포해야 합니다. 이미지를 빼고 보내거나, 배포 후 다시 시도하세요.");return true}}
      if(!(await askConfirm(imgs.length>1?`${uniq.length}명에게 이미지 ${imgs.length}장을 포토문자(MMS) ${imgs.length}통으로 나눠 보낼까요?`:`${uniq.length}명에게 ${imgs.length?"이미지가 붙은 포토문자(MMS)":smsBytes(text)>90?"장문(LMS)":"단문(SMS)"}를 보낼까요?`)))return true;
-     const dg_=x=>String(x||"").replace(/\D/g,"");const cid=p=>{if(c&&[c.phone,c.phone2].some(x=>dg_(x)===p))return c.id;const f=customers.find(x=>dg_(x.phone)===p||dg_(x.phone2)===p);return f?f.id:(c?c.id:null)};
+     const cid=r=>{if(r.c)return r.c.id;const f=customers.find(x=>dg_(x.phone)===r.p||dg_(x.phone2)===r.p);return f?f.id:(c?c.id:null)};
      toast("보내는 중…");
      /* 이미지가 여러 장이면 한 통에 한 장씩 차례로 보낸다 (글은 첫 통에, 나머지는 (2/3) 표시만) */
      const parts=imgs.length?imgs:[null];
-     for(let i=0;i<parts.length;i++){const im=parts[i];const tx=i===0?(parts.length>1?text+`\n(1/${parts.length})`:text):`(${i+1}/${parts.length})`;if(parts.length>1)toast(`보내는 중… (${i+1}/${parts.length})`);
-       const {data,error}=await sb.functions.invoke("send-sms",{body:{...(im?{image:{data:im.data,name:im.name}}:{}),messages:uniq.map(p=>({to:p,text:tx,customer_id:cid(p),ref_type:opts.ref_type||"",ref_id:opts.ref_id||null}))}});
+     for(let i=0;i<parts.length;i++){const im=parts[i];const tx=r=>i===0?(parts.length>1?textOf(r)+`\n(1/${parts.length})`:textOf(r)):`(${i+1}/${parts.length})`;if(parts.length>1)toast(`보내는 중… (${i+1}/${parts.length})`);
+       const {data,error}=await sb.functions.invoke("send-sms",{body:{...(im?{image:{data:im.data,name:im.name}}:{}),messages:rcp.map(r=>({to:r.p,text:tx(r),customer_id:cid(r),ref_type:opts.ref_type||"",ref_id:opts.ref_id||null}))}});
        const done=i?` (${parts.length}통 중 ${i}통은 이미 보냈습니다)`:"";
        if(error){let msg="";try{const b=await error.context.json();msg=b.error||(b.failed||[]).map(f=>f.to+" "+f.error).join(", ")}catch(e){}
          if(!msg)msg=/Failed to send|404|not found/i.test(error.message||"")?"Supabase에 문자 기능(send-sms)이 아직 설치되지 않았습니다":(error.message||"");toast("보내지 못했습니다: "+msg+done);if(i){imgs=imgs.slice(i);imgShow()}return true}
        if(data&&data.failed&&data.failed.length){toast(`${data.sent}건 보냄, ${data.failed.length}건 실패: ${data.failed.map(f=>f.to+" "+f.error).join(", ")}${done}`);return true}}
-     toast(parts.length>1?`포토문자 ${parts.length}통을 보냈습니다 (받는 사람 ${uniq.length}명)`:`문자를 보냈습니다 (${uniq.length}건)`);if(ui.view==="sms")renderSmsView();else if(ui.ctab==="sms"&&c&&ui.sel===c.id)renderCustSms(c)}]]);
+     toast(parts.length>1?`포토문자 ${parts.length}통을 보냈습니다 (받는 사람 ${uniq.length}명)`:`문자를 보냈습니다 (${uniq.length}건)`);if(ui.view==="sms")renderSmsView();else if(ui.ctab==="sms"&&c0&&ui.sel===c0.id)renderCustSms(c0)}]]);
   const ta=document.getElementById("smText"),info=document.getElementById("smInfo"),sel_=document.getElementById("smTpl");
   const upd=()=>{const b=smsBytes(ta.value);info.textContent=`${b}바이트 · ${imgs.length?"포토문자(MMS)"+(imgs.length>1?` ${imgs.length}통`:""):b>90?"장문(LMS)":"단문(SMS)"}${b>2000?" — 2000바이트를 넘어 보낼 수 없습니다":""}`};ta.addEventListener("input",upd);upd();
   /* 이미지 첨부: JPG로 바꾸고 200KB 아래로 줄인다 (솔라피 MMS 기준: JPG · 200KB · 1500×1440 이하) */
@@ -2510,10 +2515,25 @@ async function smsDlg(opts){opts=opts||{};let c=opts.c||null;const pick=!c;let v
     bt.onclick=()=>fi.click();
     fi.onchange=async()=>{const fs=[...(fi.files||[])];fi.value="";if(!fs.length)return;const room=MAXI-imgs.length;if(room<=0)return toast(`이미지는 ${MAXI}장까지 붙일 수 있습니다`);if(fs.length>room)toast(`이미지는 ${MAXI}장까지 붙일 수 있어 ${room}장만 넣었습니다`);
       pv.textContent="이미지를 줄이는 중…";for(const f of fs.slice(0,room)){try{imgs.push(await smsImgPrep(f))}catch(e){toast(`‘${f.name}’은(는) 쓸 수 없습니다: `+(e.message||e))}}show()};if(imgs.length)show()}
-  const drawPh=()=>{const ps=phonesOf(c);document.getElementById("smPh").innerHTML=ps.map((p,i)=>`<label><input type="checkbox" name="to" value="${esc(p)}" ${i===0?"checked":""}>${esc(p)}</label>`).join("")||(pick?`<span class="mapt">고객을 고르면 그 고객의 번호가 여기에 나옵니다.</span>`:"")};drawPh();
   sel_.onchange=()=>{const t=tpls.find(x=>x.id===sel_.value);if(t){ta.value=smsFill(t.content,v);upd()}};
-  if(pick){bindCustPicker(pool);const h=document.getElementById("jcId");h.addEventListener("change",()=>{c=pool.find(x=>x.id===h.value)||null;setV();drawPh();
-    document.getElementById("dlgH").textContent="문자 보내기"+(c?" · "+c.name:"");if(sel_.value)sel_.onchange()})}
+  /* 받는 사람: 꼬리표 + 한 칸 검색 (고객을 찾아 고르거나, 없으면 번호를 그대로 넣는다) */
+  const fmtP=p=>p.replace(/^(02|0\d{2})(\d{3,4})(\d{4})$/,"$1-$2-$3");
+  const rcBox=document.getElementById("smRc"),qEl=document.getElementById("smQ"),resEl=document.getElementById("smRes");
+  const drawRc=()=>{rcBox.innerHTML=rcp.map((r,i)=>`<span class="smchip${r.c?"":" n"}">${r.c?`<b>${esc(r.c.name)}</b> `:""}${esc(fmtP(r.p))}<button type="button" data-rx="${i}" aria-label="${esc((r.c?r.c.name+" ":"")+fmtP(r.p))} 빼기">×</button></span>`).join("");
+    rcBox.querySelectorAll("[data-rx]").forEach(b=>b.onclick=()=>{rcp.splice(+b.dataset.rx,1);changed()});
+    document.getElementById("dlgH").textContent="문자 보내기"+(c?" · "+c.name:rcp.length>1?` · ${rcp.length}명`:"")};
+  const changed=()=>{setV();drawRc();if(sel_.value)sel_.onchange()};
+  const add=(p,cc)=>{const i=rcp.findIndex(r=>r.p===p);if(i>=0){if(cc&&!rcp[i].c)rcp[i].c=cc;return}rcp.push({p,c:cc||null})};
+  function addNums(q){if(/[^\d\-\s,.+()]/.test(q))return false;const ns=q.split(/[,\s]+/).map(dg_).filter(Boolean);const one=dg_(q);const list=ns.length&&ns.every(x=>/^0\d{8,10}$/.test(x))?ns:/^0\d{8,10}$/.test(one)?[one]:null;if(!list)return false;
+    list.forEach(p=>add(p,pool.find(x=>dg_(x.phone)===p||dg_(x.phone2)===p)||null));qEl.value="";resEl.innerHTML="";changed();return true}
+  const search=()=>{const raw=qEl.value.trim(),q=csN(raw);if(!q){resEl.innerHTML="";return}
+    const hits=[];for(const x of pool){if(hits.length>=8)break;if(!custSearchText(x).includes(q))continue;phonesOf(x).forEach(ph=>{const p=dg_(ph);if(/^0\d{8,10}$/.test(p)&&!rcp.some(r=>r.p===p))hits.push({x,p})})}
+    const num=!/[^\d\-\s,.+()]/.test(raw)&&(()=>{const ns=raw.split(/[,\s]+/).map(dg_).filter(Boolean);return (ns.length&&ns.every(n=>/^0\d{8,10}$/.test(n)))||/^0\d{8,10}$/.test(dg_(raw))})();
+    resEl.innerHTML=hits.map((h,i)=>`<button type="button" data-hi="${i}"><b>${esc(h.x.name)}</b><span class="mapt">${esc(fmtP(h.p))}${h.x.address?" · "+esc(h.x.address):""}</span></button>`).join("")+(num?`<button type="button" data-num="1" class="smnum"><b>＋ ${esc(raw)} 번호로 보내기</b></button>`:"")||`<p class="mapt" style="margin:0">찾는 고객이 없습니다. 번호를 직접 입력하면 그 번호로 보낼 수 있습니다.</p>`;
+    resEl.querySelectorAll("[data-hi]").forEach(b=>b.onclick=()=>{const h=hits[+b.dataset.hi];add(h.p,h.x);qEl.value="";resEl.innerHTML="";changed();qEl.focus()});
+    const nb=resEl.querySelector("[data-num]");if(nb)nb.onclick=()=>{addNums(raw);qEl.focus()}};
+  qEl.addEventListener("input",search);qEl.addEventListener("keydown",e=>{if(e.key==="Enter"){e.preventDefault();if(e.isComposing)return;const f=resEl.querySelector("button");if(f)f.click()}else if(e.key==="Backspace"&&!qEl.value&&rcp.length){rcp.pop();changed()}});
+  drawRc();if(!rcp.length)qEl.focus();
 }
 /* 상단 '문자' 메뉴: 보내기 + 최근 보낸 문자 */
 async function renderSmsView(){const tpls=await loadSmsTpl(true);const off=isOffice();
