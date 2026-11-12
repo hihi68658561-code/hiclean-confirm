@@ -2478,7 +2478,7 @@ async function smsDlg(opts){opts=opts||{};let c=opts.c||null;let v={};let imgs=(
   openDlg("문자 보내기"+(c?" · "+esc(c.name):""),`<div id="smf" style="display:grid;gap:10px">
     ${ui.noSms?`<p class="warnbox" style="margin:0">문자 문구·기록 칸이 아직 없습니다. Supabase에서 <b>phase1zc.sql</b>을 실행해 주세요.</p>`:""}
     <div class="f"><span>받는 사람</span><div id="smRc" class="smrc"></div>
-      <input id="smQ" type="search" autocomplete="off" class="smq" placeholder="업체명·전화번호 검색, 또는 번호 직접 입력" aria-label="받는 사람 검색 또는 번호 입력"><div id="smRes" class="pickres"></div></div>
+      <input id="smToQ" type="search" autocomplete="off" class="smq" placeholder="업체명·전화번호 검색, 또는 번호 직접 입력" aria-label="받는 사람 검색 또는 번호 입력"><div id="smRes" class="pickres"></div></div>
     <label class="f">자주 쓰는 문구<select id="smTpl"><option value="">(직접 입력)</option>${tpls.map(t=>`<option value="${t.id}" ${t0&&t0.id===t.id?"selected":""}>${esc(t.title)}</option>`).join("")}</select></label>
     <label class="f">내용<textarea id="smText" rows="6" style="min-height:130px">${esc(t0?smsFill(t0.content,v):(opts.text||""))}</textarea></label>
     <p class="mapt" id="smInfo" style="margin:0"></p>
@@ -2487,7 +2487,7 @@ async function smsDlg(opts){opts=opts||{};let c=opts.c||null;let v={};let imgs=(
    [["닫기"],["보내기","pri",async()=>{
      const text=val("smText").trim();if(!text){toast("내용을 입력하세요");return true}
      /* 칸에 치다 만 번호가 있으면 받는 사람에 넣고, 번호가 아니면 알려 준다 */
-     {const q=val("smQ").trim();if(q){if(!addNums(q)){toast("받는 사람 칸에 입력 중인 글자가 있습니다. 목록에서 고르거나 지워 주세요");return true}}}
+     {const q=val("smToQ").trim();if(q){if(!addNums(q)){toast("받는 사람 칸에 입력 중인 글자가 있습니다. 목록에서 고르거나 지워 주세요");return true}}}
      if(!rcp.length){toast("받는 사람을 고르거나 번호를 입력하세요");return true}
      const multi=new Set(rcp.map(r=>r.c).filter(Boolean)).size>1;const textOf=r=>multi?smsFill(text,varsOf(r.c)):text;const uniq=rcp.map(r=>r.p);
      if(rcp.some(r=>/\{(업체명|대표자|방문일|시간|미수금|금액|제품|계좌)\}/.test(textOf(r)))&&!(await askConfirm("채워지지 않은 {칸}이 남아 있습니다. 그대로 보낼까요?")))return true;
@@ -2518,7 +2518,7 @@ async function smsDlg(opts){opts=opts||{};let c=opts.c||null;let v={};let imgs=(
   sel_.onchange=()=>{const t=tpls.find(x=>x.id===sel_.value);if(t){ta.value=smsFill(t.content,v);upd()}};
   /* 받는 사람: 꼬리표 + 한 칸 검색 (고객을 찾아 고르거나, 없으면 번호를 그대로 넣는다) */
   const fmtP=p=>p.replace(/^(02|0\d{2})(\d{3,4})(\d{4})$/,"$1-$2-$3");
-  const rcBox=document.getElementById("smRc"),qEl=document.getElementById("smQ"),resEl=document.getElementById("smRes");
+  const rcBox=document.getElementById("smRc"),qEl=document.getElementById("smToQ"),resEl=document.getElementById("smRes");
   const drawRc=()=>{rcBox.innerHTML=rcp.map((r,i)=>`<span class="smchip${r.c?"":" n"}">${r.c?`<b>${esc(r.c.name)}</b> `:""}${esc(fmtP(r.p))}<button type="button" data-rx="${i}" aria-label="${esc((r.c?r.c.name+" ":"")+fmtP(r.p))} 빼기">×</button></span>`).join("");
     rcBox.querySelectorAll("[data-rx]").forEach(b=>b.onclick=()=>{rcp.splice(+b.dataset.rx,1);changed()});
     document.getElementById("dlgH").textContent="문자 보내기"+(c?" · "+c.name:rcp.length>1?` · ${rcp.length}명`:"")};
