@@ -3353,7 +3353,7 @@ function sinkDlg(o,pre){const off=isOffice();const isNew=!o;pre=pre||{};const st
       const _si=its.map(it=>it._si);its=its.map(({_si:_x,...r})=>r);
       const site=(document.getElementById("skSite")||{}).value;const p={site_name:(site||"").trim()||(cust?cust.name:""),customer_id:cust?cust.id:null,contract_id:cust?ctrId:null,due_date:f.get("due_date")||null,items:its,memo:(f.get("memo")||"").trim()};
       if(!p.site_name){toast("설치업장명을 고르거나 입력하세요 (재고면 ‘재고’)");return true}
-      if(off){const w=whoIs((f.get("owner_name")||"").trim());Object.assign(p,{owner:w.id,owner_name:w.name,order_date:f.get("order_date")||today(),status:f.get("status")||"신규접수",in_date:f.get("in_date")||null,out_date:f.get("out_date")||null})}
+      if(off){let on_=(f.get("owner_name")||"").trim();if(!on_&&cust){const w0=skOwnerOf(cust.id,ctrId);if(w0&&w0.owner_name)on_=w0.owner_name}const w=whoIs(on_);Object.assign(p,{owner:w.id,owner_name:w.name,order_date:f.get("order_date")||today(),status:f.get("status")||"신규접수",in_date:f.get("in_date")||null,out_date:f.get("out_date")||null})}
       else if(isNew)Object.assign(p,{owner:me.id,owner_name:me.name||"",order_date:today(),status:"신규접수"});
       p.spec_text=skSpecText(its);
       const go=pp=>isNew?sb.from("sink_orders").insert(pp).select().single():sb.from("sink_orders").update(pp).eq("id",o.id).select().single();
@@ -3373,7 +3373,7 @@ function sinkDlg(o,pre){const off=isOffice();const isNew=!o;pre=pre||{};const st
       const ch=document.getElementById("skChg");if(ch)ch.onclick=()=>{cust=null;ctrId=null;drawCust()};const ksel=document.getElementById("skK");if(ksel)ksel.onchange=()=>{ctrId=ksel.value}}
     else{box.innerHTML=canEdit?`<label class="f" style="margin:0"><input id="jcQ" type="search" autocomplete="off" placeholder="업체명(상호)·전화번호로 계약 고객 찾기"></label><input type="hidden" id="jcId"><div id="jcSel"></div><div id="jcRes" class="pickres"></div>
         <p class="mapt" id="jcHint" style="margin:4px 0 0">계약 고객을 찾아 고르거나, 아래 칸에 업장명을 직접 적으세요 (재고 발주는 ‘재고’).</p><input id="skSite" placeholder="설치업장명 직접 입력" value="${esc(o.customer_id?"":(o.site_name||""))}" style="margin-top:6px">`:`<span>${esc(o.site_name||"")}</span>`;
-      if(canEdit){bindCustPicker(pool);const h=document.getElementById("jcId");h.addEventListener("change",()=>{const c=pool.find(x=>x.id===h.value);if(c){cust=c;ctrId=null;setTimeout(drawCust,0)}})}}};
+      if(canEdit){bindCustPicker(pool);const h=document.getElementById("jcId");h.addEventListener("change",()=>{const c=pool.find(x=>x.id===h.value);if(c){cust=c;ctrId=null;/* 담당자 칸이 비어 있으면 그 계약의 3차 담당자로 */const on=document.querySelector('#skf [name="owner_name"]');if(off&&on&&!on.value.trim()){const w0=skOwnerOf(c.id,null);if(w0&&w0.owner_name)on.value=w0.owner_name}setTimeout(drawCust,0)}})}}};
   drawCust();
   /* 품목 */
   const ro=canEdit?"":"readonly";
