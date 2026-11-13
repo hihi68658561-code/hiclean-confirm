@@ -258,7 +258,7 @@ body.resizing,body.resizing *{cursor:col-resize!important;user-select:none}
 .kpi span{font-size:12px;color:var(--mute)}.kpi b{font-size:16px;font-variant-numeric:tabular-nums}.kpi small{font-size:11.5px;color:var(--mute)}.kpi.bad b{color:var(--bad-fg)}
 .warnbox{background:var(--warn-bg);color:var(--warn-fg);border-radius:6px;padding:10px 12px;margin:0}
 .donebox{background:var(--ok-bg);color:var(--ok-fg);border-radius:6px;padding:8px 10px;display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-bottom:8px}
-.paysum{display:flex;gap:14px;flex-wrap:wrap;margin-bottom:8px;font-size:13px}
+.paysum{display:flex;gap:14px;flex-wrap:wrap;align-items:center;margin-bottom:8px;font-size:13px}.paysum>span{display:inline-flex;align-items:center;gap:5px}.paysum select{margin:0;width:auto;font-size:13px}
 .payadd{display:grid;grid-template-columns:140px 100px 1fr 120px 1fr auto;gap:6px;margin-top:8px}
 .payadd input,.payadd select{padding:6px 8px;border:1px solid var(--line);border-radius:6px;background:var(--field);min-width:0}
 .payadd.lcadd{grid-template-columns:140px minmax(0,1fr) auto;align-items:start}
@@ -4388,6 +4388,8 @@ function jobDlg(j,c,kind,tpl,preset){
          if(!pt.visit_time)miss.push("작업 시작 시간");if(he&&!pt.end_time)miss.push("작업 종료 시간");
          if(miss.length){jf_mark(miss);return toast("노란 칸을 적어 주세요: "+miss.join(", "))}}
        if(tp&&paidJob&&pt.cost>0){if(tp.method==="미수"){pt.pay_status="미수";if(tp.memo)pt.pay_memo=tp.memo}else if(tp.method){tpRow={pay_date:pt.done_date||today(),method:tp.method,payer:tp.name,amount:pt.cost,memo:tp.memo||""};Object.assign(pt,jpDerive([tpRow],pt.cost,""))}}}
+     /* 완료했는데 받은 돈이 없으면(유상·청구금액 있음·입금 기록 없음) 납부 여부를 '미수'로 */
+     if("cost" in pt&&pt.status==="완료"&&pt.paid_type!=="무상"&&Number(pt.cost||0)>0&&!pt.pay_status&&!pt.pay_date)pt.pay_status="미수";
      if(off){pt.techs=f.getAll("tech");pt.tech_names=f.get("tech_names")||"";if(pt.status==="접수"&&(pt.techs.length||pt.tech_names))pt.status="배정"}
      if(!isNew&&chgTo&&chgTo.customer_id!==j.customer_id){if(!(await askConfirm(`이 작업의 고객을 ‘${j.customer_name}’에서 ‘${chgTo.customer_name}’(으)로 바꿔 저장할까요?`)))return true;Object.assign(pt,chgTo)}
      let r;if(isNew){const row=Object.assign({},j,pt);delete row.id;r=await sb.from("jobs").insert(row).select().single()}else r=await sb.from("jobs").update(pt).eq("id",j.id);
