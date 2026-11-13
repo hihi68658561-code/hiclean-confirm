@@ -4040,7 +4040,9 @@ function monthBuckets(list,ym){
   const st=ym+"-01";const [y,m]=ym.split("-").map(Number);const en=(m===12?(y+1)+"-01":y+"-"+String(m+1).padStart(2,"0"))+"-01";
   const out={carry:[],new:[],done:[],hold:[],cancel:[],open:[]};
   list.forEach(j=>{const rd=rdOf(j);if(!rd||rd>=en)return;
-    const closedBefore=(j.status==="완료"&&doneOf(j)<st)||(j.status==="취소"&&updOf(j)<st);
+    /* 이월접수 = 지난달까지 접수했는데 지난달 말까지 완료가 안 된 건 (이달에 처리됐거나 아직 미완료).
+       취소한 날짜는 따로 적혀 있지 않아서, 지난달까지 접수한 취소 건은 이월로 세지 않는다 */
+    const closedBefore=(j.status==="완료"&&doneOf(j)<st)||j.status==="취소";
     const carry=rd<st&&!closedBefore,cur=rd>=st;if(!carry&&!cur)return;
     out[carry?"carry":"new"].push(j);
     if(j.status==="완료"&&doneOf(j)<en)out.done.push(j);
