@@ -4041,12 +4041,13 @@ function monthBuckets(list,ym){
   const out={carry:[],new:[],done:[],hold:[],cancel:[],open:[]};
   list.forEach(j=>{const rd=rdOf(j);if(!rd||rd>=en)return;
     /* 이월접수 = 지난달까지 접수했는데 지난달 말까지 완료가 안 된 건 (이달에 처리됐거나 아직 미완료).
-       취소한 날짜는 따로 적혀 있지 않아서, 지난달까지 접수한 취소 건은 이월로 세지 않는다 */
-    const closedBefore=(j.status==="완료"&&doneOf(j)<st)||j.status==="취소";
+       취소일(cancel_date, phase1zx)이 적힌 건은 그 날짜로 보고, 취소일이 없는 예전 취소 건은 이월로 세지 않는다 */
+    const cd=j.status==="취소"?(j.cancel_date||(rd<st?"":updOf(j))):"";
+    const closedBefore=(j.status==="완료"&&doneOf(j)<st)||(j.status==="취소"&&(!cd||cd<st));
     const carry=rd<st&&!closedBefore,cur=rd>=st;if(!carry&&!cur)return;
     out[carry?"carry":"new"].push(j);
     if(j.status==="완료"&&doneOf(j)<en)out.done.push(j);
-    else if(j.status==="취소"&&updOf(j)<en)out.cancel.push(j);
+    else if(j.status==="취소"&&cd<en)out.cancel.push(j);
     else if(j.status==="보류")out.hold.push(j);/* 보류는 미완료에서 빼고 보류 줄에만 */
     else out.open.push(j);
   });
