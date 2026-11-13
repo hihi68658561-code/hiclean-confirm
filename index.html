@@ -110,6 +110,7 @@ dialog .df{padding:12px 18px;border-top:1px solid var(--line2);display:flex;just
 .sumt th,.sumt td{border:1px solid var(--line);padding:5px 12px;text-align:right;min-width:64px}
 .sumt thead th{text-align:center;font-weight:700}
 .sumt tbody th{text-align:left;font-weight:500;color:var(--mute);background:var(--panel)}
+.sumt.salt tbody tr{cursor:pointer}.sumt.salt tbody tr:hover td,.sumt.salt tbody tr:hover th{background:var(--accent-weak)}.sumt.salt tr.on td,.sumt.salt tr.on th{font-weight:700;background:var(--accent-weak)}.sumt.salt tbody th{color:inherit}
 .sumt td.cl{cursor:pointer}.sumt td.cl:hover{background:var(--accent-weak)}.sumt td.on{outline:2px solid var(--accent);outline-offset:-2px;font-weight:700}
 .sumt tr.open td,.sumt tr.open th{font-weight:700;background:var(--warn-bg);color:var(--warn-fg)}
 .sumt .k-as{background:#efe2ff;color:#6b21a8}.sumt .k-install{background:var(--ok-bg);color:var(--ok-fg)}.sumt .k-remove{background:#fde2e2;color:#b42318}.sumt .k-addon{background:#fff3c4;color:#8a5a00}
@@ -1973,7 +1974,7 @@ function leadSortVal(c,l){switch(c){case"rdate":return l.recv_date||"";case"fdat
   case"ccount":return leadCons(l).length;case"reg":return l.created_at||"";case"status":return LSTAT.indexOf(l.status);}return cfText(leadCell(c,l)).replace("(빈 칸)","")}
 function renderLeadView(){const _sv=snapScroll();renderLeadView0();restoreScroll(_sv)}
 function renderLeadView0(){
-  if(!ui.lm)ui.lm=thisMonth();["lq","lrow","lsrc","lkpi"].forEach(k=>{if(ui[k]===undefined)ui[k]=""});
+  if(!ui.lm)ui.lm=thisMonth();["lq","lrow","lsrc","lkpi","lsal"].forEach(k=>{if(ui[k]===undefined)ui[k]=""});
   if(ui.noLeads){view().innerHTML=`<div class="sec"><h2>DB관리</h2><p class="warnbox">DB관리를 쓰려면 Supabase SQL Editor에서 <b>phase1y.sql</b>을 실행해 주세요.</p></div>`;return}
   const [st0,en0]=monthRange(ui.lm);const inM=d=>d&&d>=st0&&d<en0;
   const mon=ui.lall?leads:leads.filter(l=>inM(l.recv_date));
@@ -1985,7 +1986,15 @@ function renderLeadView0(){
   const stOf=l=>LSTAT.includes(l.status)?l.status:"";
   const cnt=(r,s)=>src.filter(l=>(r===null||stOf(l)===r)&&(s===null||(l.source||"")===s)).length;
   const qq=ui.lq.trim().toLowerCase().replace(/-/g,"");
-  let list=src.filter(l=>(ui.lrow===""||ui.lrow==="*"||stOf(l)===(ui.lrow==="(미정)"?"":ui.lrow))&&(ui.lsrc===""||ui.lsrc==="*"||(l.source||"")===(ui.lsrc==="(없음)"?"":ui.lsrc))
+  /* 영업담당별 배정·오더·전환율 (위 기준 월의 접수 건) */
+  const salOf=l=>staffName(l.sales)||l.sales_name||"(미배정)";const isOrd=l=>l.status==="오더"||!!l.customer_id;
+  const salM=new Map();mon.forEach(l=>{const k=salOf(l);const o=salM.get(k)||{n:0,o:0};o.n++;if(isOrd(l))o.o++;salM.set(k,o)});
+  const salRows=[...salM.entries()].sort((a,b)=>(a[0]==="(미배정)")-(b[0]==="(미배정)")||b[1].n-a[1].n||KO.compare(a[0],b[0]));if(ui.lsal&&!salM.has(ui.lsal))ui.lsal="";
+  const pct=(o,n)=>n?Math.round(o*100/n)+"%":"-";
+  const salT=`<table class="sumt salt" aria-label="영업담당별 집계"><thead><tr><th>영업담당</th><th>배정</th><th>오더</th><th>전환율</th></tr></thead><tbody>
+    ${salRows.map(([k,o])=>`<tr class="${ui.lsal===k?"on":""}" data-sal="${esc(k)}" role="button" tabindex="0" title="이 담당자 건만 보기"><th>${esc(k)}</th><td>${o.n}</td><td>${o.o}</td><td>${pct(o.o,o.n)}</td></tr>`).join("")||`<tr><td colspan="4" class="mapt">접수 건이 없습니다.</td></tr>`}
+    <tr data-sal="" role="button" tabindex="0" title="전체 보기"><th>합계</th><td><b>${mon.length}</b></td><td><b>${ord.length}</b></td><td><b>${pct(ord.length,mon.length)}</b></td></tr></tbody></table>`;
+  let list=src.filter(l=>(!ui.lsal||salOf(l)===ui.lsal)&&(ui.lrow===""||ui.lrow==="*"||stOf(l)===(ui.lrow==="(미정)"?"":ui.lrow))&&(ui.lsrc===""||ui.lsrc==="*"||(l.source||"")===(ui.lsrc==="(없음)"?"":ui.lsrc))
     &&(!qq||[l.biz_name,l.ceo,l.phone,l.contact_phone,l.contact_name,l.address,l.org,l.branch,l.receiver,l.sales_name,staffName(l.sales),l.note,...leadCons(l).map(c=>c.t)].join(" ").toLowerCase().replace(/-/g,"").includes(qq)));
   const S=leadGetSort();const cache=new Map();const v=(l)=>{if(!cache.has(l))cache.set(l,leadSortVal(S.c,l));return cache.get(l)};
   list.sort((a,b)=>{const A=v(a),B=v(b);const ea=A===""||A==null,eb=B===""||B==null;if(ea!==eb)return ea?1:-1;const r=typeof A==="number"&&typeof B==="number"?A-B:KO.compare(String(A),String(B));return r*S.d||regCmp(a,b)});
@@ -1996,7 +2005,7 @@ function renderLeadView0(){
   const sumT=`<table class="sumt" aria-label="상담 집계"><thead><tr><th></th>${colsS.map(s=>`<th>${esc(s)}</th>`).join("")}<th>합계</th></tr></thead><tbody>
     ${rowsS.map(r=>`<tr class="${r==="오더"?"open":""}"><th>${esc(r)}</th>${[...colsS,"*"].map(s=>`<td class="cl ${ui.lrow===r&&(ui.lsrc||"*")===s?"on":""}" data-r="${esc(r)}" data-s="${esc(s)}">${cnt(r==="(미정)"?"":r,s==="*"?null:s==="(없음)"?"":s)}</td>`).join("")}</tr>`).join("")}
     <tr><th>합계</th>${[...colsS,"*"].map(s=>`<td class="cl ${ui.lrow==="*"&&(ui.lsrc||"*")===s?"on":""}" data-r="*" data-s="${esc(s)}"><b>${cnt(null,s==="*"?null:s==="(없음)"?"":s)}</b></td>`).join("")}</tr></tbody></table>`;
-  const label=[ui.lkpi&&KPI[ui.lkpi]?KPI[ui.lkpi][0]:"",ui.lrow&&ui.lrow!=="*"?ui.lrow:"",ui.lsrc&&ui.lsrc!=="*"?ui.lsrc:""].filter(Boolean).join(" · ");
+  const label=[ui.lsal?"영업담당 "+ui.lsal:"",ui.lkpi&&KPI[ui.lkpi]?KPI[ui.lkpi][0]:"",ui.lrow&&ui.lrow!=="*"?ui.lrow:"",ui.lsrc&&ui.lsrc!=="*"?ui.lsrc:""].filter(Boolean).join(" · ");
   const conv=mon.length?Math.round(ord.length*100/mon.length):0;
   view().innerHTML=`<div class="sumwrap"><div style="display:grid;gap:8px;align-content:start"><div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap"><h2 style="margin:0;font-size:18px">DB관리</h2>
       <input id="lM" type="month" value="${esc(ui.lm)}" aria-label="기준 월" ${ui.lall?"disabled":""} style="padding:5px 8px;border:1px solid var(--line);border-radius:6px;background:var(--field)">${ui.lm!==thisMonth()&&!ui.lall?`<button class="btn sm" type="button" id="lNow">이번 달</button>`:""}
@@ -2006,7 +2015,7 @@ function renderLeadView0(){
        <div class="kpi bad kc ${ui.lkpi==="due"?"on":""}" data-lkpi="due" role="button" tabindex="0"><span>연락할 건 (오늘까지)</span><b>${due.length}건</b></div>
        <div class="kpi kc ${ui.lkpi==="care"?"on":""}" data-lkpi="care" role="button" tabindex="0"><span>관리 중 (전체)</span><b>${care.length}건</b></div></div>
       <p class="mapt" style="margin:0">접수일자 기준으로 그달 상담 건이 나옵니다. ‘다음 연락일’이 오늘이거나 지난 건은 ‘연락할 건’에 모입니다.<br>숫자를 누르면 아래 목록이 그 건들로 바뀝니다.</p></div>
-     <div class="sumbox">${sumT}</div></div>
+     <div class="sumbox">${sumT}</div><div class="sumbox">${salT}</div></div>
    <div class="toolbar"><input id="lQ" type="search" placeholder="업장명·대표자·연락처·주소·소속·상담내용 검색" value="${esc(ui.lq)}">
      <div class="nav" role="group"><button type="button" id="lAll" class="${label||cfActive("lead")?"":"on"}" title="표·카드·열 필터를 모두 풀고 전체를 봅니다">전체</button></div><span class="mapt">${label?esc(label)+" · ":""}${list.length}건</span>
      <span style="flex:1"></span>${isAdmin()?`<label class="chip"><input type="checkbox" id="lSelAll">전체 선택</label><button class="btn danger" type="button" id="lDel" disabled>선택 삭제 (0)</button>`:""}
@@ -2017,10 +2026,11 @@ function renderLeadView0(){
   applyColW(cols,null,"lead");bindColResize(cols,"lead");view().querySelectorAll(".wtbox").forEach(hbar);
   const re=()=>renderLeadView();
   view().querySelectorAll(".sumt td.cl").forEach(td=>td.onclick=()=>{ui.lrow=td.dataset.r;ui.lsrc=td.dataset.s;re()});
+  view().querySelectorAll(".salt tr[data-sal]").forEach(tr=>{const go=()=>{ui.lsal=ui.lsal===tr.dataset.sal?"":tr.dataset.sal;re()};tr.onclick=go;tr.onkeydown=e=>{if(e.key==="Enter"||e.key===" "){e.preventDefault();go()}}});
   document.getElementById("lM").onchange=e=>{if(e.target.value){ui.lm=e.target.value;re()}};
   const ln=document.getElementById("lNow");if(ln)ln.onclick=()=>{ui.lm=thisMonth();re()};
   document.getElementById("lAllP").onchange=e=>{ui.lall=e.target.checked;re()};
-  document.getElementById("lAll").onclick=()=>{ui.lrow="";ui.lsrc="";ui.lkpi="";if(ui.cf)ui.cf.lead={};re()};
+  document.getElementById("lAll").onclick=()=>{ui.lrow="";ui.lsrc="";ui.lkpi="";ui.lsal="";if(ui.cf)ui.cf.lead={};re()};
   view().querySelectorAll("[data-lkpi]").forEach(el=>{const go=()=>{ui.lkpi=ui.lkpi===el.dataset.lkpi?"":el.dataset.lkpi;ui.lrow="";ui.lsrc="";re()};el.onclick=go;el.onkeydown=e=>{if(e.key==="Enter"||e.key===" "){e.preventDefault();go()}}});
   document.getElementById("lCols").onclick=()=>colPicker(re,"lead");cfBind("lead",re);
   const im=document.getElementById("lImp");if(im)im.onclick=()=>document.getElementById("fileIn").click();
