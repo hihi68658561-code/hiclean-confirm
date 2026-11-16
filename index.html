@@ -4173,8 +4173,9 @@ function asReqText(j,c,note){const fv=n=>{const e=document.querySelector(`#jf [n
     "4. 제품명 : "+[prodName(fv("as_product")),fv("as_size"),fv("as_serial")].filter(Boolean).join(" "),"5. 설치일자 : "+idt,"6. 고장내용 : "+fv("symptom").replace(/\s+/g," "),
     "7. AS비용 : "+cost,"8. 특이사항 : "+String(note||"").replace(/\s+/g," ").trim(),"9. 처리내용 : ","10. 수리비용 : ","11. 어플설치 : ","12. 세제구입 : ","13. 이동거리 : ","14. 제품만족도 : ","15. 작업시간 : "].join("\n")}
 function asReqToggle(j,c){const ex=document.getElementById("asReq");if(ex){ex.remove();return}const f=document.getElementById("jf");if(!f)return;
-  /* 특이사항 기본값: 이 고객의 지난 A/S 마지막 처리 내용 */
-  const prev=c?jobs.filter(x=>x.customer_id===c.id&&x.id!==j.id&&asLike(x)&&x.status!=="취소"&&(x.result||"").trim()).sort((a,b)=>String(b.done_date||b.visit_date||b.request_date||"").localeCompare(String(a.done_date||a.visit_date||a.request_date||"")))[0]:null;
+  /* 특이사항 기본값: 이 고객의 지난 A/S 마지막 처리 내용 (최근 1년 이내 것만) */
+  const lim1y=(()=>{const t=today();return (Number(t.slice(0,4))-1)+t.slice(4)})();/* 1년 이내 처리 건만 */
+  const prev=c?jobs.filter(x=>x.customer_id===c.id&&x.id!==j.id&&asLike(x)&&x.status!=="취소"&&(x.result||"").trim()&&String(x.done_date||x.visit_date||x.request_date||"")>=lim1y).sort((a,b)=>String(b.done_date||b.visit_date||b.request_date||"").localeCompare(String(a.done_date||a.visit_date||a.request_date||"")))[0]:null;
   const pd=prev&&(prev.done_date||prev.visit_date||prev.request_date);const def=prev?(pd?`${+pd.slice(2,4)}/${+pd.slice(5,7)}/${+pd.slice(8,10)} `:"")+String(prev.result).replace(/\s+/g," ").trim():"";
   const box=document.createElement("div");box.id="asReq";box.style.cssText="display:grid;gap:8px;border:1px solid var(--line);border-radius:10px;padding:12px;background:#fffbe6";
   box.innerHTML=`<div style="display:flex;align-items:center;gap:8px"><b>A/S 확인요청 문자</b><span class="mapt" style="font-size:12px">위 입력 내용이 바로 반영됩니다</span><span style="flex:1"></span><button type="button" class="btn pri sm" id="asReqCp">복사</button><button type="button" class="btn sm" id="asReqX">접기</button></div>
