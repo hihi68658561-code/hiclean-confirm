@@ -2970,7 +2970,7 @@ async function skAutoSync(jj,isNew,c){const memo=String(jj.sink_memo||"").trim()
   const o=mine.find(o=>(o.items||[]).length&&(o.items||[]).every(it=>it.job===jj.id)&&["신규접수","주문완료"].includes(o.status));if(!o)return msg;
   const up={};const sig=a=>JSON.stringify((a||[]).map(it=>[it.sup||"",Number(it.qty||1)]));
   /* 품명 글이 바뀌었거나, 아직 한 줄로 뭉쳐 올라가 있는 발주만 다시 나눈다 (발주 창에서 손본 수량·품목은 건드리지 않음) */
-  if(sig(o.items)!==sig(items)&&(String(o.spec_text||"").trim()!==memo||(o.items.length===1&&String(o.items[0].sup||"").trim()===memo))){up.items=items;up.spec_text=memo}
+  if(sig(o.items)!==sig(items)&&(String(o.spec_text||"").trim()!==memo||(o.items.length===1&&(String(o.items[0].sup||"").trim()===memo||/[,，]/.test(o.items[0].sup||""))))){up.items=items;up.spec_text=memo}
   if(o.status!==want)up.status=want;
   const ow=o.memo===AUTO?skOwnerOf(jj.customer_id,jj.contract_id):null;if(ow&&ow.owner_name&&ow.owner_name!==(o.owner_name||"")){up.owner=ow.owner;up.owner_name=ow.owner_name}
   if(Object.keys(up).length){const {error:eU}=await sb.from("sink_orders").update(up).eq("id",o.id);
@@ -3353,6 +3353,9 @@ function sinkDlg(o,pre){const off=isOffice();const isNew=!o;pre=pre||{};const st
   const canEdit=off||(isNew||(o.status==="신규접수"&&o.owner===me.id));
   const skEmpty=it=>!(it.name||it.w||it.d||it.h||it.opt1||it.sup);const items=JSON.parse(JSON.stringify(o.items||[]));const lines=JSON.parse(JSON.stringify(((skPrices[o.id]||{}).lines)||[]));
   for(let i=items.length-1;i>=0;i--)if(skEmpty(items[i])){items.splice(i,1);lines.splice(i,1)}while(lines.length<items.length)lines.push({});
+  /* 직접입력 품목에 쉼표로 여러 개가 한 줄에 적혀 있으면 품목을 나눠서 보여 준다 (저장하면 나뉜 대로 저장) */
+  for(let i=items.length-1;i>=0;i--){const it=items[i];if(it.from_stock||!/[,，]/.test(it.sup||"")||(it.name&&it.name!=="99. 직접입력"))continue;const parts=skAutoItems(it.sup,it.job).map(x=>{const y=Object.assign({},it,x);if(!it.job)delete y.job;return y});
+    if(parts.length>1){items.splice(i,1,...parts);lines.splice(i,1,...parts.map(()=>({})))}}
   /* 위 입력 칸에는 한 품목만(curIt), 담은 품목은 아래 목록에. draft = 아직 목록에 안 담은 새 품목 */
   let draft=canEdit?{qty:1}:null;if(draft){items.push(draft);lines.push({})}let curIt=draft||items[0]||null;
   const lineOf=i=>{const L=lines[i]||{},it=items[i];const t=off&&(!L.price||!L.deduct)&&!it.from_stock?skPriceFor(it):null;return{price:Number(L.price)||(t&&t.price)||0,deduct:Number(L.deduct)||(t&&t.deduct)||0}};
