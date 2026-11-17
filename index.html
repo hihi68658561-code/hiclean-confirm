@@ -706,7 +706,7 @@ async function loadAll(){
   try{
     [staff,customers,contracts,jobs,payments,jpays,files,grades,notes,leads,rcases,rlogs]=await Promise.all([fetchAll("staff"),fetchAll("customers"),fetchCtr(),fetchAll("jobs"),fetchPays(),fetchJPays(),fetchFiles(),fetchGrades(),fetchNotes(),fetchLeads(),fetchRCases(),fetchRLogs()]);
     const st=await sb.from("settings").select("bank").eq("id",1).maybeSingle();if(st.data&&st.data.bank)S.bank=st.data.bank;
-  }catch(e){view().innerHTML=`<div class="empty"><h2>데이터를 불러오지 못했습니다</h2><p>${esc(e.message||"")}</p><p>1단계 데이터베이스 설정(phase1.sql)을 실행했는지 확인해 주세요.</p></div>`;return}
+  }catch(e){view().innerHTML=`<div class="empty"><h2>데이터를 불러오지 못했습니다</h2><p>${esc(e.message||"")}</p><p>${/fetch|network|load failed|timeout/i.test(e.message||"")?"서버에 연결하지 못했습니다. 인터넷 연결을 확인하고 잠시 후 다시 시도해 주세요.":"잠시 후 다시 시도해 주세요. 계속 이 화면이 나오면 화면을 캡처해 알려 주세요."}</p><p><button class="btn pri" type="button" onclick="location.reload()">다시 시도</button></p></div>`;return}
   if(ui.sel&&!custById(ui.sel))ui.sel=null;
   buildIdx();render();checkNoticeNew();
 }
