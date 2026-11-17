@@ -2954,6 +2954,28 @@ function bindSkTabs(){view().querySelectorAll("[data-sktab]").forEach(b=>b.oncli
 /* 발주가 어느 작업(설치·추가설치) 것인지: 같은 고객의 설치·추가설치 중 발주일 이후 가장 먼저 하는 작업.
    (계약 1건에 나중에 싱크대를 추가로 설치해도, 그 발주는 그 추가설치 건으로 들어감) */
 let _skJobsSrc=null,_skJobsBy=null;
+/* 작업에 적은 싱크대(발주대기·발주완료 + 품명 및 규격) → 싱크대 발주 탭에 자동 등록·맞춤. 작업 창과 계약 창에서 저장할 때 부른다.
+   품명에 쉼표(,)로 여러 개를 적으면 품목을 나눠 담고, 끝의 '2개'는 수량으로 읽는다. 돌려주는 값은 안내 문구 */
+function skAutoItems(memo,jobId){return String(memo||"").split(/\s*[,，]\s*/).map(t=>t.trim()).filter(Boolean).map(t=>{let q=1;const m=t.match(/^(.+?)\s+(\d{1,3})\s*(?:개|대|ea)$/i);if(m){t=m[1].trim();q=Number(m[2])||1}return{name:"99. 직접입력",sup:t,qty:q,job:jobId}})}
+async function skAutoSync(jj,isNew,c){const memo=String(jj.sink_memo||"").trim();const AUTO="작업 창에서 자동 등록";let msg="";
+  if(!(isOffice()&&!ui.noSink&&(jj.kind==="install"||jj.kind==="addon")&&jj.status!=="취소"&&memo&&["발주대기","발주완료"].includes(jj.sink_status)&&jj.customer_id&&jj.id))return msg;
+  const {data:os,error:eS}=await sb.from("sink_orders").select("*").eq("customer_id",jj.customer_id).neq("status","취소");if(eS)return msg;
+  const want=jj.sink_status==="발주완료"?"주문완료":"신규접수";const items=skAutoItems(memo,jj.id);
+  const byJob=o=>(o.items||[]).some(it=>it.job===jj.id);const mine=(os||[]).filter(o=>String(o.spec_text||"").trim()===memo||byJob(o)||(!isNew&&(skJobOf(o)||{}).id===jj.id));
+  if(!mine.length){const ow=skOwnerOf(jj.customer_id,jj.contract_id)||{owner:me.id,owner_name:me.name||""};const p={order_date:today(),owner:ow.owner,owner_name:ow.owner_name,customer_id:jj.customer_id,contract_id:jj.contract_id||null,site_name:jj.customer_name||(c&&c.name)||"",status:want,items,memo:AUTO,spec_text:memo};
+    let ri=await sb.from("sink_orders").insert(p);if(ri.error&&/spec_text/.test(ri.error.message)){const {spec_text,...p2}=p;ri=await sb.from("sink_orders").insert(p2)}
+    if(ri.error)msg+=" · 싱크대 발주 탭에 올리지 못했습니다: "+ri.error.message;else{skOrders=null;msg+=` · 싱크대 발주 탭에 ‘${skLbl(p.status)}’(으)로 올렸습니다`}
+    return msg}
+  /* 이미 자동으로 올린 발주(아직 신규접수·발주완료 단계)면 내용·진행사항·담당자를 작업에 맞춘다 */
+  const o=mine.find(o=>(o.items||[]).length&&(o.items||[]).every(it=>it.job===jj.id)&&["신규접수","주문완료"].includes(o.status));if(!o)return msg;
+  const up={};const sig=a=>JSON.stringify((a||[]).map(it=>[it.sup||"",Number(it.qty||1)]));
+  /* 품명 글이 바뀌었거나, 아직 한 줄로 뭉쳐 올라가 있는 발주만 다시 나눈다 (발주 창에서 손본 수량·품목은 건드리지 않음) */
+  if(sig(o.items)!==sig(items)&&(String(o.spec_text||"").trim()!==memo||(o.items.length===1&&String(o.items[0].sup||"").trim()===memo))){up.items=items;up.spec_text=memo}
+  if(o.status!==want)up.status=want;
+  const ow=o.memo===AUTO?skOwnerOf(jj.customer_id,jj.contract_id):null;if(ow&&ow.owner_name&&ow.owner_name!==(o.owner_name||"")){up.owner=ow.owner;up.owner_name=ow.owner_name}
+  if(Object.keys(up).length){const {error:eU}=await sb.from("sink_orders").update(up).eq("id",o.id);
+    if(!eU){skOrders=null;msg+=up.items||up.status?` · 싱크대 발주도 맞췄습니다${up.status?` (${skLbl(want)})`:""}`:" · 싱크대 발주 담당자를 3차 담당자로 맞췄습니다"}}
+  return msg}
 function skJobOf(o){const k0=o.contract_id&&ctrById(o.contract_id);const cid=o.customer_id||(k0&&k0.customer_id)||((customers.find(x=>nk(x.name)===nk(o.site_name||""))||{}).id);if(!cid)return null;
   const jd=j=>j.done_date||j.visit_date||"";const od=String(o.order_date||"");
   if(_skJobsSrc!==jobs){_skJobsSrc=jobs;_skJobsBy=new Map();jobs.forEach(j=>{if((j.kind==="install"||j.kind==="addon")&&j.status!=="취소"){if(!_skJobsBy.has(j.customer_id))_skJobsBy.set(j.customer_id,[]);_skJobsBy.get(j.customer_id).push(j)}});_skJobsBy.forEach(a=>a.sort((x,y)=>(jd(x)||"9999").localeCompare(jd(y)||"9999")))}
@@ -3926,11 +3948,14 @@ function contractDlg(c,k,tpl,opts){ui.payEdit=null;
      if(isNew){p.customer_id=c.id;res=await sb.from("contracts").insert(p).select().single()}else res=await sb.from("contracts").update(p).eq("id",k.id).select().single();
      if(res.error)return toast(/trial_end/.test(res.error.message)?"무료체험 종료일 칸이 아직 없습니다. Supabase에서 phase1m.sql을 실행해 주세요.":/contracts_stage_check|contract_type/.test(res.error.message)?"계약 구분 칸이 아직 없습니다. Supabase에서 phase1g.sql을 실행해 주세요.":"저장하지 못했습니다: "+res.error.message);
      const sk={sink_status:f.get("sink_status")||"",sink_memo:(f.get("sink_memo")||"").trim(),parts:(f.get("parts")||"").trim()};
-     if(isNew&&f.get("mkjob")){const r2=await sb.from("jobs").insert(Object.assign(jobFromContract(c,res.data),isOffice()?sk:{}));if(r2.error)toast("설치 작업은 만들지 못했습니다: "+r2.error.message)}
-     else if(ij&&!sinkRo&&(sk.sink_status!==(ij.sink_status||"")||sk.sink_memo!==(ij.sink_memo||"")||sk.parts!==(ij.parts||""))){const r3=await sb.from("jobs").update(sk).eq("id",ij.id);if(r3.error)toast("싱크대·부자재는 저장하지 못했습니다: "+r3.error.message)}
+     let skMsg="";
+     if(isNew&&f.get("mkjob")){const r2=await sb.from("jobs").insert(Object.assign(jobFromContract(c,res.data),isOffice()?sk:{})).select().single();if(r2.error)toast("설치 작업은 만들지 못했습니다: "+r2.error.message);else if(r2.data)skMsg=await skAutoSync(r2.data,true,c)}
+     else if(ij&&!sinkRo){let ok=true;if(sk.sink_status!==(ij.sink_status||"")||sk.sink_memo!==(ij.sink_memo||"")||sk.parts!==(ij.parts||"")){const r3=await sb.from("jobs").update(sk).eq("id",ij.id);if(r3.error){ok=false;toast("싱크대·부자재는 저장하지 못했습니다: "+r3.error.message)}}
+       /* 계약 창에서 고른 싱크대 발주(발주대기·발주완료)도 싱크대 발주 탭에 맞춘다 */
+       if(ok)skMsg=await skAutoSync(Object.assign({},ij,sk),false,c)}
      if(isOffice()&&(isNew||(custContracts(c.id)[0]||{}).id===k.id)){const sp=splitS3(p.sales3_name);const cp={owner:sp.owner.id,owner_name:sp.owner.name,collector:sp.coll.id};if("collector_name" in c)cp.collector_name=sp.coll.name;
        if(sp.owner.name)await sb.from("customers").update(cp).eq("id",c.id)}
-     toast("저장했습니다");reload(["customers","contracts","jobs"])}]]);
+     toast("저장했습니다"+skMsg);reload(["customers","contracts","jobs"])}]]);
   if(!isNew)renderPaySec(k);
   if(pickM){bindCustPicker(pool);const h=document.getElementById("jcId");
     h.addEventListener("change",()=>{const cc=pool.find(x=>x.id===h.value);if(!cc)return;document.getElementById("dlgH").textContent="신규접수 · 계약 · "+cc.name;
@@ -4425,16 +4450,7 @@ function jobDlg(j,c,kind,tpl,preset){
      {const jj=Object.assign({},j,pt,r.data||{});if(jj.kind==="remove"&&["접수","배정","보류"].includes(jj.status)&&isOffice()){const kk=rmCtrOf(jj);if(kk&&!["철거예정","철거완료","철거","취소"].includes(kk.stage)){const {error:e6}=await sb.from("contracts").update({stage:"철거예정"}).eq("id",kk.id);if(!e6){kk.stage="철거예정";pmsg+=" · 계약을 철거예정으로 바꿈"}}}}
      {const jj=Object.assign({},j,pt,r.data||{});if(jj.kind==="remove"&&jj.status==="완료"&&isOffice()){const kk=rmCtrOf(jj);if(kk&&!["철거완료","취소"].includes(kk.stage)){const {error:e3}=await sb.from("contracts").update({stage:"철거완료"}).eq("id",kk.id);if(!e3){kk.stage="철거완료";pmsg+=" · 계약을 철거완료로 바꿈"}}}}
      /* 작업 창에 적은 싱크대(발주대기·발주완료 + 품명 및 규격) → 싱크대 발주 탭에 자동 등록. 이미 그 작업의 발주가 있으면 만들지 않는다 */
-     {const jj=Object.assign({},j,pt,r.data||{});const memo=String(jj.sink_memo||"").trim();const AUTO="작업 창에서 자동 등록";
-      if(isOffice()&&!ui.noSink&&(jj.kind==="install"||jj.kind==="addon")&&jj.status!=="취소"&&memo&&["발주대기","발주완료"].includes(jj.sink_status)&&jj.customer_id){
-        const {data:os,error:eS}=await sb.from("sink_orders").select("*").eq("customer_id",jj.customer_id).neq("status","취소");
-        if(!eS){const byJob=o=>(o.items||[]).some(it=>it.job===jj.id);const mine=(os||[]).filter(o=>String(o.spec_text||"").trim()===memo||byJob(o)||(!isNew&&(skJobOf(o)||{}).id===jj.id));
-          if(!mine.length){const ow=skOwnerOf(jj.customer_id,jj.contract_id)||{owner:me.id,owner_name:me.name||""};const p={order_date:today(),owner:ow.owner,owner_name:ow.owner_name,customer_id:jj.customer_id,contract_id:jj.contract_id||null,site_name:jj.customer_name||(c&&c.name)||"",status:jj.sink_status==="발주완료"?"주문완료":"신규접수",items:[{name:"99. 직접입력",sup:memo,qty:1,job:jj.id}],memo:AUTO,spec_text:memo};
-            let ri=await sb.from("sink_orders").insert(p);if(ri.error&&/spec_text/.test(ri.error.message)){const {spec_text,...p2}=p;ri=await sb.from("sink_orders").insert(p2)}
-            if(ri.error)pmsg+=" · 싱크대 발주 탭에 올리지 못했습니다: "+ri.error.message;else{skOrders=null;pmsg+=` · 싱크대 발주 탭에 ‘${skLbl(p.status)}’(으)로 올렸습니다`}}
-          else{const o=mine.find(o=>byJob(o)&&(o.items||[]).length===1&&["신규접수","주문완료"].includes(o.status));const ow=o&&o.memo===AUTO?skOwnerOf(jj.customer_id,jj.contract_id):null;
-            const up={};if(o&&String(o.spec_text||"").trim()!==memo){up.items=[Object.assign({},o.items[0],{sup:memo})];up.spec_text=memo}if(o&&ow&&ow.owner_name&&ow.owner_name!==(o.owner_name||"")){up.owner=ow.owner;up.owner_name=ow.owner_name}
-            if(o&&Object.keys(up).length){const {error:eU}=await sb.from("sink_orders").update(up).eq("id",o.id);if(!eU){skOrders=null;pmsg+=up.items?" · 싱크대 발주 내용도 고쳤습니다":" · 싱크대 발주 담당자를 3차 담당자로 맞췄습니다"}}}}}}
+     pmsg+=await skAutoSync(Object.assign({},j,pt,r.data||{}),isNew,c);
      toast((isNew?`${kl(j)} 접수했습니다`:"저장했습니다")+pmsg);reload(["jobs","customers","files","contracts","jpays"]);
      /* 기사가 A/S·설치를 완료로 저장하면 → 확인서 작성(고객 서명) 물어보기 */
      if(tm&&c&&!ui.noFiles&&pt.status==="완료"&&j.status!=="완료"&&(j.kind==="as"||j.kind==="install")){const nj=Object.assign({},j,pt);setTimeout(async()=>{if(await askConfirm("완료 처리했습니다. 확인서를 작성해 고객 서명을 받을까요?"))confDlg(nj,c)},500)}
