@@ -4704,10 +4704,35 @@ function renderDeleteView(){
        ui.dsel=new Set();toast(`${n}건 삭제했습니다`);reload(["customers","contracts","jobs"])}]])};
 }
 
+/* 전체 백업: 모든 표를 1,000건씩 끝까지 읽어서 시트 하나씩 담은 엑셀 파일로 내려받는다 (관리자) */
+const BACKUP_TABLES=[["customers","고객"],["contracts","계약"],["payments","계약 입금"],["jobs","작업(설치·AS)"],["job_payments","AS 입금"],["leads","상담(DB)"],["customer_files","고객 파일 목록"],["customer_grades","고객 등급"],
+  ["sink_orders","싱크대 발주"],["sink_prices","싱크대 발주 금액"],["sink_price_list","싱크대 단가표"],["stock_units","제품 재고"],["stock_targets","재고 목표"],["stock_settings","재고 설정"],["wash_moves","수압식 이동"],
+  ["schedule_notes","일정 메모"],["notices","공지"],["sms_logs","문자 기록"],["sms_templates","문자 문구"],["recv_cases","채권"],["recv_logs","채권 기록"],["staff","직원"],["settings","설정"]];
+async function fullBackup(btn){if(!isAdmin())return toast("관리자만 내려받을 수 있습니다");
+  const old=btn.textContent;btn.disabled=true;const info=document.getElementById("bkInfo");const say=t=>{btn.textContent=t};
+  try{const wb=XLSX.utils.book_new();const sum=[["하이클린 업무관리 전체 백업"],["내려받은 시각",new Date().toLocaleString("ko-KR")],["내려받은 사람",me.name||""],[],["시트","표 이름","건수","비고"]];let total=0;
+    const cell=v=>{if(v==null)return"";if(typeof v==="object")v=JSON.stringify(v);if(typeof v==="string"&&v.length>32000)v=v.slice(0,32000)+"…(엑셀 칸 길이 제한으로 잘림)";return v};
+    for(const [t,label] of BACKUP_TABLES){say(`${label} 읽는 중…`);let rows=[],from=0,err="";
+      for(;;){const {data,error}=await sb.from(t).select("*").range(from,from+999);if(error){err=error.message;break}rows=rows.concat(data||[]);if(!data||data.length<1000)break;from+=1000}
+      if(err&&!rows.length){sum.push([label,t,"",/does not exist|find the table|schema cache/.test(err)?"이 표는 아직 없음":"읽지 못함: "+err]);continue}
+      const cols=[...new Set(rows.flatMap(r=>Object.keys(r)))];const aoa=[cols,...rows.map(r=>cols.map(c=>cell(r[c])))];
+      XLSX.utils.book_append_sheet(wb,XLSX.utils.aoa_to_sheet(rows.length?aoa:[["(자료 없음)"]]),label.replace(/[\\/?*\[\]:]/g," ").slice(0,31));
+      sum.push([label,t,rows.length,err?"일부만 읽음: "+err:""]);total+=rows.length}
+    sum.push([],["합계","",total]);sum.push([],["※ 사진·확인서 파일 자체는 들어 있지 않습니다. '고객 파일 목록' 시트에 파일 이름과 위치만 있습니다."]);
+    const ws0=XLSX.utils.aoa_to_sheet(sum);ws0["!cols"]=[{wch:18},{wch:18},{wch:10},{wch:50}];XLSX.utils.book_append_sheet(wb,ws0,"안내");
+    wb.SheetNames.unshift(wb.SheetNames.pop());
+    const d=today();XLSX.writeFile(wb,`하이클린_전체백업_${d}.xlsx`);
+    try{localStorage.setItem("hc_last_backup",d)}catch(_){}if(info)info.textContent="이 PC에서 마지막으로 내려받은 날: "+d;
+    toast(`전체 백업을 내려받았습니다 (${total.toLocaleString()}건)`)}
+  catch(e){toast("백업을 만들지 못했습니다: "+(e&&e.message||e))}
+  finally{btn.disabled=false;btn.textContent=old}}
 /* ================= 설정 (관리자) ================= */
 function renderSettings(){
-  view().innerHTML=`<div class="sec"><fieldset><legend>확인서 설정</legend><label class="f">입금계좌 안내 문구<input id="sBank" value="${esc(S.bank)}"></label><div class="actions"><button class="btn pri" id="bSaveSet" type="button">저장</button></div></fieldset><fieldset><legend>빈 확인서</legend><p class="mapt" style="margin:0 0 8px">손으로 적을 빈 설치확인서 · A/S 확인서 양식을 인쇄합니다.</p><div class="actions" style="justify-content:flex-start"><button class="btn" type="button" id="bBlankIS">설치확인서 인쇄</button><button class="btn" type="button" id="bBlankAS">A/S 확인서 인쇄</button></div></fieldset></div>`;
+  view().innerHTML=`<div class="sec"><fieldset><legend>확인서 설정</legend><label class="f">입금계좌 안내 문구<input id="sBank" value="${esc(S.bank)}"></label><div class="actions"><button class="btn pri" id="bSaveSet" type="button">저장</button></div></fieldset><fieldset><legend>빈 확인서</legend><p class="mapt" style="margin:0 0 8px">손으로 적을 빈 설치확인서 · A/S 확인서 양식을 인쇄합니다.</p><div class="actions" style="justify-content:flex-start"><button class="btn" type="button" id="bBlankIS">설치확인서 인쇄</button><button class="btn" type="button" id="bBlankAS">A/S 확인서 인쇄</button></div></fieldset>
+    <fieldset><legend>전체 백업 다운로드</legend><p class="mapt" style="margin:0 0 8px">고객·계약·A/S·입금·상담·싱크대·재고·문자 기록 등 프로그램의 모든 자료를 엑셀 파일 하나로 내려받습니다 (표마다 시트 하나).<br>한 달에 한 번 내려받아 회사 PC나 외장 저장장치에 보관해 두세요. 사진·확인서 파일 자체는 들어가지 않고 파일 목록만 들어갑니다.</p>
+      <div class="actions" style="justify-content:flex-start;align-items:center"><button class="btn pri" type="button" id="bBackup">전체 백업 내려받기</button><span class="mapt" id="bkInfo">${(()=>{try{const d=localStorage.getItem("hc_last_backup");return d?"이 PC에서 마지막으로 내려받은 날: "+esc(d):""}catch(_){return""}})()}</span></div></fieldset></div>`;
   document.getElementById("bBlankIS").onclick=()=>doPrint(sheetIS({},{}));document.getElementById("bBlankAS").onclick=()=>doPrint(sheetAS({},{}));
+  document.getElementById("bBackup").onclick=e=>fullBackup(e.currentTarget);
   document.getElementById("bSaveSet").onclick=async()=>{const b=val("sBank").trim();if(!b)return;const {error}=await sb.from("settings").update({bank:b}).eq("id",1);if(error)return toast("저장하지 못했습니다");S.bank=b;toast("저장했습니다")};
 }
 
