@@ -116,7 +116,7 @@ dialog .df{padding:12px 18px;border-top:1px solid var(--line2);display:flex;just
 .sumt.lsum thead th,.sumt.lsum2 thead th{height:44px;box-sizing:border-box;padding-top:0;padding-bottom:0}.sumt.lsum tbody th,.sumt.lsum tbody td,.sumt.lsum2 tbody th,.sumt.lsum2 tbody td{height:30px;box-sizing:border-box;padding-top:0;padding-bottom:0}
 .sumt.lsum2 thead th{vertical-align:middle}.sumt.lsum2 tbody th{text-align:center}
 .sumt.lsum{table-layout:fixed;width:auto}.sumt.lsum th,.sumt.lsum td{width:64px;min-width:64px;max-width:64px;text-align:center;padding:5px 4px}
-.sumt.lsum thead th{white-space:normal;word-break:keep-all;line-height:1.25;vertical-align:middle}.sumt.lsum tbody th{text-align:center}.sumt.lsum tbody td{text-align:right;padding-right:8px}
+.sumt.lsum thead th{white-space:nowrap;overflow:hidden;font-size:12.5px;padding-left:2px;padding-right:2px;vertical-align:middle;letter-spacing:-.2px}.sumt.lsum thead th.lg{font-size:11.5px;letter-spacing:-.6px}.sumt.lsum tbody th{text-align:center}.sumt.lsum tbody td{text-align:right;padding-right:8px}
 .sumt td.cl{cursor:pointer}.sumt td.cl:hover{background:var(--accent-weak)}.sumt td.on{outline:2px solid var(--accent);outline-offset:-2px;font-weight:700}
 .sumt tr.open td,.sumt tr.open th{font-weight:700;background:var(--warn-bg);color:var(--warn-fg)}
 .sumt .k-as{background:#efe2ff;color:#6b21a8}.sumt .k-install{background:var(--ok-bg);color:var(--ok-fg)}.sumt .k-remove{background:#fde2e2;color:#b42318}.sumt .k-addon{background:#fff3c4;color:#8a5a00}
@@ -2011,7 +2011,7 @@ function renderLeadView0(){
   ui.lsel=ui.lsel||new Set();[...ui.lsel].forEach(id=>{if(!list.some(l=>l.id===id))ui.lsel.delete(id)});
   const cols=getCols("lead");const shown=list.slice(0,ui.xAll?1e9:(ui.lN||500));
   const rowsS=[...LSTAT,"(미정)"],colsS=[...srcs,"(없음)"].filter((s,i,a)=>s!=="(없음)"||mon.some(l=>!l.source));
-  const sumT=`<table class="sumt lsum" aria-label="상담 집계"><thead><tr><th class="diag" aria-label="상태/구분"><span class="dg-t">구분</span><span class="dg-b">상태</span></th>${colsS.map(s=>{const t=String(s);const h=t.length>4?Math.floor(t.length/2):0;return `<th>${h?esc(t.slice(0,h))+"<br>"+esc(t.slice(h)):esc(t)}</th>`}).join("")}<th>합계</th></tr></thead><tbody>
+  const sumT=`<table class="sumt lsum" aria-label="상담 집계"><thead><tr><th class="diag" aria-label="상태/구분"><span class="dg-t">구분</span><span class="dg-b">상태</span></th>${colsS.map(s=>{const t=String(s);return `<th class="${t.length>4?"lg":""}">${esc(t)}</th>`}).join("")}<th>합계</th></tr></thead><tbody>
     ${rowsS.map(r=>`<tr class="${r==="오더"?"open":""}"><th>${r==="(미정)"?"없음":esc(r)}</th>${[...colsS,"*"].map(s=>`<td class="cl ${ui.lrow===r&&(ui.lsrc||"*")===s?"on":""}" data-r="${esc(r)}" data-s="${esc(s)}">${cnt(r==="(미정)"?"":r,s==="*"?null:s==="(없음)"?"":s)}</td>`).join("")}</tr>`).join("")}
     <tr><th>합계</th>${[...colsS,"*"].map(s=>`<td class="cl ${ui.lrow==="*"&&(ui.lsrc||"*")===s?"on":""}" data-r="*" data-s="${esc(s)}"><b>${cnt(null,s==="*"?null:s==="(없음)"?"":s)}</b></td>`).join("")}</tr></tbody></table>`;
   const label=[ui.lsal&&ui.lsal!=="*"?"영업담당 "+ui.lsal:"",ui.lsalo?"오더":"",ui.lkpi&&KPI[ui.lkpi]?KPI[ui.lkpi][0]:"",ui.lrow&&ui.lrow!=="*"?(ui.lrow==="(미정)"?"상태 없음":ui.lrow):"",ui.lsrc&&ui.lsrc!=="*"?ui.lsrc:""].filter(Boolean).join(" · ");
