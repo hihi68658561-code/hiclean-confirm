@@ -101,7 +101,7 @@ dialog .df{padding:12px 18px;border-top:1px solid var(--line2);display:flex;just
 .mback{display:none}
 @media (max-width:760px){.body.mdet>aside{display:none}.body.mdet>.mback{display:flex;align-items:center;gap:10px;position:fixed;top:0;left:0;right:0;height:50px;padding:0 12px;z-index:61;background:var(--panel);border-bottom:1px solid var(--line);box-shadow:0 1px 4px rgba(0,0,0,.06)}
   .body.mdet>.mback b{flex:1;min-width:0;font-size:16px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.body.mdet>.mback .btn.close{padding:6px 18px;font-weight:700}
-  .body.mlist>#main{display:none}
+  .body.mlist>#main{display:none}.body.mlist>aside{max-height:none}
   .body.mdet>#main{position:fixed;top:50px;left:0;right:0;bottom:0;z-index:60;overflow:auto;background:var(--bg);-webkit-overflow-scrolling:touch}
   html.mdetopen,html.mdetopen body{overflow:hidden}}
 @media (max-width:760px){.body{grid-template-columns:minmax(0,1fr)}aside{max-height:42vh;position:static;border-right:none;border-bottom:1px solid var(--line)}.chead,.tabs,.work,.cform{padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}.g2{grid-template-columns:1fr}}
@@ -792,7 +792,7 @@ function renderCustView(){
   ui.stage=ui.ctype=ui.grade="";
   const go=()=>{ui.cs={};document.querySelectorAll("[data-cs]").forEach(i=>{ui.cs[i.dataset.cs]=i.value});renderCustList()};
   document.querySelectorAll("[data-cs]").forEach(i=>i.addEventListener("keydown",e=>{if(e.key==="Enter"){e.preventDefault();go()}}));
-  document.getElementById("csGo").onclick=go;document.getElementById("csClr").onclick=()=>{document.querySelectorAll("[data-cs]").forEach(i=>i.value="");go()};
+  document.getElementById("csGo").onclick=go;document.getElementById("csClr").onclick=()=>{document.querySelectorAll("[data-cs]").forEach(i=>i.value="");ui.sel=null;ui.mdet=false;ui.ctab="info";ui.draft=null;go();renderCustMain();custMdet();window.scrollTo(0,0)};
   const nb=document.getElementById("bNewC");if(nb)nb.onclick=()=>newCustomer(null,async c=>{render();if(isOffice()&&await askConfirm("고객을 등록했습니다. 계약도 바로 등록하시겠습니까?"))contractDlg(c,null);else document.getElementById("dlg").close()});
   document.getElementById("clist").onclick=e=>{const it=e.target.closest(".citem");if(it){ui.sel=it.dataset.id;ui.ctab="info";ui.draft=null;document.querySelectorAll("#clist .citem.sel").forEach(x=>x.classList.remove("sel"));it.classList.add("sel");ui.mdet=true;renderCustMain();custMdet()}};
   document.getElementById("mBackB").onclick=()=>{ui.mdet=false;custMdet()};
