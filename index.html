@@ -2056,7 +2056,10 @@ function renderLeadView0(){
 /* 같은 연락처의 다른 상담·등록 고객 */
 function leadMatches(l){const ps=[dg(l.phone),dg(l.contact_phone)].filter(p=>p.length>=9);
   const ls=leads.filter(x=>x.id!==l.id&&ps.some(p=>dg(x.phone)===p||dg(x.contact_phone)===p));
-  const cs=customers.filter(c=>ps.some(p=>dg(c.phone)===p||dg(c.phone2)===p)||(l.biz_name&&nk(c.name)===nk(l.biz_name)));
+  /* 등록 고객: 업장명·주소·연락처 중 2가지 이상 같을 때만 (이름만 같은 다른 가게가 연결되지 않게) */
+  const an=a=>String(a||"").replace(/[\s,.()\-]/g,"");const la=an(l.address);
+  const addrEq=c=>{const ca=an(c.address);if(!la||!ca)return false;if(la===ca)return true;const [x,y]=la.length<ca.length?[la,ca]:[ca,la];return x.length>=8&&y.startsWith(x)};
+  const cs=customers.filter(c=>{const n=!!(l.biz_name&&nk(c.name)===nk(l.biz_name));const ph=ps.some(p=>dg(c.phone)===p||dg(c.phone2)===p);return (n?1:0)+(ph?1:0)+(addrEq(c)?1:0)>=2});
   return{ls,cs}}
 function leadDlg(l,pre){const isNew=!l;l=l||Object.assign({status:"",recv_date:today(),item:"초음파",source:"",receiver:"",org:"",branch:"",contact_name:"",contact_phone:"",open_info:"",ceo:"",biz_name:"",address:"",phone:"",note:"",sales:me.role==="sales"?me.id:null,sales_name:me.role==="sales"?(me.name||""):"",progress:"",feedback_date:null,next_date:null,consults:[]},pre||{});
   const can=isNew||isOffice()||l.sales===me.id||l.created_by===me.id;const ro=!can;
@@ -2065,7 +2068,7 @@ function leadDlg(l,pre){const isNew=!l;l=l||Object.assign({status:"",recv_date:t
   const c0=l.customer_id&&custById(l.customer_id);
   openDlg((isNew?"상담 등록":"상담")+(l.biz_name?" · "+esc(l.biz_name):""),`<div id="lf" style="display:grid;gap:10px">
    ${c0?`<p class="mapt dsum" style="margin:0">✔ 계약 전환됨 → 고객 <a href="#" id="lGo"><b>${esc(c0.name)}</b></a></p>`:""}
-   ${m.cs.length||m.ls.length?`<p class="warnbox" style="margin:0">${m.cs.length?`같은 연락처·업장명의 <b>등록 고객</b>: ${m.cs.slice(0,3).map(c=>esc(c.name)).join(", ")}${m.cs.length>3?" 외":""}<br>`:""}${m.ls.length?`같은 연락처의 <b>이전 상담</b> ${m.ls.length}건: ${m.ls.slice(0,3).map(x=>esc((x.recv_date||"")+" "+x.biz_name+(x.status?" ("+x.status+")":""))).join(", ")}`:""}</p>`:""}
+   ${m.cs.length||m.ls.length?`<p class="warnbox" style="margin:0">${m.cs.length?`업장명·주소·연락처 중 2가지 이상 같은 <b>등록 고객</b>: ${m.cs.slice(0,3).map(c=>esc(c.name)).join(", ")}${m.cs.length>3?" 외":""}<br>`:""}${m.ls.length?`같은 연락처의 <b>이전 상담</b> ${m.ls.length}건: ${m.ls.slice(0,3).map(x=>esc((x.recv_date||"")+" "+x.biz_name+(x.status?" ("+x.status+")":""))).join(", ")}`:""}</p>`:""}
    <h3 class="ksec">접수정보</h3>
    <div class="g3">${sel("status","상태",[["","(미정)"],...LSTAT.map(s=>[s,s])],l.status||"",ro)}${inp("recv_date","접수일자",l.recv_date,"date",ro)}${inp("item","품목",l.item,"text",ro,'list="lItem"')}</div>
    <div class="g3">${inp("source","유입경로",l.source,"text",ro,'list="lSrc" placeholder="중앙회·인바운드·홍보관"')}${inp("receiver","접수자·선행자",l.receiver,"text",ro,'list="stList2"')}${inp("org","소속 (지회/업체)",l.org,"text",ro)}</div>
