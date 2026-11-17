@@ -93,11 +93,16 @@ dialog .dh{padding:14px 18px;border-bottom:1px solid var(--line2);font-weight:70
 dialog .db{padding:14px 18px;display:grid;gap:10px;max-height:60vh;overflow:auto}
 dialog .df{padding:12px 18px;border-top:1px solid var(--line2);display:flex;justify-content:flex-end;gap:8px;flex-wrap:wrap}
 .chip{display:inline-flex;align-items:center;gap:6px;border:1px solid var(--line);border-radius:6px;padding:5px 10px;font-size:13px;cursor:pointer}
-.toast{position:fixed;left:50%;bottom:calc(24px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);background:var(--fg);color:var(--bg);padding:9px 16px;border-radius:6px;font-size:13.5px;opacity:0;transition:opacity .2s;pointer-events:none;z-index:50;max-width:calc(100% - 32px)}
+.toast{position:fixed;left:50%;bottom:calc(24px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);background:var(--fg);color:var(--bg);padding:9px 16px;border-radius:6px;font-size:13.5px;opacity:0;transition:opacity .2s;pointer-events:none;z-index:80;max-width:calc(100% - 32px)}
 .toast.on{opacity:1}
 #pdfStage{position:fixed;left:-10000px;top:0;width:210mm;background:#fff}
 #pdfStage .sheet{height:297mm;min-height:0;overflow:hidden}
 @media (max-width:1100px){.work{grid-template-columns:minmax(0,1fr)}.previewcol{position:static}}
+.mback{display:none}
+@media (max-width:760px){.body.mdet>aside{display:none}.body.mdet>.mback{display:flex;align-items:center;gap:10px;position:fixed;top:0;left:0;right:0;height:50px;padding:0 12px;z-index:61;background:var(--panel);border-bottom:1px solid var(--line);box-shadow:0 1px 4px rgba(0,0,0,.06)}
+  .body.mdet>.mback b{font-size:16px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .body.mdet>#main{position:fixed;top:50px;left:0;right:0;bottom:0;z-index:60;overflow:auto;background:var(--bg);-webkit-overflow-scrolling:touch}
+  html.mdetopen,html.mdetopen body{overflow:hidden}}
 @media (max-width:760px){.body{grid-template-columns:minmax(0,1fr)}aside{max-height:42vh;position:static;border-right:none;border-bottom:1px solid var(--line)}.chead,.tabs,.work,.cform{padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}.g2{grid-template-columns:1fr}}
 @media (prefers-reduced-motion:reduce){.toast{transition:none}}
 
@@ -764,7 +769,7 @@ function render0(){
   document.getElementById("nav").className="nav"+(ui.navOpen?" nopen":"");
   document.getElementById("nav").innerHTML=tabs.map(([k,l],i)=>`<button type="button" class="${ui.view===k?"on":""}${k==="notice"&&ui.view!=="notice"&&noticeUnread()?" ndot":""}${i>=NF?" nx":""}" data-v="${k}"><i class="nic"><svg viewBox="0 0 24 24">${NAVI[k]||""}</svg></i><span class="nll">${l}</span><span class="nls">${NS[k]||l}</span></button>`).join("")+(tabs.length>NF?`<a class="nmore" role="button">${ui.navOpen?"메뉴 접기 ▴":`전체 메뉴 ▾ <small>(나머지 ${tabs.length-NF}개)</small>`}</a>`:"");
   const nm=document.querySelector("#nav .nmore");if(nm)nm.onclick=()=>{ui.navOpen=!ui.navOpen;render0()};
-  document.querySelectorAll("#nav button").forEach(b=>b.onclick=()=>{ui.view=b.dataset.v;if(ui.view==="sched")ui.schJump=true;ui.jsel=new Set();ui._fresh=true;render()});
+  document.querySelectorAll("#nav button").forEach(b=>b.onclick=()=>{ui.view=b.dataset.v;ui.mdet=false;if(ui.view==="sched")ui.schJump=true;ui.jsel=new Set();ui._fresh=true;render()});
   if(ui.view==="install"||ui.view==="as")ui.view="work";
   if(ui.view==="home")renderHomeView();else if(ui.view==="cust")renderCustView();else if(ui.view==="work")renderWorkView();else if(ui.view==="ctrm")renderCtrView();else if(ui.view==="asm")renderAsView();else if(ui.view==="leads")renderLeadView();else if(ui.view==="recv")renderRecvView();else if(ui.view==="allm")renderAllView();else if(ui.view==="sched")renderSchedView();else if(ui.view==="sms")renderSmsView();else if(ui.view==="notice")renderNoticeView();else if(ui.view==="sink")renderSinkView();else if(ui.view==="stock")renderStockView();else if(ui.view==="staff"){ui.view="settings";ui.settab="perm";render()}else if(ui.view==="delete")renderDeleteView();else{if(ui.settab==="etc"||!isAdmin())renderSettings();else renderStaffView()}
   addXlsBtn();
@@ -782,15 +787,21 @@ function renderCustView(){
     <div class="csf" role="search">${CSF.map(([k,l,ph])=>`<label class="csr"><span>${l}</span><span class="csi"><svg viewBox="0 0 24 24" width="14" height="14" aria-hidden="true"><circle cx="11" cy="11" r="7" fill="none" stroke="currentColor" stroke-width="2"/><path d="M20 20l-4-4" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg><input data-cs="${k}" type="search" placeholder="${ph}" value="${esc((ui.cs||{})[k]||"")}" autocomplete="off"></span></label>`).join("")}</div>
     <div class="row"><span id="cnt"></span><span style="flex:1"></span><button class="btn sm" type="button" id="csClr">초기화</button><button class="btn pri sm" type="button" id="csGo" title="검색 (Enter)">검색</button></div>
     ${isOffice()||me.role==="sales"?`<div class="row" style="justify-content:flex-end"><button class="btn sm" id="bNewC">+ 새 고객</button></div>`:""}</div>
-    <div class="clist" id="clist"></div></aside><main id="main"></main></div>`;
+    <div class="clist" id="clist"></div></aside><div class="mback" id="mBack"><button type="button" class="btn sm" id="mBackB">← 닫기</button><b id="mBackT"></b></div><main id="main"></main></div>`;
   ui.stage=ui.ctype=ui.grade="";
   const go=()=>{ui.cs={};document.querySelectorAll("[data-cs]").forEach(i=>{ui.cs[i.dataset.cs]=i.value});renderCustList()};
   document.querySelectorAll("[data-cs]").forEach(i=>i.addEventListener("keydown",e=>{if(e.key==="Enter"){e.preventDefault();go()}}));
   document.getElementById("csGo").onclick=go;document.getElementById("csClr").onclick=()=>{document.querySelectorAll("[data-cs]").forEach(i=>i.value="");go()};
   const nb=document.getElementById("bNewC");if(nb)nb.onclick=()=>newCustomer(null,async c=>{render();if(isOffice()&&await askConfirm("고객을 등록했습니다. 계약도 바로 등록하시겠습니까?"))contractDlg(c,null);else document.getElementById("dlg").close()});
-  document.getElementById("clist").onclick=e=>{const it=e.target.closest(".citem");if(it){ui.sel=it.dataset.id;ui.ctab="info";ui.draft=null;document.querySelectorAll("#clist .citem.sel").forEach(x=>x.classList.remove("sel"));it.classList.add("sel");renderCustMain();if(window.innerWidth<760){const m=document.getElementById("main");if(m)m.scrollIntoView({behavior:"smooth",block:"start"})}}};
-  renderCustList();renderCustMain();
+  document.getElementById("clist").onclick=e=>{const it=e.target.closest(".citem");if(it){ui.sel=it.dataset.id;ui.ctab="info";ui.draft=null;document.querySelectorAll("#clist .citem.sel").forEach(x=>x.classList.remove("sel"));it.classList.add("sel");ui.mdet=true;renderCustMain();custMdet()}};
+  document.getElementById("mBackB").onclick=()=>{ui.mdet=false;custMdet()};
+  renderCustList();renderCustMain();custMdet();
 }
+/* 휴대폰: 고객을 고르면 상세를 화면 전체로 띄우고, 왼쪽 위 '닫기'로 검색 화면에 돌아간다 */
+function custMdet(){const b=document.querySelector("#view .body")||document.querySelector(".body");if(!b)return;const c=custById(ui.sel);const on=!!(ui.mdet&&c&&window.innerWidth<760);
+  if(on&&!b.classList.contains("mdet"))ui._mY=window.scrollY;b.classList.toggle("mdet",on);document.documentElement.classList.toggle("mdetopen",on);
+  const t=document.getElementById("mBackT");if(t)t.textContent=on?c.name:"";const m=document.getElementById("main");if(on&&m)m.scrollTop=0;
+  if(!on&&ui._mY!=null){const y=ui._mY;ui._mY=null;setTimeout(()=>window.scrollTo(0,y),0)}}
 function custSearchText(c){const ks=custContracts(c.id);return [c.name,c.biz_name,c.search_text,c.ceo,c.phone,c.phone2,c.address,c.biz_no,c.owner_name,staffName(c.owner),...ks.map(k=>k.serial+" "+k.product+" "+(k.xname||""))].join(" ").toLowerCase().replace(/[-\s]/g,"")}
 /* 고객 검색 칸: 업체명(상호)·시리얼·주소·담당자 (모두 띄어쓰기·- 무시, 여러 칸은 모두 맞아야 함) */
 const CSF=[["n","업체명(상호)","업체명·전화번호"],["s","시리얼","시리얼"],["a","주소","주소"],["o","담당자","담당자"]];
@@ -3816,7 +3827,7 @@ function openCustPopup(c,after){c=custById(c.id)||c;const d=document.getElementB
   f.onkeydown=e=>{if(e.key!=="Enter"||e.isComposing||!e.target.matches("input"))return;e.preventDefault();if(!ro)askConfirm("저장하시겠습니까?").then(y=>{if(y)save()})};
   d.showModal();setTimeout(()=>{const n=f.querySelector('[name="name"]');if(n&&!ro)n.focus()},30)}
 /* 창에서 고객정보 화면으로 바로 이동 */
-function goCust(c){if(!c)return;const d=document.getElementById("dlg");if(d.open)d.close();ui.view="cust";ui.sel=c.id;ui.ctab="info";ui._fresh=true;render();
+function goCust(c){if(!c)return;const d=document.getElementById("dlg");if(d.open)d.close();ui.view="cust";ui.sel=c.id;ui.mdet=true;ui.ctab="info";ui._fresh=true;render();
   setTimeout(()=>{const it=document.querySelector(`.citem[data-id="${c.id}"]`);if(it&&it.scrollIntoView)it.scrollIntoView({block:"nearest"});const n=document.querySelector('#cf [name="name"]');if(n)n.focus()},50)}
 function custSummary(c,k){if(!c)return"";const pr=k?[k.product,k.size,k.serial&&"SN "+k.serial].filter(Boolean).join(" "):"";
   const g=gradeOf(c);return `<p class="mapt dsum"><b>${esc(c.name)}</b>${gradeBadge(c)}${c.address?" · "+esc(c.address):""}${c.phone||c.phone2?" · "+esc(c.phone||c.phone2):""}${pr?" · 제품: "+esc(pr):""}</p>${g?`<p class="gwarn ${g.g==="블랙"?"g-black":"g-red"}">⚠ ${g.g} 고객${g.reason?" — "+esc(g.reason):""}</p>`:""}`}
