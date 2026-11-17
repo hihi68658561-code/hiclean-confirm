@@ -2704,7 +2704,10 @@ function noticeDlg(n){const isNew=!n;const keep=new Set((n&&n.images||[]).map(i=
 function addDays(d,n){const x=new Date(d+"T00:00:00");x.setDate(x.getDate()+n);const p=v=>String(v).padStart(2,"0");return `${x.getFullYear()}-${p(x.getMonth()+1)}-${p(x.getDate())}`}
 function homeJobRow(j){const c=custById(j.customer_id);const who=whoOf(j);return `<button type="button" class="hrow" data-hj="${j.id}"><span class="htime">${esc(fmtTime(j.visit_time)||"-")}</span><span class="badge ${j.kind}">${kl(j)||j.kind}</span><b class="hname">${esc(j.customer_name||(c&&c.name)||"")}</b><span class="mapt">${esc(who||"미배정")}</span>${j.status==="완료"?`<span class="badge s-완료">완료</span>`:""}</button>`}
 function renderHomeView(){const td=today(),tm=addDays(td,1),ym=thisMonth(),[m0,m1]=monthRange(ym);const inM=d=>d&&d>=m0&&d<m1;const tech=me.role==="tech";
-  const live=jobs.filter(j=>j.status!=="취소");const tk=j=>timeKey(j.visit_time);
+  /* 기사 계정(사무실 권한 없음)은 본인에게 배정된 건만 */
+  const myNames=[me.name,...(((staff||[]).find(x=>x.user_id===me.id)||{}).aliases||[])].filter(Boolean);
+  const mine=j=>(j.techs||[]).includes(me.id)||String(j.tech_names||"").split(/[\s,/·]+/).some(t=>t&&myNames.includes(t));
+  const live=jobs.filter(j=>j.status!=="취소"&&(!(tech&&!isOffice())||mine(j)));const tk=j=>timeKey(j.visit_time);
   const tJobs=live.filter(j=>j.visit_date===td).sort((a,b)=>tk(a).localeCompare(tk(b))),nJobs=live.filter(j=>j.visit_date===tm).sort((a,b)=>tk(a).localeCompare(tk(b)));
   const unasg=live.filter(j=>j.status==="접수"&&!(j.techs||[]).length&&!String(j.tech_names||"").trim());
   const leadDue=tech||ui.noLeads?[]:leads.filter(l=>leadOpen(l)&&l.next_date&&l.next_date<=td);
