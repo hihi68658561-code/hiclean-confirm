@@ -100,7 +100,8 @@ dialog .df{padding:12px 18px;border-top:1px solid var(--line2);display:flex;just
 @media (max-width:1100px){.work{grid-template-columns:minmax(0,1fr)}.previewcol{position:static}}
 .mback{display:none}
 @media (max-width:760px){.body.mdet>aside{display:none}.body.mdet>.mback{display:flex;align-items:center;gap:10px;position:fixed;top:0;left:0;right:0;height:50px;padding:0 12px;z-index:61;background:var(--panel);border-bottom:1px solid var(--line);box-shadow:0 1px 4px rgba(0,0,0,.06)}
-  .body.mdet>.mback b{font-size:16px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .body.mdet>.mback b{flex:1;min-width:0;font-size:16px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.body.mdet>.mback .btn.close{padding:6px 18px;font-weight:700}
+  .body.mlist>#main{display:none}
   .body.mdet>#main{position:fixed;top:50px;left:0;right:0;bottom:0;z-index:60;overflow:auto;background:var(--bg);-webkit-overflow-scrolling:touch}
   html.mdetopen,html.mdetopen body{overflow:hidden}}
 @media (max-width:760px){.body{grid-template-columns:minmax(0,1fr)}aside{max-height:42vh;position:static;border-right:none;border-bottom:1px solid var(--line)}.chead,.tabs,.work,.cform{padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}.g2{grid-template-columns:1fr}}
@@ -787,7 +788,7 @@ function renderCustView(){
     <div class="csf" role="search">${CSF.map(([k,l,ph])=>`<label class="csr"><span>${l}</span><span class="csi"><svg viewBox="0 0 24 24" width="14" height="14" aria-hidden="true"><circle cx="11" cy="11" r="7" fill="none" stroke="currentColor" stroke-width="2"/><path d="M20 20l-4-4" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg><input data-cs="${k}" type="search" placeholder="${ph}" value="${esc((ui.cs||{})[k]||"")}" autocomplete="off"></span></label>`).join("")}</div>
     <div class="row"><span id="cnt"></span><span style="flex:1"></span><button class="btn sm" type="button" id="csClr">초기화</button><button class="btn pri sm" type="button" id="csGo" title="검색 (Enter)">검색</button></div>
     ${isOffice()||me.role==="sales"?`<div class="row" style="justify-content:flex-end"><button class="btn sm" id="bNewC">+ 새 고객</button></div>`:""}</div>
-    <div class="clist" id="clist"></div></aside><div class="mback" id="mBack"><button type="button" class="btn sm" id="mBackB">← 닫기</button><b id="mBackT"></b></div><main id="main"></main></div>`;
+    <div class="clist" id="clist"></div></aside><div class="mback" id="mBack"><b id="mBackT"></b><button type="button" class="btn sm close" id="mBackB">닫기</button></div><main id="main"></main></div>`;
   ui.stage=ui.ctype=ui.grade="";
   const go=()=>{ui.cs={};document.querySelectorAll("[data-cs]").forEach(i=>{ui.cs[i.dataset.cs]=i.value});renderCustList()};
   document.querySelectorAll("[data-cs]").forEach(i=>i.addEventListener("keydown",e=>{if(e.key==="Enter"){e.preventDefault();go()}}));
@@ -799,7 +800,7 @@ function renderCustView(){
 }
 /* 휴대폰: 고객을 고르면 상세를 화면 전체로 띄우고, 왼쪽 위 '닫기'로 검색 화면에 돌아간다 */
 function custMdet(){const b=document.querySelector("#view .body")||document.querySelector(".body");if(!b)return;const c=custById(ui.sel);const on=!!(ui.mdet&&c&&window.innerWidth<760);
-  if(on&&!b.classList.contains("mdet"))ui._mY=window.scrollY;b.classList.toggle("mdet",on);document.documentElement.classList.toggle("mdetopen",on);
+  if(on&&!b.classList.contains("mdet"))ui._mY=window.scrollY;b.classList.toggle("mdet",on);b.classList.toggle("mlist",!on&&window.innerWidth<760&&!!c);document.documentElement.classList.toggle("mdetopen",on);
   const t=document.getElementById("mBackT");if(t)t.textContent=on?c.name:"";const m=document.getElementById("main");if(on&&m)m.scrollTop=0;
   if(!on&&ui._mY!=null){const y=ui._mY;ui._mY=null;setTimeout(()=>window.scrollTo(0,y),0)}}
 function custSearchText(c){const ks=custContracts(c.id);return [c.name,c.biz_name,c.search_text,c.ceo,c.phone,c.phone2,c.address,c.biz_no,c.owner_name,staffName(c.owner),...ks.map(k=>k.serial+" "+k.product+" "+(k.xname||""))].join(" ").toLowerCase().replace(/[-\s]/g,"")}
