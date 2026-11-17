@@ -4726,13 +4726,47 @@ async function fullBackup(btn){if(!isAdmin())return toast("관리자만 내려�
     toast(`전체 백업을 내려받았습니다 (${total.toLocaleString()}건)`)}
   catch(e){toast("백업을 만들지 못했습니다: "+(e&&e.message||e))}
   finally{btn.disabled=false;btn.textContent=old}}
+/* 사진·확인서 백업: 고른 달에 올린 파일을 저장소에서 받아 ZIP 하나로 (고객별 폴더). 관리자 */
+async function photoBackup(btn,ym,withNotice){if(!isAdmin())return toast("관리자만 내려받을 수 있습니다");if(!/^\d{4}-\d{2}$/.test(ym||""))return toast("백업할 달을 고르세요");
+  const [st,en]=monthRange(ym);const old=btn.textContent;const info=document.getElementById("pbInfo");const say=t=>{btn.textContent=t};btn.disabled=true;
+  try{say("목록 읽는 중…");
+    const readAll=async(t,cols)=>{let rows=[],from=0;for(;;){const {data,error}=await sb.from(t).select(cols).gte("created_at",st+"T00:00:00+09:00").lt("created_at",en+"T00:00:00+09:00").order("created_at").range(from,from+999);if(error)throw error;rows=rows.concat(data||[]);if(!data||data.length<1000)break;from+=1000}return rows};
+    const files=await readAll("customer_files","id,customer_id,path,kind,name,size,created_at");
+    let notes=[];if(withNotice){try{notes=await readAll("notices","id,title,images,created_at")}catch(_){notes=[]}}
+    const safe=x=>String(x||"").replace(/[\\/:*?"<>|\r\n\t]+/g," ").replace(/\s+/g," ").trim().slice(0,60)||"이름없음";
+    const kst=ts=>{const d=new Date(ts);return isNaN(d)?"":new Date(d.getTime()+9*3600e3).toISOString().slice(0,10)};
+    const extOf=(p,n)=>{const m=(n||p||"").match(/\.([a-z0-9]{2,5})$/i);return m?"."+m[1].toLowerCase():""};
+    const used=new Set();const uniq=f=>{let n=f,k=2;while(used.has(n.toLowerCase())){n=f.replace(/(\.[^.\/]+)?$/,`(${k++})$1`)}used.add(n.toLowerCase());return n};
+    const jobsL=[];files.forEach(f=>{const c=custById(f.customer_id)||{};const base=safe(f.name).replace(/\.[a-z0-9]{2,5}$/i,"");
+      jobsL.push({bucket:"bizdocs",path:f.path,size:Number(f.size||0),zip:uniq(`${safe(c.name||"고객 미상")}/${safe(f.kind)}_${kst(f.created_at)}_${base}${extOf(f.path,f.name)}`),row:[c.name||"",f.kind,kst(f.created_at),f.name,f.path]})});
+    notes.forEach(n=>(Array.isArray(n.images)?n.images:[]).forEach(im=>{if(!im||!im.path)return;jobsL.push({bucket:"notices",path:im.path,size:0,zip:uniq(`_공지/${kst(n.created_at)}_${safe(n.title)}/${safe((im.name||"").replace(/\.[a-z0-9]{2,5}$/i,""))||"이미지"}${extOf(im.path,im.name)}`),row:["(공지) "+(n.title||""),"공지 이미지",kst(n.created_at),im.name||"",im.path]})}));
+    if(!jobsL.length){toast(`${ym.slice(0,4)}년 ${+ym.slice(5)}월에 올린 파일이 없습니다`);return}
+    const mb=jobsL.reduce((a,x)=>a+x.size,0)/1048576;
+    if(!(await askConfirm(`${ym.slice(0,4)}년 ${+ym.slice(5)}월 파일 ${jobsL.length}개${mb>=1?` (약 ${Math.round(mb).toLocaleString()}MB)`:""}를 ZIP으로 내려받을까요?\n파일이 많으면 몇 분 걸릴 수 있습니다. 끝날 때까지 이 화면을 닫지 마세요.`)))return;
+    say("압축 도구 준비 중…");await loadScript("https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js");
+    const zip=new JSZip();const fail=[];let done=0,i=0;
+    const worker=async()=>{while(i<jobsL.length){const x=jobsL[i++];try{const {data,error}=await sb.storage.from(x.bucket).download(x.path);if(error||!data)throw error||new Error("빈 파일");zip.file(x.zip,data,{binary:true})}catch(e){fail.push(x.row.concat([String(e&&e.message||e)]))}done++;say(`파일 받는 중… ${done}/${jobsL.length}`)}};
+    await Promise.all([worker(),worker(),worker(),worker()]);
+    const csv=r=>r.map(v=>`"${String(v??"").replace(/"/g,'""')}"`).join(",");
+    zip.file("_파일목록.csv","\ufeff"+[csv(["고객","종류","올린 날","원래 파일명","저장 위치"]),...jobsL.map(x=>csv(x.row))].join("\r\n"));
+    if(fail.length)zip.file("_받지못한파일.csv","\ufeff"+[csv(["고객","종류","올린 날","원래 파일명","저장 위치","이유"]),...fail.map(csv)].join("\r\n"));
+    say("ZIP 만드는 중…");const blob=await zip.generateAsync({type:"blob",compression:"STORE"});
+    const a=document.createElement("a");a.href=URL.createObjectURL(blob);a.download=`하이클린_사진백업_${ym}.zip`;document.body.appendChild(a);a.click();setTimeout(()=>{URL.revokeObjectURL(a.href);a.remove()},60000);
+    const okN=jobsL.length-fail.length;if(info)info.textContent=`${ym} : ${okN}개 받음${fail.length?` · ${fail.length}개 실패(ZIP 안 _받지못한파일.csv)`:""}`;
+    toast(`사진 ${okN}개를 ZIP으로 내려받았습니다${fail.length?` · ${fail.length}개는 받지 못했습니다`:""}`)}
+  catch(e){toast("사진 백업을 만들지 못했습니다: "+(e&&e.message||e))}
+  finally{btn.disabled=false;btn.textContent=old}}
 /* ================= 설정 (관리자) ================= */
 function renderSettings(){
   view().innerHTML=`<div class="sec"><fieldset><legend>확인서 설정</legend><label class="f">입금계좌 안내 문구<input id="sBank" value="${esc(S.bank)}"></label><div class="actions"><button class="btn pri" id="bSaveSet" type="button">저장</button></div></fieldset><fieldset><legend>빈 확인서</legend><p class="mapt" style="margin:0 0 8px">손으로 적을 빈 설치확인서 · A/S 확인서 양식을 인쇄합니다.</p><div class="actions" style="justify-content:flex-start"><button class="btn" type="button" id="bBlankIS">설치확인서 인쇄</button><button class="btn" type="button" id="bBlankAS">A/S 확인서 인쇄</button></div></fieldset>
     <fieldset><legend>전체 백업 다운로드</legend><p class="mapt" style="margin:0 0 8px">고객·계약·A/S·입금·상담·싱크대·재고·문자 기록 등 프로그램의 모든 자료를 엑셀 파일 하나로 내려받습니다 (표마다 시트 하나).<br>한 달에 한 번 내려받아 회사 PC나 외장 저장장치에 보관해 두세요. 사진·확인서 파일 자체는 들어가지 않고 파일 목록만 들어갑니다.</p>
-      <div class="actions" style="justify-content:flex-start;align-items:center"><button class="btn pri" type="button" id="bBackup">전체 백업 내려받기</button><span class="mapt" id="bkInfo">${(()=>{try{const d=localStorage.getItem("hc_last_backup");return d?"이 PC에서 마지막으로 내려받은 날: "+esc(d):""}catch(_){return""}})()}</span></div></fieldset></div>`;
+      <div class="actions" style="justify-content:flex-start;align-items:center"><button class="btn pri" type="button" id="bBackup">전체 백업 내려받기</button><span class="mapt" id="bkInfo">${(()=>{try{const d=localStorage.getItem("hc_last_backup");return d?"이 PC에서 마지막으로 내려받은 날: "+esc(d):""}catch(_){return""}})()}</span></div></fieldset>
+    <fieldset><legend>사진·확인서 백업</legend><p class="mapt" style="margin:0 0 8px">고르신 달에 올린 사진·확인서·계약서·사업자등록증(과 공지 이미지)을 ZIP 파일 하나로 내려받습니다. 고객별 폴더로 정리됩니다.<br>용량이 커서 한 달씩 받습니다. 매달 초에 지난달 것을 받아 두세요.</p>
+      <div class="actions" style="justify-content:flex-start;align-items:center;flex-wrap:wrap"><input id="pbM" type="month" value="${(()=>{const t=today();const y=+t.slice(0,4),m=+t.slice(5,7);return m===1?(y-1)+"-12":y+"-"+String(m-1).padStart(2,"0")})()}" aria-label="백업할 달" style="padding:6px 8px;border:1px solid var(--line);border-radius:6px;background:var(--field)">
+        <label class="chip"><input type="checkbox" id="pbN" checked>공지 이미지 포함</label><button class="btn pri" type="button" id="bPhotoBk">사진 백업 내려받기</button><span class="mapt" id="pbInfo"></span></div></fieldset></div>`;
   document.getElementById("bBlankIS").onclick=()=>doPrint(sheetIS({},{}));document.getElementById("bBlankAS").onclick=()=>doPrint(sheetAS({},{}));
   document.getElementById("bBackup").onclick=e=>fullBackup(e.currentTarget);
+  document.getElementById("bPhotoBk").onclick=e=>photoBackup(e.currentTarget,val("pbM"),document.getElementById("pbN").checked);
   document.getElementById("bSaveSet").onclick=async()=>{const b=val("sBank").trim();if(!b)return;const {error}=await sb.from("settings").update({bank:b}).eq("id",1);if(error)return toast("저장하지 못했습니다");S.bank=b;toast("저장했습니다")};
 }
 
