@@ -106,6 +106,10 @@ dialog .df{padding:12px 18px;border-top:1px solid var(--line2);display:flex;just
 #pdfStage{position:fixed;left:-10000px;top:0;width:210mm;background:#fff}
 #pdfStage .sheet{height:297mm;min-height:0;overflow:hidden}
 @media (max-width:1100px){.work{grid-template-columns:minmax(0,1fr)}.previewcol{position:static}}
+.instov{position:fixed;inset:0;z-index:90;background:rgba(15,23,42,.55);display:grid;place-items:center;padding:16px}.instov[hidden]{display:none}
+.instbox{background:var(--panel);color:var(--fg);border-radius:14px;max-width:420px;width:100%;padding:22px 20px;box-shadow:0 10px 30px rgba(0,0,0,.25);display:grid;gap:12px;text-align:center}
+.instbox img.ic{width:72px;height:72px;border-radius:16px;margin:0 auto;box-shadow:0 2px 8px rgba(0,0,0,.15)}.instbox h2{margin:0;font-size:19px}.instbox ol{text-align:left;margin:0;padding-left:22px;line-height:1.8}
+.instbox .btn.big{font-size:17px;padding:13px 16px;font-weight:700}#lApp{margin-top:4px}
 .mback{display:none}
 @media (max-width:760px){.body.mdet>aside{display:none}.body.mdet>.mback{display:flex;align-items:center;gap:10px;position:fixed;top:0;left:0;right:0;height:50px;padding:0 12px;z-index:61;background:var(--panel);border-bottom:1px solid var(--line);box-shadow:0 1px 4px rgba(0,0,0,.06)}
   .body.mdet>.mback b{flex:1;min-width:0;font-size:16px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.body.mdet>.mback .btn.close{padding:6px 18px;font-weight:700}
@@ -460,6 +464,7 @@ header.top #nav{order:4;flex:0 0 auto;width:calc(100% + 2*max(16px,env(safe-area
     <span class="mode" id="modeLabel"></span>
     <button class="btn" id="bImport" hidden>엑셀 이관</button>
     <button class="btn ghost" id="bPw" hidden>비밀번호 변경</button>
+    <button class="btn ghost" id="bApp" type="button" hidden>📱 앱 설치</button>
     <button class="btn ghost" id="bLogout" hidden>로그아웃</button>
     </div>
     <input type="file" id="fileIn" accept=".xlsx,.xls" hidden>
@@ -473,7 +478,9 @@ header.top #nav{order:4;flex:0 0 auto;width:calc(100% + 2*max(16px,env(safe-area
   <label class="f">비밀번호<input id="lPw" type="password" autocomplete="current-password" required></label>
   <button class="btn pri" type="submit" id="lBtn">로그인</button>
   <p class="mapt" id="lMsg">회사에서 받은 이메일과 비밀번호로 로그인하세요.</p>
+  <button class="btn" type="button" id="lApp" hidden>📱 휴대폰에 앱으로 설치</button>
 </form></div>
+<div id="instOv" class="instov" hidden role="dialog" aria-modal="true" aria-label="앱 설치"><div class="instbox" id="instBox"></div></div>
 <div id="printRoot"></div>
 <dialog id="cfm" aria-labelledby="cfmMsg"><div class="cfmb"><p id="cfmMsg"></p><div class="cfmf"><button type="button" class="btn" id="cfmNo">취소</button><button type="button" class="btn pri" id="cfmYes">확인</button></div></div></dialog>
 <dialog id="lbx" aria-label="사진 크게 보기"><div class="lbwrap"><div class="lbtop"><span class="lbcap"></span><span style="flex:1"></span><button type="button" class="btn sm" id="lbOpen">원본 열기</button><select id="lbKind" aria-label="분류 이동" title="분류 이동"></select><button type="button" class="btn sm danger" id="lbDel">삭제</button><button type="button" class="btn sm" id="lbClose">닫기</button></div>
@@ -5045,5 +5052,34 @@ function imeT(el,fn,ms){return setTimeout(()=>{if(!el._ime)fn()},ms)}
 init();
 </script>
 <script>if("serviceWorker" in navigator)window.addEventListener("load",()=>navigator.serviceWorker.register("sw.js").catch(()=>{}));</script>
+<script>
+/* 휴대폰 앱 설치: 링크(?install)로 들어오거나 '앱 설치'를 누르면 안내 창. 안드로이드는 버튼 한 번, 아이폰은 사파리 '홈 화면에 추가' 안내,
+   카카오톡 등 앱 안 브라우저면 먼저 크롬(사파리)으로 열어 준다 */
+(function(){let dp=null;const ua=navigator.userAgent||"";const ios=/iPhone|iPad|iPod/i.test(ua)||(/Macintosh/.test(ua)&&navigator.maxTouchPoints>1);
+  const android=/Android/i.test(ua);const kakao=/KAKAOTALK/i.test(ua);const inapp=kakao||/NAVER\(inapp|Instagram|FBAN|FBAV|Line\/|DaumApps|band/i.test(ua);
+  const standalone=matchMedia("(display-mode: standalone)").matches||navigator.standalone===true;const mobile=ios||android;
+  const url=location.origin+location.pathname;const ic="icon-192.png";const $=id=>document.getElementById(id);
+  const close=()=>{$("instOv").hidden=true;if(/[?&]install\b/.test(location.search))history.replaceState(null,"",location.pathname+location.hash)};
+  function openExt(){if(kakao){location.href="kakaotalk://web/openExternal?url="+encodeURIComponent(url+"?install");return}
+    if(android){location.href="intent://"+location.host+location.pathname+"?install#Intent;scheme=https;package=com.android.chrome;end";return}}
+  function show(){const b=$("instBox");if(!b)return;let h=`<img class="ic" src="${ic}" alt=""><h2>하이클린 업무관리 앱 설치</h2>`;
+    if(standalone)h+=`<p>이미 앱으로 실행 중입니다.</p>`;
+    else if(inapp)h+=`<p>지금은 ${kakao?"카카오톡":"다른 앱"} 안에서 열려 있어 설치할 수 없습니다.<br>아래 버튼을 눌러 ${ios?"사파리로":"크롬으로"}열어 주세요.</p><button class="btn pri big" type="button" id="iExt">${ios?"사파리로":"크롬으로"} 열기</button><p class="mapt" style="margin:0">버튼이 안 되면 오른쪽 위(또는 아래) 메뉴에서 ‘다른 브라우저로 열기’를 누르세요.</p>`;
+    else if(dp)h+=`<p>버튼을 누르고 ‘설치’를 누르면 홈 화면에 아이콘이 생깁니다.</p><button class="btn pri big" type="button" id="iGo">앱 설치하기</button>`;
+    else if(ios)h+=`<ol><li>화면 아래(또는 위)의 <b>공유 버튼 <span aria-hidden="true">⬆︎</span></b>을 누릅니다.</li><li>목록에서 <b>홈 화면에 추가</b>를 누릅니다.</li><li>오른쪽 위 <b>추가</b>를 누릅니다.</li></ol><p class="mapt" style="margin:0">아이폰은 사파리에서만 설치할 수 있습니다.</p>`;
+    else if(android)h+=`<ol><li>오른쪽 위 <b>⋮</b> 메뉴를 누릅니다.</li><li><b>앱 설치</b> 또는 <b>홈 화면에 추가</b>를 누릅니다.</li></ol><p class="mapt" style="margin:0">삼성 인터넷은 아래 <b>≡</b> 메뉴 → <b>현재 페이지 추가 → 홈 화면</b>입니다.</p>`;
+    else h+=`<p>휴대폰에서 아래 주소를 열면 설치 안내가 나옵니다.</p><p><b style="word-break:break-all">${url}?install</b></p><button class="btn big" type="button" id="iCopy">설치 링크 복사</button><p class="mapt" style="margin:0">복사한 링크를 직원에게 카카오톡·문자로 보내 주세요.</p>`;
+    h+=`<button class="btn close" type="button" id="iClose">닫기</button>`;b.innerHTML=h;$("instOv").hidden=false;
+    const g=$("iGo");if(g)g.onclick=async()=>{const p=dp;dp=null;p.prompt();try{const r=await p.userChoice;if(r&&r.outcome==="accepted"){b.innerHTML=`<img class="ic" src="${ic}" alt=""><h2>설치했습니다</h2><p>홈 화면의 <b>업무관리</b> 아이콘으로 여세요.</p><button class="btn close" type="button" id="iClose">닫기</button>`;$("iClose").onclick=close;refresh()}}catch(_){}};
+    const x=$("iExt");if(x)x.onclick=openExt;const cp=$("iCopy");if(cp)cp.onclick=async()=>{try{await navigator.clipboard.writeText(url+"?install");cp.textContent="복사했습니다"}catch(_){cp.textContent="주소를 길게 눌러 복사하세요"}};
+    $("iClose").onclick=close}
+  function refresh(){const can=!standalone&&(mobile||dp);["bApp","lApp"].forEach(id=>{const e=$(id);if(e)e.hidden=!can})}
+  window.showAppInstall=show;
+  addEventListener("beforeinstallprompt",e=>{e.preventDefault();dp=e;refresh()});addEventListener("appinstalled",()=>{dp=null;refresh()});
+  addEventListener("DOMContentLoaded",()=>{["bApp","lApp"].forEach(id=>{const e=$(id);if(e)e.onclick=show});const ov=$("instOv");if(ov)ov.onclick=e=>{if(e.target===ov)close()};refresh();
+    if(/[?&]install\b/.test(location.search)&&!standalone)setTimeout(show,inapp?0:800)});
+  if(document.readyState!=="loading")document.dispatchEvent(new Event("DOMContentLoaded"));
+})();
+</script>
 </body>
 </html>
