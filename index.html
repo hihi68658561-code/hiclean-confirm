@@ -4,6 +4,14 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>하이클린 업무관리</title>
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" type="image/png" sizes="192x192" href="icon-192.png">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<meta name="theme-color" content="#1f5fae">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="업무관리">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;700&display=swap">
 <style>
 /* Layout: 좌측 고객목록 | 우측 작업영역(입력 + A4 미리보기). 확인서는 PDF로 저장해 인쇄 */
@@ -5036,5 +5044,6 @@ function imeT(el,fn,ms){return setTimeout(()=>{if(!el._ime)fn()},ms)}
     t._imeT=setTimeout(()=>{if(t.isConnected&&!t._ime)t.dispatchEvent(new Event("input",{bubbles:true}))},30)},true)})();
 init();
 </script>
+<script>if("serviceWorker" in navigator)window.addEventListener("load",()=>navigator.serviceWorker.register("sw.js").catch(()=>{}));</script>
 </body>
 </html>
