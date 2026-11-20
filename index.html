@@ -4395,11 +4395,11 @@ function techPaySec(j){const box=document.getElementById("jpSec");if(!box)return
   const m=document.getElementById("tpM"),n=document.getElementById("tpN"),l=document.getElementById("tpL");
   if(j.pay_status==="미수")m.value="미수";
   /* 이미 적어 둔 입금이 1건이면 불러와서 고칠 수 있게 (저장하면 새로 추가하지 않고 그 기록을 고침) */
-  const old=j.id?jpays.filter(p=>p.job_id===j.id):[];const one=old.length===1?old[0]:null;
+  const old=j.id?jpays.filter(p=>p.job_id===j.id):[];const one=old.length===1&&(isOffice()||old[0].created_by===me.id)?old[0]:null;const lock=old.length>0&&!one;
   if(one){m.value=["현금","카드"].includes(one.method)?one.method:(one.method==="계좌이체"?"현금":"");n.value=one.payer||"";document.getElementById("tpMemo").value=one.memo||""}
-  else if(old.length>1)box.insertAdjacentHTML("beforeend",`<p class="mapt" style="margin:4px 0 0">입금이 ${old.length}건으로 나뉘어 있어 여기서는 고칠 수 없습니다. 사무실에 수정을 요청해 주세요.</p>`);
+  else if(lock){box.insertAdjacentHTML("beforeend",`<p class="mapt" style="margin:4px 0 0">${old.length>1?`입금이 ${old.length}건으로 나뉘어 있어`:"사무실에서 적은 입금이라"} 여기서는 고칠 수 없습니다. 수정은 사무실에 요청해 주세요.</p>`);[m,n,document.getElementById("tpMemo")].forEach(e=>{e.disabled=true;e.classList.remove("treq")})}
   const up=()=>{const v=m.value;l.textContent=v==="카드"?"카드사명":v==="현금"?"입금자명":"카드사명 / 입금자명";n.placeholder=v==="카드"?"예: 삼성카드":v==="현금"?"예: 홍길동":v==="미수"?"":"결제방법을 먼저 고르세요";n.disabled=v==="미수";if(v==="카드")n.setAttribute("list","cardList");else n.removeAttribute("list")};m.onchange=up;up();m.addEventListener("change",()=>m.classList.toggle("tfill",!!m.value));m.classList.toggle("tfill",!!m.value);
-  return{tech:true,pend:[],rows:()=>[],get:()=>({method:m.value,name:n.value.trim(),memo:document.getElementById("tpMemo").value.trim(),rowId:one?one.id:null,multi:old.length>1})}}
+  return{tech:true,pend:[],rows:()=>[],get:()=>({method:m.value,name:n.value.trim(),memo:document.getElementById("tpMemo").value.trim(),rowId:one?one.id:null,multi:lock})}}
 function jobDlg(j,c,kind,tpl,preset){
   let wantCtr=false;if(kind==="ctr"){wantCtr=true;kind="as"}
   /* 신규접수에는 '설치'가 없음 (설치는 계약으로 접수) */
@@ -4493,7 +4493,7 @@ function jobDlg(j,c,kind,tpl,preset){
        const tp=jpS&&jpS.tech?jpS.get():null;const paidJob=asLike(j)&&pt.paid_type!=="무상";
        if(!asLike(j)){const ap=(f.get("tp_addparts")||"").trim();if(ap)pt.parts=[String(pt.parts||"").trim(),ap].filter(Boolean).join(", ")}
        if(pt.status==="완료"){const miss=[];
-         if(asLike(j)){if(!pt.paid_type)miss.push("유상/무상");else if(paidJob&&!pt.cost)miss.push("출장비·부품비");if(paidJob&&pt.cost&&tp&&!tp.method)miss.push("결제방법")}
+         if(asLike(j)){if(!pt.paid_type)miss.push("유상/무상");else if(paidJob&&!pt.cost)miss.push("출장비·부품비");if(paidJob&&pt.cost&&tp&&!tp.method&&!tp.multi)miss.push("결제방법")}
          if(!pt.visit_time)miss.push("작업 시작 시간");if(he&&!pt.end_time)miss.push("작업 종료 시간");
          if(miss.length){jf_mark(miss);return toast("노란 칸을 적어 주세요: "+miss.join(", "))}}
        if(tp&&tp.multi){}else if(tp&&paidJob&&pt.cost>0){if(tp.method==="미수"){pt.pay_status="미수";if(tp.memo)pt.pay_memo=tp.memo;if(tp.rowId)tpRow={_del:tp.rowId}}else if(tp.method){tpRow={pay_date:pt.done_date||today(),method:tp.method,payer:tp.name,amount:pt.cost,memo:tp.memo||""};Object.assign(pt,jpDerive([tpRow],pt.cost,""))}}}
