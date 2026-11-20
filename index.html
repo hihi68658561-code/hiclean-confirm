@@ -667,6 +667,8 @@ function canEditJob(j){return isOffice()||(j.techs||[]).includes(me.id)}
 async function init(){
   if(!window.supabase||!window.supabase.createClient){view().innerHTML=`<div class="empty"><h2>프로그램을 불러오지 못했습니다</h2><p>인터넷 연결을 확인하고 새로고침해 주세요.</p></div>`;return}
   sb=window.supabase.createClient(SB_URL,SB_KEY,{auth:{persistSession:true,autoRefreshToken:true},global:{fetch:(u,o)=>fetch(u,Object.assign({},o,{cache:"no-store"}))}});
+  /* 지운 표를 기억해 두었다가, 다음 새로고침 때 지운 행이 화면에서 확실히 빠지도록 건수까지 확인한다 */
+  {const _from=sb.from.bind(sb);sb.from=t=>{const q=_from(t);const d=q.delete.bind(q);q.delete=(...a)=>{(window._delT||(window._delT=new Set())).add(({job_payments:"jpays"})[t]||t);return d(...a)};return q}}
   const {data}=await sb.auth.getSession();
   if(!data||!data.session){showLogin();return}
   await afterLogin(data.session.user);
@@ -746,7 +748,7 @@ async function reload(tables,quiet){
   const seq=++reloadSeq;let res;
   const INC={customers:()=>customers,contracts:()=>contracts,jobs:()=>jobs,payments:()=>(me.role==="tech"||ui.noPay)?null:payments,jpays:()=>ui.noJPay?null:jpays,leads:()=>(me.role==="tech"||ui.noLeads)?null:leads};
   const chg=[];ui.rtick=(ui.rtick||0)+1;const forceFull=quiet&&ui.rtick%10===0;
-  try{res=await Promise.all(tables.map(async(t,i)=>{const cur=!forceFull&&INC[t]&&INC[t]();if(cur){const r=await incFetch(({jpays:"job_payments"})[t]||t,cur,TBL[t],!quiet);chg[i]=r.changed;return r.rows}
+  try{res=await Promise.all(tables.map(async(t,i)=>{const cur=!forceFull&&INC[t]&&INC[t]();if(cur){const dl=!!(window._delT&&window._delT.has(t));const r=await incFetch(({jpays:"job_payments"})[t]||t,cur,TBL[t],!quiet||dl);if(dl)window._delT.delete(t);chg[i]=r.changed;return r.rows}
     const d=await TBL[t]();const old={customers,contracts,jobs,staff,payments,jpays,files,grades,notes,leads,recv:rcases,rlogs}[t];chg[i]=JSON.stringify(old)!==JSON.stringify(d);return d}))}
   catch(e){if(!quiet)toast("최신 내용을 불러오지 못했습니다. 인터넷 연결을 확인해 주세요.");return false}
   if(seq!==reloadSeq&&quiet)return false;
@@ -1565,7 +1567,7 @@ function renderPaySec(k){
    ${ps.map(p=>ui.payEdit===p.id&&can?`<tr class="pedit" data-pe="${p.id}"><td><input type="date" data-f="pay_date" value="${esc(p.pay_date||"")}" aria-label="날짜"></td><td><select data-f="method" aria-label="수단">${PMETH.map(m=>`<option ${m===(p.method==="입금"?"현금":p.method)?"selected":""}>${m}</option>`).join("")}</select></td>
      <td><input data-f="payer" value="${esc(p.payer||"")}" list="cardList2" aria-label="카드사·입금자"></td><td><input type="text" inputmode="numeric" data-won data-f="amount" value="${esc(p.amount)}" aria-label="금액" style="text-align:right"></td><td><input data-f="memo" value="${esc(p.memo||"")}" aria-label="메모"></td>
      <td style="white-space:nowrap"><button type="button" class="btn sm pri" data-psave="${p.id}">저장</button> <button type="button" class="btn sm" data-pcancel>취소</button></td></tr>`
-   :`<tr><td>${esc(p.pay_date||"")}</td><td>${esc(p.method)}</td><td>${esc(p.payer)}</td><td class="num ${p.amount<0?"neg":""}">${won0(p.amount)}</td><td>${esc(p.memo)}</td>${can?`<td style="white-space:nowrap"><button type="button" class="btn sm" data-pedit="${p.id}" aria-label="입금 수정">수정</button> <button type="button" class="btn sm danger" data-pdel="${p.id}" aria-label="입금 삭제">삭제</button></td>`:""}</tr>`).join("")||`<tr><td colspan="6" class="mapt">입금 기록이 없습니다.</td></tr>`}</tbody></table>
+   :`<tr><td>${esc(p.pay_date||"")}</td><td>${esc(p.method)}</td><td>${esc(p.payer)}</td><td class="num ${p.amount<0?"neg":""}">${won0(p.amount)}</td><td>${esc(p.memo)}</td>${can?(!isOffice()?`<td></td>`:`<td style="white-space:nowrap"><button type="button" class="btn sm" data-pedit="${p.id}" aria-label="입금 수정">수정</button> <button type="button" class="btn sm danger" data-pdel="${p.id}" aria-label="입금 삭제">삭제</button></td>`):""}</tr>`).join("")||`<tr><td colspan="6" class="mapt">입금 기록이 없습니다.</td></tr>`}</tbody></table>
    ${can?`<div class="payadd"><input id="pD" type="date" value="${today()}" aria-label="입금일"><select id="pM" aria-label="수단">${PMETH.map(m=>`<option>${m}</option>`).join("")}</select>
      <input id="pN" list="cardList2" placeholder="카드사·입금자" aria-label="카드사·입금자"><input id="pA" type="text" inputmode="numeric" data-won placeholder="금액" aria-label="금액"><input id="pMemo" placeholder="메모" aria-label="메모">
      <button type="button" class="btn pri" id="pAdd">입금 추가</button></div>
@@ -4392,8 +4394,12 @@ function techPaySec(j){const box=document.getElementById("jpSec");if(!box)return
     <p class="mapt" style="margin:0">일부만 받았거나 카드·현금으로 나눠 받았으면, 저장한 뒤 다시 열어 ‘입금 내역’에서 나눠 적을 수 있습니다.</p>`;
   const m=document.getElementById("tpM"),n=document.getElementById("tpN"),l=document.getElementById("tpL");
   if(j.pay_status==="미수")m.value="미수";
+  /* 이미 적어 둔 입금이 1건이면 불러와서 고칠 수 있게 (저장하면 새로 추가하지 않고 그 기록을 고침) */
+  const old=j.id?jpays.filter(p=>p.job_id===j.id):[];const one=old.length===1?old[0]:null;
+  if(one){m.value=["현금","카드"].includes(one.method)?one.method:(one.method==="계좌이체"?"현금":"");n.value=one.payer||"";document.getElementById("tpMemo").value=one.memo||""}
+  else if(old.length>1)box.insertAdjacentHTML("beforeend",`<p class="mapt" style="margin:4px 0 0">입금이 ${old.length}건으로 나뉘어 있어 여기서는 고칠 수 없습니다. 사무실에 수정을 요청해 주세요.</p>`);
   const up=()=>{const v=m.value;l.textContent=v==="카드"?"카드사명":v==="현금"?"입금자명":"카드사명 / 입금자명";n.placeholder=v==="카드"?"예: 삼성카드":v==="현금"?"예: 홍길동":v==="미수"?"":"결제방법을 먼저 고르세요";n.disabled=v==="미수";if(v==="카드")n.setAttribute("list","cardList");else n.removeAttribute("list")};m.onchange=up;up();m.addEventListener("change",()=>m.classList.toggle("tfill",!!m.value));m.classList.toggle("tfill",!!m.value);
-  return{tech:true,pend:[],rows:()=>[],get:()=>({method:m.value,name:n.value.trim(),memo:document.getElementById("tpMemo").value.trim()})}}
+  return{tech:true,pend:[],rows:()=>[],get:()=>({method:m.value,name:n.value.trim(),memo:document.getElementById("tpMemo").value.trim(),rowId:one?one.id:null,multi:old.length>1})}}
 function jobDlg(j,c,kind,tpl,preset){
   let wantCtr=false;if(kind==="ctr"){wantCtr=true;kind="as"}
   /* 신규접수에는 '설치'가 없음 (설치는 계약으로 접수) */
@@ -4490,7 +4496,7 @@ function jobDlg(j,c,kind,tpl,preset){
          if(asLike(j)){if(!pt.paid_type)miss.push("유상/무상");else if(paidJob&&!pt.cost)miss.push("출장비·부품비");if(paidJob&&pt.cost&&tp&&!tp.method)miss.push("결제방법")}
          if(!pt.visit_time)miss.push("작업 시작 시간");if(he&&!pt.end_time)miss.push("작업 종료 시간");
          if(miss.length){jf_mark(miss);return toast("노란 칸을 적어 주세요: "+miss.join(", "))}}
-       if(tp&&paidJob&&pt.cost>0){if(tp.method==="미수"){pt.pay_status="미수";if(tp.memo)pt.pay_memo=tp.memo}else if(tp.method){tpRow={pay_date:pt.done_date||today(),method:tp.method,payer:tp.name,amount:pt.cost,memo:tp.memo||""};Object.assign(pt,jpDerive([tpRow],pt.cost,""))}}}
+       if(tp&&tp.multi){}else if(tp&&paidJob&&pt.cost>0){if(tp.method==="미수"){pt.pay_status="미수";if(tp.memo)pt.pay_memo=tp.memo;if(tp.rowId)tpRow={_del:tp.rowId}}else if(tp.method){tpRow={pay_date:pt.done_date||today(),method:tp.method,payer:tp.name,amount:pt.cost,memo:tp.memo||""};Object.assign(pt,jpDerive([tpRow],pt.cost,""))}}}
      /* 완료했는데 받은 돈이 없으면(유상·청구금액 있음·입금 기록 없음) 납부 여부를 '미수'로 */
      if("cost" in pt&&pt.status==="완료"&&pt.paid_type!=="무상"&&Number(pt.cost||0)>0&&!pt.pay_status&&!pt.pay_date)pt.pay_status="미수";
      if(off){pt.techs=f.getAll("tech");pt.tech_names=f.get("tech_names")||"";if(pt.status==="접수"&&(pt.techs.length||pt.tech_names))pt.status="배정"}
@@ -4499,7 +4505,10 @@ function jobDlg(j,c,kind,tpl,preset){
      if(!r.error&&!isNew&&pt.customer_id&&pt.customer_id!==j.customer_id)await sb.from("customer_files").update({customer_id:pt.customer_id}).eq("job_id",j.id);
      if(r.error&&/jobs_kind_check/.test(r.error.message))return toast(j.kind==="etc"?"기타 구분을 쓰려면 Supabase에서 phase1zl.sql을 실행해 주세요.":j.kind==="move"?"이전설치 구분이 아직 없습니다. Supabase에서 phase1t.sql을 실행해 주세요.":"철거·추가설치 구분이 아직 없습니다. Supabase에서 phase1e.sql을 실행해 주세요.");
      if(r.error)return toast(/pay_status|pay_method/.test(r.error.message)?"납부 칸이 아직 없습니다. Supabase에서 phase1b.sql을 실행해 주세요.":/paid_type|pay_date|pay_name|pay_memo|closed/.test(r.error.message)?"결제 상세 칸이 아직 없습니다. Supabase에서 phase1c.sql을 실행해 주세요.":"저장하지 못했습니다: "+r.error.message);
-     let pmsg="";if(tpRow&&!r.error){const {error:eT}=await sb.from("job_payments").insert(Object.assign({job_id:j.id,customer_id:j.customer_id},tpRow));pmsg+=eT?" · 입금을 저장하지 못했습니다: "+eT.message:" · 입금 1건"}
+     let pmsg="";if(tpRow&&!r.error){
+       if(tpRow._del){const {error:eD}=await sb.from("job_payments").delete().eq("id",tpRow._del);pmsg+=eD?" · 입금 기록을 지우지 못했습니다: "+eD.message:" · 입금 기록을 미수로 바꿈"}
+       else if(tp&&tp.rowId){const {error:eT,count}=await sb.from("job_payments").update(tpRow,{count:"exact"}).eq("id",tp.rowId);pmsg+=eT||count===0?" · 입금을 고치지 못했습니다"+(eT?": "+eT.message:""):" · 입금 수정"}
+       else{const {error:eT}=await sb.from("job_payments").insert(Object.assign({job_id:j.id,customer_id:j.customer_id},tpRow));pmsg+=eT?" · 입금을 저장하지 못했습니다: "+eT.message:" · 입금 1건"}}
      if(isNew&&jpS&&jpS.pend.length&&r.data&&(asLike(j)||j.kind==="addon")){const {error:eJ}=await sb.from("job_payments").insert(jpS.pend.map(p=>Object.assign({job_id:r.data.id,customer_id:r.data.customer_id},p)));pmsg+=eJ?" · 입금 내역을 저장하지 못했습니다: "+eJ.message:` · 입금 ${jpS.pend.length}건`}
      if(isNew&&jpSel.length&&r.data){const up={ok:0,fail:[]};const gr={};jpSel.forEach(x=>(gr[x.kind]=gr[x.kind]||[]).push(x.file));
        for(const k of Object.keys(gr)){const u=await uploadCustFiles(r.data.customer_id,gr[k],k,m=>toast(m),r.data.id);up.ok+=u.ok;up.fail=up.fail.concat(u.fail)}
