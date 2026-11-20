@@ -1588,7 +1588,8 @@ function renderPaySec(k){
     const {error}=await sb.from("payments").update({pay_date:g("pay_date")||null,method:m,payer:g("payer").trim(),amount:a,memo:g("memo").trim()}).eq("id",b.dataset.psave);
     if(error)return toast("수정하지 못했습니다: "+error.message);ui.payEdit=null;toast("입금 기록을 수정했습니다");await after()});
   box.querySelectorAll(".pedit input").forEach(x=>x.addEventListener("keydown",e=>{if(e.key==="Enter"&&!e.isComposing){e.preventDefault();e.stopPropagation();box.querySelector("[data-psave]").click()}if(e.key==="Escape"){e.preventDefault();e.stopPropagation();ui.payEdit=null;renderPaySec(k)}}));
-  box.querySelectorAll("[data-pdel]").forEach(b=>b.onclick=async()=>{if(!await askConfirm("이 입금 기록을 삭제할까요?"))return;const {error}=await sb.from("payments").delete().eq("id",b.dataset.pdel);if(error)return toast("삭제하지 못했습니다: "+error.message);toast("삭제했습니다");await after()});
+  box.querySelectorAll("[data-pdel]").forEach(b=>b.onclick=async()=>{if(!await askConfirm("이 입금 기록을 삭제할까요?"))return;const {error,count}=await sb.from("payments").delete({count:"exact"}).eq("id",b.dataset.pdel);if(error)return toast("삭제하지 못했습니다: "+error.message);
+    if(count===0){await after();return toast("삭제하지 못했습니다: 이 입금 기록을 지울 권한이 없습니다 (Supabase에서 phase1zz2.sql 실행 필요)")}toast("삭제했습니다");await after()});
   const pd=document.getElementById("pDone");if(pd)pd.onclick=async()=>{const {error}=await sb.from("contracts").update({stage:"완료"}).eq("id",k.id);if(error)return toast("바꾸지 못했습니다: "+error.message);
     k.stage="완료";const s_=document.querySelector('#kf select[name=stage]');if(s_)s_.value="완료";toast("진행단계를 완료로 바꿨습니다");await reload(["contracts"],true);renderPaySec(k)};
 }
@@ -4333,7 +4334,7 @@ function jpSec(j,can,isNew){
       const {error}=await sb.from("job_payments").update(r).eq("id",b.dataset.jpsave);if(error)return err(error);toast("입금 기록을 수정했습니다");await sync()});
     t.querySelectorAll(".pedit input").forEach(x=>x.addEventListener("keydown",e=>{if(e.key==="Enter"&&!e.isComposing){e.preventDefault();e.stopPropagation();t.querySelector("[data-jpsave]").click()}if(e.key==="Escape"){e.preventDefault();e.stopPropagation();st.edit=null;drawTbl()}}));
     t.querySelectorAll("[data-jpdel]").forEach(b=>b.onclick=async()=>{if(isNew){st.pend.splice(+b.dataset.jpdel,1);draw();return}
-      if(!await askConfirm("이 입금 기록을 삭제할까요?"))return;const {error}=await sb.from("job_payments").delete().eq("id",b.dataset.jpdel);if(error)return err(error);toast("삭제했습니다");await sync()})};
+      if(!await askConfirm("이 입금 기록을 삭제할까요?"))return;const {error,count}=await sb.from("job_payments").delete({count:"exact"}).eq("id",b.dataset.jpdel);if(error)return err(error);if(count===0)return toast("삭제하지 못했습니다: 이 입금 기록을 지울 권한이 없습니다");toast("삭제했습니다");await sync()})};
   const add=document.getElementById("jpAdd");
   if(add){const A=document.getElementById("jpA");A.addEventListener("input",()=>{A.dataset.touched="1"});
     add.onclick=async()=>{const r=rowOf(n=>({pay_date:"jpD",method:"jpM",payer:"jpN",amount:"jpA",memo:"jpMemo"})[n]&&document.getElementById(({pay_date:"jpD",method:"jpM",payer:"jpN",amount:"jpA",memo:"jpMemo"})[n]).value);if(!r)return;
