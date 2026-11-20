@@ -4321,7 +4321,7 @@ function jpSec(j,can,isNew){
      ${rows.map((p,i)=>st.edit&&st.edit===p.id&&ed?`<tr class="pedit"><td><input type="date" data-f="pay_date" value="${esc(p.pay_date||"")}" aria-label="날짜"></td><td><select data-f="method" aria-label="수단">${JPMETH.map(m=>`<option ${m===p.method?"selected":""}>${m}</option>`).join("")}</select></td>
        <td><input data-f="payer" value="${esc(p.payer||"")}" list="cardList" aria-label="카드사·입금자"></td><td><input type="text" inputmode="numeric" data-won data-f="amount" value="${esc(p.amount)}" aria-label="금액" style="text-align:right"></td><td><input data-f="memo" value="${esc(p.memo||"")}" aria-label="메모"></td>
        <td style="white-space:nowrap"><button type="button" class="btn sm pri" data-jpsave="${p.id}">저장</button> <button type="button" class="btn sm" data-jpcancel>취소</button></td></tr>`
-     :`<tr><td style="white-space:nowrap">${esc(p.pay_date||"")}</td><td style="white-space:nowrap">${esc(p.method)}</td><td>${esc(p.payer||"")}</td><td class="num ${p.amount<0?"neg":""}">${won0(p.amount)}</td><td>${esc(p.memo||"")}</td>${can?`<td style="white-space:nowrap">${p.legacy?`<small class="mapt">예전 칸</small>`:`${ed?`<button type="button" class="btn sm" data-jpedit="${p.id}">수정</button> `:""}<button type="button" class="btn sm danger" data-jpdel="${isNew?i:p.id}">삭제</button>`}</td>`:""}</tr>`).join("")||`<tr><td colspan="6" class="mapt">입금 기록이 없습니다.${!isNew&&(j.pay_date||j.pay_name)?` (예전 기록: ${esc([j.pay_date,j.pay_method,j.pay_name].filter(Boolean).join(" · "))}, 금액 없음)`:""}</td></tr>`}</tbody></table>`;
+     :`<tr><td style="white-space:nowrap">${esc(p.pay_date||"")}</td><td style="white-space:nowrap">${esc(p.method)}</td><td>${esc(p.payer||"")}</td><td class="num ${p.amount<0?"neg":""}">${won0(p.amount)}</td><td>${esc(p.memo||"")}</td>${can?`<td style="white-space:nowrap">${p.legacy?`<small class="mapt">예전 칸</small>`:`${ed&&(isOffice()||p.created_by===me.id)?`<button type="button" class="btn sm" data-jpedit="${p.id}">수정</button> `:""}${isNew||isOffice()?`<button type="button" class="btn sm danger" data-jpdel="${isNew?i:p.id}">삭제</button>`:""}`}</td>`:""}</tr>`).join("")||`<tr><td colspan="6" class="mapt">입금 기록이 없습니다.${!isNew&&(j.pay_date||j.pay_name)?` (예전 기록: ${esc([j.pay_date,j.pay_method,j.pay_name].filter(Boolean).join(" · "))}, 금액 없음)`:""}</td></tr>`}</tbody></table>`;
     bindTbl()};
   const draw=()=>{drawTbl();drawSum()};
   const sync=async()=>{await reload(["jpays"]);const real=jpaysOf(j);const d=real.length?jpDerive(real,Number(j.cost||0),j.pay_status):null;
@@ -4488,9 +4488,9 @@ function jobDlg(j,c,kind,tpl,preset){
      if(jpS&&(asLike(j)||j.kind==="addon")){const rr=jpS.rows();if(rr.length&&pt.paid_type!=="무상")Object.assign(pt,jpDerive(rr,Number(pt.cost||0),pt.pay_status))}
      if(off||isNew){Object.assign(pt,{request_date:f.get("request_date")||today(),visit_date:f.get("visit_date")||null,visit_time:fmtTime(f.get("visit_time")),symptom:f.get("symptom")||""})}
      if(he&&can)pt.end_time=fmtTime(f.get("end_time"));
-     let tpRow=null;
+     let tpRow=null,tpRid=null;
      if(tm&&can){if(f.has("visit_time"))pt.visit_time=fmtTime(f.get("visit_time"));
-       const tp=jpS&&jpS.tech?jpS.get():null;const paidJob=asLike(j)&&pt.paid_type!=="무상";
+       const tp=jpS&&jpS.tech?jpS.get():null;tpRid=tp&&tp.rowId||null;const paidJob=asLike(j)&&pt.paid_type!=="무상";
        if(!asLike(j)){const ap=(f.get("tp_addparts")||"").trim();if(ap)pt.parts=[String(pt.parts||"").trim(),ap].filter(Boolean).join(", ")}
        if(pt.status==="완료"){const miss=[];
          if(asLike(j)){if(!pt.paid_type)miss.push("유상/무상");else if(paidJob&&!pt.cost)miss.push("출장비·부품비");if(paidJob&&pt.cost&&tp&&!tp.method&&!tp.multi)miss.push("결제방법")}
@@ -4507,7 +4507,7 @@ function jobDlg(j,c,kind,tpl,preset){
      if(r.error)return toast(/pay_status|pay_method/.test(r.error.message)?"납부 칸이 아직 없습니다. Supabase에서 phase1b.sql을 실행해 주세요.":/paid_type|pay_date|pay_name|pay_memo|closed/.test(r.error.message)?"결제 상세 칸이 아직 없습니다. Supabase에서 phase1c.sql을 실행해 주세요.":"저장하지 못했습니다: "+r.error.message);
      let pmsg="";if(tpRow&&!r.error){
        if(tpRow._del){const {error:eD}=await sb.from("job_payments").delete().eq("id",tpRow._del);pmsg+=eD?" · 입금 기록을 지우지 못했습니다: "+eD.message:" · 입금 기록을 미수로 바꿈"}
-       else if(tp&&tp.rowId){const {error:eT,count}=await sb.from("job_payments").update(tpRow,{count:"exact"}).eq("id",tp.rowId);pmsg+=eT||count===0?" · 입금을 고치지 못했습니다"+(eT?": "+eT.message:""):" · 입금 수정"}
+       else if(tpRid){const {error:eT,count}=await sb.from("job_payments").update(tpRow,{count:"exact"}).eq("id",tpRid);pmsg+=eT||count===0?" · 입금을 고치지 못했습니다"+(eT?": "+eT.message:""):" · 입금 수정"}
        else{const {error:eT}=await sb.from("job_payments").insert(Object.assign({job_id:j.id,customer_id:j.customer_id},tpRow));pmsg+=eT?" · 입금을 저장하지 못했습니다: "+eT.message:" · 입금 1건"}}
      if(isNew&&jpS&&jpS.pend.length&&r.data&&(asLike(j)||j.kind==="addon")){const {error:eJ}=await sb.from("job_payments").insert(jpS.pend.map(p=>Object.assign({job_id:r.data.id,customer_id:r.data.customer_id},p)));pmsg+=eJ?" · 입금 내역을 저장하지 못했습니다: "+eJ.message:` · 입금 ${jpS.pend.length}건`}
      if(isNew&&jpSel.length&&r.data){const up={ok:0,fail:[]};const gr={};jpSel.forEach(x=>(gr[x.kind]=gr[x.kind]||[]).push(x.file));
