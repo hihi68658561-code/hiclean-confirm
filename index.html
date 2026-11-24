@@ -144,7 +144,7 @@ body.mob .app>.top{display:none}body.mob #view{padding-bottom:74px}
 .m-sum{display:grid;grid-template-columns:repeat(4,1fr);gap:6px;margin-bottom:8px}.m-sum button{background:var(--panel);border:2px solid transparent;border-radius:12px;padding:6px 0;font:inherit;font-size:11.5px;color:var(--mute);cursor:pointer}.m-sum b{display:block;font-size:18px;color:var(--fg,#1b2430)}.m-sum .r b{color:#d9480f}.m-sum .on{border-color:var(--accent);background:var(--accent-weak,#eef4fb)}
 .m-kc{flex-wrap:nowrap;overflow-x:auto;scrollbar-width:none}.m-kc button{white-space:nowrap;font-size:12.5px;padding:4px 10px}
 .m-jc{display:block;width:100%;text-align:left;font:inherit;color:inherit;background:var(--panel);border:0;border-left:4px solid transparent;border-radius:12px;padding:9px 12px;margin-bottom:7px;cursor:pointer}.m-jc.late{border-left-color:#d9480f}.m-jc .h{display:flex;align-items:center;gap:7px}.m-jc .d{display:block;margin-top:4px;font-size:12.5px;color:var(--mute)}
-.m-st{font-size:11px;border:1px solid;border-radius:10px;padding:1px 7px;white-space:nowrap}.m-st.s1{color:var(--accent)}.m-st.s2{color:#2f9e44}.m-st.s3{color:#e67700}.m-st.s4{color:#868e96}
+.m-st{font-size:11px;border:1px solid;border-radius:10px;padding:1px 7px;white-space:nowrap}.m-st.s1{color:var(--accent)}.m-st.s2{color:#2f9e44}.m-st.s3{color:#e67700}.m-st.s4{color:#868e96}.m-st.neg{color:#e03131}
 .m-jb{display:block;width:100%;border:0;background:none;font:inherit;color:inherit;text-align:left;padding:0;cursor:pointer}.m-jb .h{display:flex;align-items:center;gap:7px}.m-jb .d{display:block;margin-top:4px;font-size:12.5px;color:var(--mute)}
 div.m-jc{cursor:default}.m-1l{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.m-mini{display:flex;gap:6px;margin-top:8px;flex-wrap:wrap}.m-mini a,.m-mini button{font:inherit;font-size:12px;font-weight:700;background:var(--accent-weak,#eef4fb);color:var(--accent);border:0;border-radius:8px;padding:5px 10px;text-decoration:none;cursor:pointer}
 .m-lt{font-size:11px;font-weight:700;border-radius:10px;padding:1px 7px;white-space:nowrap}.m-lt.o{background:#fff4d6;color:#b45309}.m-lt.c{background:#eceff3;color:#5b6673}.m-lt.v{background:#e6f4ea;color:#2f9e44}.m-lt.g{background:#e8f0fe;color:#1d5fa8}.m-lt.r{background:#ffe3e3;color:#c92a2a}.m-lt.x{border:1px solid var(--line);color:var(--mute)}
@@ -948,26 +948,35 @@ function mobWork(){if(!ui.wm)ui.wm=thisMonth();if(!ui.mwr)ui.mwr="open";if(ui.mw
   view().querySelectorAll("[data-mwk]").forEach(b=>b.onclick=()=>{ui.mwk=b.dataset.mwk;mobWork()});
   view().querySelectorAll("[data-mwa]").forEach(b=>b.onclick=()=>{ui.mwall=b.dataset.mwa==="1";mobWork()});
   view().querySelectorAll("[data-mwm]").forEach(b=>b.onclick=()=>{const [yy,mm]=ui.wm.split("-").map(Number);const d=new Date(yy,mm-1+Number(b.dataset.mwm),1);ui.wm=d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0");mobWork()})}
-/* ----- 모바일: DB관리 ----- */
-function mobLeads(){const td=today(),ym=thisMonth(),[m0,m1]=monthRange(ym);if(!ui.mlk||ui.mlk==="due")ui.mlk="unasg";
-  const all=leads||[];/* 미배정 = 영업담당이 정해지지 않은 상담 */const unasg=all.filter(l=>!l.sales&&!String(l.sales_name||"").trim()),mon=all.filter(l=>l.recv_date&&l.recv_date>=m0&&l.recv_date<m1),ord=mon.filter(l=>l.status==="오더"||l.customer_id);
-  const sets={unasg,mon,ord,all};const LT={오더:"o",종결:"c",방문:"v",관리:"g",미수:"r"};
-  view().innerHTML=`<div class="m-body"><div class="m-sb"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="M20 20l-4-4"/></svg><input id="mlQ" type="search" autocomplete="off" placeholder="업장명·대표자·연락처" aria-label="상담 검색" value="${esc(ui.mlq||"")}"></div>
-    <div class="m-sum">${[["unasg","미배정","r"],["mon","당월 접수",""],["ord","당월 오더",""],["all","전체",""]].map(([k,l,c])=>`<button type="button" class="${ui.mlk===k?"on":""} ${c}" data-mlk="${k}"><b>${sets[k].length}</b>${l}</button>`).join("")}</div>
-    <p class="mapt" style="margin:-2px 2px 8px">당월 전환율 ${mon.length?Math.round(ord.length*100/mon.length):0}%</p><div id="mlL"></div></div><button type="button" class="m-fab" id="mlNew">＋ 상담 등록</button>`;
+/* ----- 모바일: DB관리 (당월 설치·A/S 모바일 화면과 같은 틀: 검색 · 월 · 4칸 · 칩 · 카드) ----- */
+function mobLeads(){const td=today();if(!ui.mlm)ui.mlm=thisMonth();if(!ui.mlk||!["unasg","open","ord","all"].includes(ui.mlk))ui.mlk="unasg";if(ui.mls===undefined)ui.mls="";
+  const [m0,m1]=monthRange(ui.mlm);const [y,m]=ui.mlm.split("-").map(Number);const all=leads||[];
+  const M=all.filter(l=>l.recv_date&&l.recv_date>=m0&&l.recv_date<m1);const isOrd=l=>l.status==="오더"||!!l.customer_id;
+  /* 미배정 = 영업담당이 정해지지 않은 상담 (월과 상관없이 전부) */
+  const sets={unasg:all.filter(l=>!l.sales&&!String(l.sales_name||"").trim()&&l.status!=="종결"&&!isOrd(l)),open:M.filter(leadOpen),ord:M.filter(isOrd),all:M};
+  const LT={오더:"s2",종결:"s4",방문:"s1",관리:"s1",미수:"neg"};const srcs=[...new Set(sets[ui.mlk].map(l=>l.source||"").filter(Boolean))];if(ui.mls&&!srcs.includes(ui.mls))ui.mls="";
+  view().innerHTML=`<div class="m-body"><div class="m-sb"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="M20 20l-4-4"/></svg><input id="mlQ" type="search" autocomplete="off" placeholder="업장명·대표자·연락처 찾기" aria-label="상담 검색" value="${esc(ui.mlq||"")}"></div>
+    <div class="m-mon"><button type="button" data-mlm="-1" aria-label="지난달">‹</button><b>${y}년 ${m}월</b><button type="button" data-mlm="1" aria-label="다음 달">›</button></div>
+    <div class="m-sum">${[["unasg","미배정","r"],["open","진행중",""],["ord","오더",""],["all","전체",""]].map(([k,l,c])=>`<button type="button" class="${ui.mlk===k?"on":""} ${c}" data-mlk="${k}"><b>${sets[k].length}</b>${l}</button>`).join("")}</div>
+    <div class="m-chips m-kc"><button type="button" class="${!ui.mls?"on":""}" data-mls="">전체 ${sets[ui.mlk].length}</button>${srcs.map(x=>`<button type="button" class="${ui.mls===x?"on":""}" data-mls="${esc(x)}">${esc(x)} ${sets[ui.mlk].filter(l=>l.source===x).length}</button>`).join("")}</div>
+    <p class="mapt" style="margin:-2px 2px 8px">${ui.mlk==="unasg"?"영업담당이 없는 상담 (월과 상관없이 전부)":`${m}월 전환율 ${M.length?Math.round(sets.ord.length*100/M.length):0}% (${sets.ord.length}/${M.length})`}</p><div id="mlL"></div></div><button type="button" class="m-fab" id="mlNew">＋ 상담 등록</button>`;
   const q=document.getElementById("mlQ");
-  const draw=()=>{ui.mlq=q.value;const qq=csN(q.value.trim());let list=qq?all:sets[ui.mlk];
+  const draw=()=>{ui.mlq=q.value;const qq=csN(q.value.trim());let list=qq?all:sets[ui.mlk].filter(l=>!ui.mls||l.source===ui.mls);
     if(qq)list=list.filter(l=>csN([l.biz_name,l.ceo,l.phone,l.contact_phone,l.contact_name,l.address,l.org,l.branch].join(" ")).includes(qq));
-    list=list.slice().sort((a,b)=>String(b.recv_date||"").localeCompare(String(a.recv_date||"")));const n=list.length;list=list.slice(0,100);
-    document.getElementById("mlL").innerHTML=list.map((l,i)=>{const ph=l.phone||l.contact_phone||"";const st=l.status||"";const dueL=leadOpen(l)&&l.next_date&&l.next_date<=td;
-      return `<div class="m-jc ${dueL?"late":""}"><button type="button" class="m-jb" data-ml="${l.id}"><span class="h"><span class="m-lt ${LT[st]||"x"}">${esc(st||"없음")}</span><b class="m-n">${esc(l.biz_name||l.ceo||"(이름 없음)")}</b>${l.next_date?`<span class="m-t ${dueL?"neg":""}">${l.next_date===td?"오늘 연락":esc(ymd2(l.next_date))}</span>`:""}</span>
-        <span class="d">${esc([l.source,staffName(l.sales)||l.sales_name,ph].filter(Boolean).join(" · "))}</span>${l.note?`<span class="d m-1l">${esc(l.note)}</span>`:""}</button>
-        <span class="m-mini">${ph?`<a href="tel:${esc(ph.replace(/[^\d+]/g,""))}">📞 전화</a><button type="button" data-mls="${i}">💬 문자</button>`:""}<button type="button" data-ml="${l.id}">✎ 상담 추가</button></span></div>`}).join("")
-      +(n>100?`<p class="mapt m-more">${n}건 중 100건만 보입니다. 검색으로 좁혀 보세요.</p>`:"")+(!n?`<p class="mapt m-more">${qq?"찾는 상담이 없습니다.":"해당하는 상담이 없습니다."}</p>`:"");
+    list=list.slice().sort((a,b)=>String(b.recv_date||"").localeCompare(String(a.recv_date||"")));const n=list.length;list=list.slice(0,150);
+    document.getElementById("mlL").innerHTML=(qq?`<p class="mapt" style="margin:0 2px 8px">검색 결과 ${n}건 (전체 기간)</p>`:"")+list.map((l,i)=>{const ph=l.phone||l.contact_phone||"";const st=l.status||"없음";const dueL=leadOpen(l)&&l.next_date&&l.next_date<=td;
+      const who=staffName(l.sales)||l.sales_name||"";
+      const line=[l.item,l.note,dueL?(l.next_date===td?"오늘 연락":"연락일 "+ymd2(l.next_date)+" 지남"):l.next_date&&leadOpen(l)?"다음 연락 "+ymd2(l.next_date):""].filter(Boolean).join(" · ");
+      return `<div class="m-jc ${dueL?"late":""}"><button type="button" class="m-jb" data-ml="${l.id}"><span class="h"><span class="m-t">${esc(ymd2(l.recv_date)||"-")}</span>${l.source?`<span class="m-lt x">${esc(l.source)}</span>`:""}<b class="m-n">${esc(l.biz_name||l.ceo||"(이름 없음)")}</b><span class="m-st ${LT[st]||"s4"}">${esc(st)}</span></span>
+        ${line?`<span class="d m-1l">${esc(line)}</span>`:""}<span class="d">${who?"👤 "+esc(who):'<b class="neg">미배정</b>'}${ph?" · "+esc(ph):""}</span></button>
+        <span class="m-mini">${ph?`<a href="tel:${esc(ph.replace(/[^\d+]/g,""))}">📞 전화</a><button type="button" data-mlsms="${i}">💬 문자</button>`:""}<button type="button" data-ml="${l.id}">✎ 상담 추가</button></span></div>`}).join("")
+      +(n>150?`<p class="mapt m-more">${n}건 중 150건만 보입니다. 검색으로 좁혀 보세요.</p>`:"")+(!n?`<p class="mapt m-more">${qq?"찾는 상담이 없습니다.":"해당하는 상담이 없습니다."}</p>`:"");
     document.querySelectorAll("#mlL [data-ml]").forEach(b=>b.onclick=()=>{const l=all.find(x=>x.id===b.dataset.ml);if(l)leadDlg(l)});
-    document.querySelectorAll("#mlL [data-mls]").forEach(b=>b.onclick=()=>{const l=list[+b.dataset.mls];const c=l.customer_id&&custById(l.customer_id);smsDlg({c:c||{name:l.biz_name||"",ceo:l.ceo||"",phone:l.phone||l.contact_phone||""}})})};
+    document.querySelectorAll("#mlL [data-mlsms]").forEach(b=>b.onclick=()=>{const l=list[+b.dataset.mlsms];const c=l.customer_id&&custById(l.customer_id);smsDlg({c:c||{name:l.biz_name||"",ceo:l.ceo||"",phone:l.phone||l.contact_phone||""}})})};
   q.addEventListener("input",draw);draw();
-  view().querySelectorAll("[data-mlk]").forEach(b=>b.onclick=()=>{ui.mlk=b.dataset.mlk;q.value="";ui.mlq="";mobLeads()});
+  view().querySelectorAll("[data-mlk]").forEach(b=>b.onclick=()=>{ui.mlk=b.dataset.mlk;ui.mls="";q.value="";ui.mlq="";mobLeads()});
+  view().querySelectorAll("[data-mls]").forEach(b=>b.onclick=()=>{ui.mls=b.dataset.mls;mobLeads()});
+  view().querySelectorAll("[data-mlm]").forEach(b=>b.onclick=()=>{const [yy,mm]=ui.mlm.split("-").map(Number);const d=new Date(yy,mm-1+Number(b.dataset.mlm),1);ui.mlm=d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0");mobLeads()});
   document.getElementById("mlNew").onclick=()=>leadDlg(null)}
 /* ----- 모바일: 문자 ----- */
 async function mobSms(){if(ui.msp===undefined)ui.msp=1;
