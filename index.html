@@ -949,16 +949,16 @@ function mobWork(){if(!ui.wm)ui.wm=thisMonth();if(!ui.mwr)ui.mwr="open";if(ui.mw
   view().querySelectorAll("[data-mwa]").forEach(b=>b.onclick=()=>{ui.mwall=b.dataset.mwa==="1";mobWork()});
   view().querySelectorAll("[data-mwm]").forEach(b=>b.onclick=()=>{const [yy,mm]=ui.wm.split("-").map(Number);const d=new Date(yy,mm-1+Number(b.dataset.mwm),1);ui.wm=d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0");mobWork()})}
 /* ----- 모바일: DB관리 ----- */
-function mobLeads(){const td=today(),ym=thisMonth(),[m0,m1]=monthRange(ym);if(!ui.mlk)ui.mlk="due";
-  const all=leads||[];const due=all.filter(l=>leadOpen(l)&&l.next_date&&l.next_date<=td),mon=all.filter(l=>l.recv_date&&l.recv_date>=m0&&l.recv_date<m1),ord=mon.filter(l=>l.status==="오더"||l.customer_id);
-  const sets={due,mon,ord,all};const LT={오더:"o",종결:"c",방문:"v",관리:"g",미수:"r"};
+function mobLeads(){const td=today(),ym=thisMonth(),[m0,m1]=monthRange(ym);if(!ui.mlk||ui.mlk==="due")ui.mlk="unasg";
+  const all=leads||[];/* 미배정 = 영업담당이 정해지지 않은 상담 */const unasg=all.filter(l=>!l.sales&&!String(l.sales_name||"").trim()),mon=all.filter(l=>l.recv_date&&l.recv_date>=m0&&l.recv_date<m1),ord=mon.filter(l=>l.status==="오더"||l.customer_id);
+  const sets={unasg,mon,ord,all};const LT={오더:"o",종결:"c",방문:"v",관리:"g",미수:"r"};
   view().innerHTML=`<div class="m-body"><div class="m-sb"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="M20 20l-4-4"/></svg><input id="mlQ" type="search" autocomplete="off" placeholder="업장명·대표자·연락처" aria-label="상담 검색" value="${esc(ui.mlq||"")}"></div>
-    <div class="m-sum">${[["due","연락할 건","r"],["mon","이달 접수",""],["ord","이달 오더",""],["all","전체",""]].map(([k,l,c])=>`<button type="button" class="${ui.mlk===k?"on":""} ${c}" data-mlk="${k}"><b>${sets[k].length}</b>${l}</button>`).join("")}</div>
-    <p class="mapt" style="margin:-2px 2px 8px">이달 전환율 ${mon.length?Math.round(ord.length*100/mon.length):0}%</p><div id="mlL"></div></div><button type="button" class="m-fab" id="mlNew">＋ 상담 등록</button>`;
+    <div class="m-sum">${[["unasg","미배정","r"],["mon","당월 접수",""],["ord","당월 오더",""],["all","전체",""]].map(([k,l,c])=>`<button type="button" class="${ui.mlk===k?"on":""} ${c}" data-mlk="${k}"><b>${sets[k].length}</b>${l}</button>`).join("")}</div>
+    <p class="mapt" style="margin:-2px 2px 8px">당월 전환율 ${mon.length?Math.round(ord.length*100/mon.length):0}%</p><div id="mlL"></div></div><button type="button" class="m-fab" id="mlNew">＋ 상담 등록</button>`;
   const q=document.getElementById("mlQ");
   const draw=()=>{ui.mlq=q.value;const qq=csN(q.value.trim());let list=qq?all:sets[ui.mlk];
     if(qq)list=list.filter(l=>csN([l.biz_name,l.ceo,l.phone,l.contact_phone,l.contact_name,l.address,l.org,l.branch].join(" ")).includes(qq));
-    list=list.slice().sort((a,b)=>ui.mlk==="due"&&!qq?String(a.next_date).localeCompare(String(b.next_date)):String(b.recv_date||"").localeCompare(String(a.recv_date||"")));const n=list.length;list=list.slice(0,100);
+    list=list.slice().sort((a,b)=>String(b.recv_date||"").localeCompare(String(a.recv_date||"")));const n=list.length;list=list.slice(0,100);
     document.getElementById("mlL").innerHTML=list.map((l,i)=>{const ph=l.phone||l.contact_phone||"";const st=l.status||"";const dueL=leadOpen(l)&&l.next_date&&l.next_date<=td;
       return `<div class="m-jc ${dueL?"late":""}"><button type="button" class="m-jb" data-ml="${l.id}"><span class="h"><span class="m-lt ${LT[st]||"x"}">${esc(st||"없음")}</span><b class="m-n">${esc(l.biz_name||l.ceo||"(이름 없음)")}</b>${l.next_date?`<span class="m-t ${dueL?"neg":""}">${l.next_date===td?"오늘 연락":esc(ymd2(l.next_date))}</span>`:""}</span>
         <span class="d">${esc([l.source,staffName(l.sales)||l.sales_name,ph].filter(Boolean).join(" · "))}</span>${l.note?`<span class="d m-1l">${esc(l.note)}</span>`:""}</button>
@@ -1663,7 +1663,7 @@ function renderCtrView0(){
   const qq=ui.cq.trim().toLowerCase();
   let list=src.filter(x=>rowOk(x,ui.crow)&&(!ui.cct||typOf(x)===ui.cct)
     &&(!qq||[x.c.name,x.c.search_text,x.c.ceo,x.c.phone,x.c.phone2,x.k.serial,x.k.memo,x.k.approval,staffName(x.k.sales3),x.k.sales3_name].join(" ").toLowerCase().includes(qq)));
-  /* 소계 묶음: 0 당월마감(이달 설치) · 1 익월마감(다음 달 이후·날짜 없음) · 2 취소,보류 · 3 전기마감(미수·이월·예전 건 결제). 소계 칸에서 직접 고르면 그 묶음 */
+  /* 소계 묶음: 0 당월마감(당월 설치) · 1 익월마감(다음 달 이후·날짜 없음) · 2 취소,보류 · 3 전기마감(미수·이월·예전 건 결제). 소계 칸에서 직접 고르면 그 묶음 */
   /* 0 전월미수채권(지난달 이전 설치·이번에 완료) · 1 당월마감 · 2 익월마감 · 3 취소,보류 · 4 전기마감(아직 미수) */
   const gOf=x=>{const bd=baseDate(x.k);const tg=!x.a&&x.k.settle_tag;
     const oldDone=!x.a&&(x.k.contract_type||"구매")==="구매"&&bd&&bd<st0&&x.k.stage==="완료"&&!(x.s.unpaid>0);/* 구매 건 중 결제 완료된 것만 */
@@ -1709,7 +1709,7 @@ function renderCtrView0(){
       <div class="kpis"><div class="kpi kc ${ui.ckpi==="ctr"?"on":""}" data-kpi="ctr" role="button" tabindex="0"><span>${all?"전체":"당월"} 계약</span><b>${mC.length}건 · ${won0(mC.reduce((a,k)=>a+Number(k.amount||0),0))}원</b></div>
        <div class="kpi kc ${ui.ckpi==="pay"?"on":""}" data-kpi="pay" role="button" tabindex="0"><span>${all?"전체":"당월"} 입금</span><b>${won0(mCard+mOther)}원</b><small>카드 ${won0(mCard)} · 현금+캐피탈 ${won0(mOther)}</small></div>
        <div class="kpi bad kc ${ui.ckpi==="unpaid"?"on":""}" data-kpi="unpaid" role="button" tabindex="0"><span>미수금 (미수 ${un.length}건)</span><b>${won0(unSum)}원</b></div></div>
-      <p class="mapt" style="margin:0">${all?"월마감되지 않은 계약이 기간 상관없이 모두 나옵니다.":"이달 설치한 건(설치 전이면 계약일 기준), 이달 최종결제된 건, 그리고 해결되지 않은 미수 건이 함께 나옵니다."}<br>숫자를 누르면 아래 목록이 그 건들로 바뀝니다.</p></div>
+      <p class="mapt" style="margin:0">${all?"월마감되지 않은 계약이 기간 상관없이 모두 나옵니다.":"당월 설치한 건(설치 전이면 계약일 기준), 당월 최종결제된 건, 그리고 해결되지 않은 미수 건이 함께 나옵니다."}<br>숫자를 누르면 아래 목록이 그 건들로 바뀝니다.</p></div>
      <div class="sumbox">${sumT}</div></div>
    <div class="toolbar"><input id="cQ" type="search" placeholder="업체명(상호)·대표자·전화·시리얼·담당 검색" value="${esc(ui.cq)}">
      <div class="nav" role="group"><button type="button" id="cAll" class="${ui.crow||ui.cct||ui.ckpi?"":"on"}">전체</button></div>
@@ -1934,7 +1934,7 @@ function asSortPicker(onDone){let cur=asGetSort().map(x=>({...x}));
       <label class="f">방향<select data-sd="${i}"><option value="1" ${x.d===1?"selected":""}>오름차순 (빠른 날짜·작은 값·가나다)</option><option value="-1" ${x.d===-1?"selected":""}>내림차순 (최근 날짜·큰 값)</option></select></label><span></span></div>`}).join("");
     document.querySelectorAll("#spList [data-si]").forEach(s=>s.onchange=()=>{const i=+s.dataset.si;if(s.value)cur[i]={c:s.value,d:(cur[i]||{}).d||1};else cur.splice(i,1);cur=cur.filter(Boolean);draw()});
     document.querySelectorAll("#spList [data-sd]").forEach(s=>s.onchange=()=>{const i=+s.dataset.sd;if(cur[i])cur[i].d=+s.value})};
-  openDlg("정렬 설정",`<p class="mapt">1순위가 같으면 2순위, 2순위도 같으면 3순위로 정렬합니다. 열 제목을 눌러도 바로 정렬됩니다(한 번 더 누르면 반대로, 세 번째 누르면 기본 정렬로).<br>목록은 항상 <b>지난달부터 남은 미처리 → 당월 접수 → 이달 처리·입금된 예전 건 → 미수</b>로 묶이고, 고른 정렬은 각 묶음 안에서 적용됩니다.</p><div id="spList" style="display:grid;gap:8px"></div>`,
+  openDlg("정렬 설정",`<p class="mapt">1순위가 같으면 2순위, 2순위도 같으면 3순위로 정렬합니다. 열 제목을 눌러도 바로 정렬됩니다(한 번 더 누르면 반대로, 세 번째 누르면 기본 정렬로).<br>목록은 항상 <b>지난달부터 남은 미처리 → 당월 접수 → 당월 처리·입금된 예전 건 → 미수</b>로 묶이고, 고른 정렬은 각 묶음 안에서 적용됩니다.</p><div id="spList" style="display:grid;gap:8px"></div>`,
     [["접수한 순서 (기본)","",()=>{cur=ADEFSORT.map(x=>({...x}));draw();return true}],["예정일·시간 순","",()=>{cur=[{c:"visit",d:1},{c:"rdate",d:1}];draw();return true}],["취소"],["적용","pri",()=>{cur=cur.filter(x=>x&&x.c);asSetSort(cur.length&&JSON.stringify(cur)!==JSON.stringify(ADEFSORT)?cur:null);onDone()}]]);draw()}
 function renderAsView(){const _sv=snapScroll();renderAsView0();restoreScroll(_sv)}
 function renderAsView0(){
@@ -1977,7 +1977,7 @@ function renderAsView0(){
        <div class="kpi kc ${ui.akpi==="pay"?"on":""}" data-akpi="pay" role="button" tabindex="0"><span>당월 입금</span><b>${won0(mCard+mCash)}원</b><small>카드 ${won0(mCard)} · 현금 ${won0(mCash)}</small></div>
        <div class="kpi bad kc ${ui.akpi==="unpaid"?"on":""}" data-akpi="unpaid" role="button" tabindex="0"><span>미수금 (미수 ${un.length}건)</span><b>${won0(unSum)}원</b></div>
        <div class="kpi kc ${ui.akpi==="open"?"on":""}" data-akpi="open" role="button" tabindex="0"><span>미처리 (전체)</span><b>${op.length}건</b></div></div>
-      <p class="mapt" style="margin:0">지난달부터 남은 미처리 건이 맨 위에, 그 아래로 이달 접수한 건, 이달 처리·입금된 건, 미수 건이 나옵니다.<br>숫자를 누르면 아래 목록이 그 건들로 바뀝니다.</p></div>
+      <p class="mapt" style="margin:0">지난달부터 남은 미처리 건이 맨 위에, 그 아래로 당월 접수한 건, 당월 처리·입금된 건, 미수 건이 나옵니다.<br>숫자를 누르면 아래 목록이 그 건들로 바뀝니다.</p></div>
      <div class="sumbox">${sumT}</div></div>
    <div class="toolbar"><input id="aQ" type="search" placeholder="업체명(상호)·전화·시리얼·접수내용·담당자 검색" value="${esc(ui.aq)}">
      <div class="nav" role="group"><button type="button" id="aAll" class="${label?"":"on"}">전체</button></div>
@@ -2278,7 +2278,7 @@ function renderLeadView0(){
   const mon=ui.lall?leads:leads.filter(l=>inM(l.recv_date));
   const due=leads.filter(leadDue);const care=leads.filter(l=>l.status==="관리"||(leadOpen(l)&&!l.status));
   const ord=mon.filter(l=>l.status==="오더"||l.customer_id);
-  const KPI={mon:[ui.lall?"전체 상담":"이달 접수",mon],ord:["계약(오더)",ord],due:["연락할 건",due],care:["관리 중",care]};
+  const KPI={mon:[ui.lall?"전체 상담":"당월 접수",mon],ord:["계약(오더)",ord],due:["연락할 건",due],care:["관리 중",care]};
   const src=ui.lkpi&&KPI[ui.lkpi]?KPI[ui.lkpi][1]:mon;
   const srcs=[...new Set([...LSRC.filter(s=>mon.some(l=>l.source===s)),...mon.map(l=>l.source).filter(Boolean)])];
   const stOf=l=>LSTAT.includes(l.status)?l.status:"";
@@ -2311,7 +2311,7 @@ function renderLeadView0(){
   view().innerHTML=`<div class="sumwrap"><div style="display:grid;gap:8px;align-content:start"><div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap"><h2 style="margin:0;font-size:18px">DB관리</h2>
       <input id="lM" type="month" value="${esc(ui.lm)}" aria-label="기준 월" ${ui.lall?"disabled":""} style="padding:5px 8px;border:1px solid var(--line);border-radius:6px;background:var(--field)">${ui.lm!==thisMonth()&&!ui.lall?`<button class="btn sm" type="button" id="lNow">이번 달</button>`:""}
       <label class="chip"><input type="checkbox" id="lAllP" ${ui.lall?"checked":""}>전체 기간</label></div>
-      <div class="kpis"><div class="kpi kc ${ui.lkpi==="mon"?"on":""}" data-lkpi="mon" role="button" tabindex="0"><span>${ui.lall?"전체 상담":"이달 접수"}</span><b>${mon.length}건</b></div>
+      <div class="kpis"><div class="kpi kc ${ui.lkpi==="mon"?"on":""}" data-lkpi="mon" role="button" tabindex="0"><span>${ui.lall?"전체 상담":"당월 접수"}</span><b>${mon.length}건</b></div>
        <div class="kpi kc ${ui.lkpi==="ord"?"on":""}" data-lkpi="ord" role="button" tabindex="0"><span>계약(오더)</span><b>${ord.length}건</b><small>전환율 ${conv}%</small></div>
        <div class="kpi bad kc ${ui.lkpi==="due"?"on":""}" data-lkpi="due" role="button" tabindex="0"><span>연락할 건 (오늘까지)</span><b>${due.length}건</b></div>
        <div class="kpi kc ${ui.lkpi==="care"?"on":""}" data-lkpi="care" role="button" tabindex="0"><span>관리 중 (전체)</span><b>${care.length}건</b></div></div>
@@ -4155,7 +4155,7 @@ function sortVal(col,x){const k=x.k,c=x.c,s=x.s;
     case"stage":return STORD.indexOf(k.stage);case"ctype":return CTYPES.indexOf(k.contract_type||"구매");case"name":return c.name||"";}
   return ctrCell(col,k,c,s,x.b).replace(/<[^>]*>/g,"").replace(/&amp;/g,"&").trim()}
 function sortCtrList(list,gf){const S=getSort();const G=gf||(()=>0);const cache=new Map();const v=(x,col)=>{const key=col;let m=cache.get(x);if(!m){m={};cache.set(x,m)}if(!(key in m))m[key]=sortVal(col,x);return m[key]};
-  /* 묶음 순서: 당월 설치 → 당월 추가설치(당월 맨 끝) → 이달 결제된 예전 건 → 미수·기타 */
+  /* 묶음 순서: 당월 설치 → 당월 추가설치(당월 맨 끝) → 당월 결제된 예전 건 → 미수·기타 */
   const grp=true;const bo=x=>!x.b?0:x.a?0.5:x.b.includes("설치")?0:x.b.includes("결제")?1:2;
   /* 각 묶음 안에서 보류·취소 → 철거완료는 맨 뒤로 */
   const sb_=x=>{const t=x.a?"":x.k.stage;return t==="보류"||t==="취소"?1:(t==="철거완료"||t==="철거")&&!(x.b&&x.b.includes("설치"))?3:0};/* 철거예정, 당월 설치 후 철거완료는 날짜 순서대로 함께 */
@@ -4167,7 +4167,7 @@ function sortPicker(onDone){let cur=getSort().map(x=>({...x}));
       <label class="f">방향<select data-sd="${i}"><option value="1" ${x.d===1?"selected":""}>오름차순 (빠른 날짜·작은 값·가나다)</option><option value="-1" ${x.d===-1?"selected":""}>내림차순 (최근 날짜·큰 값)</option></select></label><span></span></div>`}).join("");
     document.querySelectorAll("#spList [data-si]").forEach(s=>s.onchange=()=>{const i=+s.dataset.si;if(s.value)cur[i]={c:s.value,d:(cur[i]||{}).d||1};else cur.splice(i,1);cur=cur.filter(Boolean);draw()});
     document.querySelectorAll("#spList [data-sd]").forEach(s=>s.onchange=()=>{const i=+s.dataset.sd;if(cur[i])cur[i].d=+s.value})};
-  openDlg("정렬 설정",`<p class="mapt">1순위가 같으면 2순위, 2순위도 같으면 3순위로 정렬합니다. 열 제목을 눌러도 바로 정렬됩니다(한 번 더 누르면 반대로, 세 번째 누르면 기본 정렬로).<br>목록은 항상 <b>당월 건 → 당월 추가설치 → 이달 결제된 예전 건 → 미수 건</b>으로 묶이고, 고른 정렬은 각 묶음 안에서 적용됩니다.</p><div id="spList" style="display:grid;gap:8px"></div>`,
+  openDlg("정렬 설정",`<p class="mapt">1순위가 같으면 2순위, 2순위도 같으면 3순위로 정렬합니다. 열 제목을 눌러도 바로 정렬됩니다(한 번 더 누르면 반대로, 세 번째 누르면 기본 정렬로).<br>목록은 항상 <b>당월 건 → 당월 추가설치 → 당월 결제된 예전 건 → 미수 건</b>으로 묶이고, 고른 정렬은 각 묶음 안에서 적용됩니다.</p><div id="spList" style="display:grid;gap:8px"></div>`,
     [["예정일·시간 순 (기본)","",()=>{cur=DEFSORT.map(x=>({...x}));draw();return true}],["설치일자·시간 순","",()=>{cur=INSTSORT.map(x=>({...x}));draw();return true}],["취소"],["적용","pri",()=>{cur=cur.filter(x=>x&&x.c);setSort(cur.length&&JSON.stringify(cur)!==JSON.stringify(DEFSORT)?cur:null);onDone()}]]);draw()}
 function hasTrialCol(){return contracts.some(k=>"trial_end" in k)}
 /* 철거 계약이 완료되면 회색 줄 */
@@ -4385,7 +4385,7 @@ function monthBuckets(list,ym){
   const st=ym+"-01";const [y,m]=ym.split("-").map(Number);const en=(m===12?(y+1)+"-01":y+"-"+String(m+1).padStart(2,"0"))+"-01";
   const out={carry:[],new:[],done:[],hold:[],cancel:[],open:[]};
   list.forEach(j=>{const rd=rdOf(j);if(!rd||rd>=en)return;
-    /* 이월접수 = 지난달까지 접수했는데 지난달 말까지 완료가 안 된 건 (이달에 처리됐거나 아직 미완료).
+    /* 이월접수 = 지난달까지 접수했는데 지난달 말까지 완료가 안 된 건 (당월에 처리됐거나 아직 미완료).
        취소일(cancel_date, phase1zx)이 적힌 건은 그 날짜로 보고, 취소일이 없는 예전 취소 건은 이월로 세지 않는다 */
     const cd=j.status==="취소"?(j.cancel_date||(rd<st?"":updOf(j))):"";
     const closedBefore=(j.status==="완료"&&doneOf(j)<st)||(j.status==="취소"&&(!cd||cd<st));
