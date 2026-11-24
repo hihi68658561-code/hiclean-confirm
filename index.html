@@ -953,7 +953,7 @@ function mobLeads(){const td=today();if(!ui.mlm)ui.mlm=thisMonth();if(!ui.mlk||!
   const [m0,m1]=monthRange(ui.mlm);const [y,m]=ui.mlm.split("-").map(Number);const all=leads||[];
   const M=all.filter(l=>l.recv_date&&l.recv_date>=m0&&l.recv_date<m1);const isOrd=l=>l.status==="오더"||!!l.customer_id;
   /* 미배정 = 영업담당이 정해지지 않은 상담 (월과 상관없이 전부) */
-  const sets={unasg:all.filter(l=>!l.sales&&!String(l.sales_name||"").trim()&&l.status!=="종결"&&!isOrd(l)),open:M.filter(leadOpen),ord:M.filter(isOrd),all:M};
+  const noSal=l=>!l.sales&&!String(l.sales_name||"").trim();const sets={unasg:all.filter(l=>noSal(l)&&l.status!=="종결"&&!isOrd(l)),open:M.filter(l=>leadOpen(l)&&!noSal(l)),ord:M.filter(isOrd),all:M};
   const LT={오더:"s2",종결:"s4",방문:"s1",관리:"s1",미수:"neg"};const srcs=[...new Set(sets[ui.mlk].map(l=>l.source||"").filter(Boolean))];if(ui.mls&&!srcs.includes(ui.mls))ui.mls="";
   view().innerHTML=`<div class="m-body"><div class="m-sb"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="M20 20l-4-4"/></svg><input id="mlQ" type="search" autocomplete="off" placeholder="업장명·대표자·연락처 찾기" aria-label="상담 검색" value="${esc(ui.mlq||"")}"></div>
     <div class="m-mon"><button type="button" data-mlm="-1" aria-label="지난달">‹</button><b>${y}년 ${m}월</b><button type="button" data-mlm="1" aria-label="다음 달">›</button></div>
