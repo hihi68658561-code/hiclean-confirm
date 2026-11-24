@@ -140,6 +140,11 @@ body.mob .app>.top{display:none}body.mob #view{padding-bottom:74px}
 .m-fab{position:fixed;right:16px;bottom:78px;z-index:45;background:#f5821f;color:#fff;border:0;border-radius:26px;padding:12px 18px;font:inherit;font-size:14px;font-weight:700;box-shadow:0 4px 12px rgba(0,0,0,.25);cursor:pointer}
 .m-mn{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:12px}.m-mn button{background:var(--panel);border:0;border-radius:14px;padding:13px 4px;font:inherit;font-size:12.5px;color:inherit;display:flex;flex-direction:column;align-items:center;gap:4px;position:relative;cursor:pointer}.m-mn .nic{color:var(--accent)}.m-mn button.ndot::after{content:"";position:absolute;top:8px;right:12px;width:7px;height:7px;border-radius:50%;background:#e03131}
 .m-seg{display:flex;border:1px solid var(--accent);border-radius:12px;overflow:hidden}.m-seg button{flex:1;border:0;background:none;font:inherit;font-size:14px;padding:9px;color:var(--accent);cursor:pointer}.m-seg .on{background:var(--accent);color:#fff;font-weight:700}
+.m-mon{display:flex;align-items:center;justify-content:space-between;background:var(--panel);border-radius:12px;padding:4px 6px;margin-bottom:8px}.m-mon b{font-size:15px}.m-mon button{border:0;background:none;font-size:22px;color:var(--accent);padding:2px 12px;cursor:pointer}
+.m-sum{display:grid;grid-template-columns:repeat(4,1fr);gap:6px;margin-bottom:8px}.m-sum button{background:var(--panel);border:2px solid transparent;border-radius:12px;padding:6px 0;font:inherit;font-size:11.5px;color:var(--mute);cursor:pointer}.m-sum b{display:block;font-size:18px;color:var(--fg,#1b2430)}.m-sum .r b{color:#d9480f}.m-sum .on{border-color:var(--accent);background:var(--accent-weak,#eef4fb)}
+.m-kc{flex-wrap:nowrap;overflow-x:auto;scrollbar-width:none}.m-kc button{white-space:nowrap;font-size:12.5px;padding:4px 10px}
+.m-jc{display:block;width:100%;text-align:left;font:inherit;color:inherit;background:var(--panel);border:0;border-left:4px solid transparent;border-radius:12px;padding:9px 12px;margin-bottom:7px;cursor:pointer}.m-jc.late{border-left-color:#d9480f}.m-jc .h{display:flex;align-items:center;gap:7px}.m-jc .d{display:block;margin-top:4px;font-size:12.5px;color:var(--mute)}
+.m-st{font-size:11px;border:1px solid;border-radius:10px;padding:1px 7px;white-space:nowrap}.m-st.s1{color:var(--accent)}.m-st.s2{color:#2f9e44}.m-st.s3{color:#e67700}.m-st.s4{color:#868e96}
 .mobsw[hidden]{display:none}
 .mback{display:none}
 @media (max-width:760px){.body.mdet>aside{display:none}.body.mdet>.mback{display:flex;align-items:center;gap:10px;position:fixed;top:0;left:0;right:0;height:50px;padding:0 12px;z-index:61;background:var(--panel);border-bottom:1px solid var(--line);box-shadow:0 1px 4px rgba(0,0,0,.06)}
@@ -820,12 +825,13 @@ function mobMine(){const myNames=[me.name,...(((staff||[]).find(x=>x.user_id===m
   return j=>(j.techs||[]).includes(me.id)||String(j.tech_names||"").split(/[\s,/·]+/).some(t=>t&&myNames.includes(t))}
 const mobTechOnly=()=>meHas("tech")&&!isOffice();
 function mobJobRow(j,showWho){const c=custById(j.customer_id);return `<button type="button" class="m-it" data-mj="${j.id}"><span class="m-t">${esc(fmtTime(j.visit_time).replace(/^오전 /,"").replace(/^오후 (\d+)/,(m,h)=>String(+h===12?12:+h+12)))||"-"}</span><span class="badge ${j.kind}">${esc(kl(j)||j.kind)}</span><b class="m-n">${esc(j.customer_name||(c&&c.name)||"")}</b>${showWho?`<span class="m-w">${esc(whoOf(j)||"미배정")}</span>`:""}${j.status==="완료"?`<span class="m-ok">완료</span>`:j.status==="보류"?`<span class="m-hold">보류</span>`:""}</button>`}
-function mobChrome(tabs){
+function mobChrome(tabs,NS){
   let top=document.getElementById("mtop"),tab=document.getElementById("mtab");
   if(!top){top=document.createElement("div");top.id="mtop";top.className="m-top";document.querySelector(".app").prepend(top)}
   if(!tab){tab=document.createElement("nav");tab.id="mtab";tab.className="m-tab";tab.setAttribute("aria-label","아래 메뉴");document.body.appendChild(tab)}
   const logo=(document.querySelector(".top .logo")||{}).src||"";
-  top.innerHTML=`<img src="${logo}" alt="하이클린"><b>업무관리</b><div class="m-ver" role="group" aria-label="화면 보기"><button type="button" data-ver="pc">PC</button><button type="button" class="on" aria-pressed="true">모바일</button></div>`;
+  const ttl=["home","cust","sched","mmore"].includes(ui.view)?"업무관리":String((NS&&NS[ui.view==="schedpc"?"sched":ui.view])||"업무관리").replace("<br>"," ");
+  top.innerHTML=`<img src="${logo}" alt="하이클린"><b>${ttl}</b><div class="m-ver" role="group" aria-label="화면 보기"><button type="button" data-ver="pc">PC</button><button type="button" class="on" aria-pressed="true">모바일</button></div>`;
   top.querySelector("[data-ver=pc]").onclick=()=>setVer("pc");
   const cur=["home","cust","sched"].includes(ui.view)?ui.view:"mmore";
   const T=[["home","홈"],["cust","고객"],["sched","일정"],["mmore","더보기"]];
@@ -837,6 +843,7 @@ function mobRender(tabs,NS){
   if(ui.view==="cust"&&!ui.mfull){const c=ui.mdet&&ui.sel&&custById(ui.sel);if(c)mobDetail(c);else mobCust();return true}
   if(ui.view==="sched"){mobSched();return true}
   if(ui.view==="mmore"){mobMore(tabs,NS);return true}
+  if(ui.view==="work"){mobWork();return true}
   return false}
 function mobHome(){const td=today(),mine=mobMine(),tech=mobTechOnly();
   const live=jobs.filter(j=>j.status!=="취소"&&(!tech||mine(j)));const tk=j=>timeKey(j.visit_time);
@@ -904,6 +911,34 @@ function mobSched(){const td=today();if(!ui.msd)ui.msd=td;if(ui.mall===undefined
   view().querySelectorAll("[data-mall]").forEach(b=>b.onclick=()=>{ui.mall=b.dataset.mall==="1";mobSched()});
   const f=document.getElementById("mNew");if(f)f.onclick=()=>jobDlg(null,null,"as",null,{visit_date:ui.msd});
   const pc=view().querySelector("[data-mpc]");if(pc)pc.onclick=()=>{ui.view="schedpc";ui.schJump=true;ui._fresh=true;render()}}
+function mobWork(){if(!ui.wm)ui.wm=thisMonth();if(!ui.mwr)ui.mwr="open";if(ui.mwk===undefined)ui.mwk="";const tech=meHas("tech");if(ui.mwall===undefined)ui.mwall=!tech;
+  const mine=mobMine();const scoped=jobs.filter(j=>ui.mwall||mine(j));const B=monthBuckets(scoped,ui.wm);const carry=new Set(B.carry.map(j=>j.id));
+  const all=B.carry.concat(B.new);const rows={open:B.open,done:B.done,hold:B.hold,all};const [y,m]=ui.wm.split("-").map(Number);
+  const KS=[["","전체"],["as","A/S"],["install","설치"],["remove","철거"],["addon","추가"],["move","이전"],["etc","기타"]];
+  view().innerHTML=`<div class="m-body"><div class="m-sb"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="M20 20l-4-4"/></svg><input id="mwQ" type="search" autocomplete="off" placeholder="업체명·전화번호로 이번 달 작업 찾기" aria-label="작업 검색" value="${esc(ui.mwq||"")}"></div>
+    ${tech?`<div class="m-chips"><button type="button" class="${ui.mwall?"":"on"}" data-mwa="0">나의 배정건</button><button type="button" class="${ui.mwall?"on":""}" data-mwa="1">전체</button></div>`:""}
+    <div class="m-mon"><button type="button" data-mwm="-1" aria-label="지난달">‹</button><b>${y}년 ${m}월</b><button type="button" data-mwm="1" aria-label="다음 달">›</button></div>
+    <div class="m-sum">${[["open","미완료","r"],["done","완료",""],["hold","보류",""],["all","전체",""]].map(([k,l,c])=>`<button type="button" class="${ui.mwr===k?"on":""} ${c}" data-mwr="${k}"><b>${rows[k].length}</b>${l}</button>`).join("")}</div>
+    <div class="m-chips m-kc">${KS.map(([k,l])=>{const n=rows[ui.mwr].filter(j=>!k||j.kind===k).length;return k&&!n&&ui.mwk!==k?"":`<button type="button" class="${ui.mwk===k?"on":""}" data-mwk="${k}">${l} ${n}</button>`}).join("")}</div><div id="mwL"></div></div>`;
+  const q=document.getElementById("mwQ");
+  const draw=()=>{ui.mwq=q.value;const qq=csN(q.value.trim());let list=rows[ui.mwr].filter(j=>!ui.mwk||j.kind===ui.mwk);
+    if(qq)list=list.filter(j=>{const c=custById(j.customer_id);return csN(j.customer_name).includes(qq)||(c&&custSearchText(c).includes(qq))});
+    const dk=j=>ui.mwr==="done"?String(j.done_date||""):String(j.visit_date||j.request_date||"9999");
+    list=list.slice().sort((a,b)=>ui.mwr==="open"||ui.mwr==="hold"?dk(a).localeCompare(dk(b))||timeKey(a.visit_time).localeCompare(timeKey(b.visit_time)):dk(b).localeCompare(dk(a)));
+    const md=d=>d?String(d).slice(5).replace("-","/"):"-";
+    const ST={완료:"s2",보류:"s3",배정:"s1",접수:"s4",취소:"s4"};
+    document.getElementById("mwL").innerHTML=(qq?`<p class="mapt" style="margin:0 2px 8px">${m}월 · 검색 결과 ${list.length}건</p>`:"")+list.slice(0,200).map(j=>{const c=custById(j.customer_id);const pr=j.product||{};
+      const prod=[prodName(pr.product),pr.size].filter(Boolean).join(" ");
+      const pay=j.paid_type==="무상"?"무상":Number(j.cost||0)?`유상 ${won0(j.cost)}${j.pay_method?" · "+esc(j.pay_method):""}${j.pay_status==="미수"?' · <b class="neg">미수</b>':""}`:"";
+      const txt=j.status==="완료"?[esc(j.result||j.action||j.symptom||prod),pay].filter(Boolean).join(" · "):[esc(j.symptom||prod||j.sink_memo||""),carry.has(j.id)?"이월":""].filter(Boolean).join(" · ");
+      return `<button type="button" class="m-jc ${carry.has(j.id)&&j.status!=="완료"?"late":""}" data-mj="${j.id}"><span class="h"><span class="m-t">${md(j.status==="완료"?(j.done_date||j.visit_date):(j.visit_date||j.request_date))}</span><span class="badge ${j.kind}">${esc(kl(j)||j.kind)}</span><b class="m-n">${esc(j.customer_name||(c&&c.name)||"")}</b><span class="m-st ${ST[j.status]||"s4"}">${esc(j.status)}</span></span>${txt?`<span class="d">${txt}</span>`:""}<span class="d">👷 ${esc(whoOf(j)||"미배정")}</span></button>`}).join("")
+      +(list.length>200?`<p class="mapt m-more">${list.length}건 중 200건만 보입니다. 검색이나 종류로 좁혀 보세요.</p>`:"")+(!list.length?`<p class="mapt m-more">${qq?"찾는 작업이 없습니다.":"해당하는 작업이 없습니다."}</p>`:"");
+    mobBindJobs()};
+  q.addEventListener("input",draw);draw();
+  view().querySelectorAll("[data-mwr]").forEach(b=>b.onclick=()=>{ui.mwr=b.dataset.mwr;mobWork()});
+  view().querySelectorAll("[data-mwk]").forEach(b=>b.onclick=()=>{ui.mwk=b.dataset.mwk;mobWork()});
+  view().querySelectorAll("[data-mwa]").forEach(b=>b.onclick=()=>{ui.mwall=b.dataset.mwa==="1";mobWork()});
+  view().querySelectorAll("[data-mwm]").forEach(b=>b.onclick=()=>{const [yy,mm]=ui.wm.split("-").map(Number);const d=new Date(yy,mm-1+Number(b.dataset.mwm),1);ui.wm=d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0");mobWork()})}
 function mobMore(tabs,NS){const items=tabs.filter(([k])=>!["home","cust","sched"].includes(k)).concat([["schedpc","일정표"]]);
   view().innerHTML=`<div class="m-body"><div class="m-mn">${items.map(([k,l])=>`<button type="button" data-mm="${k}"${k==="notice"&&noticeUnread()?' class="ndot"':""}><i class="nic"><svg viewBox="0 0 24 24">${NAVI[k==="schedpc"?"sched":k]||""}</svg></i>${(NS[k]||l).replace("<br>"," ")}</button>`).join("")}</div>
     <section class="m-card"><h4>화면 보기</h4><div class="m-seg"><button type="button" data-ver="pc">PC 버전</button><button type="button" class="on">모바일 버전</button></div><p class="mapt" style="margin:8px 0 0">PC 버전은 모든 기능이 있는 기존 화면입니다. 고른 화면은 이 기기에 기억됩니다.</p></section>
@@ -919,7 +954,7 @@ function render0(){
   /* 모바일 버전 */
   const mob=isMob();document.body.classList.toggle("mob",mob);if(!mob){["mtop","mtab"].forEach(id=>{const e=document.getElementById(id);if(e)e.remove()})}
   {const mb=document.getElementById("bMobV");if(mb){mb.hidden=mob||window.innerWidth>=760;mb.onclick=()=>setVer("mobile")}}
-  if(mob){if(ui.view==="settings"&&!isAdmin())ui.view="home";mobChrome(tabs);if(mobRender(tabs,NS))return}
+  if(mob){if(ui.view==="settings"&&!isAdmin())ui.view="home";mobChrome(tabs,NS);if(mobRender(tabs,NS))return}
   const NF=8,hid=tabs.slice(NF).map(t=>t[0]);if(hid.includes(ui.view))ui.navOpen=true;
   document.getElementById("nav").className="nav"+(ui.navOpen?" nopen":"");
   document.getElementById("nav").innerHTML=tabs.map(([k,l],i)=>`<button type="button" class="${ui.view===k?"on":""}${k==="notice"&&ui.view!=="notice"&&noticeUnread()?" ndot":""}${i>=NF?" nx":""}" data-v="${k}"><i class="nic"><svg viewBox="0 0 24 24">${NAVI[k]||""}</svg></i><span class="nll">${l}</span><span class="nls">${NS[k]||l}</span></button>`).join("")+(tabs.length>NF?`<a class="nmore" role="button">${ui.navOpen?"메뉴 접기 ▴":`전체 메뉴 ▾ <small>(나머지 ${tabs.length-NF}개)</small>`}</a>`:"");
