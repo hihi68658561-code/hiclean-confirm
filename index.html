@@ -150,6 +150,9 @@ div.m-jc{cursor:default}.m-1l{white-space:nowrap;overflow:hidden;text-overflow:e
 .m-lt{font-size:11px;font-weight:700;border-radius:10px;padding:1px 7px;white-space:nowrap}.m-lt.o{background:#fff4d6;color:#b45309}.m-lt.c{background:#eceff3;color:#5b6673}.m-lt.v{background:#e6f4ea;color:#2f9e44}.m-lt.g{background:#e8f0fe;color:#1d5fa8}.m-lt.r{background:#ffe3e3;color:#c92a2a}.m-lt.x{border:1px solid var(--line);color:var(--mute)}
 .m-big{font-size:24px;font-weight:800;color:#d9480f;margin-top:2px}.m-jc .smc-t{-webkit-line-clamp:2}.m-jc .h a{color:inherit;text-decoration:none}
 body.mob .ntlist{padding:12px}body.mob .toolbar:has(+ .sec .warnbox),body.mob #view>.toolbar:first-child h2{display:none}body.mob .nt{border-radius:14px}body.mob .nt-au{display:none}body.mob .nt-h{flex-wrap:wrap}
+.wt.dp td,.wt.dp th{padding:8px 10px}.wt.dp td.wrap{white-space:normal;min-width:260px}.wt.dp tr.dp-new td{background:#fffdf3}.wt.dp tr.dp-dim td{color:var(--mute)}
+.dp-ok{color:#2f9e44;font-weight:700}.dp-q{color:#e67700;font-weight:700}.dp-st{font-size:11.5px;font-weight:700;border-radius:10px;padding:2px 8px;white-space:nowrap}.dp-st.ok{background:#2f9e44;color:#fff}.dp-st.no{background:#fff4e6;color:#e67700;border:1px solid #ffc078}.dp-st.ex{background:#868e96;color:#fff}
+.dp-cfg{display:grid;grid-template-columns:auto 1fr auto;gap:6px 8px;align-items:center;margin-bottom:10px}.dp-cfg span{font-size:12.5px;color:var(--mute)}.dp-cfg code{font-size:12px;background:var(--line2,#f1f3f5);border-radius:6px;padding:5px 8px;word-break:break-all}
 .mobsw[hidden]{display:none}
 .mback{display:none}
 @media (max-width:760px){.body.mdet>aside{display:none}.body.mdet>.mback{display:flex;align-items:center;gap:10px;position:fixed;top:0;left:0;right:0;height:50px;padding:0 12px;z-index:61;background:var(--panel);border-bottom:1px solid var(--line);box-shadow:0 1px 4px rgba(0,0,0,.06)}
@@ -817,7 +820,7 @@ function restoreScroll(s){if(!s||s.v!==ui.view)return;const els=[...document.que
   s.els.forEach((p,i)=>{const e=els[i];if(e){e.scrollTop=p[0];e.scrollLeft=p[1]}});window.scrollTo(s.x,s.y);
   document.querySelectorAll(".hbar").forEach(b=>{const box=b.previousElementSibling;if(box)b.scrollLeft=box.scrollLeft})}
 function render(){if(ui._fresh){ui._fresh=false;render0();window.scrollTo(0,0);return}const _sv=snapScroll();try{render0()}finally{restoreScroll(_sv)}}
-const NAVI={home:'<path d="M3 11l9-7 9 7"/><path d="M5 10v10h14V10"/>',cust:'<circle cx="12" cy="8" r="4"/><path d="M4 21c1-4 4-6 8-6s7 2 8 6"/>',leads:'<ellipse cx="12" cy="5" rx="8" ry="3"/><path d="M4 5v6c0 1.7 3.6 3 8 3s8-1.3 8-3V5"/><path d="M4 11v6c0 1.7 3.6 3 8 3s8-1.3 8-3v-6"/>',
+const NAVI={deposit:'<rect x="3" y="6" width="18" height="12" rx="2"/><circle cx="12" cy="12" r="2.5"/><path d="M6 9v6M18 9v6"/>',home:'<path d="M3 11l9-7 9 7"/><path d="M5 10v10h14V10"/>',cust:'<circle cx="12" cy="8" r="4"/><path d="M4 21c1-4 4-6 8-6s7 2 8 6"/>',leads:'<ellipse cx="12" cy="5" rx="8" ry="3"/><path d="M4 5v6c0 1.7 3.6 3 8 3s8-1.3 8-3V5"/><path d="M4 11v6c0 1.7 3.6 3 8 3s8-1.3 8-3v-6"/>',
 work:'<rect x="3" y="5" width="18" height="16" rx="2"/><path d="M3 10h18M8 3v4M16 3v4"/><path d="M8 15l2 2 4-4"/>',ctrm:'<rect x="5" y="3" width="14" height="18" rx="2"/><path d="M9 8h6M9 12h6M9 16h4"/>',allm:'<path d="M4 6h16M4 12h16M4 18h16"/>',asm:'<path d="M14 7l3-3 3 3-3 3"/><path d="M17 7L7 17"/><circle cx="6" cy="18" r="2.5"/>',
 recv:'<rect x="3" y="6" width="18" height="13" rx="2"/><path d="M3 10h18"/><circle cx="16" cy="15" r="1.5"/>',sched:'<rect x="3" y="5" width="18" height="16" rx="2"/><path d="M3 10h18M8 3v4M16 3v4"/>',sink:'<path d="M3 11h18v3a5 5 0 0 1-5 5H8a5 5 0 0 1-5-5z"/><path d="M12 11V6a2 2 0 0 1 4 0"/>',
 stock:'<path d="M21 8l-9-5-9 5 9 5 9-5z"/><path d="M3 8v8l9 5 9-5V8"/><path d="M12 13v8"/>',sms:'<path d="M4 5h16v11H8l-4 4z"/>',notice:'<path d="M3 11v2a1 1 0 0 0 1 1h3l6 4V6L7 10H4a1 1 0 0 0-1 1z"/><path d="M17 9a4 4 0 0 1 0 6"/>',settings:'<circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.6 1.6 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.6 1.6 0 0 0-2.7 1.1V21a2 2 0 0 1-4 0v-.1a1.6 1.6 0 0 0-2.7-1.1l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1A1.6 1.6 0 0 0 3.5 14H3a2 2 0 0 1 0-4h.1a1.6 1.6 0 0 0 1.1-2.7l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1A1.6 1.6 0 0 0 9.7 4V3a2 2 0 0 1 4 0v.1a1.6 1.6 0 0 0 2.7 1.1l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.6 1.6 0 0 0 1.1 2.7H21a2 2 0 0 1 0 4h-.1a1.6 1.6 0 0 0-1.5 1.3z"/>'};
@@ -853,6 +856,7 @@ function mobRender(tabs,NS){
   if(ui.view==="sms"){mobSms();return true}
   if(ui.view==="recv"&&!ui.noRecv){mobRecv();return true}
   if(ui.view==="sink"){mobSink();return true}
+  if(ui.view==="deposit"&&isOffice()){renderDepositView();return true}
   return false}
 function mobHome(){const td=today(),mine=mobMine(),tech=mobTechOnly();
   const live=jobs.filter(j=>j.status!=="취소"&&(!tech||mine(j)));const tk=j=>timeKey(j.visit_time);
@@ -1039,8 +1043,8 @@ function mobMore(tabs,NS){const items=tabs.filter(([k])=>!["home","cust","sched"
 function render0(){
   ui.dirty=false;
   if(me.role==="sales"&&((ui.view==="work"&&!meHas("tech"))||ui.view==="asm"))ui.view="home";
-  const tabs=[["home","홈"],["cust","고객조회"]];if(me.role!=="tech")tabs.push(["leads","DB관리"]);if(me.role!=="sales"||meHas("tech"))tabs.push(["work","당월 설치·A/S 전체리스트"]);if(me.role!=="tech")tabs.push(["ctrm","당월리스트"],["allm","전체리스트"],...(me.role==="sales"?[]:[["asm","A/S관리"]]),["recv","미수·채권관리"]);tabs.push(["sched","담당자별 일정표"]);if(me.role!=="tech")tabs.push(["sink","싱크대발주"]);if(isOffice())tabs.push(["stock","재고관리"]);if(me.role!=="tech")tabs.push(["sms","문자"]);tabs.push(["notice","공지사항"]);if(isAdmin())tabs.push(["settings","설정"]);
-  const NS={home:"홈",cust:"고객조회",leads:"DB관리",work:"당월<br>설치·A/S",ctrm:"당월리스트",allm:"전체리스트",asm:"A/S관리",recv:"미수채권",sched:"일정표",sink:"싱크대발주",stock:"재고관리",sms:"문자",notice:"공지사항",settings:"설정"};
+  const tabs=[["home","홈"],["cust","고객조회"]];if(me.role!=="tech")tabs.push(["leads","DB관리"]);if(me.role!=="sales"||meHas("tech"))tabs.push(["work","당월 설치·A/S 전체리스트"]);if(me.role!=="tech")tabs.push(["ctrm","당월리스트"],["allm","전체리스트"],...(me.role==="sales"?[]:[["asm","A/S관리"]]),["recv","미수·채권관리"]);if(isOffice())tabs.push(["deposit","입금확인"]);tabs.push(["sched","담당자별 일정표"]);if(me.role!=="tech")tabs.push(["sink","싱크대발주"]);if(isOffice())tabs.push(["stock","재고관리"]);if(me.role!=="tech")tabs.push(["sms","문자"]);tabs.push(["notice","공지사항"]);if(isAdmin())tabs.push(["settings","설정"]);
+  const NS={home:"홈",cust:"고객조회",leads:"DB관리",work:"당월<br>설치·A/S",ctrm:"당월리스트",allm:"전체리스트",asm:"A/S관리",recv:"미수채권",deposit:"입금확인",sched:"일정표",sink:"싱크대발주",stock:"재고관리",sms:"문자",notice:"공지사항",settings:"설정"};
   /* 모바일 버전 */
   const mob=isMob();document.body.classList.toggle("mob",mob);if(!mob){["mtop","mtab"].forEach(id=>{const e=document.getElementById(id);if(e)e.remove()})}
   {const mb=document.getElementById("bMobV");if(mb){mb.hidden=mob||window.innerWidth>=760;mb.onclick=()=>setVer("mobile")}}
@@ -1053,7 +1057,7 @@ function render0(){
   if(ui.view==="install"||ui.view==="as")ui.view="work";
   if(ui.view==="schedpc"){if(mob){renderSchedView();addXlsBtn();return}ui.view="sched"}
   if(mob&&ui.view==="cust"&&ui.mfull){renderCustView();const bb=document.getElementById("mBackB");if(bb)bb.onclick=()=>{ui.mfull=false;ui._fresh=true;render()};return}
-  if(ui.view==="home")renderHomeView();else if(ui.view==="cust")renderCustView();else if(ui.view==="work")renderWorkView();else if(ui.view==="ctrm")renderCtrView();else if(ui.view==="asm")renderAsView();else if(ui.view==="leads")renderLeadView();else if(ui.view==="recv")renderRecvView();else if(ui.view==="allm")renderAllView();else if(ui.view==="sched")renderSchedView();else if(ui.view==="sms")renderSmsView();else if(ui.view==="notice")renderNoticeView();else if(ui.view==="sink")renderSinkView();else if(ui.view==="stock")renderStockView();else if(ui.view==="staff"){ui.view="settings";ui.settab="perm";render()}else if(ui.view==="delete")renderDeleteView();else{if(ui.settab==="etc"||!isAdmin())renderSettings();else renderStaffView()}
+  if(ui.view==="home")renderHomeView();else if(ui.view==="cust")renderCustView();else if(ui.view==="work")renderWorkView();else if(ui.view==="ctrm")renderCtrView();else if(ui.view==="asm")renderAsView();else if(ui.view==="leads")renderLeadView();else if(ui.view==="recv")renderRecvView();else if(ui.view==="deposit"&&isOffice())renderDepositView();else if(ui.view==="allm")renderAllView();else if(ui.view==="sched")renderSchedView();else if(ui.view==="sms")renderSmsView();else if(ui.view==="notice")renderNoticeView();else if(ui.view==="sink")renderSinkView();else if(ui.view==="stock")renderStockView();else if(ui.view==="staff"){ui.view="settings";ui.settab="perm";render()}else if(ui.view==="delete")renderDeleteView();else{if(ui.settab==="etc"||!isAdmin())renderSettings();else renderStaffView()}
   addXlsBtn();
 }
 
@@ -5093,16 +5097,108 @@ async function photoBackup(btn,ym,withNotice){if(!isAdmin())return toast("관리
     toast(`사진 ${okN}개를 ZIP으로 내려받았습니다${fail.length?` · ${fail.length}개는 받지 못했습니다`:""}`)}
   catch(e){toast("사진 백업을 만들지 못했습니다: "+(e&&e.message||e))}
   finally{btn.disabled=false;btn.textContent=old}}
+/* ================= 입금 확인 (은행 입금 문자 → 미수 건에 연결) ================= */
+let bdeps=null;
+const depN=s=>String(s||"").replace(/\(주\)|㈜|주식회사|\s|[()·.\-]/g,"").toLowerCase();
+function depItems(){let rv=[];try{rv=recvItems()}catch(e){}return rv.filter(x=>x.open&&x.unpaid>0&&(x.t==="ctr"||x.t==="as"))}
+function depNames(x){const c=x.c||{};const a=[c.name,c.ceo,c.biz_name];if(x.t==="as"&&x.j)a.push(x.j.pay_name,x.j.customer_name);if(x.t==="ctr"&&x.k){a.push(x.k.pay_name);paysOf(x.k).forEach(p=>a.push(p.payer))}return a.map(depN).filter(v=>v&&v.length>=2)}
+function depMatch(d,items){const dn=depN(d.depositor);const out=[];items.forEach(x=>{const ns=depNames(x);const nm=!!dn&&ns.some(n=>n===dn||(dn.length>=2&&(n.includes(dn)||dn.includes(n))));const am=Number(x.unpaid)===Number(d.amount);if(nm||am)out.push({x,nm,am,sc:(nm?2:0)+(am?1:0)})});
+  out.sort((a,b)=>b.sc-a.sc||Math.abs(a.x.unpaid-d.amount)-Math.abs(b.x.unpaid-d.amount));const strong=out.filter(o=>o.nm&&o.am);return{list:out,best:strong.length===1?strong[0]:null}}
+const depWhat=x=>x.t==="ctr"?`계약 미수 ${won0(x.unpaid)}`:`${kl(x.j)||"A/S"} 미수 ${won0(x.unpaid)}`;
+async function fetchDeps(){const {data,error}=await sb.from("bank_deposits").select("*").order("dep_at",{ascending:false}).limit(2000);if(error){ui.noDeps=true;bdeps=[];return bdeps}ui.noDeps=false;bdeps=data||[];return bdeps}
+const depDate=d=>{const t=d.dep_at?new Date(d.dep_at):null;if(!t||isNaN(t))return today();return new Date(t.getTime()+9*3600e3).toISOString().slice(0,10)};
+async function depApply(d,x){const pd=depDate(d);let pid=null,err=null;
+  if(x.t==="ctr"){const r=await sb.from("payments").insert({contract_id:x.k.id,customer_id:x.k.customer_id,pay_date:pd,method:"입금",payer:d.depositor||"",amount:Number(d.amount||0),memo:"입금확인(은행 문자)"}).select("id").single();err=r.error;pid=r.data&&r.data.id}
+  else{const r=await sb.from("job_payments").insert({job_id:x.j.id,customer_id:x.j.customer_id,pay_date:pd,method:"계좌이체",payer:d.depositor||"",amount:Number(d.amount||0),memo:"입금확인(은행 문자)"}).select("id").single();err=r.error;pid=r.data&&r.data.id}
+  if(err){toast("입금을 넣지 못했습니다: "+err.message);return false}
+  if(x.t==="as"){await reload(["jpays"],true);const j=jobs.find(z=>z.id===x.j.id)||x.j;const dv=jpDerive(jpaysOf(j),Number(j.cost||0),j.pay_status);if(dv)await sb.from("jobs").update(dv).eq("id",j.id)}
+  const {error:e2}=await sb.from("bank_deposits").update({status:"확인",match_type:x.t,match_id:x.t==="ctr"?x.k.id:x.j.id,customer_id:(x.c&&x.c.id)||null,pay_id:pid,handled_by:me.name||"",handled_at:new Date().toISOString()}).eq("id",d.id);
+  if(e2){toast("입금은 넣었지만 확인 표시를 못했습니다: "+e2.message);return false}return true}
+async function depUndo(d){if(d.pay_id){const t=d.match_type==="as"?"job_payments":"payments";const {error}=await sb.from(t).delete().eq("id",d.pay_id);if(error)return toast("입금 기록을 지우지 못했습니다: "+error.message);
+    if(d.match_type==="as"){await reload(["jpays"],true);const j=jobs.find(z=>z.id===d.match_id);if(j){const rows=jpaysOf(j);const dv=rows.length?jpDerive(rows,Number(j.cost||0),j.pay_status):{pay_status:Number(j.cost||0)>0&&j.paid_type!=="무상"?"미수":"",pay_method:"",pay_date:null,pay_name:""};await sb.from("jobs").update(dv).eq("id",j.id)}}}
+  const {error}=await sb.from("bank_deposits").update({status:"미확인",match_type:"",match_id:null,customer_id:null,pay_id:null,handled_by:"",handled_at:null}).eq("id",d.id);if(error)return toast("되돌리지 못했습니다: "+error.message);return true}
+async function depAfter(){await reload(["payments","jpays","jobs"],true);await fetchDeps();render()}
+function depPick(d){const items=depItems();const m=depMatch(d,items);let q="";
+  const row=(x,i,tag)=>`<button type="button" class="hrow" data-dpi="${i}"><b class="hname">${esc(x.c&&x.c.name||"")}</b><span class="mapt">${esc(depWhat(x))}${tag?" · "+tag:""}</span></button>`;
+  openDlg(`입금 연결 · ${esc(d.depositor||"")} ${won0(d.amount)}원`,`<p class="mapt" style="margin:0 0 8px">${esc(ymd2(depDate(d)))} 입금을 어느 미수 건에 넣을지 고르세요. 고르면 그 건의 입금 내역에 바로 들어갑니다.</p>
+    <input id="dpQ" type="search" placeholder="업체명·대표자·전화번호로 미수 건 찾기" autocomplete="off" style="width:100%;margin-bottom:8px"><div id="dpL" class="pickres" style="max-height:340px"></div>`,[["닫기"]]);
+  const L=document.getElementById("dpL"),Q=document.getElementById("dpQ");
+  const draw=()=>{q=csN(Q.value.trim());let arr=q?items.filter(x=>x.c&&x.c.id&&custSearchText(x.c).includes(q)).map(x=>({x})):m.list;arr=arr.slice(0,60);
+    L.innerHTML=arr.map((o,i)=>row(o.x,i,o.nm&&o.am?"이름·금액 일치":o.nm?"이름 일치":o.am?"금액 일치":"")).join("")||`<p class="mapt">${q?"찾는 미수 건이 없습니다.":"추천할 미수 건이 없습니다. 업체명으로 찾아보세요."}</p>`;
+    L.querySelectorAll("[data-dpi]").forEach(b=>b.onclick=async()=>{const x=arr[+b.dataset.dpi].x;if(!(await askConfirm(`${x.c.name} · ${depWhat(x)}\n여기에 ${won0(d.amount)}원 입금을 넣을까요?`)))return;if(await depApply(d,x)){document.getElementById("dlg").close();toast("입금 처리했습니다");depAfter()}})};
+  Q.addEventListener("input",draw);draw();Q.focus()}
+async function depMemo(d){openDlg("입금 메모",`<label class="f">메모<textarea id="dpM" rows="3">${esc(d.memo||"")}</textarea></label>`,[["닫기"],["저장","pri",async()=>{const {error}=await sb.from("bank_deposits").update({memo:val("dpM").trim()}).eq("id",d.id);if(error){toast("저장하지 못했습니다: "+error.message);return true}toast("저장했습니다");depAfter()}]])}
+async function renderDepositView(){if(!bdeps)view().innerHTML=`<p class="mapt" style="padding:20px">불러오는 중…</p>`;await fetchDeps();if(ui.view!=="deposit")return;
+  const mob=isMob();const td=today();if(!ui.dpr)ui.dpr=15;if(!ui.dpst)ui.dpst="미확인";if(ui.dpd1===undefined){ui.dpd2=td;ui.dpd1=addDays(td,-15)}if(!ui.dpm)ui.dpm=thisMonth();
+  if(ui.noDeps){view().innerHTML=`<div class="sec"><p class="warnbox">입금 확인을 쓰려면 Supabase SQL Editor에서 <b>phase1zz3.sql</b>을 실행해 주세요.</p></div>`;return}
+  let d1,d2;if(mob){[d1,d2]=monthRange(ui.dpm);d2=addDays(d2,-1)}else{d1=ui.dpd1;d2=ui.dpd2}
+  const inR=d=>{const x=depDate(d);return x>=d1&&x<=d2};const R=bdeps.filter(inR);const items=depItems();
+  const mm=new Map(bdeps.filter(d=>d.status==="미확인").map(d=>[d.id,depMatch(d,items)]));
+  const cnt=s=>s==="전체"?R.length:s==="미확인"?bdeps.filter(d=>d.status==="미확인").length:R.filter(d=>d.status===s).length;
+  /* 미확인은 기간과 상관없이 전부 (처리할 것을 빠뜨리지 않게) */
+  let list=ui.dpst==="미확인"?bdeps.filter(d=>d.status==="미확인"):ui.dpst==="전체"?R:R.filter(d=>d.status===ui.dpst);
+  const qq=csN(ui.dpq||"");if(qq)list=list.filter(d=>{const c=d.customer_id&&custById(d.customer_id);return csN([d.depositor,d.amount,d.bank,d.memo,c&&c.name].join(" ")).includes(qq)});
+  list=list.slice().sort((a,b)=>(ui.dpold?1:-1)*String(a.dep_at||"").localeCompare(String(b.dep_at||"")));
+  const sumR=R.reduce((s,d)=>s+Number(d.amount||0),0);const bulk=bdeps.filter(d=>d.status==="미확인"&&mm.get(d.id)&&mm.get(d.id).best);
+  const linkTxt=d=>{if(d.status!=="확인")return"";const c=d.customer_id&&custById(d.customer_id);let w="";if(d.match_type==="as"){const j=jobs.find(z=>z.id===d.match_id);w=j?(kl(j)||"A/S")+" 입금":"A/S 입금"}else w="계약 입금";return `${esc(c?c.name:"")} · ${w}${d.handled_by?` <span class="mapt">(${esc(d.handled_by)})</span>`:""}`};
+  const sugg=d=>{const m=mm.get(d.id);if(!m)return"";if(m.best)return `<span class="dp-ok">✓ 이름·금액 일치</span> ${esc(m.best.x.c.name)} · ${esc(depWhat(m.best.x))}`;const o=m.list[0];if(o)return `<span class="dp-q">? ${o.nm?"이름만 일치":"금액만 일치"}</span> ${esc(o.x.c.name)} · ${esc(depWhat(o.x))}${m.list.length>1?` 외 ${m.list.length-1}건`:""}`;return `<span class="dp-q">맞는 미수 건 없음</span>`};
+  const stTag=d=>d.status==="확인"?`<span class="dp-st ok">입금확인</span>`:d.status==="제외"?`<span class="dp-st ex">제외</span>`:`<span class="dp-st no">미확인</span>`;
+  const acts=d=>d.status==="미확인"?`${mm.get(d.id)&&mm.get(d.id).best?`<button type="button" class="btn sm pri" data-dpa="${d.id}">입금 처리</button>`:""}<button type="button" class="btn sm" data-dpp="${d.id}">${mm.get(d.id)&&mm.get(d.id).best?"다른 건":"고르기"}</button><button type="button" class="btn sm" data-dpx="${d.id}">제외</button>`
+    :d.status==="확인"?`<button type="button" class="btn sm" data-dpu="${d.id}">입금확인 취소</button>`:`<button type="button" class="btn sm" data-dpr="${d.id}">되돌리기</button>`;
+  const chips=["미확인","확인","제외","전체"].map(s=>`<button type="button" class="chip ${ui.dpst===s?"on":""}" data-dps="${s}">${s==="확인"?"입금확인":s} ${cnt(s)}</button>`).join("");
+  if(mob){const [y,m]=ui.dpm.split("-").map(Number);
+    view().innerHTML=`<div class="m-body"><div class="m-sb"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="M20 20l-4-4"/></svg><input id="dpQq" type="search" autocomplete="off" placeholder="입금자·금액·업체명 찾기" value="${esc(ui.dpq||"")}"></div>
+      <div class="m-mon"><button type="button" data-dpm="-1" aria-label="지난달">‹</button><b>${y}년 ${m}월</b><button type="button" data-dpm="1" aria-label="다음 달">›</button></div>
+      <div class="m-sum">${[["미확인","미확인","r"],["확인","입금확인",""],["제외","제외",""],["전체","전체",""]].map(([k,l,c])=>`<button type="button" class="${ui.dpst===k?"on":""} ${c}" data-dps="${k}"><b>${cnt(k)}</b>${l}</button>`).join("")}</div>
+      <p class="mapt" style="margin:-2px 2px 8px">${m}월 입금 ${won0(sumR)}원${ui.dpst==="미확인"?" · 미확인은 기간과 상관없이 전부":""}</p>
+      ${list.map(d=>`<div class="m-jc ${d.status==="미확인"?"late":""}"><div class="m-jb"><span class="h"><span class="m-t">${esc(fmtDT(d.dep_at).slice(0,16))}</span><b class="m-n">${esc(d.depositor||"(이름 없음)")}</b><b>${won0(d.amount)}</b></span>
+        <span class="d">${d.status==="확인"?linkTxt(d):d.status==="제외"?"제외"+(d.memo?" · "+esc(d.memo):""):sugg(d)}</span></div><span class="m-mini">${acts(d).replace(/btn sm pri/g,"").replace(/btn sm/g,"")}</span></div>`).join("")||`<p class="mapt m-more">해당하는 입금이 없습니다.</p>`}</div>`}
+  else{view().innerHTML=`<div class="toolbar" style="padding:16px 20px 0;flex-wrap:wrap;gap:8px"><h2 style="margin:0;font-size:18px">입금 확인</h2><span class="mapt">기업은행 입금 문자가 자동으로 쌓입니다</span></div>
+    <div class="toolbar" style="padding:10px 20px 0;flex-wrap:wrap;gap:6px"><input type="date" id="dpD1" value="${d1}"> ~ <input type="date" id="dpD2" value="${d2}">${[[0,"당일"],[3,"3일"],[7,"1주일"],[15,"15일"],[30,"30일"]].map(([n,l])=>`<button type="button" class="btn sm ${ui.dpr===n?"pri":""}" data-dpn="${n}">${l}</button>`).join("")}
+      <label class="chip"><input type="radio" name="dpo" ${ui.dpold?"":"checked"} data-dpo="0">최근거래순</label><label class="chip"><input type="radio" name="dpo" ${ui.dpold?"checked":""} data-dpo="1">과거거래순</label><span style="flex:1"></span>
+      <span class="mapt">기간 입금 <b>${R.length}건 · ${won0(sumR)}원</b></span></div>
+    <div class="toolbar" style="padding:10px 20px 0;flex-wrap:wrap;gap:6px"><input id="dpQq" type="search" placeholder="입금자·금액·업체명 검색" value="${esc(ui.dpq||"")}" style="width:220px">${chips}<span style="flex:1"></span>${bulk.length?`<button type="button" class="btn pri" id="dpBulk">추천 일괄 입금 처리 (${bulk.length}건)</button>`:""}</div>
+    ${ui.dpst==="미확인"?`<p class="mapt" style="padding:4px 20px 0;margin:0">미확인은 기간과 상관없이 모두 보입니다.</p>`:""}
+    <div class="wtbox" style="margin:10px 20px 20px;overflow-x:auto"><table class="wt dp"><thead><tr><th>입금일시</th><th>계좌</th><th>입금자(적요)</th><th>내용</th><th class="num">입금액</th><th>매치상태</th><th>매치 연결</th><th></th><th>메모</th></tr></thead><tbody>
+    ${list.map(d=>`<tr class="${d.status==="미확인"?"dp-new":d.status==="제외"?"dp-dim":""}"><td style="white-space:nowrap">${esc(fmtDT(d.dep_at))}</td><td class="mapt">${esc(String(d.account||"").slice(-4))}</td><td><b>${esc(d.depositor||"")}</b></td><td class="mapt">${esc(d.bank||"")} 입금</td><td class="num"><b>${won0(d.amount)}</b></td><td>${stTag(d)}</td>
+      <td class="wrap">${d.status==="확인"?linkTxt(d):d.status==="미확인"?sugg(d):""}</td><td style="white-space:nowrap">${acts(d)}</td><td><button type="button" class="btn sm ghost" data-dpmemo="${d.id}" title="메모">✎</button> <span class="mapt">${esc(d.memo||"")}</span></td></tr>`).join("")||`<tr><td colspan="9" class="mapt">해당하는 입금이 없습니다.</td></tr>`}</tbody></table></div>`}
+  const byId=id=>bdeps.find(d=>d.id===id);const V=view();
+  V.querySelectorAll("[data-dps]").forEach(b=>b.onclick=()=>{ui.dpst=b.dataset.dps;renderDepositView()});
+  const qb=document.getElementById("dpQq");if(qb){let tm;qb.addEventListener("input",()=>{clearTimeout(tm);tm=setTimeout(()=>{ui.dpq=qb.value;renderDepositView().then(()=>{const e=document.getElementById("dpQq");if(e){e.focus();e.setSelectionRange(e.value.length,e.value.length)}})},300)})}
+  V.querySelectorAll("[data-dpn]").forEach(b=>b.onclick=()=>{ui.dpr=+b.dataset.dpn;ui.dpd2=td;ui.dpd1=addDays(td,-ui.dpr);renderDepositView()});
+  ["dpD1","dpD2"].forEach(id=>{const e=document.getElementById(id);if(e)e.onchange=()=>{ui.dpr=-1;ui[id==="dpD1"?"dpd1":"dpd2"]=e.value;renderDepositView()}});
+  V.querySelectorAll("[data-dpo]").forEach(b=>b.onchange=()=>{ui.dpold=b.dataset.dpo==="1";renderDepositView()});
+  V.querySelectorAll("[data-dpm]").forEach(b=>b.onclick=()=>{const [yy,mo]=ui.dpm.split("-").map(Number);const dd=new Date(yy,mo-1+Number(b.dataset.dpm),1);ui.dpm=dd.getFullYear()+"-"+String(dd.getMonth()+1).padStart(2,"0");renderDepositView()});
+  V.querySelectorAll("[data-dpa]").forEach(b=>b.onclick=async()=>{const d=byId(b.dataset.dpa),m=mm.get(d.id);if(!m||!m.best)return;b.disabled=true;if(await depApply(d,m.best.x)){toast(`${m.best.x.c.name}에 입금 처리했습니다`);depAfter()}else b.disabled=false});
+  V.querySelectorAll("[data-dpp]").forEach(b=>b.onclick=()=>depPick(byId(b.dataset.dpp)));
+  V.querySelectorAll("[data-dpx]").forEach(b=>b.onclick=async()=>{const {error}=await sb.from("bank_deposits").update({status:"제외",handled_by:me.name||"",handled_at:new Date().toISOString()}).eq("id",b.dataset.dpx);if(error)return toast("바꾸지 못했습니다: "+error.message);toast("제외했습니다");depAfter()});
+  V.querySelectorAll("[data-dpr]").forEach(b=>b.onclick=async()=>{const {error}=await sb.from("bank_deposits").update({status:"미확인",handled_by:"",handled_at:null}).eq("id",b.dataset.dpr);if(error)return toast("바꾸지 못했습니다: "+error.message);depAfter()});
+  V.querySelectorAll("[data-dpu]").forEach(b=>b.onclick=async()=>{const d=byId(b.dataset.dpu);const c=d.customer_id&&custById(d.customer_id);if(!(await askConfirm(`${c?c.name+"에 넣은 ":""}입금 ${won0(d.amount)}원을 취소할까요?\n그 건의 입금 내역에서도 지워지고, 이 입금은 다시 미확인이 됩니다.`)))return;if(await depUndo(d)){toast("입금확인을 취소했습니다");depAfter()}});
+  V.querySelectorAll("[data-dpmemo]").forEach(b=>b.onclick=()=>depMemo(byId(b.dataset.dpmemo)));
+  const bk=document.getElementById("dpBulk");if(bk)bk.onclick=async()=>{if(!(await askConfirm(`이름과 금액이 모두 맞는 ${bulk.length}건을 추천한 미수 건에 한꺼번에 입금 처리할까요?\n\n`+bulk.slice(0,10).map(d=>`· ${d.depositor} ${won0(d.amount)} → ${mm.get(d.id).best.x.c.name}`).join("\n")+(bulk.length>10?`\n외 ${bulk.length-10}건`:""))))return;
+    bk.disabled=true;let ok=0;for(const d of bulk){if(await depApply(d,mm.get(d.id).best.x))ok++}toast(`${ok}건 입금 처리했습니다`);depAfter()}}
+/* 설정 > 기타설정: 입금 문자 연결 키 */
+async function depCfgBox(box){if(!box)return;const {data,error}=await sb.rpc("deposit_token",{p_reset:false});
+  if(error){box.innerHTML=`<p class="mapt">입금 문자 연결을 쓰려면 Supabase SQL Editor에서 <b>phase1zz3.sql</b>을 실행해 주세요.</p>`;return}
+  const url=`${SB_URL}/rest/v1/rpc/ingest_deposit`;const body=`{"p_token":"${data}","p_text":"[sms_message]"}`;
+  box.innerHTML=`<p class="mapt" style="margin:0 0 8px">회사 휴대폰의 MacroDroid에 아래 세 가지를 넣으면, 기업은행 입금 문자가 <b>입금 확인</b> 메뉴에 자동으로 쌓입니다. 이 키는 다른 사람에게 보내지 마세요.</p>
+    <div class="dp-cfg"><span>주소 (URL)</span><code>${esc(url)}</code><button type="button" class="btn sm" data-cp="${esc(url)}">복사</button>
+    <span>헤더 apikey</span><code>${esc(SB_KEY)}</code><button type="button" class="btn sm" data-cp="${esc(SB_KEY)}">복사</button>
+    <span>본문 (JSON)</span><code>${esc(body)}</code><button type="button" class="btn sm" data-cp="${esc(body)}">복사</button></div>
+    <div class="actions" style="justify-content:flex-start"><button type="button" class="btn danger" id="dpReset">연결 키 새로 만들기</button><span class="mapt">휴대폰을 바꾸거나 키가 새어 나갔을 때. 바꾸면 휴대폰의 본문도 새로 넣어야 합니다.</span></div>`;
+  box.querySelectorAll("[data-cp]").forEach(b=>b.onclick=async()=>{try{await navigator.clipboard.writeText(b.dataset.cp);b.textContent="복사됨"}catch(_){b.textContent="길게 눌러 복사"}});
+  document.getElementById("dpReset").onclick=async()=>{if(!(await askConfirm("연결 키를 새로 만들까요?\n지금 휴대폰에 넣어 둔 키는 더 이상 쓸 수 없습니다.")))return;const r=await sb.rpc("deposit_token",{p_reset:true});if(r.error)return toast("바꾸지 못했습니다: "+r.error.message);toast("새 키를 만들었습니다");depCfgBox(box)}}
 /* ================= 설정 (관리자) ================= */
 function renderSettings(){
   view().innerHTML=`<div class="sec"><fieldset><legend>확인서 설정</legend><label class="f">입금계좌 안내 문구<input id="sBank" value="${esc(S.bank)}"></label><div class="actions"><button class="btn pri" id="bSaveSet" type="button">저장</button></div></fieldset><fieldset><legend>빈 확인서</legend><p class="mapt" style="margin:0 0 8px">손으로 적을 빈 설치확인서 · A/S 확인서 양식을 인쇄합니다.</p><div class="actions" style="justify-content:flex-start"><button class="btn" type="button" id="bBlankIS">설치확인서 인쇄</button><button class="btn" type="button" id="bBlankAS">A/S 확인서 인쇄</button></div></fieldset>
+    <fieldset><legend>입금 문자 연결 (기업은행)</legend><div id="depCfg"><p class="mapt">불러오는 중…</p></div></fieldset>
     <fieldset><legend>전체 백업 다운로드</legend><p class="mapt" style="margin:0 0 8px">고객·계약·A/S·입금·상담·싱크대·재고·문자 기록 등 프로그램의 모든 자료를 엑셀 파일 하나로 내려받습니다 (표마다 시트 하나).<br>한 달에 한 번 내려받아 회사 PC나 외장 저장장치에 보관해 두세요. 사진·확인서 파일 자체는 들어가지 않고 파일 목록만 들어갑니다.</p>
       <div class="actions" style="justify-content:flex-start;align-items:center"><button class="btn pri" type="button" id="bBackup">전체 백업 내려받기</button><span class="mapt" id="bkInfo">${(()=>{try{const d=localStorage.getItem("hc_last_backup");return d?"이 PC에서 마지막으로 내려받은 날: "+esc(d):""}catch(_){return""}})()}</span></div></fieldset>
     <fieldset><legend>사진·확인서 백업</legend><p class="mapt" style="margin:0 0 8px">고르신 달에 올린 사진·확인서·계약서·사업자등록증(과 공지 이미지)을 ZIP 파일 하나로 내려받습니다. 고객별 폴더로 정리됩니다.<br>용량이 커서 한 달씩 받습니다. 매달 초에 지난달 것을 받아 두세요.</p>
       <div class="actions" style="justify-content:flex-start;align-items:center;flex-wrap:wrap"><input id="pbM" type="month" value="${(()=>{const t=today();const y=+t.slice(0,4),m=+t.slice(5,7);return m===1?(y-1)+"-12":y+"-"+String(m-1).padStart(2,"0")})()}" aria-label="백업할 달" style="padding:6px 8px;border:1px solid var(--line);border-radius:6px;background:var(--field)">
         <label class="chip"><input type="checkbox" id="pbN" checked>공지 이미지 포함</label><button class="btn pri" type="button" id="bPhotoBk">사진 백업 내려받기</button><span class="mapt" id="pbInfo"></span></div></fieldset></div>`;
   document.getElementById("bBlankIS").onclick=()=>doPrint(sheetIS({},{}));document.getElementById("bBlankAS").onclick=()=>doPrint(sheetAS({},{}));
-  document.getElementById("bBackup").onclick=e=>fullBackup(e.currentTarget);
+  document.getElementById("bBackup").onclick=e=>fullBackup(e.currentTarget);depCfgBox(document.getElementById("depCfg"));
   document.getElementById("bPhotoBk").onclick=e=>photoBackup(e.currentTarget,val("pbM"),document.getElementById("pbN").checked);
   document.getElementById("bSaveSet").onclick=async()=>{const b=val("sBank").trim();if(!b)return;const {error}=await sb.from("settings").update({bank:b}).eq("id",1);if(error)return toast("저장하지 못했습니다");S.bank=b;toast("저장했습니다")};
 }
