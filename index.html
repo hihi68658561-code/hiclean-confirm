@@ -5180,11 +5180,11 @@ async function renderDepositView(){if(!bdeps)view().innerHTML=`<p class="mapt" s
 /* 설정 > 기타설정: 입금 문자 연결 키 */
 async function depCfgBox(box){if(!box)return;const {data,error}=await sb.rpc("deposit_token",{p_reset:false});
   if(error){box.innerHTML=`<p class="mapt">입금 문자 연결을 쓰려면 Supabase SQL Editor에서 <b>phase1zz3.sql</b>을 실행해 주세요.</p>`;return}
-  const url=`${SB_URL}/rest/v1/rpc/ingest_deposit`;const body=`{"p_token":"${data}","p_text":"[sms_message]"}`;
+  const url=`${SB_URL}/rest/v1/rpc/ingest_sms`;const body=`${data}\n[sms_message]`;
   box.innerHTML=`<p class="mapt" style="margin:0 0 8px">회사 휴대폰의 MacroDroid에 아래 세 가지를 넣으면, 기업은행 입금 문자가 <b>입금 확인</b> 메뉴에 자동으로 쌓입니다. 이 키는 다른 사람에게 보내지 마세요.</p>
     <div class="dp-cfg"><span>주소 (URL)</span><code>${esc(url)}</code><button type="button" class="btn sm" data-cp="${esc(url)}">복사</button>
     <span>헤더 apikey</span><code>${esc(SB_KEY)}</code><button type="button" class="btn sm" data-cp="${esc(SB_KEY)}">복사</button>
-    <span>본문 (JSON)</span><code>${esc(body)}</code><button type="button" class="btn sm" data-cp="${esc(body)}">복사</button></div>
+    <span>본문 (text/plain)</span><code style="white-space:pre-wrap">${esc(body)}</code><button type="button" class="btn sm" data-cp="${esc(body)}">복사</button></div>
     <div class="actions" style="justify-content:flex-start"><button type="button" class="btn danger" id="dpReset">연결 키 새로 만들기</button><span class="mapt">휴대폰을 바꾸거나 키가 새어 나갔을 때. 바꾸면 휴대폰의 본문도 새로 넣어야 합니다.</span></div>`;
   box.querySelectorAll("[data-cp]").forEach(b=>b.onclick=async()=>{try{await navigator.clipboard.writeText(b.dataset.cp);b.textContent="복사됨"}catch(_){b.textContent="길게 눌러 복사"}});
   document.getElementById("dpReset").onclick=async()=>{if(!(await askConfirm("연결 키를 새로 만들까요?\n지금 휴대폰에 넣어 둔 키는 더 이상 쓸 수 없습니다.")))return;const r=await sb.rpc("deposit_token",{p_reset:true});if(r.error)return toast("바꾸지 못했습니다: "+r.error.message);toast("새 키를 만들었습니다");depCfgBox(box)}}
