@@ -864,7 +864,7 @@ function mobRender(tabs,NS){
   return false}
 function mobHome(){const td=today(),mine=mobMine(),tech=mobTechOnly();
   const live=jobs.filter(j=>j.status!=="취소"&&(!tech||mine(j)));const tk=j=>timeKey(j.visit_time);
-  const tJ=live.filter(j=>j.visit_date===td).sort((a,b)=>tk(a).localeCompare(tk(b)));
+  const tJ=live.filter(j=>schDay(j)===td).sort((a,b)=>tk(a).localeCompare(tk(b)));
   const late=live.filter(j=>j.visit_date&&j.visit_date<td&&["접수","배정","보류"].includes(j.status));
   const tom=live.filter(j=>j.visit_date===addDays(td,1)).length;const w=["일","월","화","수","목","금","토"][new Date(td+"T00:00:00").getDay()];
   view().innerHTML=`<div class="m-body"><div class="m-hi">${esc(me.name||"")}님, ${tech?"오늘 내 일정":"오늘 일정"} ${tJ.length}건<small>${+td.slice(5,7)}월 ${+td.slice(8,10)}일 (${w})</small></div>
@@ -3007,7 +3007,7 @@ function renderHomeView(){const td=today(),tm=addDays(td,1),ym=thisMonth(),[m0,m
   const myNames=[me.name,...(((staff||[]).find(x=>x.user_id===me.id)||{}).aliases||[])].filter(Boolean);
   const mine=j=>(j.techs||[]).includes(me.id)||String(j.tech_names||"").split(/[\s,/·]+/).some(t=>t&&myNames.includes(t));
   const live=jobs.filter(j=>j.status!=="취소"&&(!(tech&&!isOffice())||mine(j)));const tk=j=>timeKey(j.visit_time);
-  const tJobs=live.filter(j=>j.visit_date===td).sort((a,b)=>tk(a).localeCompare(tk(b))),nJobs=live.filter(j=>j.visit_date===tm).sort((a,b)=>tk(a).localeCompare(tk(b)));
+  const tJobs=live.filter(j=>schDay(j)===td).sort((a,b)=>tk(a).localeCompare(tk(b))),nJobs=live.filter(j=>j.visit_date===tm).sort((a,b)=>tk(a).localeCompare(tk(b)));
   const unasg=live.filter(j=>j.status==="접수"&&!(j.techs||[]).length&&!String(j.tech_names||"").trim());
   const leadDue=tech||ui.noLeads?[]:leads.filter(l=>leadOpen(l)&&l.next_date&&l.next_date<=td);
   const rv=tech||ui.noRecv?[]:recvItems();const rOpen=rv.filter(x=>x.open&&x.stage!=="대손처리");
