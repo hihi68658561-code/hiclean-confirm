@@ -5105,7 +5105,11 @@ async function photoBackup(btn,ym,withNotice){if(!isAdmin())return toast("관리
 /* ================= 입금 확인 (은행 입금 문자 → 미수 건에 연결) ================= */
 let bdeps=null;
 const depN=s=>String(s||"").replace(/\(주\)|㈜|주식회사|\s|[()·.\-]/g,"").toLowerCase();
-function depItems(){let rv=[];try{rv=recvItems()}catch(e){}return rv.filter(x=>x.open&&x.unpaid>0&&(x.t==="ctr"||x.t==="as"))}
+function depItems(){let rv=[];try{rv=recvItems()}catch(e){}rv=rv.filter(x=>x.open&&x.unpaid>0&&(x.t==="ctr"||x.t==="as"));
+  /* A/S·이전설치 미수는 채권 목록(recvItems)에 없어서 여기서 따로 넣음 */
+  const seen=new Set(rv.filter(x=>x.t==="as").map(x=>x.j.id));
+  jobs.forEach(j=>{if(j.kind==="addon"||seen.has(j.id)||j.status==="취소"||j.paid_type==="무상")return;const ap=asPay(j);if(!(ap.unpaid>0))return;if(j.pay_status!=="미수"&&!(Number(j.cost||0)>0&&!ap.paid))return;
+    rv.push({t:"as",id:j.id,j,c:custById(j.customer_id)||{},amount:Number(j.cost||0),paid:ap.paid,unpaid:ap.unpaid,open:true})});return rv}
 function depNames(x){const c=x.c||{};const a=[c.name,c.ceo,c.biz_name];if(x.t==="as"&&x.j)a.push(x.j.pay_name,x.j.customer_name);if(x.t==="ctr"&&x.k){a.push(x.k.pay_name);paysOf(x.k).forEach(p=>a.push(p.payer))}return a.map(depN).filter(v=>v&&v.length>=2)}
 function depMatch(d,items){const dn=depN(d.depositor);const out=[];items.forEach(x=>{const ns=depNames(x);const nm=!!dn&&ns.some(n=>n===dn||(dn.length>=2&&(n.includes(dn)||dn.includes(n))));const am=Number(x.unpaid)===Number(d.amount);if(nm||am)out.push({x,nm,am,sc:(nm?2:0)+(am?1:0)})});
   out.sort((a,b)=>b.sc-a.sc||Math.abs(a.x.unpaid-d.amount)-Math.abs(b.x.unpaid-d.amount));const strong=out.filter(o=>o.nm&&o.am);return{list:out,best:strong.length===1?strong[0]:null}}
