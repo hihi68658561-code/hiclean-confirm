@@ -1143,16 +1143,30 @@ function mobLeads(){const td=today();if(!ui.mlm)ui.mlm=thisMonth();if(!ui.mlk||!
   view().querySelectorAll("[data-mlm]").forEach(b=>b.onclick=()=>{const [yy,mm]=ui.mlm.split("-").map(Number);const d=new Date(yy,mm-1+Number(b.dataset.mlm),1);ui.mlm=d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0");mobLeads()});
   document.getElementById("mlNew").onclick=()=>leadDlg(null)}
 /* ----- 모바일: 문자 ----- */
-async function mobSms(){if(ui.msp===undefined)ui.msp=1;
-  view().innerHTML=`<div class="m-body"><div class="m-sb"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="M20 20l-4-4"/></svg><input id="msQ" type="search" autocomplete="off" placeholder="업체명·전화번호·내용" aria-label="문자 검색" value="${esc(ui.msq||"")}"></div><div id="msL"><p class="mapt">불러오는 중…</p></div></div><button type="button" class="m-fab" id="msNew">＋ 문자 보내기</button>`;
+async function mobSms(){if(ui.msp===undefined)ui.msp=1;if(!ui.msm2)ui.msm2=thisMonth();if(!ui.msk2)ui.msk2="all";if(ui.mst2===undefined)ui.mst2="";
+  const [y,m]=ui.msm2.split("-").map(Number);
+  view().innerHTML=`<div class="m-body"><div class="m-sb"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="M20 20l-4-4"/></svg><input id="msQ" type="search" autocomplete="off" placeholder="업체명·전화번호·내용" aria-label="문자 검색" value="${esc(ui.msq||"")}"></div>
+    <div class="m-mon"><button type="button" data-msm="-1" aria-label="지난달">‹</button><b>${y}년 ${m}월</b><button type="button" data-msm="1" aria-label="다음 달">›</button></div>
+    <div id="msTop"></div><div id="msL"><p class="mapt">불러오는 중…</p></div></div><button type="button" class="m-fab" id="msNew">＋ 문자 보내기</button>`;
   document.getElementById("msNew").onclick=()=>smsDlg({});const q=document.getElementById("msQ");let data=[],tm=null;
-  const load=async()=>{const qq=q.value.trim();ui.msq=qq;let r=sb.from("sms_logs").select("*").order("created_at",{ascending:false}).limit(300);
-    if(qq){const d=qq.replace(/\D/g,"");const ids=customers.filter(c=>csN(c.name).includes(csN(qq))).map(c=>c.id).slice(0,50);const ors=[`content.ilike.%${qq.replace(/[%,()]/g," ")}%`];if(d.length>=3)ors.push(`to_phone.ilike.%${d}%`);if(ids.length)ors.push(`customer_id.in.(${ids.join(",")})`);r=r.or(ors.join(","))}
-    const {data:dd,error}=await r;const box=document.getElementById("msL");if(!box)return;if(error){box.innerHTML=`<p class="mapt">문자 기록을 불러오지 못했습니다.</p>`;return}data=dd||[];if(qq)ui.msp=1;draw()};
-  const draw=()=>{const box=document.getElementById("msL");if(!box)return;const PG=20,np=Math.max(1,Math.ceil(data.length/PG));if(ui.msp>np)ui.msp=np;const pg=data.slice((ui.msp-1)*PG,ui.msp*PG);
-    box.innerHTML=(q.value.trim()?`<p class="mapt" style="margin:0 2px 8px">검색 결과 ${data.length}건</p>`:"")+pg.map(l=>{const c=l.customer_id&&custById(l.customer_id);const fail=l.status==="실패";
-      return `<div class="m-jc"><span class="h"><span class="m-t">${esc(fmtDT(l.created_at))}</span><b class="m-n">${c?`<a href="#" data-mgc="${c.id}">${esc(c.name)}</a>`:esc(fmtPhone(l.to_phone))}</b><span class="m-st ${fail?"neg":"s2"}">${fail?"실패":esc(l.msg_type||"")}</span></span>${c?`<span class="d">${esc(fmtPhone(l.to_phone))}${l.by_name?" · "+esc(l.by_name):""}</span>`:""}<span class="d" style="color:inherit">${smsCell(l.content)}</span>${fail&&l.error?`<span class="d neg">${esc(l.error)}</span>`:""}</div>`}).join("")
-      +(!data.length?`<p class="mapt m-more">${q.value.trim()?"찾는 문자가 없습니다.":"보낸 문자가 없습니다."}</p>`:"")
+  view().querySelectorAll("[data-msm]").forEach(b=>b.onclick=()=>{const dd=new Date(y,m-1+Number(b.dataset.msm),1);ui.msm2=dd.getFullYear()+"-"+String(dd.getMonth()+1).padStart(2,"0");ui.msp=1;mobSms()});
+  const load=async()=>{const qq=q.value.trim();ui.msq=qq;let r=sb.from("sms_logs").select("*").order("created_at",{ascending:false});
+    if(qq){r=r.limit(300);const d=qq.replace(/\D/g,"");const ids=customers.filter(c=>csN(c.name).includes(csN(qq))).map(c=>c.id).slice(0,50);const ors=[`content.ilike.%${qq.replace(/[%,()]/g," ")}%`];if(d.length>=3)ors.push(`to_phone.ilike.%${d}%`);if(ids.length)ors.push(`customer_id.in.(${ids.join(",")})`);r=r.or(ors.join(","))}
+    else{const [a0,a1]=monthRange(ui.msm2);r=r.gte("created_at",new Date(a0+"T00:00:00+09:00").toISOString()).lt("created_at",new Date(a1+"T00:00:00+09:00").toISOString()).limit(2000)}
+    const {data:dd,error}=await r;const box=document.getElementById("msL");if(!box)return;if(error){box.innerHTML=`<p class="mapt">문자 기록을 불러오지 못했습니다.</p>`;return}data=dd||[];ui.msp=1;draw()};
+  const mine=l=>!!me.name&&l.by_name===me.name;const fail=l=>l.status==="실패";
+  const draw=()=>{const box=document.getElementById("msL");if(!box)return;const qq=q.value.trim();
+    const sets={all:data,ok:data.filter(l=>!fail(l)),fail:data.filter(fail),mine:data.filter(mine)};const base=qq?data:sets[ui.msk2];
+    const types=[...new Set(base.map(l=>l.msg_type||"").filter(Boolean))];if(ui.mst2&&!types.includes(ui.mst2))ui.mst2="";
+    document.getElementById("msTop").innerHTML=qq?"":`<div class="m-sum">${[["all","전체",""],["ok","보냄",""],["fail","실패","r"],["mine","내가 보냄",""]].map(([k,l,c])=>`<button type="button" class="${ui.msk2===k?"on":""} ${c}" data-msk2="${k}"><b>${sets[k].length}</b>${l}</button>`).join("")}</div>
+      ${types.length>1?`<div class="m-chips m-kc"><button type="button" class="${!ui.mst2?"on":""}" data-mst2="">전체 ${base.length}</button>${types.map(t=>`<button type="button" class="${ui.mst2===t?"on":""}" data-mst2="${esc(t)}">${esc(t)} ${base.filter(l=>l.msg_type===t).length}</button>`).join("")}</div>`:""}`;
+    document.querySelectorAll("#msTop [data-msk2]").forEach(b=>b.onclick=()=>{ui.msk2=b.dataset.msk2;ui.mst2="";ui.msp=1;draw()});
+    document.querySelectorAll("#msTop [data-mst2]").forEach(b=>b.onclick=()=>{ui.mst2=b.dataset.mst2;ui.msp=1;draw()});
+    const list=base.filter(l=>!ui.mst2||l.msg_type===ui.mst2);
+    const PG=20,np=Math.max(1,Math.ceil(list.length/PG));if(ui.msp>np)ui.msp=np;const pg=list.slice((ui.msp-1)*PG,ui.msp*PG);
+    box.innerHTML=(qq?`<p class="mapt" style="margin:0 2px 8px">검색 결과 ${list.length}건 (전체 기간)</p>`:"")+pg.map(l=>{const c=l.customer_id&&custById(l.customer_id);const f=fail(l);
+      return `<div class="m-jc ${f?"late":""}"><span class="h"><span class="m-t">${esc(fmtDT(l.created_at))}</span><b class="m-n">${c?`<a href="#" data-mgc="${c.id}">${esc(c.name)}</a>`:esc(fmtPhone(l.to_phone))}</b><span class="m-st ${f?"neg":"s2"}">${f?"실패":esc(l.msg_type||"")}</span></span>${c?`<span class="d">${esc(fmtPhone(l.to_phone))}${l.by_name?" · 👤 "+esc(l.by_name):""}</span>`:l.by_name?`<span class="d">👤 ${esc(l.by_name)}</span>`:""}<span class="d" style="color:inherit">${smsCell(l.content)}</span>${f&&l.error?`<span class="d neg">${esc(l.error)}</span>`:""}</div>`}).join("")
+      +(!list.length?`<p class="mapt m-more">${qq?"찾는 문자가 없습니다.":"보낸 문자가 없습니다."}</p>`:"")
       +(np>1?`<div class="smpager"><button type="button" class="btn sm" data-msp="-1" ${ui.msp<=1?"disabled":""}>‹ 이전</button><span>${ui.msp} / ${np}</span><button type="button" class="btn sm" data-msp="1" ${ui.msp>=np?"disabled":""}>다음 ›</button></div>`:"");
     smsBind(box);box.querySelectorAll("[data-mgc]").forEach(a=>a.onclick=e=>{e.preventDefault();goCust(custById(a.dataset.mgc))});
     box.querySelectorAll("[data-msp]").forEach(b=>b.onclick=()=>{ui.msp+=Number(b.dataset.msp);draw();window.scrollTo(0,0)})};
