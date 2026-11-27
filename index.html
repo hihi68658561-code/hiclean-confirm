@@ -3192,7 +3192,7 @@ function renderHomeView(){const td=today(),tm=addDays(td,1),ym=thisMonth(),[m0,m
   const w=["일","월","화","수","목","금","토"][new Date(td+"T00:00:00").getDay()];
   let h=`<div class="home"><div class="hhead"><h2>${esc(me.name||"")}님, 안녕하세요</h2><span class="mapt">${td.slice(0,4)}년 ${+td.slice(5,7)}월 ${+td.slice(8,10)}일 (${w})</span></div>`;
   /* 할 일 */
-  const ntSec=`<section class="hsec"><h3>공지사항 <a href="#" data-hgo="notice" class="mapt" id="hNtAll" hidden>전체 보기</a></h3><div class="hlist" id="hNotice"><p class="mapt">불러오는 중…</p></div></section>`;
+  const ntSec=`<section class="hsec"><h3>공지사항 <a href="#" data-hgo="notice" class="mapt">전체 보기</a></h3><div class="hlist" id="hNotice"><p class="mapt">불러오는 중…</p></div></section>`;
   h+=`<div class="htop"><section class="hsec"><h3>오늘 할 일</h3><div class="kpis hk">${card("t-today","오늘 일정",tJobs.length+"건",tJobs.filter(j=>j.status==="완료").length?`완료 ${tJobs.filter(j=>j.status==="완료").length}건`:"")}${card("t-tom","내일 일정",nJobs.length+"건")}
     ${tech?"":card("work","미배정 접수",unasg.length+"건","기사 배정 필요",unasg.length?"bad":"")}${tech?"":card("leads","연락할 DB",leadDue.length+"건","다음 연락일 오늘까지",leadDue.length?"bad":"")}${tech||ui.noRecv?"":card("recv-due","조치할 채권",rDue.length+"건",rBroke.length?`약속일 지난 건 ${rBroke.length}건`:"",rDue.length||rBroke.length?"bad":"")}</div></section>${ntSec}</div>`;
   /* 일정 */
@@ -3217,7 +3217,7 @@ function renderHomeView(){const td=today(),tm=addDays(td,1),ym=thisMonth(),[m0,m
   view().querySelectorAll("[data-hj]").forEach(b=>b.onclick=()=>{const j=jobs.find(x=>x.id===b.dataset.hj);if(j)jobDlg(j)});
   view().querySelectorAll("[data-hrs]").forEach(b=>b.onclick=()=>{ui.view="recv";ui.rkpi="";ui.rage="";ui.rown="";ui.rkind="";ui.rstage=b.dataset.hrs;ui._fresh=true;render()});
   (async()=>{const ns=await fetchNotices();const box=document.getElementById("hNotice");if(!box)return;
-    const list=ns.slice().sort((a,b)=>(b.pinned-a.pinned)||String(b.created_at).localeCompare(String(a.created_at)));{const al=document.getElementById("hNtAll");if(al)al.hidden=list.length<=3}list.splice(3);
+    const list=ns.slice().sort((a,b)=>(b.pinned-a.pinned)||String(b.created_at).localeCompare(String(a.created_at))).slice(0,5);
     box.innerHTML=ui.noNotice?`<p class="mapt">공지사항 기능이 아직 설치되지 않았습니다.</p>`:list.map(n=>`<button type="button" class="hrow" data-hn="${n.id}">${n.pinned?`<span class="tag ntpin">고정</span>`:""}<b class="hname">${esc(n.title)}</b><span class="mapt">${esc(ymd2(fmtD(n.created_at)))}</span></button>`).join("")||`<p class="mapt">등록된 공지가 없습니다.</p>`;
     box.querySelectorAll("[data-hn]").forEach(b=>b.onclick=()=>{if(ui.nopen===undefined)ui.nopen=new Set();ui.nopen.add(b.dataset.hn);ui.view="notice";ui._fresh=true;render()})})();
   if(!tech)(async()=>{const box=document.getElementById("hSms");const {data,error}=await sb.from("sms_logs").select("*").order("created_at",{ascending:false}).limit(5);if(!box)return;
