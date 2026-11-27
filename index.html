@@ -5114,6 +5114,16 @@ function depNames(x){const c=x.c||{};const a=[c.name,c.ceo,c.biz_name];if(x.t===
 function depMatch(d,items){const dn=depN(d.depositor);const out=[];items.forEach(x=>{const ns=depNames(x);const nm=!!dn&&ns.some(n=>n===dn||(dn.length>=2&&(n.includes(dn)||dn.includes(n))));const am=Number(x.unpaid)===Number(d.amount);if(nm||am)out.push({x,nm,am,sc:(nm?2:0)+(am?1:0)})});
   out.sort((a,b)=>b.sc-a.sc||Math.abs(a.x.unpaid-d.amount)-Math.abs(b.x.unpaid-d.amount));const strong=out.filter(o=>o.nm&&o.am);return{list:out,best:strong.length===1?strong[0]:null}}
 const depWhat=x=>x.t==="ctr"?`계약 미수 ${won0(x.unpaid)}`:`${kl(x.j)||"A/S"} 미수 ${won0(x.unpaid)}`;
+/* 계약·A/S 화면에서 이미 넣은 입금(카드 제외) 중 금액·날짜가 맞는 것 */
+function depExist(d,used){const dd=depDate(d),lo=addDays(dd,-3),hi=addDays(dd,10),amt=Number(d.amount||0),dn=depN(d.depositor);const out=[];
+  const ok=p=>p&&Number(p.amount||0)===amt&&p.pay_date&&p.pay_date>=lo&&p.pay_date<=hi&&!used.has(p.id)&&!jpCard(p.method);
+  const nm=(names)=>!!dn&&names.map(depN).filter(v=>v&&v.length>=2).some(n=>n===dn||n.includes(dn)||dn.includes(n));
+  (payments||[]).forEach(p=>{if(!ok(p))return;const k=ctrById(p.contract_id);const c=(k&&custById(k.customer_id))||custById(p.customer_id)||{};out.push({t:"ctr",p,k,c,nm:nm([p.payer,c.name,c.ceo,c.biz_name])})});
+  (jpays||[]).forEach(p=>{if(!ok(p))return;const j=jobs.find(z=>z.id===p.job_id);const c=(j&&custById(j.customer_id))||custById(p.customer_id)||{};out.push({t:"as",p,j,c,nm:nm([p.payer,c.name,c.ceo,c.biz_name,j&&j.pay_name])})});
+  const strong=out.filter(o=>o.nm);return{list:out,best:strong.length===1?strong[0]:(!strong.length&&out.length===1?out[0]:null)}}
+const depExWhat=e=>`${e.t==="ctr"?"계약":(e.j&&kl(e.j))||"A/S"} 입금 ${ymd2(e.p.pay_date)} ${e.p.method||""}`;
+async function depLink(d,e){const {error}=await sb.from("bank_deposits").update({status:"확인",match_type:e.t+"_x",match_id:e.t==="ctr"?(e.k&&e.k.id)||null:(e.j&&e.j.id)||null,customer_id:e.c.id||null,pay_id:e.p.id,handled_by:me.name||"",handled_at:new Date().toISOString()}).eq("id",d.id);
+  if(error){toast("연결하지 못했습니다: "+error.message);return false}return true}
 async function fetchDeps(){const {data,error}=await sb.from("bank_deposits").select("*").order("dep_at",{ascending:false}).limit(2000);if(error){ui.noDeps=true;bdeps=[];return bdeps}ui.noDeps=false;bdeps=data||[];return bdeps}
 const depDate=d=>{const t=d.dep_at?new Date(d.dep_at):null;if(!t||isNaN(t))return today();return new Date(t.getTime()+9*3600e3).toISOString().slice(0,10)};
 async function depApply(d,x){const pd=depDate(d);let pid=null,err=null;
@@ -5123,7 +5133,7 @@ async function depApply(d,x){const pd=depDate(d);let pid=null,err=null;
   if(x.t==="as"){await reload(["jpays"],true);const j=jobs.find(z=>z.id===x.j.id)||x.j;const dv=jpDerive(jpaysOf(j),Number(j.cost||0),j.pay_status);if(dv)await sb.from("jobs").update(dv).eq("id",j.id)}
   const {error:e2}=await sb.from("bank_deposits").update({status:"확인",match_type:x.t,match_id:x.t==="ctr"?x.k.id:x.j.id,customer_id:(x.c&&x.c.id)||null,pay_id:pid,handled_by:me.name||"",handled_at:new Date().toISOString()}).eq("id",d.id);
   if(e2){toast("입금은 넣었지만 확인 표시를 못했습니다: "+e2.message);return false}return true}
-async function depUndo(d){if(d.pay_id){const t=d.match_type==="as"?"job_payments":"payments";const {error}=await sb.from(t).delete().eq("id",d.pay_id);if(error)return toast("입금 기록을 지우지 못했습니다: "+error.message);
+async function depUndo(d){if(d.pay_id&&!String(d.match_type||"").endsWith("_x")){const t=d.match_type==="as"?"job_payments":"payments";const {error}=await sb.from(t).delete().eq("id",d.pay_id);if(error)return toast("입금 기록을 지우지 못했습니다: "+error.message);
     if(d.match_type==="as"){await reload(["jpays"],true);const j=jobs.find(z=>z.id===d.match_id);if(j){const rows=jpaysOf(j);const dv=rows.length?jpDerive(rows,Number(j.cost||0),j.pay_status):{pay_status:Number(j.cost||0)>0&&j.paid_type!=="무상"?"미수":"",pay_method:"",pay_date:null,pay_name:""};await sb.from("jobs").update(dv).eq("id",j.id)}}}
   const {error}=await sb.from("bank_deposits").update({status:"미확인",match_type:"",match_id:null,customer_id:null,pay_id:null,handled_by:"",handled_at:null}).eq("id",d.id);if(error)return toast("되돌리지 못했습니다: "+error.message);return true}
 async function depAfter(){await reload(["payments","jpays","jobs"],true);await fetchDeps();render()}
@@ -5143,16 +5153,18 @@ async function renderDepositView(){if(!bdeps)view().innerHTML=`<p class="mapt" s
   let d1,d2;if(mob){[d1,d2]=monthRange(ui.dpm);d2=addDays(d2,-1)}else{d1=ui.dpd1;d2=ui.dpd2}
   const inR=d=>{const x=depDate(d);return x>=d1&&x<=d2};const R=bdeps.filter(inR);const items=depItems();
   const mm=new Map(bdeps.filter(d=>d.status==="미확인").map(d=>[d.id,depMatch(d,items)]));
+  const used=new Set(bdeps.filter(d=>d.status==="확인"&&d.pay_id).map(d=>d.pay_id));const ex=new Map(bdeps.filter(d=>d.status==="미확인").map(d=>[d.id,depExist(d,used)]));
+  const exB=id=>{const e=ex.get(id);return e&&e.best};
   const cnt=s=>s==="전체"?R.length:s==="미확인"?bdeps.filter(d=>d.status==="미확인").length:R.filter(d=>d.status===s).length;
   /* 미확인은 기간과 상관없이 전부 (처리할 것을 빠뜨리지 않게) */
   let list=ui.dpst==="미확인"?bdeps.filter(d=>d.status==="미확인"):ui.dpst==="전체"?R:R.filter(d=>d.status===ui.dpst);
   const qq=csN(ui.dpq||"");if(qq)list=list.filter(d=>{const c=d.customer_id&&custById(d.customer_id);return csN([d.depositor,d.amount,d.bank,d.memo,c&&c.name].join(" ")).includes(qq)});
   list=list.slice().sort((a,b)=>(ui.dpold?1:-1)*String(a.dep_at||"").localeCompare(String(b.dep_at||"")));
-  const sumR=R.reduce((s,d)=>s+Number(d.amount||0),0);const bulk=bdeps.filter(d=>d.status==="미확인"&&mm.get(d.id)&&mm.get(d.id).best);
-  const linkTxt=d=>{if(d.status!=="확인")return"";const c=d.customer_id&&custById(d.customer_id);let w="";if(d.match_type==="as"){const j=jobs.find(z=>z.id===d.match_id);w=j?(kl(j)||"A/S")+" 입금":"A/S 입금"}else w="계약 입금";return `${esc(c?c.name:"")} · ${w}${d.handled_by?` <span class="mapt">(${esc(d.handled_by)})</span>`:""}`};
-  const sugg=d=>{const m=mm.get(d.id);if(!m)return"";if(m.best)return `<span class="dp-ok">✓ 이름·금액 일치</span> ${esc(m.best.x.c.name)} · ${esc(depWhat(m.best.x))}`;const o=m.list[0];if(o)return `<span class="dp-q">? ${o.nm?"이름만 일치":"금액만 일치"}</span> ${esc(o.x.c.name)} · ${esc(depWhat(o.x))}${m.list.length>1?` 외 ${m.list.length-1}건`:""}`;return `<span class="dp-q">맞는 미수 건 없음</span>`};
+  const sumR=R.reduce((s,d)=>s+Number(d.amount||0),0);const bulk=bdeps.filter(d=>d.status==="미확인"&&((exB(d.id)&&exB(d.id).nm)||(!exB(d.id)&&mm.get(d.id)&&mm.get(d.id).best)));
+  const linkTxt=d=>{if(d.status!=="확인")return"";const c=d.customer_id&&custById(d.customer_id);let w="";const mt=String(d.match_type||"");if(mt.startsWith("as")){const j=jobs.find(z=>z.id===d.match_id);w=j?(kl(j)||"A/S")+" 입금":"A/S 입금"}else w="계약 입금";if(mt.endsWith("_x"))w+=" (이미 넣은 입금과 연결)";return `${esc(c?c.name:"")} · ${w}${d.handled_by?` <span class="mapt">(${esc(d.handled_by)})</span>`:""}`};
+  const sugg=d=>{const e=exB(d.id);if(e)return `<span class="${e.nm?"dp-ok":"dp-q"}">${e.nm?"✓":"?"} 이미 입금 등록됨</span> ${esc(e.c.name||"")} · ${esc(depExWhat(e))}`;const m=mm.get(d.id);if(!m)return"";if(m.best)return `<span class="dp-ok">✓ 이름·금액 일치</span> ${esc(m.best.x.c.name)} · ${esc(depWhat(m.best.x))}`;const o=m.list[0];if(o)return `<span class="dp-q">? ${o.nm?"이름만 일치":"금액만 일치"}</span> ${esc(o.x.c.name)} · ${esc(depWhat(o.x))}${m.list.length>1?` 외 ${m.list.length-1}건`:""}`;return `<span class="dp-q">맞는 미수 건 없음</span>`};
   const stTag=d=>d.status==="확인"?`<span class="dp-st ok">입금확인</span>`:d.status==="제외"?`<span class="dp-st ex">제외</span>`:`<span class="dp-st no">미확인</span>`;
-  const acts=d=>d.status==="미확인"?`${mm.get(d.id)&&mm.get(d.id).best?`<button type="button" class="btn sm pri" data-dpa="${d.id}">입금 처리</button>`:""}<button type="button" class="btn sm" data-dpp="${d.id}">${mm.get(d.id)&&mm.get(d.id).best?"다른 건":"고르기"}</button><button type="button" class="btn sm" data-dpx="${d.id}">제외</button>`
+  const acts=d=>d.status==="미확인"?`${exB(d.id)?`<button type="button" class="btn sm pri" data-dpl="${d.id}" title="새로 넣지 않고 이미 등록된 입금과 연결만 합니다">연결</button>`:mm.get(d.id)&&mm.get(d.id).best?`<button type="button" class="btn sm pri" data-dpa="${d.id}">입금 처리</button>`:""}<button type="button" class="btn sm" data-dpp="${d.id}">${mm.get(d.id)&&mm.get(d.id).best?"다른 건":"검색"}</button><button type="button" class="btn sm" data-dpx="${d.id}">제외</button>`
     :d.status==="확인"?`<button type="button" class="btn sm" data-dpu="${d.id}">입금확인 취소</button>`:`<button type="button" class="btn sm" data-dpr="${d.id}">되돌리기</button>`;
   const chips=["미확인","확인","제외","전체"].map(s=>`<button type="button" class="chip ${ui.dpst===s?"on":""}" data-dps="${s}">${s==="확인"?"입금확인":s} ${cnt(s)}</button>`).join("");
   if(mob){const [y,m]=ui.dpm.split("-").map(Number);
@@ -5166,7 +5178,7 @@ async function renderDepositView(){if(!bdeps)view().innerHTML=`<p class="mapt" s
     <div class="toolbar" style="padding:10px 20px 0;flex-wrap:wrap;gap:6px"><input type="date" id="dpD1" value="${d1}"> ~ <input type="date" id="dpD2" value="${d2}">${[[0,"당일"],[3,"3일"],[7,"1주일"],[15,"15일"],[30,"30일"]].map(([n,l])=>`<button type="button" class="btn sm ${ui.dpr===n?"pri":""}" data-dpn="${n}">${l}</button>`).join("")}
       <label class="chip"><input type="radio" name="dpo" ${ui.dpold?"":"checked"} data-dpo="0">최근거래순</label><label class="chip"><input type="radio" name="dpo" ${ui.dpold?"checked":""} data-dpo="1">과거거래순</label><span style="flex:1"></span>
       <span class="mapt">기간 입금 <b>${R.length}건 · ${won0(sumR)}원</b></span></div>
-    <div class="toolbar" style="padding:10px 20px 0;flex-wrap:wrap;gap:6px"><input id="dpQq" type="search" placeholder="입금자·금액·업체명 검색" value="${esc(ui.dpq||"")}" style="width:220px">${chips}<span style="flex:1"></span>${bulk.length?`<button type="button" class="btn pri" id="dpBulk">추천 일괄 입금 처리 (${bulk.length}건)</button>`:""}</div>
+    <div class="toolbar" style="padding:10px 20px 0;flex-wrap:wrap;gap:6px"><input id="dpQq" type="search" placeholder="입금자·금액·업체명 검색" value="${esc(ui.dpq||"")}" style="width:220px">${chips}<span style="flex:1"></span>${bulk.length?`<button type="button" class="btn pri" id="dpBulk">추천 일괄 처리 (${bulk.length}건)</button>`:""}</div>
     ${ui.dpst==="미확인"?`<p class="mapt" style="padding:4px 20px 0;margin:0">미확인은 기간과 상관없이 모두 보입니다.</p>`:""}
     <div class="wtbox" style="margin:10px 20px 20px;overflow-x:auto"><table class="wt dp"><thead><tr><th>입금일시</th><th>계좌</th><th>입금자(적요)</th><th>내용</th><th class="num">입금액</th><th>매치상태</th><th>매치 연결</th><th></th><th>메모</th></tr></thead><tbody>
     ${list.map(d=>`<tr class="${d.status==="미확인"?"dp-new":d.status==="제외"?"dp-dim":""}"><td style="white-space:nowrap">${esc(fmtDT(d.dep_at))}</td><td class="mapt">${esc(String(d.account||"").slice(-4))}</td><td><b>${esc(d.depositor||"")}</b></td><td class="mapt">${esc(d.bank||"")} 입금</td><td class="num"><b>${won0(d.amount)}</b></td><td>${stTag(d)}</td>
@@ -5179,15 +5191,16 @@ async function renderDepositView(){if(!bdeps)view().innerHTML=`<p class="mapt" s
   V.querySelectorAll("[data-dpo]").forEach(b=>b.onchange=()=>{ui.dpold=b.dataset.dpo==="1";renderDepositView()});
   V.querySelectorAll("[data-dpm]").forEach(b=>b.onclick=()=>{const [yy,mo]=ui.dpm.split("-").map(Number);const dd=new Date(yy,mo-1+Number(b.dataset.dpm),1);ui.dpm=dd.getFullYear()+"-"+String(dd.getMonth()+1).padStart(2,"0");renderDepositView()});
   V.querySelectorAll("[data-dpa]").forEach(b=>b.onclick=async()=>{const d=byId(b.dataset.dpa),m=mm.get(d.id);if(!m||!m.best)return;b.disabled=true;if(await depApply(d,m.best.x)){toast(`${m.best.x.c.name}에 입금 처리했습니다`);depAfter()}else b.disabled=false});
+  V.querySelectorAll("[data-dpl]").forEach(b=>b.onclick=async()=>{const d=byId(b.dataset.dpl),e=exB(d.id);if(!e)return;b.disabled=true;if(await depLink(d,e)){toast(`${e.c.name||""} 입금과 연결했습니다`);depAfter()}else b.disabled=false});
   V.querySelectorAll("[data-dpp]").forEach(b=>b.onclick=()=>depPick(byId(b.dataset.dpp)));
   V.querySelectorAll("[data-dpx]").forEach(b=>b.onclick=async()=>{const {error}=await sb.from("bank_deposits").update({status:"제외",handled_by:me.name||"",handled_at:new Date().toISOString()}).eq("id",b.dataset.dpx);if(error)return toast("바꾸지 못했습니다: "+error.message);toast("제외했습니다");depAfter()});
   V.querySelectorAll("[data-dpr]").forEach(b=>b.onclick=async()=>{const {error}=await sb.from("bank_deposits").update({status:"미확인",handled_by:"",handled_at:null}).eq("id",b.dataset.dpr);if(error)return toast("바꾸지 못했습니다: "+error.message);depAfter()});
-  V.querySelectorAll("[data-dpu]").forEach(b=>b.onclick=async()=>{const d=byId(b.dataset.dpu);const c=d.customer_id&&custById(d.customer_id);if(!(await askConfirm(`${c?c.name+"에 넣은 ":""}입금 ${won0(d.amount)}원을 취소할까요?\n그 건의 입금 내역에서도 지워지고, 이 입금은 다시 미확인이 됩니다.`)))return;if(await depUndo(d)){toast("입금확인을 취소했습니다");depAfter()}});
+  V.querySelectorAll("[data-dpu]").forEach(b=>b.onclick=async()=>{const d=byId(b.dataset.dpu);const c=d.customer_id&&custById(d.customer_id);const lx=String(d.match_type||"").endsWith("_x");if(!(await askConfirm(lx?`${c?c.name+" ":""}입금과의 연결을 풀까요?\n계약·A/S의 입금 내역은 그대로 두고, 이 입금만 다시 미확인이 됩니다.`:`${c?c.name+"에 넣은 ":""}입금 ${won0(d.amount)}원을 취소할까요?\n그 건의 입금 내역에서도 지워지고, 이 입금은 다시 미확인이 됩니다.`)))return;if(await depUndo(d)){toast("입금확인을 취소했습니다");depAfter()}});
   V.querySelectorAll("[data-dpraw]").forEach(b=>b.onclick=async()=>{const d=byId(b.dataset.dpraw);const t=String(d.raw||"").replace(/\r/g,"").trim();if(!t)return toast("저장된 문자 원문이 없습니다");
     try{await navigator.clipboard.writeText(t);toast("문자 내용을 복사했습니다")}catch(_){openDlg("받은 문자",`<textarea id="dpRaw" rows="8" readonly style="width:100%">${esc(t)}</textarea><p class="mapt">전체 선택(Ctrl+A) 후 복사(Ctrl+C) 하세요.</p>`,[["닫기"]]);const e=document.getElementById("dpRaw");e.focus();e.select()}});
   V.querySelectorAll("[data-dpmemo]").forEach(b=>b.onclick=()=>depMemo(byId(b.dataset.dpmemo)));
-  const bk=document.getElementById("dpBulk");if(bk)bk.onclick=async()=>{if(!(await askConfirm(`이름과 금액이 모두 맞는 ${bulk.length}건을 추천한 미수 건에 한꺼번에 입금 처리할까요?\n\n`+bulk.slice(0,10).map(d=>`· ${d.depositor} ${won0(d.amount)} → ${mm.get(d.id).best.x.c.name}`).join("\n")+(bulk.length>10?`\n외 ${bulk.length-10}건`:""))))return;
-    bk.disabled=true;let ok=0;for(const d of bulk){if(await depApply(d,mm.get(d.id).best.x))ok++}toast(`${ok}건 입금 처리했습니다`);depAfter()}}
+  const bk=document.getElementById("dpBulk");if(bk)bk.onclick=async()=>{if(!(await askConfirm(`이름과 금액이 모두 맞는 ${bulk.length}건을 한꺼번에 처리할까요?\n\n`+bulk.slice(0,10).map(d=>`· ${d.depositor} ${won0(d.amount)} → ${exB(d.id)?(exB(d.id).c.name||"")+" (이미 넣은 입금과 연결)":mm.get(d.id).best.x.c.name}`).join("\n")+(bulk.length>10?`\n외 ${bulk.length-10}건`:""))))return;
+    bk.disabled=true;let ok=0;for(const d of bulk){const e=exB(d.id);if(e?await depLink(d,e):await depApply(d,mm.get(d.id).best.x))ok++}toast(`${ok}건 입금 처리했습니다`);depAfter()}}
 /* 설정 > 기타설정: 입금 문자 연결 키 */
 async function depCfgBox(box){if(!box)return;const {data,error}=await sb.rpc("deposit_token",{p_reset:false});
   if(error){box.innerHTML=`<p class="mapt">입금 문자 연결을 쓰려면 Supabase SQL Editor에서 <b>phase1zz3.sql</b>을 실행해 주세요.</p>`;return}
