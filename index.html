@@ -147,7 +147,7 @@ body.mob .app>.top{display:none}body.mob #view{padding-bottom:74px}
 .m-st{font-size:11px;border:1px solid;border-radius:10px;padding:1px 7px;white-space:nowrap}.m-st.s1{color:var(--accent)}.m-st.s2{color:#2f9e44}.m-st.s3{color:#e67700}.m-st.s4{color:#868e96}.m-st.neg{color:#e03131}
 .m-jb{display:block;width:100%;border:0;background:none;font:inherit;color:inherit;text-align:left;padding:0;cursor:pointer}.m-jb .h{display:flex;align-items:center;gap:7px}.m-jb .d{display:block;margin-top:4px;font-size:12.5px;color:var(--mute)}
 div.m-jc{cursor:default}.m-1l{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.m-mini{display:flex;gap:6px;margin-top:8px;flex-wrap:wrap}.m-mini a,.m-mini button{font:inherit;font-size:12px;font-weight:700;background:var(--accent-weak,#eef4fb);color:var(--accent);border:0;border-radius:8px;padding:5px 10px;text-decoration:none;cursor:pointer}
-.m-lt{font-size:11px;font-weight:700;border-radius:10px;padding:1px 7px;white-space:nowrap}.m-lt.o{background:#fff4d6;color:#b45309}.m-lt.c{background:#eceff3;color:#5b6673}.m-lt.v{background:#e6f4ea;color:#2f9e44}.m-lt.g{background:#e8f0fe;color:#1d5fa8}.m-lt.r{background:#ffe3e3;color:#c92a2a}.m-lt.x{border:1px solid var(--line);color:var(--mute)}
+.m-lt{font-size:11px;font-weight:700;border-radius:10px;padding:1px 7px;white-space:nowrap}.m-lt.o{background:#fff4d6;color:#b45309}.m-gh{display:flex;justify-content:space-between;align-items:baseline;margin:14px 4px 6px;font-size:13px}.m-gh b{color:#1f7a3d}.m-gh span{color:var(--mute);font-size:12px}.m-lt.c{background:#eceff3;color:#5b6673}.m-lt.v{background:#e6f4ea;color:#2f9e44}.m-lt.g{background:#e8f0fe;color:#1d5fa8}.m-lt.r{background:#ffe3e3;color:#c92a2a}.m-lt.x{border:1px solid var(--line);color:var(--mute)}
 .m-big{font-size:24px;font-weight:800;color:#d9480f;margin-top:2px}.m-jc .smc-t{-webkit-line-clamp:2}.m-jc .h a{color:inherit;text-decoration:none}
 body.mob .ntlist{padding:12px}body.mob .toolbar:has(+ .sec .warnbox),body.mob #view>.toolbar:first-child h2{display:none}body.mob .nt{border-radius:14px}body.mob .nt-au{display:none}body.mob .nt-h{flex-wrap:wrap}
 .wt.dp td,.wt.dp th{padding:8px 10px}.wt.dp td.wrap{white-space:normal;min-width:260px}.wt.dp tr.dp-new td{background:#fffdf3}.wt.dp tr.dp-dim td{color:var(--mute)}
@@ -861,6 +861,7 @@ function mobRender(tabs,NS){
   if(ui.view==="recv"&&!ui.noRecv){mobRecv();return true}
   if(ui.view==="sink"){mobSink();return true}
   if(ui.view==="deposit"&&isOffice()){renderDepositView();return true}
+  if(ui.view==="ctrm"){mobCtrm();return true}
   return false}
 function mobHome(){const td=today(),mine=mobMine(),tech=mobTechOnly();
   const live=jobs.filter(j=>j.status!=="취소"&&(!tech||mine(j)));const tk=j=>timeKey(j.visit_time);
@@ -957,6 +958,53 @@ function mobWork(){if(!ui.wm)ui.wm=thisMonth();if(!ui.mwr)ui.mwr="open";if(ui.mw
   view().querySelectorAll("[data-mwa]").forEach(b=>b.onclick=()=>{ui.mwall=b.dataset.mwa==="1";mobWork()});
   view().querySelectorAll("[data-mwm]").forEach(b=>b.onclick=()=>{const [yy,mm]=ui.wm.split("-").map(Number);const d=new Date(yy,mm-1+Number(b.dataset.mwm),1);ui.wm=d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0");mobWork()})}
 /* ----- 모바일: DB관리 (당월 설치·A/S 모바일 화면과 같은 틀: 검색 · 월 · 4칸 · 칩 · 카드) ----- */
+/* 모바일 당월리스트: 계약 요약 카드 (A/S 작업 모바일 화면과 같은 틀) */
+function mobCtrInfo(k){const c=custById(k.customer_id);if(!c)return;const E=v=>v?esc(v):`<span class="mapt">(없음)</span>`;const s=payStat(k);
+  const ph=[c.phone,c.phone2].filter(Boolean);const addr=c.address||"";const ij=installOf(k);const idt=ij&&(ij.done_date||ij.visit_date);
+  const prod=[[k.product,k.size].filter(Boolean).join(" "),k.serial&&"SN "+k.serial,k.wash_added&&"수압식 추가"].filter(Boolean).join(" · ");
+  const un=s.unpaid>0&&(s.n||k.stage==="미수")?s.unpaid:0;const who=s3Text(k)||staffName(c.owner)||c.owner_name||"";
+  const rows=[["업체명",`<b>${esc(c.name||"")}</b>`],["전화번호",ph.map(x=>`<a href="tel:${esc(x.replace(/[^0-9+]/g,""))}">${esc(x)}</a>`).join(" · ")||E("")],
+    ["주소",addr?`${esc(addr)} <a class="btn sm" target="_blank" rel="noopener" href="https://map.naver.com/v5/search/${encodeURIComponent(addr)}">지도</a>`:E("")],["제품명",E(prod)],
+    ["구분 · 단계",`${esc(k.contract_type||"구매")} · <b>${esc(k.stage||"-")}</b>`],["계약일자",E(ymd2(k.contract_date))],
+    ["설치일자",idt?esc(ymd2(idt))+(ij.status==="완료"?"":` <span class="mapt">(예정 · ${esc(ij.status||"")})</span>`):E("")],
+    ["계약금액",`<b>${won0(k.amount||0)}원</b>`],["입금",s.paid?`${won0(s.paid)}원 <span class="mapt">(카드 ${won0(s.card)} · 현금 등 ${won0(s.other)})</span>`:E("")],
+    ["미수",un?`<b class="neg">${won0(un)}원</b>`:`<span class="mapt">없음</span>`],["영업담당",E(who)],
+    ["특이사항",`<span style="white-space:pre-wrap">${E([k.memo,c.memo].filter(Boolean).join("\n"))}</span>`]];
+  openDlg(`계약 · ${esc(c.name||"")}`,`<h3 class="ksec" style="margin:0">계약 정보</h3><div class="tinfo">${rows.map(([l,v],i)=>`<div class="l"><b>${i+1}</b>${l}</div><div class="v">${v}</div>`).join("")}</div>${gradeWarn(c)}`,
+    [["고객정보","gocust",()=>{openCustPopup(c,()=>{});return true}],["문자","",()=>{smsDlg({c});return true}],...(isOffice()||me.role==="sales"?[["계약 수정","",()=>{setTimeout(()=>contractDlg(c,k),0)}]]:[]),["닫기"]])}
+/* 모바일 당월리스트 (기준 틀: 검색 · 월 · 4칸 · 칩 · 카드) */
+function mobCtrm(){const D=ctrData({crow:"",cct:"",ckpi:"",cq:""});const list=D.list;sortCtrList(list,x=>x.g);
+  if(!ui.mck||!["now","next","unasg","all"].includes(ui.mck))ui.mck="now";if(ui.mcr===undefined)ui.mcr="";
+  const [y,m]=ui.cm.split("-").map(Number);const nm=m===12?1:m+1;
+  const GS={now:x=>x.g>=1&&x.g<2,next:x=>x.g>=2&&x.g<2.4,unasg:x=>x.g===2.4,all:()=>true};
+  const sets=Object.fromEntries(Object.keys(GS).map(k=>[k,list.filter(GS[k])]));
+  const base=sets[ui.mck];const RO=[["","전체"],...CROWS.map(r=>[r[0],r[1]])];
+  const rok=(x,r)=>D.rowOk(x,r);if(ui.mcr&&!base.some(x=>rok(x,ui.mcr)))ui.mcr="";
+  const GL={0:"전월미수채권",1:`${m}월 당월마감`,1.5:`${m}월 추가설치`,1.7:`${m}월 철거`,2:`${nm}월 익월마감`,2.2:`${nm}월 추가설치`,2.3:`${nm}월 철거`,2.4:"미배정 (설치일 없음)",3:"취소·보류",4:"전기마감 (미수)"};
+  const ST={완료:"s2",확정:"s1",미정:"s3",미수:"neg",보류:"s3",취소:"s4",접수:"s3",배정:"s1"};
+  const card=x=>{const k=x.k,c=x.c,a=x.a;const st=a?(a.status||""):(k.stage||"");const ph=c.phone||c.phone2||"";const who=a?"":(s3Text(k)||staffName(c.owner)||c.owner_name||"");
+    const d=baseDate(k);const un=x.s&&x.s.unpaid>0&&(x.s.n||k.stage==="미수")?x.s.unpaid:0;
+    return `<div class="m-jc ${un?"late":""}"><button type="button" class="m-jb" ${a?`data-mca="${a.id}"`:`data-mck="${k.id}"`}><span class="h"><span class="m-t">${esc(d?ymd2(d):"날짜 없음")}</span><span class="m-lt ${a?"o":"g"}">${esc(D.typOf(x))}</span><b class="m-n">${esc(c.name||"(이름 없음)")}</b><span class="m-st ${ST[st]||"s4"}">${esc(st||"-")}</span></span>
+      <span class="d m-1l">${esc([a?(a.parts||a.symptom||""):k.product,who&&"👤 "+who].filter(Boolean).join(" · "))}</span>
+      <span class="d">${a?"":`금액 <b>${won0(k.amount||0)}</b>`}${un?` · <b class="neg">미수 ${won0(un)}</b>`:!a&&x.s&&x.s.paid?` · 입금 ${won0(x.s.paid)}`:""}</span></button>
+      ${ph?`<span class="m-mini"><a href="tel:${esc(ph.replace(/[^\d+]/g,""))}">📞 전화</a><button type="button" data-mcs="${c.id}">💬 문자</button></span>`:""}</div>`};
+  view().innerHTML=`<div class="m-body"><div class="m-sb"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="M20 20l-4-4"/></svg><input id="mcQ" type="search" autocomplete="off" placeholder="업체명·대표자·전화·시리얼 찾기" aria-label="계약 검색" value="${esc(ui.mcq||"")}"></div>
+    <div class="m-mon"><span></span><b>${y}년 ${m}월 마감</b><span></span></div>
+    <div class="m-sum">${[["now","당월마감",""],["next","익월마감",""],["unasg","미배정","r"],["all","전체",""]].map(([k,l,c])=>`<button type="button" class="${ui.mck===k?"on":""} ${c}" data-mck2="${k}"><b>${sets[k].length}</b>${l}</button>`).join("")}</div>
+    <div class="m-chips m-kc">${RO.map(([r,l])=>{const n=base.filter(x=>!r||rok(x,r)).length;return n||!r?`<button type="button" class="${ui.mcr===r?"on":""}" data-mcr="${r}">${l} ${n}</button>`:""}).join("")}</div>
+    <p class="mapt" style="margin:-2px 2px 8px">당월 계약 ${D.mC.length}건 · 입금 ${won0(D.mCard+D.mOther)}원 · <span class="neg">미수 ${won0(D.unSum)}원</span></p><div id="mcL"></div></div>${isOffice()||me.role==="sales"?`<button type="button" class="m-fab" id="mcNew">＋ 신규접수</button>`:""}`;
+  const q=document.getElementById("mcQ");
+  const draw=()=>{ui.mcq=q.value;const qq=csN(q.value.trim());let arr=qq?list:base.filter(x=>!ui.mcr||rok(x,ui.mcr));
+    if(qq)arr=arr.filter(x=>csN([x.c.name,x.c.search_text,x.c.ceo,x.c.phone,x.c.phone2,x.k.serial,x.k.memo,s3Text(x.k)].join(" ")).includes(qq));
+    let h="",prev=null;arr.slice(0,200).forEach(x=>{if(x.gs!==prev){prev=x.gs;const xs=arr.filter(y=>y.gs===x.gs);h+=`<div class="m-gh"><b>${esc(GL[x.gs]||"")}</b><span>${xs.length}건 · ${won0(xs.reduce((a,y)=>a+(y.a?0:Number(y.k.amount||0)),0))}원</span></div>`}h+=card(x)});
+    document.getElementById("mcL").innerHTML=(qq?`<p class="mapt" style="margin:0 2px 8px">검색 결과 ${arr.length}건 (당월리스트 전체)</p>`:"")+h+(arr.length>200?`<p class="mapt m-more">${arr.length}건 중 200건만 보입니다. 검색으로 좁혀 보세요.</p>`:"")+(!arr.length?`<p class="mapt m-more">${qq?"찾는 계약이 없습니다.":"해당하는 계약이 없습니다."}</p>`:"");
+    document.querySelectorAll("#mcL [data-mck]").forEach(b=>b.onclick=()=>{const k=ctrById(b.dataset.mck);const c=k&&custById(k.customer_id);if(k)mobCtrInfo(k)});
+    document.querySelectorAll("#mcL [data-mca]").forEach(b=>b.onclick=()=>{const j=jobs.find(z=>z.id===b.dataset.mca);if(j)jobDlg(j)});
+    document.querySelectorAll("#mcL [data-mcs]").forEach(b=>b.onclick=()=>{const c=custById(b.dataset.mcs);if(c)smsDlg({c})})};
+  q.addEventListener("input",draw);draw();
+  view().querySelectorAll("[data-mck2]").forEach(b=>b.onclick=()=>{ui.mck=b.dataset.mck2;ui.mcr="";q.value="";ui.mcq="";mobCtrm()});
+  view().querySelectorAll("[data-mcr]").forEach(b=>b.onclick=()=>{ui.mcr=b.dataset.mcr;mobCtrm()});
+  const nb=document.getElementById("mcNew");if(nb)nb.onclick=()=>jobDlg(null,null,"ctr")}
 function mobLeads(){const td=today();if(!ui.mlm)ui.mlm=thisMonth();if(!ui.mlk||!["unasg","open","ord","all"].includes(ui.mlk))ui.mlk="unasg";if(ui.mls===undefined)ui.mls="";
   const [m0,m1]=monthRange(ui.mlm);const [y,m]=ui.mlm.split("-").map(Number);const all=leads||[];
   const M=all.filter(l=>l.recv_date&&l.recv_date>=m0&&l.recv_date<m1);const isOrd=l=>l.status==="오더"||!!l.customer_id;
@@ -1653,8 +1701,7 @@ function ctrCell(col,k,c,st,basis){
 function renderCtrView(){const _sv=snapScroll();renderCtrView0();restoreScroll(_sv)}
 /* 당월리스트 기준 달: 마감을 10일에 확정하므로 매월 1~10일은 전월, 11일부터 이번 달 */
 function ctrMonth(){const t=today();const [y,m,d]=t.split("-").map(Number);if(d>10)return t.slice(0,7);return m===1?`${y-1}-12`:`${y}-${String(m-1).padStart(2,"0")}`}
-function renderCtrView0(){
-  ui.cm=ctrMonth();ui.cmAll=false;if(ui.crow===undefined)ui.crow="";if(ui.cct===undefined)ui.cct="";if(ui.cq===undefined)ui.cq="";
+function ctrData(F){ui.cm=ctrMonth();ui.cmAll=false;
   const all=!!ui.cmAll;const [st0,en0]=monthRange(ui.cm);const inM=d=>all?!!d:(d&&d>=st0&&d<en0);
   const rows=[];
   contracts.forEach(k=>{const s=payStat(k);const b=[];if(all){if(!monthClosed(k))rows.push({k,c:custById(k.customer_id)||{},s,b:["전체"]});return}
@@ -1672,14 +1719,13 @@ function renderCtrView0(){
   const mP=payments.filter(p=>inM(p.pay_date));const mCard=mP.filter(p=>p.method==="카드").reduce((a,p)=>a+Number(p.amount||0),0),mOther=mP.filter(p=>p.method!=="카드").reduce((a,p)=>a+Number(p.amount||0),0);
   const un=contracts.filter(k=>k.stage==="미수");const unSum=un.reduce((a,k)=>a+Math.max(0,payStat(k).unpaid),0);
   /* 위쪽 요약 칸을 누르면 그 건들만 */
-  if(ui.ckpi===undefined)ui.ckpi="";
   const KPI={ctr:["당월 계약",mC],pay:["당월 입금",contracts.filter(k=>paysOf(k).some(p=>inM(p.pay_date)))],unpaid:["미수",un]};
-  const src=ui.ckpi&&KPI[ui.ckpi]?KPI[ui.ckpi][1].filter(k=>!monthClosed(k)).map(k=>({k,c:custById(k.customer_id)||{},s:payStat(k),b:[KPI[ui.ckpi][0]]})):rows;
+  const src=F.ckpi&&KPI[F.ckpi]?KPI[F.ckpi][1].filter(k=>!monthClosed(k)).map(k=>({k,c:custById(k.customer_id)||{},s:payStat(k),b:[KPI[F.ckpi][0]]})):rows;
   const AP={done:j=>j.status==="완료",open:j=>j.status==="접수"||j.status==="배정",hold:j=>j.status==="보류",cancel:j=>j.status==="취소",unpaid:()=>false,remove:()=>false};
   const rowOk=(x,r)=>!r||(x.a?AP[r](x.a):CROWS.find(y=>y[0]===r)[2](x.k));const typOf=x=>x.a?"추가설치":(x.k.contract_type||"구매");
   const cnt=(r,t)=>src.filter(x=>typOf(x)!=="양도"&&rowOk(x,r)&&(!t||typOf(x)===t)).length;
-  const qq=ui.cq.trim().toLowerCase();
-  let list=src.filter(x=>rowOk(x,ui.crow)&&(!ui.cct||typOf(x)===ui.cct)
+  const qq=F.cq.trim().toLowerCase();
+  let list=src.filter(x=>rowOk(x,F.crow)&&(!F.cct||typOf(x)===F.cct)
     &&(!qq||[x.c.name,x.c.search_text,x.c.ceo,x.c.phone,x.c.phone2,x.k.serial,x.k.memo,x.k.approval,staffName(x.k.sales3),x.k.sales3_name].join(" ").toLowerCase().includes(qq)));
   /* 소계 묶음: 0 당월마감(당월 설치) · 1 익월마감(다음 달 이후·날짜 없음) · 2 취소,보류 · 3 전기마감(미수·이월·예전 건 결제). 소계 칸에서 직접 고르면 그 묶음 */
   /* 0 전월미수채권(지난달 이전 설치·이번에 완료) · 1 당월마감 · 2 익월마감 · 3 취소,보류 · 4 전기마감(아직 미수) */
@@ -1704,6 +1750,10 @@ function renderCtrView0(){
     if(g===1&&!x.a&&!x.k.settle_tag&&["미정","확정"].includes(x.k.stage)){const ij=installOf(x.k);if(!(ij&&(ij.done_date||ij.visit_date)))return 2.4}
     if(g!==2||x.a)return g;const ij=installOf(x.k);return ij&&(ij.done_date||ij.visit_date)?2:2.4};
   list.forEach(x=>{x.g=gOf2(x);x.gs=(x.g>=2&&x.g<3)||x.g===1.7?x.g:Math.floor(x.g*2)/2});/* gs = 소계 묶음 (익월마감·다음 달 추가설치·미배정은 따로) */
+  return {all,st0,en0,inM,rows,mC,mCard,mOther,un,unSum,KPI,src,rowOk,typOf,cnt,list,gOf2}}
+function renderCtrView0(){
+  ui.cm=ctrMonth();ui.cmAll=false;if(ui.crow===undefined)ui.crow="";if(ui.cct===undefined)ui.cct="";if(ui.cq===undefined)ui.cq="";if(ui.ckpi===undefined)ui.ckpi="";
+  const D_=ctrData(ui);const {all,st0,en0,inM,rows,mC,mCard,mOther,un,unSum,KPI,src,rowOk,typOf,cnt,gOf2}=D_;let list=D_.list;
   sortCtrList(list,x=>x.g);
   list=cfApply("ctr",list,(c,x)=>cfText(ctrCell(c,x.k,x.c,x.s,x.b)));
   ui.csel=ui.csel||new Set();[...ui.csel].forEach(id=>{if(!list.some(x=>x.k.id===id))ui.csel.delete(id)});
