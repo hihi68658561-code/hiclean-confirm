@@ -1024,13 +1024,13 @@ function mobAllm(){const rows=contracts.filter(monthClosed).map(k=>({k,c:custByI
   const sets={all:M,done:M.filter(x=>x.a?x.a.status==="완료":x.k.stage==="완료"),unpaid:M.filter(un),remove:M.filter(x=>!x.a&&["철거예정","철거완료","철거"].includes(x.k.stage))};
   const base=sets[ui.mak2];const types=[...new Set(base.map(typ))];if(ui.mat2&&!types.includes(ui.mat2))ui.mat2="";
   const sumAmt=M.reduce((a,x)=>a+(x.a?0:Number(x.k.amount||0)),0);
-  view().innerHTML=`<div class="m-body"><div class="m-sb"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="M20 20l-4-4"/></svg><input id="mrQ" type="search" autocomplete="off" placeholder="업체명·대표자·전화·주소·시리얼 찾기" aria-label="계약 검색" value="${esc(ui.mrq||"")}"></div>
+  view().innerHTML=`<div class="m-body"><div class="m-sb"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="M20 20l-4-4"/></svg><input id="mrQ" type="search" autocomplete="off" placeholder="업체명·대표자·전화·주소·시리얼 찾기" aria-label="계약 검색" value="${esc(ui.mrq2||"")}"></div>
     <div class="m-mon"><button type="button" data-mrm="-1" aria-label="지난달">‹</button><b>${y}년 ${m}월 설치</b><button type="button" data-mrm="1" aria-label="다음 달">›</button></div>
     <div class="m-sum">${[["all","전체",""],["done","설치완료",""],["unpaid","미수","r"],["remove","철거",""]].map(([k,l,c])=>`<button type="button" class="${ui.mak2===k?"on":""} ${c}" data-mrk="${k}"><b>${sets[k].length}</b>${l}</button>`).join("")}</div>
     <div class="m-chips m-kc"><button type="button" class="${!ui.mat2?"on":""}" data-mrt="">전체 ${base.length}</button>${types.map(t=>`<button type="button" class="${ui.mat2===t?"on":""}" data-mrt="${esc(t)}">${esc(t)} ${base.filter(x=>typ(x)===t).length}</button>`).join("")}</div>
     <p class="mapt" style="margin:-2px 2px 8px">월마감된 계약 · ${m}월 ${M.length}건 · 계약금액 ${won0(sumAmt)}원 (전체 ${rows.length}건)</p><div id="mrL"></div></div>`;
   const q=document.getElementById("mrQ");
-  const draw=()=>{ui.mrq=q.value;const qq=csN(q.value.trim());let arr=qq?rows:base.filter(x=>!ui.mat2||typ(x)===ui.mat2);
+  const draw=()=>{ui.mrq2=q.value;const qq=csN(q.value.trim());let arr=qq?rows:base.filter(x=>!ui.mat2||typ(x)===ui.mat2);
     if(qq)arr=arr.filter(x=>csN([x.c.name,x.c.search_text,x.c.ceo,x.c.phone,x.c.phone2,x.c.address,x.k.serial,x.k.memo,x.k.approval,s3Text(x.k)].join(" ")).includes(qq));
     arr=arr.slice().sort((a,b)=>String(baseDate(b.k)||"").localeCompare(String(baseDate(a.k)||"")));const n=arr.length;
     document.getElementById("mrL").innerHTML=(qq?`<p class="mapt" style="margin:0 2px 8px">검색 결과 ${n}건 (전체 기간)</p>`:"")+arr.slice(0,150).map(mobCtrCard).join("")+(n>150?`<p class="mapt m-more">${n}건 중 150건만 보입니다. 검색으로 좁혀 보세요.</p>`:"")+(!n?`<p class="mapt m-more">${qq?"찾는 계약이 없습니다.":"해당하는 계약이 없습니다."}</p>`:"");
@@ -1038,7 +1038,7 @@ function mobAllm(){const rows=contracts.filter(monthClosed).map(k=>({k,c:custByI
     document.querySelectorAll("#mrL [data-mca]").forEach(b=>b.onclick=()=>{const j=jobs.find(z=>z.id===b.dataset.mca);if(j)jobDlg(j)});
     document.querySelectorAll("#mrL [data-mcs]").forEach(b=>b.onclick=()=>{const c=custById(b.dataset.mcs);if(c)smsDlg({c})})};
   q.addEventListener("input",draw);draw();
-  view().querySelectorAll("[data-mrk]").forEach(b=>b.onclick=()=>{ui.mak2=b.dataset.mrk;ui.mat2="";q.value="";ui.mrq="";mobAllm()});
+  view().querySelectorAll("[data-mrk]").forEach(b=>b.onclick=()=>{ui.mak2=b.dataset.mrk;ui.mat2="";q.value="";ui.mrq2="";mobAllm()});
   view().querySelectorAll("[data-mrt]").forEach(b=>b.onclick=()=>{ui.mat2=b.dataset.mrt;mobAllm()});
   view().querySelectorAll("[data-mrm]").forEach(b=>b.onclick=()=>{const dd=new Date(y,m-1+Number(b.dataset.mrm),1);ui.mam2=dd.getFullYear()+"-"+String(dd.getMonth()+1).padStart(2,"0");mobAllm()})}
 /* 모바일 당월리스트 (기준 틀: 검색 · 월 · 4칸 · 칩 · 카드) */
@@ -1116,22 +1116,26 @@ async function mobSms(){if(ui.msp===undefined)ui.msp=1;
 function mobRecv(){if(ui.mrs===undefined)ui.mrs="";const td=today();let rv=[];try{rv=recvItems()}catch(e){}
   const open=rv.filter(x=>x.open&&x.stage!=="대손처리"&&x.unpaid>0);const sum=a=>a.reduce((s,x)=>s+Number(x.unpaid||0),0);
   const broke=x=>x.cs&&x.cs.promise_date&&x.cs.promise_date<td,dueN=x=>x.cs&&x.cs.next_date&&x.cs.next_date<=td;
-  const stages=RSHOW.filter(s=>open.some(x=>x.stage===s));
+  if(!ui.mrk||!["all","act","broke","long"].includes(ui.mrk))ui.mrk="all";if(ui.mrs==="!")ui.mrs="";
+  const sets={all:open,act:open.filter(x=>broke(x)||dueN(x)),broke:open.filter(broke),long:open.filter(x=>(x.days||0)>=90)};const base=sets[ui.mrk];
+  const stages=RSHOW.filter(s=>base.some(x=>x.stage===s));if(ui.mrs&&!stages.includes(ui.mrs))ui.mrs="";
   view().innerHTML=`<div class="m-body"><div class="m-sb"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="M20 20l-4-4"/></svg><input id="mrQ" type="search" autocomplete="off" placeholder="업체명·전화번호" aria-label="미수 검색" value="${esc(ui.mrq||"")}"></div>
-    <section class="m-card"><span class="mapt">총 미수금 · ${open.length}건</span><div class="m-big">${won0(sum(open))}원</div></section>
-    <div class="m-chips m-kc"><button type="button" class="${ui.mrs===""?"on":""}" data-mrs="">전체 ${open.length}</button><button type="button" class="${ui.mrs==="!"?"on":""}" data-mrs="!">조치할 건 ${open.filter(x=>broke(x)||dueN(x)).length}</button>${stages.map(s=>`<button type="button" class="${ui.mrs===s?"on":""}" data-mrs="${esc(s)}">${esc(s)} ${open.filter(x=>x.stage===s).length}</button>`).join("")}</div><div id="mrL"></div></div>`;
+    <div class="m-sum">${[["all","전체",""],["act","조치할 건","r"],["broke","약속 지남","r"],["long","90일 이상",""]].map(([k,l,c])=>`<button type="button" class="${ui.mrk===k?"on":""} ${c}" data-mrk="${k}"><b>${sets[k].length}</b>${l}</button>`).join("")}</div>
+    <div class="m-chips m-kc"><button type="button" class="${ui.mrs===""?"on":""}" data-mrs="">전체 ${base.length}</button>${stages.map(s=>`<button type="button" class="${ui.mrs===s?"on":""}" data-mrs="${esc(s)}">${esc(s)} ${base.filter(x=>x.stage===s).length}</button>`).join("")}</div>
+    <p class="mapt" style="margin:-2px 2px 8px">총 미수금 <b class="neg">${won0(sum(open))}원</b> (${open.length}건)${ui.mrk!=="all"?` · 이 칸 ${won0(sum(base))}원`:""}</p><div id="mrL"></div></div>`;
   const q=document.getElementById("mrQ");
-  const draw=()=>{ui.mrq=q.value;const qq=csN(q.value.trim());let list=open.filter(x=>!ui.mrs||(ui.mrs==="!"?broke(x)||dueN(x):x.stage===ui.mrs));
+  const draw=()=>{ui.mrq=q.value;const qq=csN(q.value.trim());let list=qq?open:base.filter(x=>!ui.mrs||x.stage===ui.mrs);
     if(qq)list=list.filter(x=>x.c&&x.c.id&&custSearchText(x.c).includes(qq));
     list=list.slice().sort((a,b)=>(broke(b)-broke(a))||(dueN(b)-dueN(a))||(b.unpaid-a.unpaid));
     const what=x=>x.t==="ctr"?"계약 잔금":x.t==="as"?`${kl(x.j)||"A/S"} 비용`:"기타 채권";
     document.getElementById("mrL").innerHTML=list.slice(0,150).map((x,i)=>{const ph=x.c&&(x.c.phone||x.c.phone2)||"";const cs=x.cs||{};
       return `<div class="m-jc ${broke(x)||dueN(x)?"late":""}"><button type="button" class="m-jb" data-mr="${i}"><span class="h">${broke(x)?`<span class="m-lt r">약속 지남</span>`:x.stage?`<span class="tag rs-${esc(x.stage)}">${esc(x.stage)}</span>`:""}<b class="m-n">${esc(x.c&&x.c.name||"")}</b><b class="neg">${won0(x.unpaid)}</b></span>
-        <span class="d">${esc([what(x),cs.promise_date?"약속 "+ymd2(cs.promise_date):"",cs.next_date?"다음 연락 "+ymd2(cs.next_date):"",x.c&&(staffName(x.c.owner)||x.c.owner_name)].filter(Boolean).join(" · "))}</span></button>
+        <span class="d">${esc([what(x),x.idate?ymd2(x.idate)+(x.days>0?` (${x.days}일)`:""):""].filter(Boolean).join(" · "))}</span>
+        <span class="d m-1l">${esc([cs.promise_date?"약속 "+ymd2(cs.promise_date):"",cs.next_date?"다음 연락 "+ymd2(cs.next_date):"",x.c&&(staffName(x.c.owner)||x.c.owner_name)&&"👤 "+(staffName(x.c.owner)||x.c.owner_name)].filter(Boolean).join(" · ")||"연락 기록 없음")}</span></button>
         <span class="m-mini">${ph?`<a href="tel:${esc(ph.replace(/[^\d+]/g,""))}">📞 전화</a><button type="button" data-mrsms="${i}">💬 문자</button>`:""}<button type="button" data-mr="${i}">✎ 기록</button></span></div>`}).join("")||`<p class="mapt m-more">해당하는 미수가 없습니다.</p>`;
     document.querySelectorAll("#mrL [data-mr]").forEach(b=>b.onclick=()=>recvDlg(list[+b.dataset.mr]));
     document.querySelectorAll("#mrL [data-mrsms]").forEach(b=>b.onclick=()=>smsDlg({c:list[+b.dataset.mrsms].c}))};
-  q.addEventListener("input",draw);draw();view().querySelectorAll("[data-mrs]").forEach(b=>b.onclick=()=>{ui.mrs=b.dataset.mrs;mobRecv()})}
+  q.addEventListener("input",draw);draw();view().querySelectorAll("[data-mrs]").forEach(b=>b.onclick=()=>{ui.mrs=b.dataset.mrs;mobRecv()});view().querySelectorAll("[data-mrk]").forEach(b=>b.onclick=()=>{ui.mrk=b.dataset.mrk;ui.mrs="";q.value="";ui.mrq="";mobRecv()})}
 /* ----- 모바일: 싱크대발주 ----- */
 async function mobSink(){const SK_NOTOUT=o=>!["출고완료","취소","재고등록"].includes(o.status),chipSt=o=>/사용$/.test(skStLabel(o))?"":o.status==="재고등록"?"입고완료":o.status;if(!skOrders)view().innerHTML=`<p class="mapt" style="padding:20px">불러오는 중…</p>`;await fetchSink();if(!isMob()||ui.view!=="sink")return;if(!ui.mss)ui.mss="미출고";
   const os=(skOrders||[]).slice();const ST=["신규접수","주문완료","입고완료","출고완료","취소"];const cnt=s=>s==="미출고"?os.filter(SK_NOTOUT).length:os.filter(o=>chipSt(o)===s).length;
