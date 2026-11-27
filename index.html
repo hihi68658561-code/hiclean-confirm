@@ -862,6 +862,7 @@ function mobRender(tabs,NS){
   if(ui.view==="sink"){mobSink();return true}
   if(ui.view==="deposit"&&isOffice()){renderDepositView();return true}
   if(ui.view==="ctrm"){mobCtrm();return true}
+  if(ui.view==="stock"&&isOffice()){mobStock();return true}
   if(ui.view==="allm"){mobAllm();return true}
   if(ui.view==="asm"&&me.role!=="sales"){mobAsm();return true}
   return false}
@@ -1007,6 +1008,50 @@ function mobCtrInfo(k){const c=custById(k.customer_id);if(!c)return;const E=v=>v
     ["특이사항",`<span style="white-space:pre-wrap">${E([k.memo,c.memo].filter(Boolean).join("\n"))}</span>`]];
   openDlg(`계약 · ${esc(c.name||"")}`,`<h3 class="ksec" style="margin:0">계약 정보</h3><div class="tinfo">${rows.map(([l,v],i)=>`<div class="l"><b>${i+1}</b>${l}</div><div class="v">${v}</div>`).join("")}</div>${gradeWarn(c)}`,
     [["고객정보","gocust",()=>{openCustPopup(c,()=>{});return true}],["문자","",()=>{smsDlg({c});return true}],...(isOffice()||me.role==="sales"?[["계약 수정","",()=>{setTimeout(()=>contractDlg(c,k),0)}]]:[]),["닫기"]])}
+/* 모바일 재고관리 (기준 틀) */
+async function mobStock(){if(!stkUnits)view().innerHTML=`<p class="mapt" style="padding:20px">불러오는 중…</p>`;await fetchStock();await stkRemoveSync();if(!isMob()||ui.view!=="stock")return;
+  if(ui.noStock){view().innerHTML=`<div class="m-body"><p class="warnbox">재고관리를 쓰려면 Supabase SQL Editor에서 <b>phase1zg.sql</b>을 실행해 주세요.</p></div>`;return}
+  if(!ui.stab||ui.stab==="used")ui.stab="ultra";const tm=thisMonth();const [y,m]=tm.split("-").map(Number);
+  const seg=`<div class="m-chips m-kc" style="margin-bottom:8px">${[["ultra","초음파세척기"],["wash","수압식세척기"]].map(([k,l])=>`<button type="button" class="${ui.stab===k?"on":""}" data-mst="${k}">${l}</button>`).join("")}</div>`;
+  const sb_=(id,ph,v)=>`<div class="m-sb"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="M20 20l-4-4"/></svg><input id="${id}" type="search" autocomplete="off" placeholder="${ph}" value="${esc(v||"")}"></div>`;
+  if(ui.stab==="wash"){const ins=washMoves.filter(x=>x.kind!=="출고"),outs=[...washAuto(),...washMoves.filter(x=>x.kind==="출고")].sort((a,b)=>String(b.move_date||"").localeCompare(String(a.move_date||"")));
+    const S=a=>a.reduce((s,x)=>s+Number(x.qty||0),0);const inSum=S(ins),outSum=S(outs);const mOut=outs.filter(x=>String(x.move_date||"").slice(0,7)===tm);
+    if(!ui.mwk||!["out","mout","in"].includes(ui.mwk))ui.mwk="mout";const L={out:outs,mout:mOut,in:ins.slice().sort((a,b)=>String(b.move_date||"").localeCompare(String(a.move_date||"")))}[ui.mwk];
+    view().innerHTML=`<div class="m-body">${sb_("mwQ","업체명·전화·주소 찾기",ui.mwq)}${seg}
+      <div class="m-sum"><button type="button" class="${""}" disabled><b>${inSum-outSum}</b>현 재고</button>${[["mout",`${m}월 출고`],["out","전체 출고"],["in","입고·조정"]].map(([k,l])=>`<button type="button" class="${ui.mwk===k?"on":""}" data-mwk="${k}"><b>${k==="mout"?S(mOut):k==="out"?outSum:inSum}</b>${l}</button>`).join("")}</div>
+      <p class="mapt" style="margin:-2px 2px 8px">수압식 추가 구매 계약은 설치가 완료되면 자동으로 출고에 들어갑니다.</p><div id="mwL"></div></div><button type="button" class="m-fab" id="mwNew">＋ 입고</button>`;
+    const q=document.getElementById("mwQ");const draw=()=>{ui.mwq=q.value;const qq=csN(q.value.trim());let arr=qq?[...outs,...ins]:L;if(qq)arr=arr.filter(x=>csN([x.site_name,x.phone,x.address,x.product,x.memo].join(" ")).includes(qq));
+      document.getElementById("mwL").innerHTML=arr.slice(0,150).map((x,i)=>{const isIn=x.kind!=="출고"&&!x.auto;return `<div class="m-jc"><button type="button" class="m-jb" data-mw="${i}"><span class="h"><span class="m-t">${esc(ymd2(x.move_date)||"-")}</span><span class="m-lt ${isIn?"v":"o"}">${isIn?(x.kind==="조정"?"재고조정":"입고"):"출고"}</span><b class="m-n">${esc(isIn?(x.memo||x.product||""):x.site_name||"")}</b><b>${Number(x.qty||0)}대</b></span>
+        ${isIn?"":`<span class="d m-1l">${esc([x.product,x.phone,x.auto?"계약":"직접"].filter(Boolean).join(" · "))}</span>`}</button></div>`}).join("")||`<p class="mapt m-more">${qq?"찾는 기록이 없습니다.":"기록이 없습니다."}</p>`;
+      document.querySelectorAll("#mwL [data-mw]").forEach(b=>b.onclick=()=>{const x=arr[+b.dataset.mw];if(x.auto){const k=x.k;if(k)mobCtrInfo(k)}else washDlg(x)})};
+    q.addEventListener("input",draw);draw();
+    view().querySelectorAll("[data-mwk]").forEach(b=>b.onclick=()=>{ui.mwk=b.dataset.mwk;q.value="";ui.mwq="";mobStock()});
+    document.getElementById("mwNew").onclick=()=>washDlg(null,"입고");
+  }else{const cm=stkCtrMap();const units=stkUnits.map(u=>({u,s:stkState(u,cm)}));
+    const sets={in:units.filter(x=>x.s.st==="in"&&!x.u.used),rsv:units.filter(x=>x.s.st==="rsv"),mout:units.filter(x=>x.s.st==="out"&&String(x.s.date||"").slice(0,7)===tm),used:units.filter(x=>(x.u.used&&x.s.st==="in")||x.s.st==="uc")};
+    if(!ui.msk||!sets[ui.msk])ui.msk="in";const base=sets[ui.msk];const mdl=x=>x.u.model==="DK"?"대광":((STK_MODELS[x.u.model]||{}).short||x.u.model||"기타");
+    const mods=[...new Set(base.map(mdl))];if(ui.msm&&!mods.includes(ui.msm))ui.msm="";
+    const fresh=sets.in;let need=0;const sizes=[...new Set([...STK_SIZES,...stkUnits.map(u=>u.size).filter(Boolean)])];
+    stkTargets.forEach(t=>{if(t.model==="AT")return;const n=fresh.filter(x=>x.u.model===t.model&&x.u.size===t.size&&x.u.ty===t.ty&&x.u.lip===1).length;need+=Math.max(0,Number(t.qty||0)-n)});
+    const plan=units.filter(x=>x.s.st==="x"&&x.s.label==="생산예정").length;
+    view().innerHTML=`<div class="m-body">${sb_("msQ","시리얼·번호·업장·메모 찾기",ui.msq)}${seg}
+      <div class="m-sum">${[["in","재고",""],["rsv","출고예정",""],["mout",`${m}월 출고`,""],["used","중고","" ]].map(([k,l,c])=>`<button type="button" class="${ui.msk===k?"on":""} ${c}" data-msk="${k}"><b>${sets[k].length}</b>${l}</button>`).join("")}</div>
+      <div class="m-chips m-kc"><button type="button" class="${!ui.msm?"on":""}" data-msm="">전체 ${base.length}</button>${mods.map(t=>`<button type="button" class="${ui.msm===t?"on":""}" data-msm="${esc(t)}">${esc(t)} ${base.filter(x=>mdl(x)===t).length}</button>`).join("")}</div>
+      <p class="mapt" style="margin:-2px 2px 8px">${need?`<b class="neg">생산 필요 ${need}대</b>`:"생산 필요 없음"}${plan?` · 생산예정 ${plan}대`:""} <span class="mapt">(현황표·적정 재고는 PC에서)</span></p><div id="msL"></div></div><button type="button" class="m-fab" id="msNew">＋ 재고 등록</button>`;
+    const ST={in:["재고","s2"],rsv:["출고예정","s1"],out:["출고","s4"],uc:["중고확인","s3"],x:["","s3"]};
+    const q=document.getElementById("msQ");const draw=()=>{ui.msq=q.value;const qq=csN(q.value.trim());let arr=qq?units:base.filter(x=>!ui.msm||mdl(x)===ui.msm);
+      if(qq)arr=arr.filter(x=>csN([x.u.serial,x.u.no,x.u.remark,x.u.memo,stkSiteLabel(x.s,x.u),stkSpec(x.u),x.u.grade].join(" ")).includes(qq));
+      arr=arr.slice().sort((a,b)=>ui.msk==="mout"?String(b.s.date||"").localeCompare(String(a.s.date||"")):String(a.u.no??"").localeCompare(String(b.u.no??""),"ko",{numeric:true}));const n=arr.length;
+      document.getElementById("msL").innerHTML=(qq?`<p class="mapt" style="margin:0 2px 8px">검색 결과 ${n}대 (전체)</p>`:"")+arr.slice(0,150).map((x,i)=>{const st=ST[x.s.st]||["",""];const site=stkSiteLabel(x.s,x.u);
+        return `<div class="m-jc"><button type="button" class="m-jb" data-ms="${x.u.id}"><span class="h"><span class="m-t">No.${esc(String(x.u.no??"-"))}</span>${x.u.used?'<span class="m-lt o">중고</span>':""}<b class="m-n">${esc(stkSpec(x.u))}</b><span class="m-st ${st[1]}">${esc(x.s.st==="x"?x.s.label:st[0])}</span></span>
+          <span class="d m-1l">${esc([x.u.serial&&"SN "+x.u.serial,x.u.grade&&"등급 "+x.u.grade,x.u.in_date&&"입고 "+ymd2(x.u.in_date)].filter(Boolean).join(" · ")||"-")}</span>
+          ${site||x.s.date?`<span class="d m-1l">${esc([site&&"🏪 "+site,x.s.date&&"출고 "+ymd2(x.s.date)].filter(Boolean).join(" · "))}</span>`:""}</button></div>`}).join("")+(n>150?`<p class="mapt m-more">${n}대 중 150대만 보입니다. 검색으로 좁혀 보세요.</p>`:"")+(!n?`<p class="mapt m-more">${qq?"찾는 제품이 없습니다.":"해당하는 제품이 없습니다."}</p>`:"");
+      document.querySelectorAll("#msL [data-ms]").forEach(b=>b.onclick=()=>{const u=stkUnits.find(z=>z.id===b.dataset.ms);if(u)stockUnitDlg(u)})};
+    q.addEventListener("input",draw);draw();
+    view().querySelectorAll("[data-msk]").forEach(b=>b.onclick=()=>{ui.msk=b.dataset.msk;ui.msm="";q.value="";ui.msq="";mobStock()});
+    view().querySelectorAll("[data-msm]").forEach(b=>b.onclick=()=>{ui.msm=b.dataset.msm;mobStock()});
+    document.getElementById("msNew").onclick=()=>stockUnitDlg(null,false)}
+  view().querySelectorAll("[data-mst]").forEach(b=>b.onclick=()=>{ui.stab=b.dataset.mst;mobStock()})}
 /* 모바일 당월·전체리스트 카드 */
 function mobCtrCard(x){const ST={완료:"s2",확정:"s1",미정:"s3",미수:"neg",보류:"s3",취소:"s4",접수:"s3",배정:"s1"};const k=x.k,c=x.c,a=x.a;const st=a?(a.status||""):(k.stage||"");const ph=c.phone||c.phone2||"";const who=a?"":(s3Text(k)||staffName(c.owner)||c.owner_name||"");
     const d=baseDate(k);const un=x.s&&x.s.unpaid>0&&(x.s.n||k.stage==="미수")?x.s.unpaid:0;
