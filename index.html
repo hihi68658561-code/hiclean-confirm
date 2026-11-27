@@ -862,6 +862,7 @@ function mobRender(tabs,NS){
   if(ui.view==="sink"){mobSink();return true}
   if(ui.view==="deposit"&&isOffice()){renderDepositView();return true}
   if(ui.view==="ctrm"){mobCtrm();return true}
+  if(ui.view==="asm"&&me.role!=="sales"){mobAsm();return true}
   return false}
 function mobHome(){const td=today(),mine=mobMine(),tech=mobTechOnly();
   const live=jobs.filter(j=>j.status!=="취소"&&(!tech||mine(j)));const tk=j=>timeKey(j.visit_time);
@@ -958,6 +959,39 @@ function mobWork(){if(!ui.wm)ui.wm=thisMonth();if(!ui.mwr)ui.mwr="open";if(ui.mw
   view().querySelectorAll("[data-mwa]").forEach(b=>b.onclick=()=>{ui.mwall=b.dataset.mwa==="1";mobWork()});
   view().querySelectorAll("[data-mwm]").forEach(b=>b.onclick=()=>{const [yy,mm]=ui.wm.split("-").map(Number);const d=new Date(yy,mm-1+Number(b.dataset.mwm),1);ui.wm=d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0");mobWork()})}
 /* ----- 모바일: DB관리 (당월 설치·A/S 모바일 화면과 같은 틀: 검색 · 월 · 4칸 · 칩 · 카드) ----- */
+/* 모바일 A/S관리 (기준 틀: 검색 · 월 · 4칸 · 칩 · 카드) */
+function mobAsm(){_instMap=null;if(!ui.am)ui.am=thisMonth();if(!ui.mak||!["open","rcv","unpaid","all"].includes(ui.mak))ui.mak="open";if(ui.map===undefined)ui.map="*";
+  const [st0,en0]=monthRange(ui.am);const inM=d=>d&&d>=st0&&d<en0;const [y,m]=ui.am.split("-").map(Number);const all=jobs.filter(asLike);
+  const rows=all.filter(j=>inM(j.request_date)||inM(j.done_date)||asPayRows(j).some(p=>inM(p.pay_date))||((j.request_date||"")<st0&&(["접수","배정","보류"].includes(j.status)||(j.pay_status==="미수"&&j.status!=="취소"))));
+  const sets={open:all.filter(j=>["접수","배정","보류"].includes(j.status)),rcv:all.filter(j=>inM(j.request_date)),unpaid:all.filter(j=>j.pay_status==="미수"&&j.status!=="취소"),all:rows};
+  let mCard=0,mCash=0;all.forEach(j=>{if(j.status==="취소")return;asPayRows(j).forEach(p=>{if(!inM(p.pay_date))return;const a=Number(p.amount||0);if(jpCard(p.method))mCard+=a;else mCash+=a})});
+  const unSum=sets.unpaid.reduce((a,j)=>a+asPay(j).unpaid,0);const base=sets[ui.mak];const ptOf=j=>asPt(j)||"미정";
+  const PT=["*","유상","무상","미정"];if(ui.map!=="*"&&!base.some(j=>ptOf(j)===ui.map))ui.map="*";
+  const ST={완료:"s2",배정:"s1",접수:"s3",보류:"s3",취소:"s4"};const td=today();
+  const card=j=>{const c=custById(j.customer_id)||{};const mo=asMoney(j);const ph=c.phone||c.phone2||"";const who=whoOf(j);const late=["접수","배정"].includes(j.status)&&j.visit_date&&j.visit_date<td;
+    const un=j.pay_status==="미수"&&j.status!=="취소"?mo.unpaid:0;const d=j.status==="완료"?(j.done_date||j.request_date):(j.visit_date||j.request_date);
+    return `<div class="m-jc ${un||late?"late":""}"><button type="button" class="m-jb" data-maj="${j.id}"><span class="h"><span class="m-t">${esc(d?ymd2(d):"-")}</span><span class="m-lt ${j.kind==="move"?"o":"g"}">${esc(kl(j)||"A/S")}</span><b class="m-n">${esc(j.customer_name||c.name||"(이름 없음)")}</b><span class="m-st ${un?"neg":ST[j.status]||"s4"}">${esc(un?"미수":j.status||"-")}</span></span>
+      <span class="d m-1l">${esc([j.symptom,who?"👤 "+who:"미배정"].filter(Boolean).join(" · "))}</span>
+      <span class="d">${ptOf(j)==="무상"?"무상":mo.cost?`청구 <b>${won0(mo.cost)}</b>`:'<span class="mapt">금액 미정</span>'}${un?` · <b class="neg">미수 ${won0(un)}</b>`:""}${!j.visit_date&&j.status!=="완료"&&j.status!=="취소"?' · <span class="neg">방문일 없음</span>':""}</span></button>
+      ${ph?`<span class="m-mini"><a href="tel:${esc(ph.replace(/[^\d+]/g,""))}">📞 전화</a><button type="button" data-mas="${c.id}">💬 문자</button></span>`:""}</div>`};
+  view().innerHTML=`<div class="m-body"><div class="m-sb"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="M20 20l-4-4"/></svg><input id="maQ" type="search" autocomplete="off" placeholder="업체명·전화·고장내용·기사 찾기" aria-label="A/S 검색" value="${esc(ui.maq||"")}"></div>
+    <div class="m-mon"><button type="button" data-mam="-1" aria-label="지난달">‹</button><b>${y}년 ${m}월</b><button type="button" data-mam="1" aria-label="다음 달">›</button></div>
+    <div class="m-sum">${[["open","미처리","r"],["rcv","당월 접수",""],["unpaid","미수","r"],["all","전체",""]].map(([k,l,c])=>`<button type="button" class="${ui.mak===k?"on":""} ${c}" data-mak="${k}"><b>${sets[k].length}</b>${l}</button>`).join("")}</div>
+    <div class="m-chips m-kc">${PT.map(t=>{const n=base.filter(j=>t==="*"||ptOf(j)===t).length;return n||t==="*"?`<button type="button" class="${ui.map===t?"on":""}" data-map="${t}">${t==="*"?"전체":t} ${n}</button>`:""}).join("")}</div>
+    <p class="mapt" style="margin:-2px 2px 8px">${m}월 입금 ${won0(mCard+mCash)}원 (카드 ${won0(mCard)} · 현금 ${won0(mCash)}) · <span class="neg">미수 ${won0(unSum)}원</span>${ui.mak==="open"||ui.mak==="unpaid"?"<br>미처리·미수는 월과 상관없이 전부":""}</p><div id="maL"></div></div>${canNewJob(null)?`<button type="button" class="m-fab" id="maNew">＋ A/S 접수</button>`:""}`;
+  const q=document.getElementById("maQ");
+  const draw=()=>{ui.maq=q.value;const qq=csN(q.value.trim());let arr=qq?all:base.filter(j=>ui.map==="*"||ptOf(j)===ui.map);
+    if(qq)arr=arr.filter(j=>{const c=custById(j.customer_id)||{};return csN([c.name,c.search_text,j.customer_name,c.ceo,c.phone,c.phone2,j.address,j.symptom,j.result,j.parts,j.pay_name,whoOf(j)].join(" ")).includes(qq)});
+    const dk=j=>j.status==="완료"?(j.done_date||j.request_date||""):(j.visit_date||j.request_date||"");
+    arr=arr.slice().sort((a,b)=>ui.mak==="open"?dk(a).localeCompare(dk(b)):dk(b).localeCompare(dk(a)));const n=arr.length;
+    document.getElementById("maL").innerHTML=(qq?`<p class="mapt" style="margin:0 2px 8px">검색 결과 ${n}건 (전체 기간)</p>`:"")+arr.slice(0,150).map(card).join("")+(n>150?`<p class="mapt m-more">${n}건 중 150건만 보입니다. 검색으로 좁혀 보세요.</p>`:"")+(!n?`<p class="mapt m-more">${qq?"찾는 A/S가 없습니다.":"해당하는 A/S가 없습니다."}</p>`:"");
+    document.querySelectorAll("#maL [data-maj]").forEach(b=>b.onclick=()=>{const j=jobs.find(z=>z.id===b.dataset.maj);if(j)jobDlg(j)});
+    document.querySelectorAll("#maL [data-mas]").forEach(b=>b.onclick=()=>{const c=custById(b.dataset.mas);if(c)smsDlg({c})})};
+  q.addEventListener("input",draw);draw();
+  view().querySelectorAll("[data-mak]").forEach(b=>b.onclick=()=>{ui.mak=b.dataset.mak;ui.map="*";q.value="";ui.maq="";mobAsm()});
+  view().querySelectorAll("[data-map]").forEach(b=>b.onclick=()=>{ui.map=b.dataset.map;mobAsm()});
+  view().querySelectorAll("[data-mam]").forEach(b=>b.onclick=()=>{const dd=new Date(y,m-1+Number(b.dataset.mam),1);ui.am=dd.getFullYear()+"-"+String(dd.getMonth()+1).padStart(2,"0");mobAsm()});
+  const nb=document.getElementById("maNew");if(nb)nb.onclick=()=>jobDlg(null,null,"as")}
 /* 모바일 당월리스트: 계약 요약 카드 (A/S 작업 모바일 화면과 같은 틀) */
 function mobCtrInfo(k){const c=custById(k.customer_id);if(!c)return;const E=v=>v?esc(v):`<span class="mapt">(없음)</span>`;const s=payStat(k);
   const ph=[c.phone,c.phone2].filter(Boolean);const addr=c.address||"";const ij=installOf(k);const idt=ij&&(ij.done_date||ij.visit_date);
