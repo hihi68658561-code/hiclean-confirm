@@ -159,6 +159,9 @@ body.mob .ntlist{padding:12px}body.mob .toolbar:has(+ .sec .warnbox),body.mob #v
   body:not(.mob) #nav .nacct{display:flex;flex-wrap:wrap;align-items:center;gap:6px;grid-column:1/-1;width:100%;border-top:1px solid var(--line);margin-top:6px;padding:8px 4px 2px;font-size:13px}}
 .wt.aana{font-size:12px}.wt.aana th,.wt.aana td{padding:4px 6px;text-align:center;white-space:nowrap}.wt.aana tbody th{text-align:left;background:#f4f6f8;position:sticky;left:0;z-index:1}.wt.aana thead th.ah{position:sticky;left:0;z-index:3}.wt.aana thead th.cum{background:#e3f1df}.wt.aana thead th.mo1{background:#dfe7f5}.wt.aana thead th.mo2{background:#fbe4d5}.wt.aana thead th.ah{background:#e03131;color:#fff}
 .wt.aana td.gl,.wt.aana th.gl{border-right:2px solid #adb5bd}.wt.aana tr.atot td,.wt.aana tr.atot th{background:#fff3bf}.wt.aana tr.aext td,.wt.aana tr.aext th{background:#fff9db}
+.mswk{border-collapse:collapse;width:100%;font-size:13px}.mswk th,.mswk td{border:1px solid var(--line);padding:6px 4px;text-align:center;min-width:42px}.mswk thead th{background:#f1f3f5;font-weight:600}.mswk tbody th{white-space:nowrap;background:#f8f9fa;font-weight:500;position:relative}
+.mswk tbody th i{color:#e67700;font-style:normal;margin-left:2px}.mswk th.sun{color:#e03131}.mswk th.sat{color:#1c7ed6}.mswk tr.on th,.mswk tr.on td{background:#e7f0ff}.mswk tr.td th{font-weight:800}.mswk td b{color:var(--accent)}.mswk td.lv{color:#c92a2a;background:#fff5f5}
+.m-it.mpn{background:#fff9db}.m-it.mpn.lv b{color:#c92a2a}.m-ref{display:block;width:100%;text-align:left;border:1px dashed #fab005;background:#fff9db;border-radius:12px;padding:10px 14px;margin:0 0 10px;font-size:14px;color:#5c4400}
 .mobsw[hidden]{display:none}
 .mback{display:none}
 @media (max-width:760px){.body.mdet>aside{display:none}.body.mdet>.mback{display:flex;align-items:center;gap:10px;position:fixed;top:0;left:0;right:0;height:50px;padding:0 12px;z-index:61;background:var(--panel);border-bottom:1px solid var(--line);box-shadow:0 1px 4px rgba(0,0,0,.06)}
@@ -933,7 +936,7 @@ function mobSched(){const td=today();if(!ui.msd)ui.msd=td;if(ui.mall===undefined
   view().querySelectorAll("[data-mdd]").forEach(b=>b.onclick=()=>{ui.msd=addDays(ui.msd,+b.dataset.mdd);mobSched()});
   view().querySelectorAll("[data-mall]").forEach(b=>b.onclick=()=>{ui.mall=b.dataset.mall==="1";mobSched()});
   const f=document.getElementById("mNew");if(f)f.onclick=()=>jobDlg(null,null,"as",null,{visit_date:ui.msd});
-  const pc=view().querySelector("[data-mpc]");if(pc)pc.onclick=()=>{ui.view="schedpc";ui.schJump=true;ui._fresh=true;render()}}
+  const pc=view().querySelector("[data-mpc]");if(pc)pc.onclick=()=>{ui.view="schedpc";ui.schFull=false;ui.mpd=ui.msd;ui.schJump=true;ui._fresh=true;render()}}
 function mobWork(){if(!ui.wm)ui.wm=thisMonth();if(!ui.mwr)ui.mwr="open";if(ui.mwk===undefined)ui.mwk="";const tech=meHas("tech");if(ui.mwall===undefined)ui.mwall=!tech;
   const mine=mobMine();const scoped=jobs.filter(j=>ui.mwall||mine(j));const B=monthBuckets(scoped,ui.wm);const carry=new Set(B.carry.map(j=>j.id));
   const all=B.carry.concat(B.new);const rows={open:B.open,done:B.done,hold:B.hold,all};const [y,m]=ui.wm.split("-").map(Number);
@@ -1217,7 +1220,7 @@ function mobMore(tabs,NS){const items=tabs.filter(([k])=>!["home","cust","sched"
   view().innerHTML=`<div class="m-body"><div class="m-mn">${items.map(([k,l])=>`<button type="button" data-mm="${k}"${k==="notice"&&noticeUnread()?' class="ndot"':""}><i class="nic"><svg viewBox="0 0 24 24">${NAVI[k==="schedpc"?"sched":k]||""}</svg></i>${(NS[k]||l).replace("<br>"," ")}</button>`).join("")}</div>
     <section class="m-card"><h4>화면 보기</h4><div class="m-seg"><button type="button" data-ver="pc">PC 버전</button><button type="button" class="on">모바일 버전</button></div><p class="mapt" style="margin:8px 0 0">PC 버전은 모든 기능이 있는 기존 화면입니다. 고른 화면은 이 기기에 기억됩니다.</p></section>
     <section class="m-card"><h4>${esc(me.name||me.email||"")} <span class="mapt">${esc(ROLE[me.role]||"")}</span></h4><button type="button" class="m-link" data-mx="bPw"><b>비밀번호 변경</b><span>›</span></button><button type="button" class="m-link" data-mx="app"><b>휴대폰에 앱으로 설치</b><span>›</span></button><button type="button" class="m-link neg" data-mx="bLogout"><b>로그아웃</b><span>›</span></button></section></div>`;
-  view().querySelectorAll("[data-mm]").forEach(b=>b.onclick=()=>{ui.view=b.dataset.mm;if(ui.view==="schedpc")ui.schJump=true;ui._fresh=true;render()});
+  view().querySelectorAll("[data-mm]").forEach(b=>b.onclick=()=>{ui.view=b.dataset.mm;ui.schFull=false;if(ui.view==="schedpc")ui.schJump=true;ui._fresh=true;render()});
   view().querySelector("[data-ver=pc]").onclick=()=>setVer("pc");
   view().querySelectorAll("[data-mx]").forEach(b=>b.onclick=()=>{const k=b.dataset.mx;if(k==="app"){if(window.showAppInstall)window.showAppInstall();return}const el=document.getElementById(k);if(el)el.click()})}
 function render0(){
@@ -1236,7 +1239,7 @@ function render0(){
   const nm=document.querySelector("#nav .nmore");if(nm)nm.onclick=()=>{ui.navOpen=!ui.navOpen;render0()};
   document.querySelectorAll("#nav button").forEach(b=>b.onclick=()=>{ui.view=b.dataset.v;ui.mdet=false;if(ui.view==="sched")ui.schJump=true;ui.jsel=new Set();ui._fresh=true;render()});
   if(ui.view==="install"||ui.view==="as")ui.view="work";
-  if(ui.view==="schedpc"){if(mob){renderSchedView();addXlsBtn();return}ui.view="sched"}
+  if(ui.view==="schedpc"){if(mob){if(ui.schFull){renderSchedView();addXlsBtn();return}mobSchedPc();return}ui.view="sched"}
   if(mob&&ui.view==="cust"&&ui.mfull){renderCustView();const bb=document.getElementById("mBackB");if(bb)bb.onclick=()=>{ui.mfull=false;ui._fresh=true;render()};return}
   if(ui.view==="home")renderHomeView();else if(ui.view==="cust")renderCustView();else if(ui.view==="work")renderWorkView();else if(ui.view==="ctrm")renderCtrView();else if(ui.view==="asm")renderAsView();else if(ui.view==="asana")renderAsAnaView();else if(ui.view==="leads")renderLeadView();else if(ui.view==="recv")renderRecvView();else if(ui.view==="deposit"&&isOffice())renderDepositView();else if(ui.view==="allm")renderAllView();else if(ui.view==="sched")renderSchedView();else if(ui.view==="sms")renderSmsView();else if(ui.view==="notice")renderNoticeView();else if(ui.view==="sink")renderSinkView();else if(ui.view==="stock")renderStockView();else if(ui.view==="staff"){ui.view="settings";ui.settab="perm";render()}else if(ui.view==="delete")renderDeleteView();else{if(ui.settab==="etc"||!isAdmin())renderSettings();else renderStaffView()}
   addXlsBtn();
@@ -2294,9 +2297,39 @@ function schJumpToday(){const tbl=view().querySelector(".wt.sch");if(!tbl)return
   requestAnimationFrame(()=>{const th=tbl.querySelector("thead");const hh=th?th.getBoundingClientRect().height:0;
     if(box&&box.scrollHeight>box.clientHeight+4){box.scrollTop=row.offsetTop-hh-2;box.getBoundingClientRect().top<0&&box.scrollIntoView({block:"start"})}
     else row.scrollIntoView({block:"start"})})}
-function renderSchedView0(){
-  if(!ui.sm)ui.sm=thisMonth();const [st0,en0]=monthRange(ui.sm);const inM=d=>d&&d>=st0&&d<en0;
-  /* 영업: 본인이 3차 담당인 설치·추가설치만 */
+/* 모바일 기사별 일정표: 주간일정(날짜×기사 건수) + 하루(기사별 목록) */
+function mobSchedPc(){const td=today();if(!ui.mpd)ui.mpd=td;const d=ui.mpd;const W=["일","월","화","수","목","금","토"];const wd=x=>new Date(x+"T00:00:00").getDay();
+  const mon=addDays(d,-((wd(d)+6)%7));const days=[];for(let i=0;i<7;i++)days.push(addDays(mon,i));
+  const S=schData(days[0],addDays(days[6],1));const {groups,allGroups,entries,off,hid}=S;
+  const refOf=x=>[KHOL[x],...notes.filter(n=>n.day===x&&!n.user_id).map(n=>n.note)].filter(Boolean);
+  const cntOf=(g,x)=>{const e=entries(g,x);return{j:e.filter(z=>z.j).length,n:e.filter(z=>z.n)}};
+  const short=n=>String(n).length>3?String(n).slice(0,3):n;
+  const add=(g,x)=>{if(!(off||canNewJob(null)))return;const uid=g.id;if(uid.startsWith("n:"))return jobDlg(null,null,"install",null,{visit_date:x,tech_names:uid.slice(2)});if(uid==="_out")return jobDlg(null,null,"install",null,{visit_date:x});schAdd(uid,x)};
+  const week=`<section class="m-card" style="padding:10px 8px"><h4 style="padding:0 6px">주간일정 <span class="mapt">${ymd2(days[0])} ~ ${ymd2(days[6]).slice(3)}</span></h4><div style="overflow-x:auto"><table class="mswk"><thead><tr><th></th>${groups.map(g=>`<th>${esc(short(g.name))}</th>`).join("")}</tr></thead><tbody>
+    ${days.map(x=>{const r=refOf(x);const hol=wd(x)===0||!!KHOL[x];return `<tr class="${x===d?"on":""} ${x===td?"td":""}"><th data-mpx="${x}" class="${hol?"sun":wd(x)===6?"sat":""}">${+x.slice(8)} ${W[wd(x)]}${r.length?`<i title="${esc(r.join(", "))}">•</i>`:""}</th>${groups.map(g=>{const c=cntOf(g,x);const lv=c.n.some(n=>LEAVE.test(n.n.note));return `<td data-mpx="${x}" data-mpg="${esc(g.id)}" class="${lv?"lv":""}">${c.j?`<b>${c.j}</b>`:lv?"휴":c.n.length?"📝":""}</td>`}).join("")}</tr>`}).join("")}</tbody></table></div>
+    <p class="mapt" style="margin:6px 6px 0">숫자 = 작업 건수 · 휴 = 연차·휴무 · 📝 = 메모 · 날짜를 누르면 아래에 그날 일정</p></section>`;
+  const r=refOf(d);
+  const daySec=groups.map(g=>{const es=entries(g,d);const nj=es.filter(z=>z.j).length;
+    return `<section class="m-card" id="mpg-${esc(g.id)}"><h4>${esc(g.name)} <span class="mapt">${nj?nj+"건":"일정 없음"}</span>${off||canNewJob(null)?`<button type="button" class="btn sm" data-mpa="${esc(g.id)}" style="margin-left:auto">＋</button>`:""}</h4>
+      ${es.map(e=>{if(e.n){const lv=LEAVE.test(e.n.note);return `<button type="button" class="m-it mpn ${lv?"lv":""}" data-mpn="${e.n.id}"><span class="m-t">${esc(e.n.time_text||"")||"메모"}</span><b class="m-n" style="font-weight:500">📝 ${esc(e.n.note)}</b></button>`}
+        const j=e.j;const c=custById(j.customer_id)||{};const sup=g.id!=="_out"&&S.gk(j)[0]!==g.id;const tm=[fmtTime(j.visit_time),fmtTime(j.end_time)].filter(Boolean).join("~");
+        return `<button type="button" class="m-it" data-mj="${j.id}"><span class="m-t">${esc(tm)||"-"}</span><span class="badge ${sup?"":j.kind}">${sup?"지원":esc(kl(j)||j.kind)}</span><b class="m-n">${esc(c.name||j.customer_name||"")}<small class="mapt" style="font-weight:400"> ${esc(schRegion(c.address||j.address))}</small></b>${j.status==="완료"?`<span class="m-ok">완료</span>`:j.status==="보류"?`<span class="m-hold">보류</span>`:j.status==="취소"?`<span class="m-hold">취소</span>`:""}</button>`}).join("")}</section>`}).join("");
+  view().innerHTML=`<div class="m-body"><div class="m-mon"><button type="button" data-mpw="-7" aria-label="이전 주">‹</button><b>${+d.slice(5,7)}월 ${+d.slice(8)}일 (${W[wd(d)]})</b><button type="button" data-mpw="7" aria-label="다음 주">›</button></div>
+    <div class="m-chips m-kc">${allGroups.map(g=>`<button type="button" class="${hid.has(g.id)?"":"on"}" data-mph="${esc(g.id)}">${esc(g.name)}</button>`).join("")}${d!==td?`<button type="button" data-mpx="${td}">오늘</button>`:""}</div>
+    ${week}
+    ${r.length||off?`<button type="button" class="m-ref" data-mpr="1">${r.length?"📌 "+esc(r.join(" · ")):"＋ 참조 메모(휴일근로·회사 휴무 등)"}</button>`:""}
+    ${daySec||`<p class="mapt m-more">보이는 기사가 없습니다. 위에서 기사를 켜 주세요.</p>`}
+    <button type="button" class="btn m-full" data-mpfull="1">표로 보기 (PC와 같은 월간 일정표)</button></div>`;
+  view().querySelector("[data-mpfull]").onclick=()=>{ui.schFull=true;ui.sm=d.slice(0,7);ui.schJump=true;ui._fresh=true;render()};
+  mobBindJobs();
+  view().querySelectorAll("[data-mpw]").forEach(b=>b.onclick=()=>{ui.mpd=addDays(ui.mpd,+b.dataset.mpw);mobSchedPc()});
+  view().querySelectorAll("[data-mpx]").forEach(b=>b.onclick=()=>{ui.mpd=b.dataset.mpx;const gid=b.dataset.mpg;mobSchedPc();if(gid){const el=document.getElementById("mpg-"+gid);if(el)el.scrollIntoView({behavior:"smooth",block:"start"})}});
+  view().querySelectorAll("[data-mph]").forEach(b=>b.onclick=()=>{const h=schHidden();const id=b.dataset.mph;if(h.has(id))h.delete(id);else h.add(id);schSetHidden(h);mobSchedPc()});
+  view().querySelectorAll("[data-mpa]").forEach(b=>b.onclick=()=>{const g=groups.find(z=>z.id===b.dataset.mpa);if(g)add(g,d)});
+  view().querySelectorAll("[data-mpn]").forEach(b=>b.onclick=()=>{const n=notes.find(x=>x.id===b.dataset.mpn);if(n&&off)noteDlg(n.user_id,n.day,n)});
+  const rf=view().querySelector("[data-mpr]");if(rf)rf.onclick=()=>{if(!off)return;const n=notes.find(x=>x.day===d&&!x.user_id);noteDlg(null,d,n)}}
+/* 기사별 일정표 데이터 (PC 일정표 · 모바일 일정표 같이 씀) */
+function schData(st0,en0){const inM=d=>d&&d>=st0&&d<en0;
   const mineS=j=>{const k=ctrById(j.contract_id)||custContracts(j.customer_id)[0];return (k&&k.sales3===me.id)||schSales(j)===(me.name||"\u0000")};
   const mj=jobs.filter(j=>inM(schDay(j))&&(me.role!=="sales"||((j.kind==="install"||j.kind==="addon")&&mineS(j))));
   const mn=notes.filter(n=>inM(n.day));
@@ -2324,6 +2357,11 @@ function renderSchedView0(){
     const top=ns.filter(n=>!nk_(n.time_text)).map(n=>({n,t:""}));
     const mixed=[...ns.filter(n=>nk_(n.time_text)).map(n=>({n,t:nk_(n.time_text)})),...js.map(j=>({j,t:timeKey(j.visit_time)}))].sort((a,b)=>a.t.localeCompare(b.t)||(a.n?1:0)-(b.n?1:0));
     return [...top,...mixed]};
+  return {mineS,mj,mn,keyOfName,gk,used,people,nameKeys,hid,allGroups,techOnly,ext,groups,off,entries}}
+function renderSchedView0(){
+  if(!ui.sm)ui.sm=thisMonth();const [st0,en0]=monthRange(ui.sm);const inM=d=>d&&d>=st0&&d<en0;
+  /* 영업: 본인이 3차 담당인 설치·추가설치만 */
+  const {mineS,mj,mn,keyOfName,gk,used,people,nameKeys,hid,allGroups,techOnly,ext,groups,off,entries}=schData(st0,en0);
   const [y,m]=ui.sm.split("-").map(Number);const last=new Date(y,m,0).getDate();const td=today();
   const days=[];for(let i=1;i<=last;i++)days.push(ui.sm+"-"+String(i).padStart(2,"0"));
   const cell7=(g,d,e)=>{
