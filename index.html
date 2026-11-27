@@ -5408,9 +5408,10 @@ function asAnaCalc(js,keyFn,cats){const pt=j=>asPt(j)==="유상"?"유":"무";con
   js.forEach(j=>{const k=keyFn(j);if(!m.has(k))m.set(k,z());const o=m.get(k);if(j.status==="취소")o.취++;else o[pt(j)]++});return m}
 function renderAsAnaView(){if(!isOffice()){view().innerHTML=`<div class="empty"><h2>사무실·관리자만 쓸 수 있는 화면입니다</h2></div>`;return}_instMap=null;
   const cy=+thisMonth().slice(0,4);if(!ui.aay)ui.aay=cy;const Y=ui.aay;const lastM=Y===cy?+thisMonth().slice(5):12;
-  const all=jobs.filter(asLike);const inY=(j,y)=>String(j.request_date||"").slice(0,4)===String(y);
+  /* 기준: 완료·취소된 건만 · 완료는 완료일, 취소는 취소일(없으면 접수일)로 그 달에 셈 */
+  const all=jobs.filter(j=>asLike(j)&&(j.status==="완료"||j.status==="취소"));const ad=j=>String(j.status==="완료"?(j.done_date||j.visit_date||j.request_date||""):(j.cancel_date||j.request_date||""));const inY=(j,y)=>ad(j).slice(0,4)===String(y);
   const prev=all.filter(j=>inY(j,Y-1)),cur=all.filter(j=>inY(j,Y));const months=[];for(let m=ui.aaAll?1:Math.max(1,lastM-2);m<=lastM;m++)months.push(`${Y}-${String(m).padStart(2,"0")}`);
-  const byM=ym=>cur.filter(j=>String(j.request_date||"").slice(0,7)===ym);
+  const byM=ym=>cur.filter(j=>ad(j).slice(0,7)===ym);
   const yrs=[...new Set(all.map(asYearCat))].filter(x=>/년$/.test(x)).sort();
   const SECS=[["AS 항목",asItemOf,AS_ITEMS],["지역분류",asRegion,[...AS_REG.map(r=>r[0]),"기타·미상"]],["설치년도",asYearCat,[...yrs,"중고구매","미상"]],["제품분류",asProdCat,["1채널","3채널","온케어","대광","맘스큐리","타제품"]]];
   const cost=js=>js.filter(j=>j.status!=="취소").reduce((a,j)=>a+Number(j.cost||0),0);
@@ -5433,7 +5434,7 @@ function renderAsAnaView(){if(!isOffice()){view().innerHTML=`<div class="empty">
   const html=SECS.map(table).join("");
   const empty=cur.filter(j=>!j.as_item||!AS_ITEMS.includes(j.as_item));
   view().innerHTML=`<div class="toolbar" style="padding:16px 20px 8px;flex-wrap:wrap;gap:8px"><h2 style="margin:0;font-size:18px">A/S 분석</h2><select id="aaY" aria-label="연도">${[cy,cy-1,cy-2].map(y=>`<option value="${y}" ${y===Y?"selected":""}>${y}년</option>`).join("")}</select>
-      <span class="nav" role="group"><button type="button" class="${ui.aaAll?"":"on"}" data-aaa="0">최근 3개월</button><button type="button" class="${ui.aaAll?"on":""}" data-aaa="1">1~${lastM}월 전부</button></span><span class="mapt">접수일 기준 · A/S·이전설치 · 월계에는 취소 포함, 누적 합계는 취소 제외</span><span style="flex:1"></span>
+      <span class="nav" role="group"><button type="button" class="${ui.aaAll?"":"on"}" data-aaa="0">최근 3개월</button><button type="button" class="${ui.aaAll?"on":""}" data-aaa="1">1~${lastM}월 전부</button></span><span class="mapt">완료·취소된 A/S·이전설치 (완료일·취소일 기준) · 월계에는 취소 포함, 누적 합계는 취소 제외</span><span style="flex:1"></span>
       <button class="btn" type="button" id="aaBack">← A/S관리</button><button class="btn pri" type="button" id="aaXls">엑셀 다운로드</button></div>
     ${hasAsItem()?(empty.length?`<p class="mapt" style="margin:0 20px 10px">${Y}년 A/S ${empty.length}건은 A/S 항목이 비어 있어 <b>고장내용 글로 자동 분류</b>해서 셌습니다. <button class="btn sm" type="button" id="aaSave">자동 분류를 항목 칸에 저장</button> 저장한 뒤 A/S 창에서 항목을 고칠 수 있습니다.</p>`:"")
       :`<p class="warnbox" style="margin:0 20px 10px">A/S 항목 칸을 쓰려면 Supabase SQL Editor에서 <b>phase1zz5.sql</b>을 실행해 주세요. 지금은 고장내용 글로 자동 분류한 결과입니다.</p>`}
@@ -5441,7 +5442,7 @@ function renderAsAnaView(){if(!isOffice()){view().innerHTML=`<div class="empty">
   view().querySelectorAll("[data-aaa]").forEach(b=>b.onclick=()=>{ui.aaAll=b.dataset.aaa==="1";renderAsAnaView()});
   document.getElementById("aaY").onchange=e=>{ui.aay=+e.target.value;renderAsAnaView()};
   document.getElementById("aaBack").onclick=()=>{ui.view="asm";ui._fresh=true;render()};
-  document.getElementById("aaXls").onclick=()=>{if(!window.XLSX||!XLSX.utils)return toast("엑셀 도구를 불러오지 못했습니다");const aoa=[[`AS 분석 (${Y}년, 접수일 기준)`],[`작성: ${me.name||""} · ${ymd2(today())}`],[],...xl];
+  document.getElementById("aaXls").onclick=()=>{if(!window.XLSX||!XLSX.utils)return toast("엑셀 도구를 불러오지 못했습니다");const aoa=[[`AS 분석 (${Y}년, 완료·취소 건 · 완료일·취소일 기준)`],[`작성: ${me.name||""} · ${ymd2(today())}`],[],...xl];
     const ws=XLSX.utils.aoa_to_sheet(aoa);const mg=[];aoa.forEach((r,ri)=>{if(r.length>4&&r[1]&&r[2]===""&&r[3]===""&&r[4]==="")for(let c=1;c<r.length;c+=4)mg.push({s:{r:ri,c},e:{r:ri,c:c+3}})});ws["!merges"]=mg;ws["!cols"]=[{wch:14},...Array(groups.length*4).fill({wch:8})];
     const wb=XLSX.utils.book_new();XLSX.utils.book_append_sheet(wb,ws,`${Y}년`);XLSX.writeFile(wb,`AS분석_${Y}.xlsx`);toast("엑셀 파일을 내려받았습니다")};
   const sv=document.getElementById("aaSave");if(sv)sv.onclick=async()=>{if(!(await askConfirm(`${Y}년 A/S ${empty.length}건의 비어 있는 A/S 항목에 자동 분류 결과를 저장할까요?\n이미 항목을 고른 건은 그대로 둡니다.`)))return;sv.disabled=true;
