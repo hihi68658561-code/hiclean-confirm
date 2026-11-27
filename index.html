@@ -161,7 +161,7 @@ body.mob .ntlist{padding:12px}body.mob .toolbar:has(+ .sec .warnbox),body.mob #v
 .wt.aana td.gl,.wt.aana th.gl{border-right:2px solid #adb5bd}.wt.aana tr.atot td,.wt.aana tr.atot th{background:#fff3bf}.wt.aana tr.aext td,.wt.aana tr.aext th{background:#fff9db}
 .mswk{border-collapse:collapse;width:100%;font-size:13px}.mswk th,.mswk td{border:1px solid var(--line);padding:6px 4px;text-align:center;min-width:42px}.mswk thead th{background:#f1f3f5;font-weight:600}.mswk tbody th{white-space:nowrap;background:#f8f9fa;font-weight:500;position:relative}
 .mswk tbody th i{color:#e67700;font-style:normal;margin-left:2px}.mswk th.sun{color:#e03131}.mswk th.sat{color:#1c7ed6}.mswk tr.on th,.mswk tr.on td{background:#e7f0ff}.mswk tr.td th{font-weight:800}.mswk td b{color:var(--accent)}.mswk td.lv{color:#c92a2a;background:#fff5f5}
-.m-it.mpn{background:#fff9db}.m-it.mpn.lv b{color:#c92a2a}.m-ref{display:block;width:100%;text-align:left;border:1px dashed #fab005;background:#fff9db;border-radius:12px;padding:10px 14px;margin:0 0 10px;font-size:14px;color:#5c4400}
+.m-it.mpj .m-t{flex:0 0 92px;width:92px;white-space:nowrap;font-size:13px;font-variant-numeric:tabular-nums;text-align:left}.m-it.mpj .badge{flex:0 0 66px;width:66px;box-sizing:border-box;text-align:center;padding-left:0;padding-right:0;white-space:nowrap}.m-it.mpn{background:#fff9db}.m-it.mpn.lv b{color:#c92a2a}.m-ref{display:block;width:100%;text-align:left;border:1px dashed #fab005;background:#fff9db;border-radius:12px;padding:10px 14px;margin:0 0 10px;font-size:14px;color:#5c4400}
 .mobsw[hidden]{display:none}
 .mback{display:none}
 @media (max-width:760px){.body.mdet>aside{display:none}.body.mdet>.mback{display:flex;align-items:center;gap:10px;position:fixed;top:0;left:0;right:0;height:50px;padding:0 12px;z-index:61;background:var(--panel);border-bottom:1px solid var(--line);box-shadow:0 1px 4px rgba(0,0,0,.06)}
@@ -2311,15 +2311,15 @@ function mobSchedPc(){const td=today();if(!ui.mpd)ui.mpd=td;const d=ui.mpd;const
   const r=refOf(d);
   const daySec=groups.map(g=>{const es=entries(g,d);const nj=es.filter(z=>z.j).length;
     return `<section class="m-card" id="mpg-${esc(g.id)}"><h4>${esc(g.name)} <span class="mapt">${nj?nj+"건":"일정 없음"}</span>${off||canNewJob(null)?`<button type="button" class="btn sm" data-mpa="${esc(g.id)}" style="margin-left:auto">＋</button>`:""}</h4>
-      ${es.map(e=>{if(e.n){const lv=LEAVE.test(e.n.note);return `<button type="button" class="m-it mpn ${lv?"lv":""}" data-mpn="${e.n.id}"><span class="m-t">${esc(e.n.time_text||"")||"메모"}</span><b class="m-n" style="font-weight:500">📝 ${esc(e.n.note)}</b></button>`}
+      ${es.map(e=>{if(e.n){const lv=LEAVE.test(e.n.note);return `<button type="button" class="m-it mpj mpn ${lv?"lv":""}" data-mpn="${e.n.id}"><span class="m-t">${esc(e.n.time_text||"")||"메모"}</span><b class="m-n" style="font-weight:500">📝 ${esc(e.n.note)}</b></button>`}
         const j=e.j;const c=custById(j.customer_id)||{};const sup=g.id!=="_out"&&S.gk(j)[0]!==g.id;const tm=[fmtTime(j.visit_time),fmtTime(j.end_time)].filter(Boolean).join("~");
-        return `<button type="button" class="m-it" data-mj="${j.id}"><span class="m-t">${esc(tm)||"-"}</span><span class="badge ${sup?"":j.kind}">${sup?"지원":esc(kl(j)||j.kind)}</span><b class="m-n">${esc(c.name||j.customer_name||"")}<small class="mapt" style="font-weight:400"> ${esc(schRegion(c.address||j.address))}</small></b>${j.status==="완료"?`<span class="m-ok">완료</span>`:j.status==="보류"?`<span class="m-hold">보류</span>`:j.status==="취소"?`<span class="m-hold">취소</span>`:""}</button>`}).join("")}</section>`}).join("");
+        return `<button type="button" class="m-it mpj" data-mj="${j.id}"><span class="m-t">${esc(tm)||"-"}</span><span class="badge ${sup?"":j.kind}">${sup?"지원":esc(kl(j)||j.kind)}</span><b class="m-n">${esc(c.name||j.customer_name||"")}<small class="mapt" style="font-weight:400"> ${esc(schRegion(c.address||j.address))}</small></b>${j.status==="완료"?`<span class="m-ok">완료</span>`:j.status==="보류"?`<span class="m-hold">보류</span>`:j.status==="취소"?`<span class="m-hold">취소</span>`:""}</button>`}).join("")}</section>`}).join("");
   view().innerHTML=`<div class="m-body"><div class="m-mon"><button type="button" data-mpw="-7" aria-label="이전 주">‹</button><b>${+d.slice(5,7)}월 ${+d.slice(8)}일 (${W[wd(d)]})</b><button type="button" data-mpw="7" aria-label="다음 주">›</button></div>
     <div class="m-chips m-kc">${allGroups.map(g=>`<button type="button" class="${hid.has(g.id)?"":"on"}" data-mph="${esc(g.id)}">${esc(g.name)}</button>`).join("")}${d!==td?`<button type="button" data-mpx="${td}">오늘</button>`:""}</div>
     ${week}
     ${r.length||off?`<button type="button" class="m-ref" data-mpr="1">${r.length?"📌 "+esc(r.join(" · ")):"＋ 참조 메모(휴일근로·회사 휴무 등)"}</button>`:""}
     ${daySec||`<p class="mapt m-more">보이는 기사가 없습니다. 위에서 기사를 켜 주세요.</p>`}
-    <button type="button" class="btn m-full" data-mpfull="1">표로 보기 (PC와 같은 월간 일정표)</button></div>`;
+    <button type="button" class="btn m-full" data-mpfull="1">표로 보기 (PC 버전)</button></div>`;
   view().querySelector("[data-mpfull]").onclick=()=>{ui.schFull=true;ui.sm=d.slice(0,7);ui.schJump=true;ui._fresh=true;render()};
   mobBindJobs();
   view().querySelectorAll("[data-mpw]").forEach(b=>b.onclick=()=>{ui.mpd=addDays(ui.mpd,+b.dataset.mpw);mobSchedPc()});
